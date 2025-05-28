@@ -103,379 +103,379 @@ entries:
             - title:
                 en: Platform integration with infrastructure
                 ru: Интеграция платформы с инфраструктурой
-                folders:
-                  - title:
-                      en: Overview
-                      ru: Обзор
-                    url: /admin/integrations/integrations-overview.html
-                  - title:
-                      en: Public cloud providers
-                      ru: Публичные облачные провайдеры
-                    folders:
-                      - title:
-                          en: Обзор
-                          ru: Overview
-                        url: /admin/integrations/public/overview.html
-                      - title:
-                          en: Integration with Yandex Cloud
-                          ru: Интеграция с Yandex Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/yandex/yandex-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/yandex/yandex-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/yandex/yandex-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/yandex/yandex-storage.html
-                          - title:
-                              en: Integration with Yandex Cloud services
-                              ru: Интеграция с службами Yandex Cloud
-                            url: /admin/integrations/public/yandex/yandex-services.html
-                      - title:
-                          en: Integration with VK Cloud
-                          ru: Интеграция с VK Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/vk/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/vk/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with Selectel Cloud
-                          ru: Интеграция с Selectel Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/selectel/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/selectel/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with OVH Cloud
-                          ru: Интеграция с OVH Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/ovh/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/ovh/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/ovh/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with OpenStack-based clouds
-                          ru: Интеграция с облаками на базе OpenStack
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/openstack/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/openstack/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with Amazon Web Services (AWS)
-                          ru: Интеграция с Amazon Web Services (AWS)
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/amazon/amazon-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/amazon/amazon-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/amazon/amazon-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/amazon/amazon-storage.html
-                          - title:
-                              en: Integration with Amazon Web Services
-                              ru: Интеграция с службами Amazon Web Services
-                            url: /admin/integrations/public/amazon/amazon-services.html
-                      - title:
-                          en: Integration with Microsoft Azure
-                          ru: Интеграция с Microsoft Azure
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/azure/azure-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/azure/azure-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/azure/azure-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/azure/azure-storage.html
-                          - title:
-                              en: Integration with Microsoft Azure
-                              ru: Интеграция с службами Microsoft Azure
-                            url: /admin/integrations/public/azure/azure-services.html
-                      - title:
-                          en: Integration with Huawei Cloud
-                          ru: Интеграция с Huawei Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/huaweicloud/huawei-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/huaweicloud/huawei-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/huaweicloud/huawei-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/huaweicloud/huawei-storage.html
-                          - title:
-                              en: Integration with Huawei Cloud
-                              ru: Интеграция с службами Huawei Cloud
-                            url: /admin/integrations/public/huaweicloud/huawei-services.html
-                      - title:
-                          en: Integration with VMware vSphere
-                          ru: Интеграция с VMware vSphere
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/vsphere/vsphere-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/vsphere/vsphere-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/vsphere/vsphere-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/vsphere/vsphere-storage.html
-                          - title:
-                              en: Integration with vSphere
-                              ru: Интеграция с службами vSphere
-                            url: /admin/integrations/public/vsphere/vsphere-services.html
-                      - title:
-                          en: Integration with zVirt
-                          ru: Интеграция с zVirt
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/zvirt/zvirt-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/zvirt/zvirt-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/zvirt/zvirt-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/zvirt/zvirt-storage.html
-                          - title:
-                              en: Integration with zVirt
-                              ru: Интеграция с службами zVirt
-                            url: /admin/integrations/public/zvirt/zvirt-services.html
-                      - title:
-                          en: Integration with Dynamix
-                          ru: Интеграция с Dynamix
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/dynamix/dynamix-overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/dynamix/dynamix-authorization.html
-                          - title:
-                              en: Configuration and layout
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/dynamix/dynamix-layout.html
-                          - title:
-                              en: Storage, balancing and features
-                              ru: Хранилище и балансировка
-                            url: /admin/integrations/public/dynamix/dynamix-storage.html
-                          - title:
-                              en: Integration with Dynamix
-                              ru: Интеграция с службами Dynamix
-                            url: /admin/integrations/public/dynamix/dynamix-services.html
-                      - title:
-                          en: Integration with Google Cloud Platform (GCP)
-                          ru: Интеграция с Google Cloud Platform (GCP)
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/public/gcp/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/public/gcp/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
-                  - title:
-                      en: Private cloud providers
-                      ru: Частные облака
-                    folders:
-                      - title:
-                          en: Overview
-                          ru: Обзор
-                        url: /admin/integrations/private/overview.html
-                      - title:
-                          en: Integration with VK Cloud
-                          ru: Интеграция с VK Cloud
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/private/vk/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/private/vk/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with OpenStack
-                          ru: Интеграция с OpenStack
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/private/openstack/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/private/openstack/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
-                  - title:
-                      en: Virtualization systems
-                      ru: Системы виртуализации
-                    folders:
-                      - title:
-                          en: Обзор
-                          ru: Overview
-                        url: /admin/integrations/virtualization/overview.html
-                      - title:
-                          en: Integration with VMware vSphere
-                          ru: Интеграция с VMware vSphere
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/virtualization/vmware/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/virtualization/vmware/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/virtualization/vmware/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with VMware Cloud Director
-                          ru: Интеграция с VMware Cloud Director
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/virtualization/vcd/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
-                      - title:
-                          en: Integration with RED
-                          ru: TODO Интеграция с РЭД виртуализацией
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/virtualization/red/red-overview.html
-                      - title:
-                          en: Integration with zVirt
-                          ru: Интеграция с zVirt
-                        folders:
-                          - title:
-                              en: Overview
-                              ru: Обзор
-                            url: /admin/integrations/virtualization/zvirt/overview.html
-                          - title:
-                              en: Connection and authorization
-                              ru: Подключение и авторизация
-                            url: /admin/integrations/virtualization/zvirt/сonnection-and-authorization.html
-                          - title:
-                              en: Configuration and layout scheme
-                              ru: Схемы размещения и настройка
-                            url: /admin/integrations/virtualization/zvirt/сonfiguration-and-layout-scheme.html
-                  - title:
-                      en: Hibrid integration
-                      ru: Гибридная интеграция
-                    folders:
-                      - title:
-                          en: Обзор
-                          ru: Overview
-                        url: /admin/integrations/hibrid/overview.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/integrations/integrations-overview.html
+                - title:
+                    en: Public cloud providers
+                    ru: Публичные облачные провайдеры
+                  folders:
+                    - title:
+                        en: Обзор
+                        ru: Overview
+                      url: /admin/integrations/public/overview.html
+                    - title:
+                        en: Integration with Yandex Cloud
+                        ru: Интеграция с Yandex Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/yandex/yandex-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/yandex/yandex-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/yandex/yandex-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/yandex/yandex-storage.html
+                        - title:
+                            en: Integration with Yandex Cloud services
+                            ru: Интеграция с службами Yandex Cloud
+                          url: /admin/integrations/public/yandex/yandex-services.html
+                    - title:
+                        en: Integration with VK Cloud
+                        ru: Интеграция с VK Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/vk/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/vk/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Selectel Cloud
+                        ru: Интеграция с Selectel Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/selectel/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/selectel/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OVH Cloud
+                        ru: Интеграция с OVH Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/ovh/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/ovh/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/ovh/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OpenStack-based clouds
+                        ru: Интеграция с облаками на базе OpenStack
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/openstack/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/openstack/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Amazon Web Services (AWS)
+                        ru: Интеграция с Amazon Web Services (AWS)
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/amazon/amazon-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/amazon/amazon-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/amazon/amazon-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/amazon/amazon-storage.html
+                        - title:
+                            en: Integration with Amazon Web Services
+                            ru: Интеграция с службами Amazon Web Services
+                          url: /admin/integrations/public/amazon/amazon-services.html
+                    - title:
+                        en: Integration with Microsoft Azure
+                        ru: Интеграция с Microsoft Azure
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/azure/azure-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/azure/azure-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/azure/azure-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/azure/azure-storage.html
+                        - title:
+                            en: Integration with Microsoft Azure
+                            ru: Интеграция с службами Microsoft Azure
+                          url: /admin/integrations/public/azure/azure-services.html
+                    - title:
+                        en: Integration with Huawei Cloud
+                        ru: Интеграция с Huawei Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/huaweicloud/huawei-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/huaweicloud/huawei-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/huaweicloud/huawei-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/huaweicloud/huawei-storage.html
+                        - title:
+                            en: Integration with Huawei Cloud
+                            ru: Интеграция с службами Huawei Cloud
+                          url: /admin/integrations/public/huaweicloud/huawei-services.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/vsphere/vsphere-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/vsphere/vsphere-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/vsphere/vsphere-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/vsphere/vsphere-storage.html
+                        - title:
+                            en: Integration with vSphere
+                            ru: Интеграция с службами vSphere
+                          url: /admin/integrations/public/vsphere/vsphere-services.html
+                    - title:
+                        en: Integration with zVirt
+                        ru: Интеграция с zVirt
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/zvirt/zvirt-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/zvirt/zvirt-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/zvirt/zvirt-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/zvirt/zvirt-storage.html
+                        - title:
+                            en: Integration with zVirt
+                            ru: Интеграция с службами zVirt
+                          url: /admin/integrations/public/zvirt/zvirt-services.html
+                    - title:
+                        en: Integration with Dynamix
+                        ru: Интеграция с Dynamix
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/dynamix/dynamix-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/dynamix/dynamix-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/dynamix/dynamix-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/dynamix/dynamix-storage.html
+                        - title:
+                            en: Integration with Dynamix
+                            ru: Интеграция с службами Dynamix
+                          url: /admin/integrations/public/dynamix/dynamix-services.html
+                    - title:
+                        en: Integration with Google Cloud Platform (GCP)
+                        ru: Интеграция с Google Cloud Platform (GCP)
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/gcp/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/gcp/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
+                - title:
+                    en: Private cloud providers
+                    ru: Частные облака
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/private/overview.html
+                    - title:
+                        en: Integration with VK Cloud
+                        ru: Интеграция с VK Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/vk/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/vk/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OpenStack
+                        ru: Интеграция с OpenStack
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/openstack/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/openstack/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+                - title:
+                    en: Virtualization systems
+                    ru: Системы виртуализации
+                  folders:
+                    - title:
+                        en: Обзор
+                        ru: Overview
+                      url: /admin/integrations/virtualization/overview.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/vmware/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vmware/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vmware/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with VMware Cloud Director
+                        ru: Интеграция с VMware Cloud Director
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/vcd/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with RED
+                        ru: TODO Интеграция с РЭД виртуализацией
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/red/red-overview.html
+                    - title:
+                        en: Integration with zVirt
+                        ru: Интеграция с zVirt
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/zvirt/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/zvirt/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/zvirt/сonfiguration-and-layout-scheme.html
+                - title:
+                    en: Hibrid integration
+                    ru: Гибридная интеграция
+                  folders:
+                    - title:
+                        en: Обзор
+                        ru: Overview
+                      url: /admin/integrations/hibrid/overview.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
