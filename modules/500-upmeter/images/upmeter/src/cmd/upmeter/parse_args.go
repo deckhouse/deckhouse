@@ -79,6 +79,7 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 }
 
 func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
+
 	// Sender
 	cmd.Flag("service-host", "Upmeter server host.").
 		Envar("UPMETER_SERVICE_HOST").
@@ -143,6 +144,24 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Envar("UPMETER_USER_AGENT").
 		Default("UpmeterAgent/1.0").
 		StringVar(&config.UserAgent)
+
+	// d8_clusterconfiguration_converge args
+	const prefix = "UPMETER_DECKHOUSE_CONTROLLER_PROBE_"
+
+	cmd.Flag("window-size", "Sliding window size").
+		Envar(prefix + "WINDOW_SIZE").
+		Default("5").
+		IntVar(&config.DynamicProbes.Converge.WindowSize)
+
+	cmd.Flag("freeze-threshold", "Duration for freeze detection").
+		Envar(prefix + "FREEZE_THRESHOLD").
+		Default("5m").
+		DurationVar(&config.DynamicProbes.Converge.FreezeThreshold)
+
+	cmd.Flag("allowed-tasks-per-interval", "Allowed number of tasks per interval").
+		Envar(prefix + "ALLOWED_TASKS_PER_INTERVAL").
+		Default("10.0").
+		Float64Var(&config.DynamicProbes.Converge.AllowedTasksPerTimeInterval)
 }
 
 func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
