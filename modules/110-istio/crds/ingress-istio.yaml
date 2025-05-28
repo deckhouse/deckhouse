@@ -145,7 +145,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['30443']
+                      x-doc-examples: [30443]
                 resourcesRequests:
                   required: ['mode']
                   type: object
