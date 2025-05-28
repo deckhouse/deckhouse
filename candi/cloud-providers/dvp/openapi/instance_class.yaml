@@ -30,13 +30,13 @@ spec:
                   properties:
                     cpu:
                       description: |
-                        CPU setting for the virtual machine.
+                        CPU settings for the virtual machine.
                       type: object
                       required: [cores]
                       properties:
                         cores:
                           description: |
-                            Amount of CPU cores for the virtual machine.
+                            Number of CPU cores for the virtual machine.
                           minimum: 1
                           format: int32
                           type: integer
@@ -46,12 +46,12 @@ spec:
                           default: "100%"
                           enum: ["5%", "10%", "25%", "50%", "100%"]
                           description: |
-                            Guaranteed share of CPU that will be allocated to the virtual machine. Specified as a percentage.
+                            Guaranteed share of CPU fraction that will be allocated to the virtual machine.
                           x-doc-example: "100%"
                     memory:
                       type: object
                       description: |
-                        Specifies the memory settings for the VM.
+                        Specifies the memory settings for the virtual machine.
                       required:
                         - size
                       properties:
@@ -69,10 +69,10 @@ spec:
                         - EFIWithSecureBoot
                       default: EFI
                       description: >
-                        Defines a bootloader for a the virtual machine.
+                        Defines a bootloader for the virtual machine.
 
-                        * `BIOS`: Use BIOS;
-                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI);
+                        * `BIOS`: Use BIOS.
+                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot support.
                 rootDisk:
                   type: object
@@ -113,7 +113,7 @@ spec:
                           description: |
                             The name of the image that will be used to create the root disk.
 
-                            > The installation requires linux OS images with cloud-init pre-installed
+                            > The installation requires Linux OS images with cloud-init pre-installed.
   scope: Cluster
   names:
     plural: dvpinstanceclasses

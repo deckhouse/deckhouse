@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -42,6 +41,7 @@ type DeschedulerSpec struct {
 	PodLabelSelector       *metav1.LabelSelector   `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector   `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	EvictLocalStoragePods  *EvictLocalStoragePods  `json:"evictLocalStoragePods,omitempty" yaml:"evictLocalStoragePods,omitempty"`
 	Strategies             Strategies              `json:"strategies" yaml:"strategies"`
 }
 
@@ -49,6 +49,8 @@ type PriorityClassThreshold struct {
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
 	Value int    `json:"value,omitempty" yaml:"value,omitempty"`
 }
+
+type EvictLocalStoragePods bool
 
 type Strategies struct {
 	LowNodeUtilization                      *LowNodeUtilization                      `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`
@@ -80,11 +82,4 @@ type RemovePodsViolatingNodeAffinity struct {
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
-}
-
-type deschedulerKind struct{}
-
-func (f *deschedulerKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *deschedulerKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Descheduler"}
 }

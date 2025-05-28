@@ -49,6 +49,7 @@ const (
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
 	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
+	ModuleReleaseAnnotationChangeCause           = "modules.deckhouse.io/change-cause"
 
 	ModuleReleaseAnnotationDryrun            = "dryrun"
 	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"

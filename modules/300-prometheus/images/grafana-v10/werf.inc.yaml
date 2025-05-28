@@ -29,7 +29,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -58,7 +58,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 git:

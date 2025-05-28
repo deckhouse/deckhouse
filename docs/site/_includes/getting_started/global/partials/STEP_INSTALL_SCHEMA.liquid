@@ -121,7 +121,9 @@ Scheme of Deckhouse installation in a private environment:<br />
    - one of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) should be installed
    - Python should be installed
    {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry or to a private container image registry containing Deckhouse images
+   - access to a proxy registry or to a private container image registry containing Deckhouse images;
+   - when using private image storage, you must first [upload images](../../documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry)
+     of the Deckhouse Kubernetes Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry

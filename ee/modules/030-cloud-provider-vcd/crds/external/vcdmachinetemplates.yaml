@@ -116,6 +116,9 @@ spec:
                         description: TemplatePath is the path of the template OVA
                           that is to be used
                         type: string
+                      templateOrg:
+                        description: TemplateOrg is the organization of the template OVA that is to be used
+                        type: string
                       vmNamingTemplate:
                         description: VmNamingTemplate is go template to generate VM
                           names based on Machine and VCDMachine CRs. Functions of

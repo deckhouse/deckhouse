@@ -1,5 +1,6 @@
 name: admission-policy-engine
 weight: 15
+stage: "General Availability"
 subsystems:
   - security
 namespace: d8-admission-policy-engine

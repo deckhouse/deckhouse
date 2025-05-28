@@ -51,6 +51,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metadata-exporter")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: alliance-metadata-exporter
       imagePullSecrets:
       - name: deckhouse-registry

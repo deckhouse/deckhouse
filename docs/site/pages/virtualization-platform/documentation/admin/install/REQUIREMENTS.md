@@ -3,9 +3,11 @@ title: "Requirements"
 permalink: en/virtualization-platform/documentation/admin/install/requirements.html
 ---
 
-> **Warning.** The platform components must be deployed on physical servers (bare-metal servers).
->
-> Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be enabled. If the platform is deployed on virtual machines, technical support will not be provided.
+{% alert level="warning" %}
+The platform components must be deployed on physical servers (bare-metal servers).
+
+Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be enabled. If the platform is deployed on virtual machines, technical support will not be provided.
+{% endalert %}
 
 ## Platform scalability
 
@@ -22,21 +24,21 @@ The platform has no other restrictions and is compatible with any hardware that 
 
    This machine will run the Deckhouse installer. For example, it can be an administrator's laptop or any other computer that is not intended to be added to the cluster. Requirements for this machine:
 
-   - OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
-   - Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
-   - HTTPS access to the container image registry at `registry.deckhouse.io`;
-   - SSH key-based access to the node that will serve as the **master node** of the future cluster;
-   - SSH key-based access to the node that will serve as the **worker node** of the future cluster (if the cluster will consist of more than one master node).
+   - OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+).
+   - Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/)).
+   - HTTPS access to the container image registry at `registry.deckhouse.io`.
+   - SSH-key-based access to the node that will serve as the **master node** of the future cluster.
+   - SSH-key-based access to the node that will serve as the **worker node** of the future cluster (if the cluster will consist of more than one master node).
 
 1. **Server for the master node**
 
-   There can be multiple servers running the cluster’s control plane components, but only one server is required at installation time. The others can be added later via node management mechanisms.
+   There can be multiple servers running the cluster’s control plane components, but only one server is required for installation. The others can be added later via node management mechanisms.
 
    Requirements for a physical bare-metal server:
 
    - Resources:
      - CPU:
-       - x86_64 architecture;
+       - x86-64 architecture;
        - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
        - At least 4 cores.
      - RAM: At least 8 GB.
@@ -49,11 +51,11 @@ The platform has no other restrictions and is compatible with any hardware that 
    - Network access:
      - HTTPS access to the container image registry at `registry.deckhouse.io`;
      - Access to the package repositories of the chosen OS;
-     - SSH key-based access from the **installation machine** (see p.1);
-     - Network access from the **installation machine** (see p.1) on port `22322/TCP`.
+     - SSH key-based access from the **installation machine** (see item 1);
+     - Network access from the **installation machine** (see item 1) on port `22322/TCP`.
    - Required software:
      - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
-   > **Warning.** The container runtime will be installed automatically, so do not pre-install any `containerd` or `docker` packages.
+   > **Warning.** The container runtime will be installed automatically, so there's no need to install any `containerd` or `docker` packages.
 
 1. **Servers for worker nodes**
 
@@ -63,7 +65,7 @@ The platform has no other restrictions and is compatible with any hardware that 
 
    - Resources:
      - CPU:
-       - x86_64 architecture;
+       - x86-64 architecture;
        - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
        - At least 4 cores;
      - RAM: At least 8 GB;
@@ -77,10 +79,10 @@ The platform has no other restrictions and is compatible with any hardware that 
    - Network access:
      - HTTPS access to the container image registry at `registry.deckhouse.io`;
      - Access to the package repositories of the chosen OS;
-     - SSH key-based access from the **installation machine** (see p.1);
+     - SSH key-based access from the **installation machine** (see item 1);
    - Required software:
      - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
-   > **Important.** The container runtime will be installed automatically, so do not pre-install any `containerd` or `docker` packages.
+   > **Important.** The container runtime will be installed automatically, so there's no need to install any `containerd` or `docker` packages.
 
 1. **Storage hardware**
 
@@ -94,6 +96,12 @@ The platform has no other restrictions and is compatible with any hardware that 
 | Debian                      | 10, 11, 12                      |
 | Ubuntu                      | 20.04, 22.04, 24.04      |
 
+{% alert level="warning" %}
+Ensuring stable operation of live migration mechanisms requires the use of an identical version of the Linux kernel on all cluster nodes.
+
+This is because differences in kernel versions can lead to incompatible interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
+{% endalert %}
+
 ## Supported guest operating systems
 
 The virtualization platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
@@ -104,23 +112,26 @@ Successful startup of the operating system is determined by the following criter
 - uninterrupted operation of key components such as networking and storage;
 - no crashes or errors during operation.
 
-For Linux family operating systems it is recommended to use guest OS images with cloud-init support, which allows initializing virtual machines after their creation.
+For Linux family operating systems, it is recommended to use guest OS images with `cloud-init` support, which allows initializing virtual machines after their creation.
 
-For Windows operating systems, the platform supports initialization using the built-in sysprep utility.
+For Windows family operating systems, the platform supports initialization with [autounattend](https://learn.microsoft.com/ru-ru/windows-hardware/manufacture/desktop/windows-setup-automation-overview) installation.
 
 ## Supported virtual machine configurations
 
-Maximum number of cores supported: `254`
-Maximum amount of RAM: `1024 GB`
+- Maximum number of cores supported: `248`.
+- Maximum amount of RAM: `1024 GB`.
+- Maximum number of block devices to be attached: `16`.
 
-## Supported Storage Systems
+## Supported storage systems
 
 Virtual machines use PersistentVolume resources. To manage these resources and allocate disk space within the cluster, one or more supported storage systems must be installed:
 
 | Storage System                              | Disk Location              |
 |---------------------------------------------|----------------------------|
-| LVM (Logical Volume Manager)                | Local                     |
-| DRBD (Distributed Replicated Block Device)  | Replicas on cluster nodes |
-| Ceph Cluster                                | External storage          |
-| NFS (Network File System)                   | External storage          |
-| TATLIN.UNIFIED (Yadro)                      | External storage          |
+| sds-local-volume                            | Local                      |
+| sds-replicated-volume                       | Replicas on cluster nodes  |
+| Ceph Cluster                                | External storage           |
+| NFS (Network File System)                   | External storage           |
+| TATLIN.UNIFIED (Yadro)                      | External storage           |
+| Huawei Dorado                               | External storage           |
+| HPE 3par                                    | External storage           |

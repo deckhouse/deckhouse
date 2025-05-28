@@ -532,19 +532,6 @@ alerts:
         Bashible-apiserver has been locked for too long.
       severity: "6"
       markupFormat: markdown
-    - name: D8CephCsiModuleDeprecated
-      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
-      moduleUrl: 031-ceph-csi
-      module: ceph-csi
-      edition: ce
-      description: |
-        The `ceph-csi` module is deprecated and will be removed in Deckhouse 1.70.
-
-        Use the [`csi-ceph`](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
-      summary: |
-        Ceph-csi module is deprecated.
-      severity: "5"
-      markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -1876,7 +1863,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.29)
+        Please migrate to the next kubernetes version (at least 1.30)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
@@ -2345,9 +2332,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8NodeHasUnmetKernelRequirements
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/kernel-requirements.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/kernel-requirements.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
       edition: ce
       description: |-
         Deckhouse has detected that some nodes don't meet the required kernel constraints.
@@ -3661,6 +3648,45 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseModuleUpdatingFailedBrokenSequence
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Current version: {{ $labels.actual_version }}.
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The necessary versions of the Module image is not available in the registry.
+
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+      summary: |
+        Module update has failed. Updating sequence is broken.
+      severity: "4"
+      markupFormat: markdown
+    - name: DeckhouseModuleUpdatingFailedModuleIsNotValid
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+      summary: |
+        Module update has failed. Module is not valid.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseModuleUseEmptyDir
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
       moduleUrl: 300-prometheus
@@ -3737,7 +3763,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "6"
@@ -3747,7 +3780,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "9"
@@ -4943,7 +4983,7 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiRetentionPerionViolation
+    - name: LokiInsufficientDiskForRetention
       sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
       moduleUrl: 462-loki
       module: loki
@@ -4955,19 +4995,6 @@ alerts:
       summary: |
         Not enough disk space to retain logs for 168 hours
       severity: "4"
-      markupFormat: markdown
-    - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |
-        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
-
-        For details on volume migration, refer to the migration guide available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md`.
-      summary: |
-        StorageClass {{ $labels.storageclass }} is using a deprecated RBD provisioner.
-      severity: "9"
       markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -5980,7 +6007,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster operation policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
@@ -6084,7 +6111,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one pod violates the configured cluster pod security standards.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
@@ -6239,7 +6266,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster security policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
@@ -6476,7 +6503,6 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
-    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex

@@ -16,9 +16,6 @@ linters-settings:
           name: cloud-controller-manager
       liveness-probe:
         - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
-        - kind: Deployment
           name: csi-controller
           container: controller
         - kind: Deployment
@@ -43,9 +40,6 @@ linters-settings:
           name: csi-controller
           container: snapshotter
       readiness-probe:
-        - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
         - kind: Deployment
           name: csi-controller
           container: controller

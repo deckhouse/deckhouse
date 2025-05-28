@@ -3,7 +3,6 @@ package hooks
 
 var auditPolicyBasicNamespaces = []string{
 	"d8-admission-policy-engine",
-	"d8-ceph-csi",
 	"d8-cert-manager",
 	"d8-chrony",
 	"d8-cloud-instance-manager",
@@ -40,7 +39,6 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-runtime-audit-engine",
 	"d8-service-with-healthchecks",
 	"d8-snapshot-controller",
-	"d8-static-routing-manager",
 	"d8-system",
 	"d8-upmeter",
 	"d8-user-authn",
@@ -104,6 +102,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-dashboard:metrics-scraper",
 	"system:serviceaccount:d8-dashboard:web",
 	"system:serviceaccount:d8-descheduler:descheduler",
+	"system:serviceaccount:d8-ingress-nginx:failover-cleaner",
 	"system:serviceaccount:d8-ingress-nginx:ingress-nginx",
 	"system:serviceaccount:d8-ingress-nginx:kruise",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
@@ -146,9 +145,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-service-with-healthchecks:agent",
 	"system:serviceaccount:d8-service-with-healthchecks:controller",
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
-	"system:serviceaccount:d8-static-routing-manager:agent",
 	"system:serviceaccount:d8-system:d8-kube-dns",
-	"system:serviceaccount:d8-system:deckhouse-tools",
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
 	"system:serviceaccount:d8-system:terraform-auto-converger",

@@ -37,13 +37,14 @@ Example output:
 
 ```console
 NAME                          PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-i-linstor-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-i-linstor-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-i-linstor-thin-r3             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-linstor-thin-r1               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-linstor-thin-r2               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-linstor-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-nfs-4-1-wffc                  nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
+NAME                                 PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+i-sds-replicated-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+i-sds-replicated-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+i-sds-replicated-thin-r3             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+sds-replicated-thin-r1               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+sds-replicated-thin-r2               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
 The `(default)` marker next to the class name indicates that this `StorageClass` will be used by default if the user has not explicitly specified the class name in the resource being created.
@@ -97,7 +98,7 @@ spec:
   # Disk storage settings.
   persistentVolumeClaim:
     # Replace with your StorageClass name.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
     size: 100Mi
 EOF
 ```
@@ -108,11 +109,17 @@ After creation, the [VirtualDisk](../../../reference/cr/virtualdisk.html) resour
 - `Provisioning`: The disk creation process is ongoing.
 - `Resizing`: The disk resizing process is ongoing.
 - `WaitForFirstConsumer`: The disk is waiting for a virtual machine that will use it.
+- `WaitForUserUpload` - the disk is waiting for the user to upload an image (type: Upload).
 - `Ready`: The disk is created and ready for use.
 - `Failed`: An error occurred during the creation process.
-- `Terminating`: The disk deletion process is ongoing. This process may "hang" in this state if the disk is still attached to a virtual machine.
+- `PVCLost` - system error, PVC with data has been lost.
+- `Terminating` - the disk is being deleted. The disk may "hang" in this state if it is still connected to the virtual machine.
 
 Until the disk reaches the `Ready` phase, the entire `.spec` block can be modified. Changing it will restart the disk creation process.
+
+If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [virtualization settings](../../admin/install/steps/virtualization.html#parameter-description).
+
+Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
 Check the disk's status after creation:
 
@@ -136,14 +143,14 @@ When creating a disk, you can specify its desired size, which must be equal to o
 Using a previously created project image [VirtualImage](../../../reference/cr/virtualimage.html), here’s an example command to determine the size of the unpacked image:
 
 ```bash
-d8 k get cvi ubuntu-22.04 -o wide
+d8 k get vi ubuntu-22-04 -o wide
 ```
 
 Example output:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
-ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
+ubuntu-22-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
 
 The required size is indicated in the UNPACKEDSIZE column and is 2.5Gi.
@@ -162,13 +169,13 @@ spec:
     # Specify a size greater than the unpacked image size.
     size: 10Gi
     # Substitute with your StorageClass name.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
   # The source from which the disk is created.
   dataSource:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22.04
+      name: ubuntu-22-04
 EOF
 ```
 
@@ -184,13 +191,13 @@ spec:
   # Disk storage parameters configuration.
   persistentVolumeClaim:
     # Substitute with your StorageClass name.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
   # The source from which the disk is created.
   dataSource:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22.04
+      name: ubuntu-22-04
 EOF
 ```
 

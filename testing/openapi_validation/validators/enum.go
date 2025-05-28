@@ -58,6 +58,8 @@ var (
 		"candi/openapi/cluster_configuration.yaml": {
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
+			// encryptionAlgorithm
+			"apiVersions[0].openAPISpec.properties.encryptionAlgorithm",
 		},
 		"global-hooks/openapi/values.yaml": {
 			// from openapispec
@@ -202,16 +204,6 @@ var (
 		"modules/402-ingress-nginx/crds/ingress-nginx.yaml": {
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items",
-		},
-		"modules/031-ceph-csi/crds/cephcsi.yaml": {
-			// ignore file system names: ext4, xfs, etc.
-			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-		},
-		"modules/031-ceph-csi/openapi/values.yaml": {
-			// ignore file system names: ext4, xfs, etc.
-			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 		},
 		"modules/380-metallb/openapi/config-values.yaml": {
 			// ignore enum values
