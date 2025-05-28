@@ -95,6 +95,7 @@ def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     if len(ca) == 0:
         return None
     try:
+        print("???", ca)
         x509.load_pem_x509_certificate(ca.encode(), default_backend())
         return None
     except Exception as e:
