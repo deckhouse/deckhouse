@@ -28,7 +28,7 @@ def main(ctx: hook.Context):
     dashboard_dict = {}
     ts = time.time()
 
-    for i in ctx.NewSnapshots.Get("dashboard_resources", []):
+    for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
         dashboard_name = dashboard.get('name', '')
         try:
