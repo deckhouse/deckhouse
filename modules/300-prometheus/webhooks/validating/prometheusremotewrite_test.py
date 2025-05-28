@@ -162,7 +162,6 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
     def test_should_allow_update_url(self):
         ctx = _prepare_prometheusremotewrites_class_binding_context({
             "url": "https://new.local",
-            "name": "new"
         })
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
@@ -170,7 +169,6 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
     def test_should_deny_double_url(self):
         ctx = _prepare_prometheusremotewrites_class_binding_context({
             "url": "https://test.local",
-            "name": "new"
         })
         out = hook.testrun(main, [ctx])
         expected_error = "Remote write URL https://test.local is already in use"
@@ -182,7 +180,6 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "tlsConfig": {
                 "ca": "-----BEGIN CERTIFICATE-----\nMIICCTCCAY6gAwIBAgINAgPluILrIPglJ209ZjAKBggqhkjOPQQDAzBHMQswCQYD\nVQQGEwJVUzEiMCAGA1UEChMZR29vZ2xlIFRydXN0IFNlcnZpY2VzIExMQzEUMBIG\nA1UEAxMLR1RTIFJvb3QgUjMwHhcNMTYwNjIyMDAwMDAwWhcNMzYwNjIyMDAwMDAw\nWjBHMQswCQYDVQQGEwJVUzEiMCAGA1UEChMZR29vZ2xlIFRydXN0IFNlcnZpY2Vz\nIExMQzEUMBIGA1UEAxMLR1RTIFJvb3QgUjMwdjAQBgcqhkjOPQIBBgUrgQQAIgNi\nAAQfTzOHMymKoYTey8chWEGJ6ladK0uFxh1MJ7x/JlFyb+Kf1qPKzEUURout736G\njOyxfi//qXGdGIRFBEFVbivqJn+7kAHjSxm65FSWRQmx1WyRRK2EE46ajA2ADDL2\n4CejQjBAMA4GA1UdDwEB/wQEAwIBhjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW\nBBTB8Sa6oC2uhYHP0/EqEr24Cmf9vDAKBggqhkjOPQQDAwNpADBmAjEA9uEglRR7\nVKOQFhG/hMjqb2sXnh5GmCCbn9MN2azTL818+FsuVbu/3ZL3pAzcMeGiAjEA/Jdm\nZuVDFhOD3cffL74UOO0BzrEXGhF16b0DjyZ+hOXJYKaV11RZt+cRLInUue4X\n-----END CERTIFICATE-----"
             },
-            "name": "new"
         })
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
@@ -193,7 +190,6 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "tlsConfig": {
                 "ca": "1111"
             },
-            "name": "new"
         })
         out = hook.testrun(main, [ctx])
         tests.assert_validation_deny(self, out, out.validations._data[0]["message"])

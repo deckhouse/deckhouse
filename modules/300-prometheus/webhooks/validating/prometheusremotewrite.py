@@ -80,14 +80,16 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
 # https://ratify.dev/docs/plugins/verifier/cosign/#scopes
 def check_verify_url_signatures(ctx: DotMap) -> Optional[str]:
     url = ctx.review.request.object.spec.url
-    filtered_name = ""
     if len(url) == 0:
         return "Url has empty string"
     if ctx.review.request.operation == "UPDATE":
         filtered_name = ctx.review.request.name
+        if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url and rw.filterResult.name != filtered_name]) > 0:
+            return f"Remote write URL {url} is already in use"
+    if ctx.review.request.operation == "CREATE":
+        if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url]) > 0:
+            return f"Remote write URL {url} is already in use"
     # search in all prometheusremote write if url alredy used
-    if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url and rw.filterResult.name != filtered_name]) > 0:
-        return f"Remote write URL {url} is already in use"
     return None
     
 def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
