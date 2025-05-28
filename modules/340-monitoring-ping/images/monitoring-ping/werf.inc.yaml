@@ -8,8 +8,8 @@ import:
     add: /src/monitoring-ping
     to: /monitoring-ping
     before: setup
-  - image: tools/setcap
-    add: /usr/bin/setcap
+  - image: tools/libcap
+    add: /usr/sbin/setcap
     to: /tools/setcap
     before: setup
 shell:
