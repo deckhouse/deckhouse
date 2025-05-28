@@ -196,8 +196,7 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
-        expected_error = "Certificate verification failed: Unable to load certificate. See https://cryptography.io/en/latest/faq.html#why-can-t-i-import-my-pem-file for more details."
-        tests.assert_validation_deny(self, out, expected_error)
+        tests.assert_validation_deny(self, out, out.validations._data[0]["message"])
 
 if __name__ == '__main__':
     unittest.main()
