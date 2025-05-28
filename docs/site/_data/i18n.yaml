@@ -233,10 +233,9 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
-  guides_intro_message:
-    en: Guides and Step-by-Step Walkthroughs
-    ru: Руководства и пошаговые инструкции
-
+  guides_description:
+    en: They will help you achieve a specific goal or solve a specific problem.
+    ru: Помогут достичь конкретной цели или решить конкретную задачу.
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

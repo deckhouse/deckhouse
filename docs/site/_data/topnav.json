@@ -46,12 +46,6 @@
             "url": "/community/",
             "target": "",
             "rel": ""
-          },
-          {
-            "title": "Guides",
-            "url": "/guides/",
-            "target": "",
-            "rel": ""
           }
         ]
       }
@@ -128,12 +122,6 @@
                 "rel": ""
               }
             ]
-          },
-          {
-            "title": "Направляющие",
-            "url": "/gadlines/",
-            "target": "",
-            "rel": ""
           }
         ]
       }
