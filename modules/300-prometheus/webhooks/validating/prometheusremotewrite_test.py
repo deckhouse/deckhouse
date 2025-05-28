@@ -53,7 +53,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
             "version": "v1",
             "resource": "prometheusremotewrites"
           }},
-          "name": "worker-test",
+          "name": "new",
           "operation": "UPDATE",
           "userInfo": {{
             "username": "kubernetes-admin",
@@ -138,11 +138,17 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
         }}
       }},
     "snapshots": {{
-        "prometheusremotewrite": [
+        "prometheusremotewrites": [
             {{
                 "filterResult": {{
                     "name": "test_double",
                     "url": "https://test.local"
+                }}
+            }},
+            {{
+                "filterResult": {{
+                    "name": "new",
+                    "url": "https://new.local"
                 }}
             }}
         ]
@@ -179,20 +185,18 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
-        print("!!!!", out.validations.__dict__)
         tests.assert_validation_allowed(self, out, None)
 
     def test_should_deny_invalid_ca(self):
         ctx = _prepare_prometheusremotewrites_class_binding_context({
-            "url": "https://test.local",
+            "url": "https://new.local",
             "tlsConfig": {
                 "ca": "1111"
             },
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
-        print("!!!!", out.validations.__dict__)
-        expected_error = "Certificate verification failed"
+        expected_error = "Certificate verification failed: Unable to load certificate. See https://cryptography.io/en/latest/faq.html#why-can-t-i-import-my-pem-file for more details."
         tests.assert_validation_deny(self, out, expected_error)
 
 if __name__ == '__main__':

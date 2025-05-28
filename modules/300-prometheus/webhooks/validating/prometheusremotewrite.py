@@ -86,7 +86,7 @@ def check_verify_url_signatures(ctx: DotMap) -> Optional[str]:
     if ctx.review.request.operation == "UPDATE":
         filtered_name = ctx.review.request.name
     # search in all prometheusremote write if url alredy used
-    if len([rw for rw in ctx.snapshots.prmetheusremotewrites if rw.spec.url == url and rw.name != filtered_name]) > 0:
+    if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url and rw.filterResult.name != filtered_name]) > 0:
         return f"Remote write URL {url} is already in use"
     return None
     
@@ -95,7 +95,6 @@ def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     if len(ca) == 0:
         return None
     try:
-        print("???", ca)
         x509.load_pem_x509_certificate(ca.encode(), default_backend())
         return None
     except Exception as e:
