@@ -64,7 +64,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 			remotePath = remotePath + "/" + filepath.Base(srcPath)
 		}
 
-		if err := scpClient.CopyFile(context.Background(), localFile, remotePath, "0755"); err != nil {
+		if err := scpClient.CopyFile(ctx, localFile, remotePath, "0755"); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
 	} else {
@@ -138,7 +138,7 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
-		if err := scpClient.CopyFromRemote(context.Background(), localFile, remotePath); err != nil {
+		if err := scpClient.CopyFromRemote(ctx, localFile, remotePath); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
 	} else {

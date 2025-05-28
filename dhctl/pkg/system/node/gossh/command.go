@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -78,6 +79,10 @@ type SSHCommand struct {
 
 	cmd     string
 	timeout time.Duration
+
+	ctx       context.Context
+	Cancel    func() error
+	ctxResult <-chan error
 }
 
 func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
@@ -132,7 +137,7 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
-	err = c.session.Start(command)
+	err = c.start()
 	if err != nil {
 		return err
 	}
@@ -140,7 +145,7 @@ func (c *SSHCommand) Start() error {
 	if c.WaitHandler != nil {
 		c.ProcessWait()
 	} else {
-		err = c.session.Wait()
+		err = c.wait()
 		if err != nil {
 			return err
 		}
@@ -152,6 +157,73 @@ func (c *SSHCommand) Start() error {
 	return nil
 }
 
+func (c *SSHCommand) start() error {
+	if c.ctx != nil {
+		select {
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		default:
+		}
+	}
+
+	if c.Cancel != nil && c.ctx != nil && c.ctx.Done() != nil {
+		resultc := make(chan error)
+		c.ctxResult = resultc
+		go c.watchCtx(resultc)
+	}
+
+	command := c.cmd + " " + strings.Join(c.Args, " ")
+
+	return c.session.Start(command)
+}
+
+func (c *SSHCommand) watchCtx(resultc chan<- error) {
+	<-c.ctx.Done()
+
+	var err error
+	if c.Cancel != nil {
+		if interruptErr := c.Cancel(); interruptErr == nil {
+			// We appear to have successfully interrupted the command, so any
+			// program behavior from this point may be due to ctx even if the
+			// command exits with code 0.
+			err = c.ctx.Err()
+		} else if errors.Is(interruptErr, os.ErrProcessDone) {
+			// The process already finished: we just didn't notice it yet.
+			// (Perhaps c.Wait hadn't been called, or perhaps it happened to race with
+			// c.ctx being canceled.) Don't inject a needless error.
+		} else {
+			err = interruptErr
+		}
+	}
+
+	resultc <- err
+}
+
+func (c *SSHCommand) wait() error {
+	waitCh := make(chan (error))
+
+	go func() {
+		waitCh <- c.session.Wait()
+	}()
+
+	select {
+	case err := <-c.ctxResult:
+		if c.ctxResult != nil {
+			if err == context.Canceled {
+				return nil
+			} else if err == context.DeadlineExceeded {
+				return nil
+			}
+		}
+	case err := <-waitCh:
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func (c *SSHCommand) ProcessWait() {
 	waitErrCh := make(chan error, 1)
 	c.waitCh = make(chan struct{}, 1)
@@ -159,7 +231,7 @@ func (c *SSHCommand) ProcessWait() {
 
 	// wait for process in go routine
 	go func() {
-		waitErrCh <- c.session.Wait()
+		waitErrCh <- c.wait()
 	}()
 
 	go func() {
@@ -208,6 +280,7 @@ func (c *SSHCommand) ProcessWait() {
 
 func (c *SSHCommand) Run(ctx context.Context) error {
 	log.DebugF("executor: run '%s'\n", c.cmd)
+	c.Cmd(ctx)
 	defer c.session.Close()
 
 	err := c.Start()
@@ -266,6 +339,7 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 	)
 
 	c.cmd = sudoCmdLine
+	c.Cmd(ctx)
 
 	c.WithMatchers(
 		process.NewByteSequenceMatcher("SudoPassword"),
@@ -312,28 +386,49 @@ func (c *SSHCommand) WithStderrHandler(handler func(string)) {
 	c.stderrHandler = handler
 }
 
-func (c *SSHCommand) Cmd(ctx context.Context) {}
+func (c *SSHCommand) Cmd(ctx context.Context) {
+	if ctx != nil {
+		c.ctx = ctx
+	}
+	c.Cancel = func() error {
+		return c.session.Signal(ssh.SIGINT)
+	}
+}
 
 func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
+	c.Cmd(ctx)
 	defer c.session.Close()
 
-	command := c.cmd + " " + strings.Join(c.Args, " ")
-	output, err := c.session.Output(command)
+	var o bytes.Buffer
+	var e bytes.Buffer
+	c.session.Stdout = &o
+	c.session.Stderr = &e
+	err := c.start()
 	if err != nil {
-		return output, nil, fmt.Errorf("execute command '%s': %w", c.Name, err)
+		return o.Bytes(), e.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
-	return output, nil, nil
+
+	err = c.wait()
+
+	return o.Bytes(), e.Bytes(), err
 }
 
 func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
+	c.Cmd(ctx)
 	defer c.session.Close()
 
-	command := c.cmd + " " + strings.Join(c.Args, " ")
-	output, err := c.session.CombinedOutput(command)
+	var o bytes.Buffer
+	c.session.Stdout = &o
+	c.session.Stderr = &o
+
+	err := c.start()
 	if err != nil {
-		return output, fmt.Errorf("execute command '%s': %w", c.Name, err)
+		return o.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
-	return output, nil
+
+	err = c.wait()
+
+	return o.Bytes(), err
 }
 
 func (c *SSHCommand) WithTimeout(timeout time.Duration) {
