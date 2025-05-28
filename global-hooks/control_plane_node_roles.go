@@ -15,8 +15,6 @@
 package hooks
 
 import (
-	"fmt"
-
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -43,24 +41,25 @@ var (
 // This hook adds node-role.kubernetes.io/control-plane label to all nodes with
 // node-role.kubernetes.io/master label. And vice versa.
 func applyBothNodeRoles(input *go_hook.HookInput) error {
-	masters, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, "master_nodes")
-	if err != nil {
-		return fmt.Errorf("unmarshal master_nodes: %w", err)
+	nodes := make([]labeledNode, 0)
+	for _, snapshotName := range []string{"master_nodes", "control_plane_nodes"} {
+		snapshots, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, snapshotName)
+		if err != nil {
+			return err
+		}
+
+		nodes = append(nodes, snapshots...)
 	}
 
-	controlPlanes, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, "control_plane_nodes")
-	if err != nil {
-		return fmt.Errorf("unmarshal control_plane_nodes: %w", err)
-	}
-	allNodes := masters
-	allNodes = append(allNodes, controlPlanes...)
+	// snapshots := input.Snapshots["master_nodes"]
+	// snapshots = append(snapshots, input.Snapshots["control_plane_nodes"]...)
 
-	for _, node := range allNodes {
+	for _, node := range nodes {
 		if node.MasterLabelExists && node.ControlPlaneLabelExists {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(roleLabelsPatch, "pv1", "Node", "", node.Name)
+		input.PatchCollector.MergePatch(roleLabelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil
