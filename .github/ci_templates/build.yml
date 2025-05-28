@@ -59,7 +59,7 @@ steps:
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_git_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
     id: build
