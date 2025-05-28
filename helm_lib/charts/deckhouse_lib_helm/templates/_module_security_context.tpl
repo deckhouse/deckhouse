@@ -79,12 +79,10 @@ Usage examples
 {{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" (dict "ro" false) }}
 
 # read-only + extra caps
-{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible"
-     (dict "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" (dict "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
 
 # read/write + extra caps
-{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible"
-     (dict "ro" false "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
 ----------------------------------------------------------------- */ -}}
 {{- /* SecurityContext for Deckhouse UID/GID 64535, PSS Restricted
      Optional keys:

@@ -49,8 +49,8 @@ import:
   add: /src/stale-dns-connections-cleaner
   to: /stale-dns-connections-cleaner
   before: install
-  owner: root
-  group: root
+  owner: 64535
+  group: 64535
 imageSpec:
   config:
     entrypoint: ["/stale-dns-connections-cleaner"]
