@@ -33,7 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const taskCalculatorServiceName = "task-calculator"
+const (
+	taskCalculatorServiceName = "task-calculator"
+	maxMinorVersionDiffForLTS = 10
+)
 
 type TaskCalculator struct {
 	k8sclient client.Client
@@ -223,8 +226,6 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					DeployedReleaseInfo: deployedReleaseInfo,
 				}, nil
 			}
-
-			const maxMinorVersionDiffForLTS = 10
 
 			// it must await if deployed release has minor version more than acceptable LTS channel limitation
 			if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
