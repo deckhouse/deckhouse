@@ -231,8 +231,6 @@ securityContext:
     drop:
     - ALL
     add: {{ index . 1 | toJson }}
-  seccompProfile:
-    type: RuntimeDefault
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} */ -}}
