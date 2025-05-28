@@ -1,4 +1,3 @@
-{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-ns.deckhouse.io" }}
 ---
@@ -250,5 +249,4 @@ spec:
   policyName: {{ $policyName }}
   validationActions: [Deny, Audit]
 
-{{- end }}
 {{- end }}

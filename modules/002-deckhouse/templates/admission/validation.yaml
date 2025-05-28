@@ -1,7 +1,10 @@
 {{/* KubeDNS is not installed on the bootstrap phase and kube-apiserver will fail on a DNS resolution request */}}
 {{/*   because it doesn't know `deckhouse.d8-system.svc` address yet.*/}}
 {{- if .Values.global.clusterIsBootstrapped }}
+  {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1
+  {{- else if semverCompare "= 1.29" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1  
 kind: ValidatingWebhookConfiguration
 metadata:
   name: deckhouse-webhook
