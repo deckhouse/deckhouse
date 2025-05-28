@@ -294,10 +294,6 @@ dhctl:
       pull_request: https://github.com/deckhouse/deckhouse/pull/11926
 docs:
   features:
-    - summary: >-
-        Added NGINX configuration to proxy `deckhouse-cli-trdl` through the frontend, enabling
-        downloads of Deckhouse CLI artifacts via deckhouse.ru.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/12837
     - summary: Refactor site deployments.
       pull_request: https://github.com/deckhouse/deckhouse/pull/12654
     - summary: >-
