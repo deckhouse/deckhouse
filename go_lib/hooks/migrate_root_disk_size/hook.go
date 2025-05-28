@@ -264,7 +264,7 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}, oldSize in
 func needMigrateForDeckhouseInstallVersion(snaps pkg.Snapshots) (bool, error) {
 	installVersions, err := sdkobjectpatch.UnmarshalToStruct[string](snaps, "install_version")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to unmarshal install_version snapshot: %w", err)
 	}
 
 	if len(installVersions) == 0 {

@@ -120,7 +120,7 @@ func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Containe
 
 	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[dockerConfig](input.NewSnapshots, "trivy_provider_secrets")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal trivy_provider_secrets snapshot: %w", err)
 	}
 
 	for _, auth := range authSnaps {

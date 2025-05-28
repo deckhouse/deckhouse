@@ -83,7 +83,7 @@ func setCiliumMode(input *go_hook.HookInput) error {
 	// if secret exists, use it
 	ciliumConfigs, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
 	if len(ciliumConfigs) > 0 {

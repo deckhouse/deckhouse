@@ -206,7 +206,10 @@ func checkCni(input *go_hook.HookInput) error {
 	}
 
 	deckhouseCniMCs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
-	if err != nil || len(deckhouseCniMCs) == 0 {
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
+	if len(deckhouseCniMCs) == 0 {
 		needUpdateMC = true
 	} else {
 		desiredCNIModuleConfig.Spec.Settings = deckhouseCniMCs[0].DeepCopy().Spec.Settings

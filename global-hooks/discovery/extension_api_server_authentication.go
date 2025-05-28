@@ -52,7 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoveryExtentsionAPIServerCA(input *go_hook.HookInput) error {
 	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "extension_api_server_authentication")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal extension_api_server_authentication snapshot: %w", err)
 	}
 	if len(intervalScrapSnap) == 0 {
 		return fmt.Errorf("extension api server authentication not found")

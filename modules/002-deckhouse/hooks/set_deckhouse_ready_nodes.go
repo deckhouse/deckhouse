@@ -125,12 +125,12 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 	pods, err := sdkobjectpatch.UnmarshalToStruct[statusPod](input.NewSnapshots, "control-plane-pods")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal control-plane-pods snapshot: %w", err)
 	}
 
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[statusNode](input.NewSnapshots, "control-plane-nodes")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal control-plane-nodes snapshot: %w", err)
 	}
 
 	if len(nodes) == 0 {

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -128,7 +129,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 
 	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal %s snapshot: %w", readyNotMasterNodesSnapName, err)
 	}
 
 	for _, ready := range readyNodes {

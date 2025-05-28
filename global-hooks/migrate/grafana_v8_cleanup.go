@@ -19,6 +19,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -181,7 +183,7 @@ func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
 	for _, resource := range []string{"grafana-v8-deployments", "grafana-v8-services", "grafana-v8-ingresses", "grafana-v8-pdb"} {
 		snapshots, err := sdkobjectpatch.UnmarshalToStruct[GrafanaV8Resource](input.NewSnapshots, resource)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal %s snapshot: %w", resource, err)
 		}
 
 		resources = append(resources, snapshots)

@@ -173,7 +173,10 @@ func checkCni(input *go_hook.HookInput) error {
 	needUpdateMC := false
 
 	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
-	if err != nil || len(cniSecrets) == 0 || (cniSecrets[0] == cniSecretStruct{}) {
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
+	}
+	if len(cniSecrets) == 0 || (cniSecrets[0] == cniSecretStruct{}) {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -202,7 +205,10 @@ func checkCni(input *go_hook.HookInput) error {
 	}
 
 	cniMCs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
-	if err != nil || len(cniMCs) == 0 {
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
+	if len(cniMCs) == 0 {
 		needUpdateMC = true
 	} else {
 		desiredCNIModuleConfig.Spec.Settings = cniMCs[0].DeepCopy().Spec.Settings

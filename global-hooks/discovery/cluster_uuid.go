@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -77,7 +79,7 @@ func discoveryClusterUUID(input *go_hook.HookInput) error {
 
 	uuidSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cluster_uuid")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal cluster_uuid snapshot: %w", err)
 	}
 
 	var clusterUUID string

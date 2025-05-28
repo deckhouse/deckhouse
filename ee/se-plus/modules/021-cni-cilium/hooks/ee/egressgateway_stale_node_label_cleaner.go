@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleEgressNodeCleanup(input *go_hook.HookInput) error {
 	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
 	}
 	// Make maps all NodeSelector's EgressGateway's
 	nodeSelectors := make(map[string]struct{})
@@ -51,7 +51,7 @@ func handleEgressNodeCleanup(input *go_hook.HookInput) error {
 
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
 	}
 	for _, node := range nodes {
 		// Check if a node matches at least one NodeSelector

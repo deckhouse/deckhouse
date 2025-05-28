@@ -128,7 +128,7 @@ func handleCheckEtcdPeers(input *go_hook.HookInput, dc dependency.Container) err
 	}
 	etcdPods, err := sdkobjectpatch.UnmarshalToStruct[etcdPod](input.NewSnapshots, "etcd_pods")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal etcd_pods snapshot: %w", err)
 	}
 
 	if len(etcdPods) == 0 {

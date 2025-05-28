@@ -228,7 +228,7 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 
 	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, kubeServiceSnap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeServiceSnap, err)
 	}
 
 	if len(serviceSnap) > 0 {
@@ -260,7 +260,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 
 	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, kubeEndpointsSnap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSnap, err)
 	}
 
 	var endpoints []string

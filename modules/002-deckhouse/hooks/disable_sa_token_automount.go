@@ -95,7 +95,7 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
 	sas, err := sdkobjectpatch.UnmarshalToStruct[SA](input.NewSnapshots, "default-sa")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal default-sa snapshot: %w", err)
 	}
 
 	for _, sa := range sas {

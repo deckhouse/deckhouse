@@ -69,7 +69,7 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 
 	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "deckhouse")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}
 
 	if len(deckhouseImages) != 1 {

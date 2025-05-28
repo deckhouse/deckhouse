@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -65,7 +66,7 @@ func applyDefaultStorageClassFilter(obj *unstructured.Unstructured) (go_hook.Fil
 func discoveryDefaultStorageClass(input *go_hook.HookInput) error {
 	storageClassesSnap, err := sdkobjectpatch.UnmarshalToStruct[storageClass](input.NewSnapshots, "default_sc")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
 	}
 
 	defaultStorageClass := ""

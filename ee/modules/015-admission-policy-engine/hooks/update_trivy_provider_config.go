@@ -96,7 +96,7 @@ func updateConfig(input *go_hook.HookInput) error {
 
 		snaps, err := sdkobjectpatch.UnmarshalToStruct[trivySettings](input.NewSnapshots, "trivy_config")
 		if err != nil {
-			return fmt.Errorf("unmarshal to struct: %v", err)
+			return fmt.Errorf("failed to unmarshal trivy_config snapshot: %w", err)
 		}
 
 		if len(snaps) != 0 {

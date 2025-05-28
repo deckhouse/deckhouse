@@ -187,18 +187,17 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 // effective storage class is the target storage class. If it changes, the PVC will be recreated.
-func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, currentStorageClass string) string {
+func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, currentStorageClass string) (string, error) {
 	var effectiveStorageClass string
 
 	defaultSCs, err := sdkobjectpatch.UnmarshalToStruct[DefaultStorageClass](input.NewSnapshots, "default_sc")
 	if err != nil {
-		input.Logger.Warn("Unable to unmarshal default storage classes", log.Err(err))
-	} else {
-		for _, sc := range defaultSCs {
-			if sc.IsDefault {
-				effectiveStorageClass = sc.Name
-				break
-			}
+		return "", fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
+	}
+	for _, sc := range defaultSCs {
+		if sc.IsDefault {
+			effectiveStorageClass = sc.Name
+			break
 		}
 	}
 
@@ -244,7 +243,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		},
 	)
 
-	return effectiveStorageClass
+	return effectiveStorageClass, nil
 }
 
 func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Container, args Args) error {
@@ -294,8 +293,10 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		currentStorageClass = pvcs[0].StorageClassName
 	}
 
-	effectiveStorageClass := calculateEffectiveStorageClass(input, args, currentStorageClass)
-
+	effectiveStorageClass, err := calculateEffectiveStorageClass(input, args, currentStorageClass)
+	if err != nil {
+		return err
+	}
 	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
 		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
 		if wasPvc {

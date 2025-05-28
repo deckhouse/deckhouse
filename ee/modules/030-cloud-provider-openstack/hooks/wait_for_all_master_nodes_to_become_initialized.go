@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleAllMasterNodes(input *go_hook.HookInput) error {
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[uninitializedNode](input.NewSnapshots, "nodes")
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal nodes: %v", err)
+		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
 	}
 
 	totalCount := len(nodes)

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"log/slog"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -27,6 +28,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -161,6 +163,7 @@ func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string)
 	for _, s := range snapshotsNames {
 		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, s)
 		if err != nil {
+			input.Logger.Error("failed to unmarshal snapshot", slog.String("snapshot", s), log.Err(err))
 			continue
 		}
 		if len(subnetsSnap) > 0 {

@@ -22,6 +22,8 @@ TODO: remove after deckhouse 1.68
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -54,7 +56,7 @@ func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 func handleClusterConfigurationLabel(input *go_hook.HookInput) error {
 	snap, err := sdkobjectpatch.UnmarshalToStruct[map[string]string](input.NewSnapshots, "clusterConfiguration")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}
 	if len(snap) == 0 {
 		return nil

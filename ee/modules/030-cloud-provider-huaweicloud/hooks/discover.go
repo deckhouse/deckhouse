@@ -26,7 +26,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -144,7 +143,9 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderHuaweicloud.internal.providerDiscoveryData", discoveryData)
 
-	handleDiscoveryDataVolumeTypes(input, discoveryData.VolumeTypes)
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.VolumeTypes); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -152,7 +153,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	volumeTypes []cloudDataV1.HuaweiCloudVolumeType,
-) {
+) error {
 	storageClassStorageDomain := make(map[string]cloudDataV1.HuaweiCloudVolumeType, len(volumeTypes))
 
 	for _, vt := range volumeTypes {
@@ -178,8 +179,7 @@ func handleDiscoveryDataVolumeTypes(
 	storageClassSnapshots := make(map[string]storage.StorageClass)
 	sclasses, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
-		input.Logger.Error("failed to unmarhsal storage classes", log.Err(err))
-		return
+		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
 
 	for _, s := range sclasses {
@@ -207,6 +207,8 @@ func handleDiscoveryDataVolumeTypes(
 	input.Logger.Info("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data", slog.Any("data", storageClasses))
 
 	setStorageClassesValues(input, storageClasses)
+
+	return nil
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

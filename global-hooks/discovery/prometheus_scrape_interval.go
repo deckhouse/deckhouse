@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -53,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoveryPrometheusScrapeInterval(input *go_hook.HookInput) error {
 	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "prometheus_scrape_interval")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal prometheus_scrape_interval snapshot: %w", err)
 	}
 
 	intervalInSeconds := 30

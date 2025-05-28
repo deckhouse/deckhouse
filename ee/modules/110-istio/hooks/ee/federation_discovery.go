@@ -128,7 +128,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 	federations, err := sdkobjectpatch.UnmarshalToStruct[IstioFederationDiscoveryCrdInfo](input.NewSnapshots, "federations")
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal federations: %w", err)
+		return fmt.Errorf("failed to unmarshal federations snapshot: %w", err)
 	}
 
 	for _, federationInfo := range federations {

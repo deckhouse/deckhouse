@@ -153,7 +153,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secrets, err := sdkobjectpatch.UnmarshalToStruct[Secret](input.NewSnapshots, "secrets")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal secrets snapshot: %w", err)
 	}
 	if len(secrets) == 0 {
 		input.Logger.Info("No Secrets received, skipping execution")
@@ -162,7 +162,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 
 	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}
 	if len(namespaces) == 0 {
 		input.Logger.Info("No Namespaces received, skipping execution")

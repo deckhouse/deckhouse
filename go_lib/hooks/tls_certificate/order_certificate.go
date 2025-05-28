@@ -178,7 +178,7 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
 		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.NewSnapshots, "certificateSecrets")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal certificateSecrets snapshot: %w", err)
 		}
 		if len(secrets) != 0 {
 			var secret CertificateSecret

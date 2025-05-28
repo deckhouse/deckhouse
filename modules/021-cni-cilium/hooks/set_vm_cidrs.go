@@ -58,7 +58,7 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func applyVMCIDRs(input *go_hook.HookInput) error {
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[[]any](input.NewSnapshots, "vm-cidrs")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal vm-cidrs snapshot: %w", err)
 	}
 	if len(snaps) == 1 {
 		input.Values.Set("cniCilium.internal.vmCIDRs", snaps[0])

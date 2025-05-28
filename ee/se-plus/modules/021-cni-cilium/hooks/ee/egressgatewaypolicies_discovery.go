@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -55,7 +57,7 @@ func handleEgressGatewayPolicies(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_egress_gateway_policy")
 	egressGatewayPoliciesSnaps, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayPolicyInfo](input.NewSnapshots, "egressgatewaypolicies")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal egressgatewaypolicies snapshot: %w", err)
 	}
 	input.Values.Set("cniCilium.internal.egressGatewayPolicies", egressGatewayPoliciesSnaps)
 

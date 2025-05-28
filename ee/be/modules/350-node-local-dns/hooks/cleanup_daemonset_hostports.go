@@ -65,7 +65,7 @@ func hostNetworkFalse(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func handleHostNetworkFalseWithHostPorts(input *go_hook.HookInput, dc dependency.Container) error {
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "daemonset")
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("failed to unmarshal daemonset snapshot: %w", err)
 	}
 
 	if len(snaps) == 0 {

@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleVolumeAttachments(input *go_hook.HookInput) error {
 	snap, err := sdkobjectpatch.UnmarshalToStruct[volumeAttachment](input.NewSnapshots, "finalizers")
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("failed to unmarshal finalizers snapshot: %w", err)
 	}
 	if len(snap) == 0 {
 		return nil

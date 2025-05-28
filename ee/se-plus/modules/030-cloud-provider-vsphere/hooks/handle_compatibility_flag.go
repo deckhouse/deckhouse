@@ -73,7 +73,7 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 
 	storageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
 	if err != nil {
-		return fmt.Errorf("unmarshal storage classes: %v", err)
+		return fmt.Errorf("failed to unmarshal module_storageclasses snapshot: %w", err)
 	}
 
 	for _, sc := range storageClasses {

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -52,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleValidationKinds(input *go_hook.HookInput, _ dependency.Container) error {
 	resourcesRaw, err := sdkobjectpatch.UnmarshalToStruct[matchData](input.NewSnapshots, "constraint-exporter-cm")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal constraint-exporter-cm snapshot: %w", err)
 	}
 
 	if len(resourcesRaw) == 0 {

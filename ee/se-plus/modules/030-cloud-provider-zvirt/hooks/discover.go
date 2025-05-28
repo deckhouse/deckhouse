@@ -82,7 +82,7 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	cloudSecrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "cloud_provider_discovery_data")
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("failed to unmarshal cloud_provider_discovery_data snapshot: %w", err)
 	}
 
 	if len(cloudSecrets) == 0 {
@@ -90,7 +90,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 		if err != nil {
-			return fmt.Errorf("unmarshal to struct storage_classes: %v", err)
+			return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 		}
 
 		if len(storageClassesSnaps) == 0 {
@@ -135,7 +135,9 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
 
-	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageDomains)
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.StorageDomains); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -143,7 +145,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	storageDomains []cloudDataV1.ZvirtStorageDomain,
-) {
+) error {
 	storageClassStorageDomain := make(map[string]string, len(storageDomains))
 
 	for _, domain := range storageDomains {
@@ -168,8 +170,7 @@ func handleDiscoveryDataVolumeTypes(
 
 	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
-		input.Logger.Errorf("failed to unmarshal storage_classes snapshots: %v", err)
-		storageClassSnapshots = nil
+		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
 
 	storageClassMap := make(map[string]*storage.StorageClass, len(storageClassSnapshots))
@@ -198,6 +199,8 @@ func handleDiscoveryDataVolumeTypes(
 	input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
 	setStorageClassesValues(input, storageClasses)
+
+	return nil
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

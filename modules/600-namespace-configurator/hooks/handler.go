@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"regexp"
 
@@ -73,7 +74,7 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}
 	if len(namespaces) == 0 {
 		input.Logger.Debug("Namespaces not found. Skip")
@@ -152,7 +153,7 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
 	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}
 
 	for _, ns := range namespaces {

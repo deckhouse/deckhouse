@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -42,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleOP(input *go_hook.HookInput) error {
 	ops, err := sdkobjectpatch.UnmarshalToStruct[operationPolicy](input.NewSnapshots, "operation-policies")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal operation-policies snapshot: %w", err)
 	}
 
 	data, err := json.Marshal(ops)

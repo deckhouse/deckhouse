@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
@@ -84,7 +85,7 @@ func getDefaultPolicy(input *go_hook.HookInput) string {
 
 	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_data")
 	if err != nil {
-		input.Logger.Warnf("failed to unmarshal install_data snapshot: %v", err)
+		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
 		return "Privileged"
 	}
 

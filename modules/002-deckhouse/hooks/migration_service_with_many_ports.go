@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -68,7 +70,7 @@ func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterRe
 func patchServiceWithManyPorts(input *go_hook.HookInput) error {
 	services, err := sdkobjectpatch.UnmarshalToStruct[serviceInfo](input.NewSnapshots, "service_helm_fix")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal service_helm_fix snapshot: %w", err)
 	}
 
 	for _, svc := range services {

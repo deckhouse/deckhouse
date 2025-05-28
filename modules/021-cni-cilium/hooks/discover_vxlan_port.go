@@ -129,7 +129,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 	var installationStatus = New
 	cms, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.NewSnapshots, "cilium-configmap")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal cilium-configmap snapshot: %w", err)
 	}
 	if len(cms) > 0 {
 		installationStatus = Existing

@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +48,7 @@ func applyBothNodeRoles(input *go_hook.HookInput) error {
 	for _, snapshotName := range []string{"master_nodes", "control_plane_nodes"} {
 		snapshots, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, snapshotName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal %s snapshot: %w", snapshotName, err)
 		}
 
 		nodes = append(nodes, snapshots...)

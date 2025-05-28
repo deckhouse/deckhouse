@@ -84,7 +84,7 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.NewSnapshots, imageModulesD8RegistryConfSnap)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal %s snapshot: %w", imageModulesD8RegistryConfSnap, err)
 	}
 
 	if len(registryConfSnap) == 0 {

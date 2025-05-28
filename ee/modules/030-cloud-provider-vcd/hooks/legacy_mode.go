@@ -109,7 +109,7 @@ func applyCloudProviderDiscoveryDataSecretVCDAPIVersionFilter(obj *unstructured.
 func handleLegacyMode(input *go_hook.HookInput) error {
 	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[*bool](input.NewSnapshots, "legacy_mode")
 	if err != nil {
-		return fmt.Errorf("failted to unmarshal snapshots %w", err)
+		return fmt.Errorf("failed to unmarshal legacy_mode snapshot: %w", err)
 	}
 
 	if len(legacyModeBools) == 0 {
@@ -127,7 +127,7 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 
 	vcdAPIVers, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "vcd_api_version")
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal snapshots: %w", err)
+		return fmt.Errorf("failed to unmarshal vcd_api_version snapshot: %w", err)
 	}
 
 	if len(vcdAPIVers) == 0 {

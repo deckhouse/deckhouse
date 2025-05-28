@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -76,8 +77,7 @@ func handleActions(input *go_hook.HookInput) error {
 
 	labels, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "pss_enforcement_actions")
 	if err != nil {
-		input.Logger.Warnf("failed to unmarshal pss_enforcement_actions snapshot: %v", err)
-		return err
+		return fmt.Errorf("failed to unmarshal pss_enforcement_actions snapshot: %w", err)
 	}
 
 	for _, label := range labels {

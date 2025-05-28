@@ -17,6 +17,7 @@ limitations under the License.
 package tls_certificate
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -208,7 +209,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 
 		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, SnapshotKey)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal secret snapshot: %w", err)
 		}
 
 		if len(certs) == 0 {

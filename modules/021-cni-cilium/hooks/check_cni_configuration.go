@@ -173,7 +173,7 @@ func checkCni(input *go_hook.HookInput) error {
 	needUpdateMC := false
 	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
 	// Let's check secret.
@@ -213,7 +213,7 @@ func checkCni(input *go_hook.HookInput) error {
 	}
 	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
 	}
 	// Let's check what mc exist and explicitly enabled.
 	if len(cniModuleConfigs) == 0 {

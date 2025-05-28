@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -47,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleSP(input *go_hook.HookInput) error {
 	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal security-policies snapshot: %w", err)
 	}
 
 	refs := make(map[string]set.Set)
