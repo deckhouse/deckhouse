@@ -142,3 +142,12 @@ Scheme of Deckhouse installation in a private environment:<br />
 </li>
 {%- endif %}
 </ol>
+
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" %}
+{% alert level="warning" %}
+The recommendations above provide the minimum resources required for the initial deployment of a cluster with one master node and one worker node.
+This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read [the recommendations for preparing
+for production](../../guides/production.html) and [the instructions](../../guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
+for the operation of the future cluster.
+{% endalert %}
+{%- endif %}

@@ -51,7 +51,11 @@ shell:
   - |
     jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
   - |
-    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json |
+    jq '(.en[] | select(.title == "Kubernetes Platform").items[] | select(.url == "/products/kubernetes-platform/guides/production.html").url) = "/products/kubernetes-platform/guides/"' |
+    jq '(.en[] | select(.title == "Kubernetes Platform").items[] | select(.url == "/products/kubernetes-platform/guides/").title) = "Guides"' |
+    jq '(.ru[] | select(.title == "Kubernetes Platform").items[] | select(.url == "/products/kubernetes-platform/guides/production.html").url) = "/products/kubernetes-platform/guides/"' |
+    jq '(.ru[] | select(.title == "Kubernetes Platform").items[] | select(.url == "/products/kubernetes-platform/guides/").title) = "Руководства"' > /data/topnav-l2-products.json
   - |
     jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
   - |
