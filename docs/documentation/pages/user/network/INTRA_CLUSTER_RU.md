@@ -1,6 +1,6 @@
 ---
 title: "Внутрикластерное взаимодействие"
-permalink: ru/user/intra-cluster.html
+permalink: ru/user/network/intra-cluster.html
 lang: ru
 ---
 

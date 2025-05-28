@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/security/kuma-and-av-software.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) поддерживает интеграцию с [Kaspersky Unified Monitoring and Analysis Platform (KUMA)](https://go.kaspersky.com/ru-kuma),
+Deckhouse Kubernetes Platform (DKP) поддерживает интеграцию с [Kaspersky Unified Monitoring and Analysis Platform (KUMA)](https://lp.kaspersky.com/ru/kuma/),
 единой системой мониторинга и анализа от «Лаборатории Касперского».
 Это позволяет отправлять события безопасности и журналы аудита в централизованную SIEM-систему для дальнейшего анализа.
 
@@ -37,7 +37,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
       encoding:
         codec: "JSON"
   ---
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1alpha2
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
@@ -68,7 +68,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
       encoding:
         codec: "JSON"
   ---
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1alpha2
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
@@ -102,7 +102,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
       encoding:
         codec: "CEF"
   ---
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1alpha2
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
@@ -137,7 +137,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
       encoding:
         codec: "Syslog"
   ---
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1alpha2
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
@@ -168,7 +168,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
         - kafka-address:9092 # Замените при настройке.
       topic: k8s-logs
   ---
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1alpha2
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
