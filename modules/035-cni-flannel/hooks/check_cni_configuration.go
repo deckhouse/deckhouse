@@ -167,6 +167,7 @@ func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
 }
 
 func checkCni(input *go_hook.HookInput) error {
+	// Clear a metrics and reqKey
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
@@ -177,19 +178,27 @@ func checkCni(input *go_hook.HookInput) error {
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
-	if len(cniSecrets) == 0 || (cniSecrets[0] == (cniSecretStruct{})) {
+	// Let's check secret.
+	// Secret d8-cni-configuration does not exist or exist but contain nil.
+	// This means that the current CNI module is enabled and configured via mc, nothing to do.
+	if len(cniSecrets) == 0 {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
-	cniSecret := cniSecrets[0]
+	// Secret d8-cni-configuration exist but key "cni" does not equal "flannel".
+	// This means that the current CNI module is enabled and configured via mc, nothing to do.
+	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
 	if cniSecret.cni != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
+	// Secret d8-cni-configuration exist, key "cni" eq "flannel".
+
+	// Prepare desiredCNIModuleConfig
 	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleConfig",
@@ -209,13 +218,18 @@ func checkCni(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
 	}
+	// Let's check what mc exist and explicitly enabled.
 	if len(deckhouseCniMCs) == 0 {
 		needUpdateMC = true
 	} else {
-		desiredCNIModuleConfig.Spec.Settings = deckhouseCniMCs[0].DeepCopy().Spec.Settings
+		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
+		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
+	// Skip comparison if in secret d8-cni-configuration key "flannel" does not exist or empty.
 	if cniSecret.flannel != (flannelConfigStruct{}) {
+		// Secret d8-cni-configuration exist, key "cni" eq "flannel" and key "flannel" does not empty.
+		// Let's compare secret with module configuration.
 		switch cniSecret.flannel.PodNetworkMode {
 		case "host-gw":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
@@ -265,6 +279,7 @@ func checkCni(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	// All configuration settled, nothing to do.
 	setCNIMiscMetricAndReq(input, false)
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 	return nil

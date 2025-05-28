@@ -163,7 +163,7 @@ func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string)
 	for _, s := range snapshotsNames {
 		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, s)
 		if err != nil {
-			input.Logger.Error("failed to unmarshal snapshot", slog.String("snapshot", s), log.Err(err))
+			input.Logger.Warn("failed to unmarshal snapshot", slog.String("snapshot", s), log.Err(err))
 			continue
 		}
 		if len(subnetsSnap) > 0 {

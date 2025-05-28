@@ -241,6 +241,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range nodes {
+		// Node is NotReady or cordoned
 		if !node.IsReady || node.IsCordoned {
 			if node.IsMemberLabeled {
 				nodesToUnlabel[node.Name] = appendToSliceUniqString(nodesToUnlabel[node.Name], memberNodeLabelKey)
@@ -254,6 +255,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		var nodeMatchedAnyEG bool
 
 		for egName, egState := range EgressGatewayStates {
+			// node's labels match with egress gateway nodeSelector
 			if nodeMatchesNodeSelector(node.Labels, egState.NodeSelector) {
 				nodeMatchedAnyEG = true
 				egState.AllNodes = appendToSliceUniqString(egState.AllNodes, node.Name)
@@ -268,7 +270,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 				EgressGatewayStates[egName] = egState
 			}
 		}
-
+		// Node doesn't match any EG NodeSelector
 		if !nodeMatchedAnyEG {
 			if node.IsMemberLabeled {
 				nodesToUnlabel[node.Name] = appendToSliceUniqString(nodesToUnlabel[node.Name], memberNodeLabelKey)
@@ -283,11 +285,13 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cilium_agent_pods snapshot: %w", err)
 	}
-
+	// Collect info about nodes with healthy cilium agent pod
 	for _, pod := range ciliumPods {
+		// Pod is NotReady or deleted
 		if !pod.IsReady || pod.IsDeleted {
 			continue
 		}
+		// Check if pod's Node is in AllNodes of any EG
 		for egName, egState := range EgressGatewayStates {
 			if slices.Contains(egState.AllNodes, pod.Node) {
 				egState.HealthyNodes = appendToSliceUniqString(egState.HealthyNodes, pod.Node)
@@ -300,11 +304,13 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal egress_agent_pods snapshot: %w", err)
 	}
-
+	// Collect info about nodes with healthy egress gateway agent pod
 	for _, pod := range egressAgentPods {
+		// Pod is NotReady or deleted
 		if !pod.IsReady || pod.IsDeleted {
 			continue
 		}
+		// Check if pod's Node is in AllNodes of any EG and in HealthyNode
 		for egName, egState := range EgressGatewayStates {
 			if slices.Contains(egState.HealthyNodes, pod.Node) {
 				egState.HealthyNodesWithEgressAgent = appendToSliceUniqString(egState.HealthyNodesWithEgressAgent, pod.Node)
@@ -312,7 +318,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 			}
 		}
 	}
-
+	// Evaluate desired nodes
 	egressInternalMap, err := egressGatewayMapFromSnapshots(input)
 	if err != nil {
 		return err
@@ -325,8 +331,10 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 
 	for egName, egState := range EgressGatewayStates {
 		if egState.Mode == string(eeCommon.VirtualIPAddress) {
+			// for VirtualIP ready node is one with cilium agent and egress gateway agent
 			egState.ReadyNodes = egState.HealthyNodesWithEgressAgent
 		} else {
+			// otherwise ready node is one with cilium agent
 			egState.ReadyNodes = egState.HealthyNodes
 		}
 
@@ -365,8 +373,9 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 
 	processAddingLabels(input, nodesToLabel)
 	processRemovingLabels(input, nodesToUnlabel)
-
+	// clean finalizer for orphaned EGI
 	egNodes := loadAllNodesFromEgressGatewayStates(EgressGatewayStates)
+	// Check if pod's Node is in AllNodes of any EG
 	for _, egi := range egressGatewayInstances {
 		if !egi.IsDeleted {
 			continue
@@ -493,6 +502,7 @@ func appendLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 	}
 }
 
+// map[<eg name>]egressGatewayState
 func egressGatewayStatesFromSnapshots(input *go_hook.HookInput) (map[string]egressGatewayState, error) {
 	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
 	if err != nil {

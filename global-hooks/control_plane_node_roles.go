@@ -54,9 +54,6 @@ func applyBothNodeRoles(input *go_hook.HookInput) error {
 		nodes = append(nodes, snapshots...)
 	}
 
-	// snapshots := input.Snapshots["master_nodes"]
-	// snapshots = append(snapshots, input.Snapshots["control_plane_nodes"]...)
-
 	for _, node := range nodes {
 		if node.MasterLabelExists && node.ControlPlaneLabelExists {
 			continue

@@ -161,7 +161,7 @@ func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshots []sdkpkg.Snapshot)
 	}
 
 	secretData := make(map[string][]byte, 0)
-
+	// Expect one field with basic auth
 	err := snapshots[0].UnmarshalTo(&secretData)
 	if err != nil {
 		return "", fmt.Errorf("secret/%s has empty data: %w", h.Secret.Name, err)

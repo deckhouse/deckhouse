@@ -118,11 +118,15 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
+		// if we have cm here then set value and return
+		// configmap is source of truth
 		input.Values.Set(clusterBootstrapFlagPath, true)
 		return createBootstrappedFile()
 	}
-
+	// not have `is bootstrap` configmap
 	if input.Values.Exists(clusterBootstrapFlagPath) {
+		// here cm was deleted probably
+		// create it!
 		createBootstrapClusterCm(input.PatchCollector)
 		return createBootstrappedFile()
 	}
