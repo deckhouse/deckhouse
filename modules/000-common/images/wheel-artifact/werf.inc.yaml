@@ -10,7 +10,6 @@ shell:
   install:
   - mkdir /wheels
   - cd /wheels
-  - git reset --hard {{ $commit }}
   - git init .
   - git remote add origin $(cat /run/secrets/SOURCE_REPO)/python-modules/wheels
   - git fetch origin {{ $commit }}
