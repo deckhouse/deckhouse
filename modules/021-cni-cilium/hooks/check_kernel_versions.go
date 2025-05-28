@@ -94,18 +94,6 @@ func handleNodes(input *go_hook.HookInput) error {
 			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
 			modulesListInUse:        []string{"cni-cilium"},
 		},
-		{
-			kernelVersionConstraint: ">= 5.7",
-			modulesListInUse:        []string{"cni-cilium", "istio"},
-		},
-		{
-			kernelVersionConstraint: ">= 5.7",
-			modulesListInUse:        []string{"cni-cilium", "openvpn"},
-		},
-		{
-			kernelVersionConstraint: ">= 5.7",
-			modulesListInUse:        []string{"cni-cilium", "node-local-dns"},
-		},
 	}
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
