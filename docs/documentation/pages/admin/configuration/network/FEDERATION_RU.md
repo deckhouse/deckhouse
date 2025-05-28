@@ -1,6 +1,6 @@
 ---
 title: "Федерация"
-permalink: ru/admin/network/cluster-federation.html
+permalink: ru/admin/configuration/network/cluster-federation.html
 lang: ru
 ---
 

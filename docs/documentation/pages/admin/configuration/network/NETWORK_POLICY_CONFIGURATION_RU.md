@@ -1,6 +1,6 @@
 ---
 title: "Настройка сетевых политик"
-permalink: ru/admin/network/network-policy-configuration.html
+permalink: ru/admin/configuration/network/network-policy-configuration.html
 lang: ru
 ---
 

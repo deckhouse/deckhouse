@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных на основе протокола SCSI"
-permalink: ru/admin/storage/external/scsi.html
+permalink: ru/admin/configuration/storage/external/scsi.html
 lang: ru
 ---
 
@@ -36,7 +36,7 @@ Deckhouse поддерживает управление хранилищами, 
 
 Для работы с хранилищами, подключёнными через SCSI, включите модуль `csi-scsi-generic`. Это приведет к:
 - Регистрации CSI-драйвера.
-- запуску сервисных подов `csi-scsi-generic`.
+- Запуску сервисных подов `csi-scsi-generic`.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -50,7 +50,7 @@ spec:
 EOF
 ```
 
-Дождитесь, пока модуль перейдет в состояние `Ready`.
+Дождитесь, пока модуль перейдет в состояние `Ready`. Проверьте состояние модуля командой:
 
 ```shell
 d8 k get module csi-scsi-generic -w
@@ -123,7 +123,7 @@ EOF
 
 Обратите внимание, что в примере выше используются два [SCSITarget](../../../reference/cr/scsitarget/). Таким образом можно создать несколько [SCSITarget](../../../reference/cr/scsitarget/) как для одного, так и для разных СХД. Это позволяет использовать `multipath` для повышения отказоустойчивости и производительности.
 
-Проверить создание объекта можно командой (`Phase` должен быть `Created`):
+Проверьте создание объекта следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
@@ -149,7 +149,7 @@ EOF
 
 Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать [SCSITarget](../../../reference/cr/scsitarget/) для создания PersistentVolume по меткам. В примере выше выбираются все [SCSITarget](../../../reference/cr/scsitarget/) с меткой `my-key: some-label-value`. Эта метка будет выставлена на все устройства, которые будут обнаружены в указанных [SCSITarget](../../../reference/cr/scsitarget/).
 
-Проверить создание объекта можно командой (`Phase` должен быть `Created`):
+Проверьте создание объекта следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
@@ -157,7 +157,7 @@ d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
 
 ### Проверка работоспособности модуля
 
-Проверьте состояние подов в пространстве `d8-csi-scsi-generic`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
+Проверьте состояние подов в пространстве `d8-csi-scsi-generic` при помощи следующей команды. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 
 ```shell
 d8 k -n d8-csi-scsi-generic get pod -owide -w

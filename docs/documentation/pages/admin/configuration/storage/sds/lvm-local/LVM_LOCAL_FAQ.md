@@ -1,6 +1,6 @@
 ---
 title: "Managing local storage based on LVM"
-permalink: en/admin/storage/sds/lvm-local-faq.html
+permalink: en/admin/configuration/storage/sds/lvm-local-faq.html
 ---
 
 Using local storage helps avoid network delays and improves performance compared to remote storage, which is accessed over a network. This approach is ideal for test environments and EDGE clusters.
@@ -298,7 +298,7 @@ done
 echo "Data migration completed"
 ```
 
-Usage:
+To use the script, run the following command:
 
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME

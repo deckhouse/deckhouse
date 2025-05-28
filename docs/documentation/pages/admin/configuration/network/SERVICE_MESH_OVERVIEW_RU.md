@@ -1,7 +1,7 @@
 ---
-title: "Servise Mesh"
-permalink: ru/admin/network/service-mesh-overview.html
+title: "Service Mesh"
+permalink: ru/admin/configuration/network/service-mesh-overview.html
 lang: ru
 ---
 
-Вводная страница про Servise Mesh
+Вводная страница про Service Mesh

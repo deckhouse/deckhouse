@@ -1,9 +1,9 @@
 ---
 title: "HPE data storage"
-permalink: en/admin/storage/external/hpe.html
+permalink: en/admin/configuration/storage/external/hpe.html
 ---
 
-Deckhouse provides support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This ensures a reliable, scalable, and high-performance storage solution suitable for mission-critical workloads. To support HPE 3PAR storage systems, the `csi-hpe` module is used, allowing the creation of StorageClass in Kubernetes through the [HPEStorageClass](../../../reference/cr/hpestorageclass/) resource.
+Deckhouse includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](../../../reference/cr/hpestorageclass/) resource.
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
@@ -24,8 +24,8 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling the module
 
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
-- registration of the CSI driver.
-- launch of service pods for the `csi-hpe` components.
+- Registration of the CSI driver.
+- Launch of service pods for the `csi-hpe` components.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -39,7 +39,7 @@ spec:
 EOF
 ```
 
-Wait for the module to become `Ready`.
+Wait until the module transitions to the `Ready` state. Check the module’s status with the following command:
 
 ```shell
 d8 k get module csi-hpe -w
@@ -81,7 +81,7 @@ spec:
 EOF
 ```
 
-You can check objects creation (Phase must be `Created`):
+Verify the creation of the object using the following command (`Phase` should be `Created`):
 
 ```shell
 d8 k get hpestorageconnections.storage.deckhouse.io <hpestorageconnection name>

@@ -1,4 +1,4 @@
 ---
 title: "Prometheus settings"
-permalink: en/admin/configuration/monitoring/alerts.html
+permalink: en/admin/configuration/monitoring/prometheus.html
 ---

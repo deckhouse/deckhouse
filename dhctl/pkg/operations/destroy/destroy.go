@@ -23,22 +23,21 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
-	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -59,16 +58,16 @@ type Params struct {
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
-	TerraformContext *tf.TerraformContext
+	InfrastructureContext *infrastructure.Context
 }
 
 type ClusterDestroyer struct {
 	state           *State
 	stateCache      dhctlstate.Cache
-	terrStateLoader infra.StateLoader
+	terrStateLoader controller.StateLoader
 
 	d8Destroyer       *DeckhouseDestroyer
-	cloudClusterInfra *infra.ClusterInfra
+	cloudClusterInfra *controller.ClusterInfra
 
 	skipResources bool
 
@@ -97,7 +96,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 
 	d8Destroyer := NewDeckhouseDestroyer(wrapper.Client(), state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
-	var terraStateLoader terraform.StateLoader
+	var terraStateLoader controller.StateLoader
 
 	if params.CommanderMode {
 		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
@@ -109,12 +108,12 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-		terraStateLoader = terraform.NewFileTerraStateLoader(state.cache, metaConfig)
+		terraStateLoader = infrastructurestate.NewFileTerraStateLoader(state.cache, metaConfig)
 	} else {
-		terraStateLoader = terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	}
 
-	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := controller.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.InfrastructureContext, controller.ClusterInfraOptions{PhasedExecutionContext: pec})
 
 	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{})
 

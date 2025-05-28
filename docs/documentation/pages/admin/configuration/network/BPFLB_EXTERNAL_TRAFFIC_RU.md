@@ -1,6 +1,6 @@
 ---
 title: "Режимы работы bpfLB для обработки внешнего трафика"
-permalink: ru/admin/network/bpflb-external-traffic.html
+permalink: ru/admin/configuration/network/bpflb-external-traffic.html
 lang: ru
 ---
 
@@ -35,4 +35,4 @@ lang: ru
 
 * `Hybrid` — в данном режиме TCP-трафик обрабатывается в режиме `DSR`, а UDP — в режиме `SNAT`.
 
-**Добавить примеры настройки** #TODO 
+**Добавить примеры настройки** #TODO

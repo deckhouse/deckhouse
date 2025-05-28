@@ -1,6 +1,6 @@
 ---
 title: "Общие сведения о настройках сети в Deckhouse Kubernetes Platform"
-permalink: ru/admin/network/overview.html
+permalink: ru/admin/configuration/network/
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Межкластерное взаимодействие (альянс)"
-permalink: ru/admin/network/inter-cluster-cooperation-overview.html
+permalink: ru/admin/configuration/network/inter-cluster-cooperation-overview.html
 lang: ru
 ---
 

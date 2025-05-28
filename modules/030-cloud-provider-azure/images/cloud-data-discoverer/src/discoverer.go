@@ -24,7 +24,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute"
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -32,12 +32,12 @@ import (
 )
 
 type Discoverer struct {
-	logger         *log.Entry
+	logger         *log.Logger
 	location       string
 	subscriptionID string
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	location := os.Getenv("AZURE_LOCATION")
 	if location == "" {
 		logger.Fatalf("Cannot get AZURE_LOCATION env")
@@ -156,7 +156,7 @@ func (d *Discoverer) continueProcessing(r *armcompute.ResourceSKU) (bool, error)
 		}
 
 		if *restr.ReasonCode == "NotAvailableForSubscription" {
-			d.logger.Debugln("sku not available for subscription")
+			d.logger.Debug("sku not available for subscription")
 			return false, nil
 		}
 	}

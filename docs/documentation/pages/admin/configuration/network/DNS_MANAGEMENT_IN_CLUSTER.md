@@ -1,6 +1,6 @@
 ---
 title: "Managing DNS in a Kubernetes cluster"
-permalink: en/admin/network/dns-management-in-cluster.html
+permalink: en/admin/configuration/network/dns-management-in-cluster.html
 ---
 
 DNS management in a Kubernetes cluster is implemented using the `kube-dns` module.

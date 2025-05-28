@@ -127,13 +127,20 @@ func run() error {
 		}
 
 		if len(tplTemplates) > 0 {
-			renderContent, err := renderHelmTemplate(module, helper.GetMapKeys(tplTemplates))
+			tplRelativePaths := helper.GetMapKeys(tplTemplates)
+			renderContent, err := renderHelmTemplate(module, tplRelativePaths)
 			if err != nil {
 				return err
 			}
-			for templatePath, templateContent := range renderContent {
-				_, templateName := filepath.Split(templatePath)
-				templateAlerts, err := getAlertsFromTemplate([]byte(templateContent), moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+
+			for _, templatePath := range tplRelativePaths {
+				// templatePath may contains subdirectory or not, e.g. "image-availability/image-checks.tpl", "nat-instance.tpl"
+				pathSegments := strings.Split(templatePath, "/")
+				name := pathSegments[len(pathSegments)-1]
+
+				templateContent := renderContent[fmt.Sprintf("renderdir/templates/%s", name)]
+
+				templateAlerts, err := getAlertsFromTemplate([]byte(templateContent), moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templatePath))
 				if err != nil {
 					return err
 				}

@@ -17,6 +17,7 @@ package logger
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -26,6 +27,11 @@ import (
 )
 
 type loggerCtxKey struct{}
+
+type Options struct {
+	DebugWriter   io.Writer
+	DefaultWriter io.Writer
+}
 
 // NewLogger returns initialized slog logger
 func NewLogger(level *slog.LevelVar) *slog.Logger {

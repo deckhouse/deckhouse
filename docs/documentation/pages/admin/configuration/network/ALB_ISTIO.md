@@ -1,6 +1,6 @@
 ---
 title: "ALB means Istio"
-permalink: en/admin/network/alb-istio.html
+permalink: en/admin/configuration/network/alb-istio.html
 ---
 
 Istio ALB is implemented via Istio Ingress Gateway or NGINX Ingress. The [istio](../../reference/mc/istio/) module is used for this purpose.
@@ -29,7 +29,7 @@ spec:
     node-role/frontend: ''
   tolerations:
     - effect: NoExecute
-      key: dedicated
+      key: key: dedicated.deckhouse.io
       operator: Equal
       value: frontend
   resourcesRequests:

@@ -122,6 +122,8 @@
     Okmeter agents are no longer able to access the Kubernetes API.
  - **[operator-trivy]** Added an init container to the `trivy-server` to set the correct user:group ownership for its volume. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[operator-trivy]** Fixed security vulnerabilities and updated the `report-updater` build. [#11597](https://github.com/deckhouse/deckhouse/pull/11597)
+ - **[prometheus]** Enables WAL for Grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13068](https://github.com/deckhouse/deckhouse/pull/13068)
+    Grafana deployment will be rollout restarted.
  - **[prometheus]** Changes the links in alert's template about alerts from url to relative links [#12028](https://github.com/deckhouse/deckhouse/pull/12028)
     The links in the alerts will be correct when the documentation module is enabled.
  - **[prometheus]** Fixed an issue in the Grafana datasource. [#11788](https://github.com/deckhouse/deckhouse/pull/11788)
@@ -143,6 +145,7 @@
  - **[registrypackages]** CVE update ec2-describe-tags. [#12115](https://github.com/deckhouse/deckhouse/pull/12115)
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
+ - **[runtime-audit-engine]** Fix CrashLoopBack due to invalid config. [#13144](https://github.com/deckhouse/deckhouse/pull/13144)
  - **[runtime-audit-engine]** copy falcosecurity_falcosidekick_falco_events_total metric to falco_events for backward compatibility [#12873](https://github.com/deckhouse/deckhouse/pull/12873)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
  - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)

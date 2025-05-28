@@ -1,6 +1,6 @@
 ---
 title: "Балансировка в кластерах на облачных платформах"
-permalink: ru/admin/network/cloud-balancing.html
+permalink: ru/admin/configuration/network/cloud-balancing.html
 lang: ru
 ---
 

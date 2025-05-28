@@ -1,6 +1,6 @@
 ---
 title: "Балансировщик ServiceWithHealthcheck"
-permalink: ru/admin/network/service-with-healthcheck.html
+permalink: ru/admin/configuration/network/service-with-healthcheck.html
 lang: ru
 ---
 

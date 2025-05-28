@@ -17,10 +17,9 @@ package controller
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-
-	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 )
 
 type CloudPermanentNodeGroupHook struct {
@@ -43,8 +42,8 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 	}
 }
 
-func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner terraform.RunnerInterface) (runPostAction bool, err error) {
-	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (runPostAction bool, err error) {
+	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
 	}
@@ -55,6 +54,6 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner terraform.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	return nil
 }

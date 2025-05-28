@@ -1,6 +1,6 @@
 ---
 title: "Настройка внутренней сети"
-permalink: ru/admin/network/configuration.html
+permalink: ru/admin/configuration/network/configuration.html
 lang: ru
 ---
 

@@ -16,7 +16,7 @@ permalink: /candi/dhctl.html
 An application for creating Kubernetes clusters and configuring their infrastructure.
 
 Basic features:
-* Terraform base infrastructure and initial master node in various clouds, e.g., AWS, YandexCloud, OpenStack.
+* Terraform/Opentofu base infrastructure and initial master node in various clouds, e.g., AWS, YandexCloud, OpenStack.
 * Install Kubernetes and other packages required for its work (ether in a cloud or bare metal).
 * Install **Deckhouse** - Kubernetes cluster operator, which deploys cluster add-ons and manages their configurations.
 * Create additional `master` nodes or `static` nodes, configure and delete them.
@@ -127,7 +127,7 @@ For example, use a docker image from the Flant docker registry:
      ```
 
      > macOS users do not need to mount the .ssh folder to the `/tmp`.
-     > Because of Docker for MAc specific features it is more convenient to mount it to the `/root`.
+     > Because of Docker for macOS specific features it is more convenient to mount it to the `/root`.
 3. Execute cluster bootstrap:
 
    ```bash
@@ -202,13 +202,13 @@ You cannot observe these changes, react to them. Every Kubernetes cluster become
 1. To converge objects in a cloud to its desired state, dhctl has the `converge` command.
     During this command execution, dhctl will:
     * Connect to the Kubernetes cluster
-    * Download terraform state for the base infrastructure
-    * Sequentially call terraform apply for the downloaded state
+    * Download infrastructure state for the base infrastructure
+    * Sequentially call infrastructure utility apply for the downloaded state
     * Upload new states to the cluster
     * For master nodes and static nodes
         * If nodes quantity in the configuration is higher than we actually have, dhctl will create new nodes
         * If nodes quantity in the configuration is lower than we actually have, dhctl will delete excessive nodes
-        * Sequentially call terraform apply for other nodes
+        * Sequentially call infrastructure utility apply for other nodes
     > if object is marked to be changed or deleted, dhctl will ask a user for confirmation.
 
     Example:
@@ -222,7 +222,7 @@ You cannot observe these changes, react to them. Every Kubernetes cluster become
 
 2. There are two commands to check the current state of objects in a cloud:
     * `dhctl terraform converge-exporter` - runs Prometheus exporter, which periodically checks the difference between
-      objects and cloud and terraform state from secrets.
+      objects and cloud and infrastructure state from secrets.
         > This command is used in the module `040-terraform-manager`
     * `dhctl terraform check` - executes the check once and returns report in ether YAML or JSON format.
 
@@ -232,8 +232,8 @@ To destroy a Kubernetes cluster from a cloud, execute `destroy` command.
 During execution, dhctl will:
 * Connect to the cluster
 * Delete Kubernetes resources bound to the cloud objects, e.g., services with type LoadBalancer, PV, PVC, and Machines (dhctl will wait until resources become deleted).
-* Download terraform state for base infrastructure and nodes from the cluster
-* Sequentially call terraform destroy for downloaded states
+* Download infrastructure state for base infrastructure and nodes from the cluster
+* Sequentially call infrastructure utility destroy for downloaded states
 
 Execution example:
 

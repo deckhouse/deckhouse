@@ -14,9 +14,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/yandex-cloud-controller-manager.git /src
+    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
     - rm -rf .git
 ---
@@ -29,13 +32,14 @@ import:
     to: /src
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /src
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go

@@ -30,8 +30,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -45,6 +47,8 @@ import (
 const (
 	defaultModuleWeight = 900
 	DefaultDevVersion   = "dev"
+
+	tracerName = "downloader"
 )
 
 type ModuleDownloader struct {
@@ -101,7 +105,10 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
-func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadByModuleVersion")
+	defer span.End()
+
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
 	}
@@ -113,8 +120,15 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
-	res := ModuleDownloadResult{}
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+	span.SetAttributes(attribute.String("moduleChecksum", moduleChecksum))
+
+	var res ModuleDownloadResult
 
 	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
@@ -169,7 +183,7 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 	return moduletools.ExtractDocs(img)
 }
 
-func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
+func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module error: %v", err)
@@ -178,7 +192,7 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, e
 	return regCli.Image(context.TODO(), imageTag)
 }
 
-func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) (*DownloadStatistic, error) {
 	_ = os.RemoveAll(moduleStorePath)
 
 	ds, err := md.copyModuleToFS(moduleStorePath, img)
@@ -206,7 +220,7 @@ func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersio
 	return md.storeModule(moduleVersionPath, img)
 }
 
-func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) copyModuleToFS(rootPath string, img crv1.Image) (*DownloadStatistic, error) {
 	rc, err := cr.Extract(img)
 	if err != nil {
 		return nil, err
@@ -351,7 +365,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*moduletypes.Definition, error) {
+func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
 	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
@@ -380,7 +394,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleReleaseMetadata, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleReleaseMetadata, error) {
 	var meta ModuleReleaseMetadata
 
 	rc, err := cr.Extract(img)

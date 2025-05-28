@@ -30,7 +30,7 @@ module Jekyll
 
       lang = @context.registers[:page]['lang']
 
-      return if !entry || ! entry.dig('title',lang)
+      return if !entry || ! entry.dig('title',lang) || entry['draft'] == true
 
       validate_item(entry)
 

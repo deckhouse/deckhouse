@@ -1,6 +1,6 @@
 ---
 title: "ALB средствами Istio"
-permalink: ru/admin/network/alb-istio.html
+permalink: ru/admin/configuration/network/alb-istio.html
 lang: ru
 ---
 
@@ -30,7 +30,7 @@ spec:
     node-role/frontend: ''
   tolerations:
     - effect: NoExecute
-      key: dedicated
+      key: dedicated.deckhouse.io
       operator: Equal
       value: frontend
   resourcesRequests:

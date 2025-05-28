@@ -1,9 +1,9 @@
 ---
 title: "Setting up local storage based on LVM"
-permalink: en/admin/storage/sds/lvm-local.html
+permalink: en/admin/configuration/storage/sds/lvm-local.html
 ---
 
-Using local storage helps avoid network latencies, which improves performance compared to remote storage that requires network connectivity. This approach is ideal for test environments and EDGE clusters.
+Local storage reduces network latency and provides higher performance compared to remote storage accessed over the network. This approach is especially effective in test environments and EDGE clusters.
 
 ## Enabling the module
 
@@ -102,7 +102,7 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
-In the example above, six block devices are available across three nodes. To group block devices on one node, you need to create an LVM volume group using the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource.
+In the example above, six block devices are available across three nodes. To use these devices for storage, they must be combined into LVM volume groups. This approach allows managing multiple devices as a single storage unit on each node. To achieve this, you need to create an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource that defines the composition of the LVM volume group on a specific node.
 
 To create an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
 
@@ -149,20 +149,22 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 If the resource transitions to the `Ready` phase, this indicates that an LVM volume group named `vg` has been created on node worker-0 using the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-Next, you need to repeat the creation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker-1 and worker-2), modifying the resource name, node name, and block device names accordingly. Ensure that LVM volume groups are created on all nodes where they are intended for use by running the following command:
+Next, you need to repeat the creation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker‑1 and worker‑2). To do this:
+- Modify the example above by updating the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource name, the node name, and the block device names corresponding to the selected node.
+- Make sure that LVM volume groups are created on all nodes where they are intended to be used by running the following command:
 
-```shell
-d8 k get lvg -w
-```
+  ```shell
+  d8 k get lvg -w
+  ```
 
-In the output, you should see a list of created volume groups:
+  In the output, you should see a list of created volume groups:
 
-```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
-```
+  ```console
+  NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+  vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+  vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
+  vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
+  ```
 
 ### Creating a thick type StorageClass
 

@@ -432,7 +432,9 @@ The control plane update process in DKP is fully automated.
 
 1. Save the changes.
 
-## Viewing etcd cluster members
+## etcd restore
+
+### Viewing etcd cluster members
 
 Below are the steps to view the list of nodes that are part of the etcd cluster:
 
@@ -442,9 +444,9 @@ Below are the steps to view the list of nodes that are part of the etcd cluster:
    kubectl -n kube-system get pods -l component=etcd,tier=control-plane
    ```
 
-   The pod name usually starts with the prefix `etcd-`.
+   Typically, pod name has the `etcd-` prefix.
 
-1. Run the following command on any available etcd pod (assuming it is running in the `kube-system` namespace):
+1. Run the following command on any available etcd Pod (assuming it is running in the `kube-system` namespace):
 
    ```console
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
@@ -453,4 +455,58 @@ Below are the steps to view the list of nodes that are part of the etcd cluster:
      --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-   This command uses substitution: `$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`, which automatically inserts the name of the first pod matching the specified labels.
+   This command uses substitution: `$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`.
+   It automatically inserts the name of the first Pod matching the specified labels.  
+
+### If etcd is not functioning
+
+1. Stop all etcd nodes except one by deleting the `etcd.yaml` manifest on the others.
+1. On the remaining node, add the `--force-new-cluster` option to the etcd startup command.
+1. After the cluster is restored, remove this option.
+   > **Caution**: this action completely wipes previous data and creates a new etcd cluster.
+
+### If etcd keeps restarting with the error panic: unexpected removal of unknown remote peer
+
+In some cases, manual restoration via `etcdutl snapshot restore` can help:
+
+1. Save a local snapshot from `/var/lib/etcd/member/snap/db`.
+1. Use `etcdutl` with the `--force-new-cluster` option to restore.
+1. Completely wipe the `/var/lib/etcd` directory and place the restored snapshot there.
+1. Remove any "stuck" etcd/kube-apiserver containers and restart the node.
+
+### What to do if the database volume of etcd reaches the limit set in quota-backend-bytes
+
+When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
+
+```shell
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+--endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
+```
+
+If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to take the following steps:
+
+1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` - this sets the limit to 8 GB.
+1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
+
+   ```shell
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ alarm disarm
+   ```
+
+1. Change the [maxDbSize](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings  to match the value specified in the manifest.
+
+### How to speed up pod rescheduling when a node becomes unreachable
+
+1. Shorten the time for a node to transition to the `Unreachable` state.  
+   Adjust the `nodeMonitorGracePeriodSeconds` parameter (default is 40 seconds).  
+   For example, set it to 10 seconds.
+
+1. Speed up Pod eviction from an unreachable node.  
+   Adjust the `failedNodePodEvictionTimeoutSeconds` parameter (default is 300 seconds).  
+   For example, set it to 50 seconds.
+
+> **Important.** Shorter timeouts cause system components to check node states and reschedule pods more frequently. This increases the load on the control plane, so choose values that balance fault tolerance and system performance according to your needs.

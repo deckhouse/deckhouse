@@ -20,7 +20,9 @@ d8Revision: EE
 
 metrics:
   google: G-4X28CEP7W2
-  yandex: 78422802
+  yandex:
+    ru: 78422802
+    en: 100410448
 
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
@@ -92,19 +94,23 @@ defaults:
   - scope:
       path: "pages/admin"
     values:
-      sidebar: kubernetes-platform
+      sidebar: main
+      sitemap_include: false
   - scope:
       path: "pages/architecture"
+      sitemap_include: false
     values:
-      sidebar: kubernetes-platform
+      sidebar: main
   - scope:
       path: "pages/user"
     values:
-      sidebar: kubernetes-platform
+      sidebar: main
+      sitemap_include: false
   - scope:
       path: "pages/reference"
+      sitemap_include: false
     values:
-      sidebar: kubernetes-platform
+      sidebar: main
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -149,6 +155,16 @@ defaults:
       toc: false
       sitemap_include: false
       layout: guide
+  - scope:
+      path: "pages/stronghold"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: stronghold
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: stronghold
+      sitemap_include: false
   - scope:
       path: "modules_ru"
       type: "pages"

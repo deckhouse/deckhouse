@@ -1,10 +1,10 @@
 ---
 title: "Распределённое хранилище Ceph"
-permalink: ru/admin/storage/external/ceph.html
+permalink: ru/admin/configuration/storage/external/ceph.html
 lang: ru
 ---
 
-Ceph — это масштабируемая распределённая система хранения, обеспечивающая высокую доступность и отказоустойчивость данных. В Deckhouse поддерживается интеграция с Ceph-кластерами, что позволяет динамически управлять хранилищем и использовать StorageClass на основе RBD (RADOS Block Device) или CephFS.
+Ceph — это масштабируемая распределённая система хранения, обеспечивающая высокую доступность и отказоустойчивость данных. В Deckhouse поддерживается интеграция с Ceph-кластерами. Это даёт возможность динамически управлять хранилищем и использовать StorageClass на основе RBD (RADOS Block Device) или CephFS.
 
 На этой странице представлены инструкции по подключению Ceph в Deckhouse, настройке аутентификации, созданию объектов StorageClass, а также проверке работоспособности хранилища.
 
@@ -25,7 +25,7 @@ EOF
 
 ## Подключение к Ceph-кластеру
 
-Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс [CephClusterConnection](../../../reference/cr/cephclusterconnection/). Пример команды:
+Чтобы настроить подключение к Ceph-кластеру примените ресурс [CephClusterConnection](../../../reference/cr/cephclusterconnection/). Пример команды:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -43,7 +43,7 @@ spec:
 EOF
 ```
 
-Проверить создание подключения можно командой (фаза должна быть в статусе `Created`):
+Проверьте создание подключения следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get cephclusterconnection ceph-cluster-1

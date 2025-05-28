@@ -12,9 +12,12 @@ git:
       - "**/*"
   includePaths:
     - patches
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch mimir-{{ $MimirVersion }} {{ .SOURCE_REPO }}/grafana/mimir.git /src
+    - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
     - rm -rf .git ./operations
@@ -27,13 +30,15 @@ import:
     add: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - go build -o mimir ./cmd/mimir
     - chown -R 64535:64535 /src/mimir

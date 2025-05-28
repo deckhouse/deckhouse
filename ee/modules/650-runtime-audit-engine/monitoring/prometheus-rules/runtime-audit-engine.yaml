@@ -1,7 +1,5 @@
 - name: runtime-audit-engine
   rules:
-  - record: falco_events
-    expr: falcosecurity_falcosidekick_falco_events_total{job="runtime-audit-engine"}
   - alert: D8RuntimeAuditEngineNotScheduledInCluster
     for: 15m
     expr: |
@@ -16,14 +14,20 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Pods of runtime-audit-engine cannot be scheduled in the cluster.
+      summary: Runtime-audit-engine Pods cannot be scheduled.
       description: |
-        A number of runtime-audit-engine pods are not scheduled.
-        Security audit is not fully operational.
+        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
 
-        Consider checking state of the d8-runtime-audit-engine/runtime-audit-engine DaemonSet.
-        `kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine`
-        Get a list of nodes that have pods in an not Ready state.
-        ```
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-        ```
+        Troubleshooting steps:
+
+        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
+
+           ```shell
+           kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
+           ```
+
+        2. Get a list of nodes where Pods are not in the Ready state:
+
+           ```shell
+           kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           ```

@@ -1,6 +1,6 @@
 ---
 title: "Istio"
-permalink: ru/admin/network/istio-outgoing-balancing.html
+permalink: ru/admin/configuration/network/istio-outgoing-balancing.html
 lang: ru
 ---
 

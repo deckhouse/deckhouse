@@ -28,7 +28,7 @@ lang: ru
 
 Они имеют вложенную структуру и сгруппированы по назначению — приложения в кластере (Applications), сетевое взаимодействие (Ingress Nginx), параметры кластера (Kubernetes Cluster), основные (Main) и безопасность (Security).
 
-![Главный экран Grafana](../../images/grafana/grafana.png)
+![Главный экран Grafana](../../images/grafana/grafana-main.png)
 
 ### Работа с дашбордами
 

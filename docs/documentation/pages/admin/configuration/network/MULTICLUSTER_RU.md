@@ -1,6 +1,6 @@
 ---
 title: "Мультикластер"
-permalink: ru/admin/network/multicluster.html
+permalink: ru/admin/configuration/network/multicluster.html
 lang: ru
 ---
 

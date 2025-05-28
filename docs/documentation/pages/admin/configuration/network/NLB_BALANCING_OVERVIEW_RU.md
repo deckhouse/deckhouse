@@ -1,6 +1,6 @@
 ---
 title: "Балансировка TCP/UDP"
-permalink: ru/admin/network/nlb-balancing-overview.html
+permalink: ru/admin/configuration/network/nlb-balancing-overview.html
 lang: ru
 ---
 
