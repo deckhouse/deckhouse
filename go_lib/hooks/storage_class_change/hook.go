@@ -270,7 +270,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: pod.Name}})
 			input.Logger.Info("evicting Pod %s/%s due to PVC %s stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("POD name", pod.Name), slog.String("PVC name", pvc.Name))
 			if err != nil {
-				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("POD name", pod.Name), log.Err(err))
+				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), log.Err(err))
 			}
 		}
 	}
@@ -290,12 +290,12 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 				input.Logger.Info("storage class changed, deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
-					input.Logger.Error("", log.Err(err))
+					input.Logger.Error("error occured", log.Err(err))
 				}
 			}
 		}
 
-		input.Logger.Info("storage class changed, deleting", slog.String("namespace", args.Namespace), slog.String("object kind", args.ObjectKind), slog.String("name", args.ObjectName))
+		input.Logger.Info("storage class changed, deleting", slog.String("namespace", args.Namespace), slog.String("object_kind", args.ObjectKind), slog.String("name", args.ObjectName))
 		switch args.ObjectKind {
 		case "Prometheus":
 			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com"}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})

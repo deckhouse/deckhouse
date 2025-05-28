@@ -354,7 +354,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
 
 	requirements.SaveValue("global.discovery.kubernetesVersion", minVerStr)
-	input.Logger.Info("k8s version was discovered", slog.String("version", minVerStr), slog.String("versions", strings.Join(versions, ",")))
+	input.Logger.Info("k8s version was discovered", slog.String("minimal_version", minVerStr), slog.String("versions", strings.Join(versions, ",")))
 
 	input.MetricsCollector.Set("deckhouse_kubernetes_version", 1, map[string]string{
 		"version": minVerStr,

@@ -61,7 +61,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 	if !errors.IsNotFound(err) {
-		input.Logger.Info("Migration cm already exists, skipping migration", slog.String("migrationCM", migrationCM))
+		input.Logger.Info("Migration cm already exists, skipping migration", slog.String("migration_cm", migrationCM))
 		return nil
 	}
 

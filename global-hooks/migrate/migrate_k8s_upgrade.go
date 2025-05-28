@@ -110,7 +110,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		kubernetesVersion = config.KubernetesVersion
 	}
 
-	input.Logger.Info("", slog.String("kubernetesVersion", kubernetesVersion))
+	input.Logger.Info("", slog.String("kubernetes_version", kubernetesVersion))
 
 	c, err := semver.NewConstraint("< 1.29")
 	if err != nil {

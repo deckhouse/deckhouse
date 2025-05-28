@@ -181,7 +181,7 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	for _, clusterStateRaw := range clusterStateSnap {
 		clusterState := clusterStateRaw.(*StateClusterResult)
 		if !clusterState.ClusterState {
-			input.Logger.Warn("Secret is not terraform state. Probably you located in test env", slog.String("name", clusterState.SecretName))
+			input.Logger.Warn("Secret is not terraform state. Probably you located in test env", slog.String("secret_name", clusterState.SecretName))
 			continue
 		}
 
@@ -198,12 +198,12 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 		for _, nodeStateSnapshot := range input.Snapshots["nodes_state"] {
 			nodeState := nodeStateSnapshot.(*StateNodeResult)
 			if nodeState.IsBackup {
-				input.Logger.Info("Node state is backup state. Skip", slog.String("name", nodeState.SecretName))
+				input.Logger.Info("Node state is backup state. Skip", slog.String("secret_name", nodeState.SecretName))
 				continue
 			}
 
 			if nodeState.TerraformVersion == terraformVersion {
-				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("name", nodeState.SecretName))
+				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("secret_name", nodeState.SecretName))
 				needMigrate = true
 				break
 			}

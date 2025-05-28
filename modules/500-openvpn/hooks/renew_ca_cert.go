@@ -128,7 +128,7 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 	// // Check if cert expires within 6 hours
 	now := time.Now()
 	if cert.NotAfter.Sub(now) <= 6*time.Hour {
-		input.Logger.Info("Server certificate expired, initiating cleanup and restart", slog.String("name", cert.NotAfter.String()))
+		input.Logger.Info("Server certificate expired, initiating cleanup and restart", slog.Time("expired_at", cert.NotAfter))
 
 		// Remove openvpn-pki-ca
 		input.PatchCollector.Delete("v1", "Secret", "d8-openvpn", "openvpn-pki-ca")        // Ca cert
@@ -145,7 +145,7 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 		for _, snapshot := range snapshotsClients {
 			clientSecretName := snapshot.(string)
 			input.PatchCollector.Delete("v1", "Secret", "d8-openvpn", clientSecretName)
-			input.Logger.Info("Client secret scheduled for deletion", slog.String("name", clientSecretName))
+			input.Logger.Info("Client secret scheduled for deletion", slog.String("secret_name", clientSecretName))
 		}
 
 		// Patch spec.template.metadata.annotations for reload SS
@@ -163,7 +163,7 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 		input.PatchCollector.PatchWithMerge(patch, "apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
 		input.Logger.Info("StatefulSet openvpn scheduled for restart")
 	} else {
-		input.Logger.Info("Server certificate is valid until", slog.Time("name", cert.NotAfter))
+		input.Logger.Info("Server certificate is valid", slog.Time("valid_until", cert.NotAfter))
 	}
 
 	return nil

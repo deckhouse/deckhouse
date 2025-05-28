@@ -174,7 +174,7 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 	for moduleEvent := range r.moduleManager.GetModuleEventsChannel() {
 		if moduleEvent.ModuleName != "" {
 			if err := r.refreshModule(ctx, moduleEvent.ModuleName); err != nil {
-				r.log.Debug("failed to handle the event", slog.String("module", moduleEvent.ModuleName), log.Err(err))
+				r.log.Debug("failed to handle the event", slog.String("module_name", moduleEvent.ModuleName), log.Err(err))
 			}
 		}
 	}

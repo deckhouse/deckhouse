@@ -86,7 +86,7 @@ func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
-	input.Logger.Info("cluster master addresses", slog.String("name", strings.Join(fpp.HostPort, ",")))
+	input.Logger.Info("cluster master addresses", slog.String("adresses", strings.Join(fpp.HostPort, ",")))
 
 	input.Values.Set("kubeProxy.internal.clusterMasterAddresses", fpp.HostPort)
 
