@@ -1,0 +1,238 @@
+{!{ define "svace_analyze" }!}
+{!{ $ctx := . }!}
+# <template: svace_analyze>
+runs-on: [self-hosted]
+steps:
+  {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
+
+  - name: Analyze builds and upload to Svacer
+    id: analyze
+    env:
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ANALYZE_DIR: "svace-analyze"
+      SVACER_URL: "${{ secrets.SVACER_URL }}"
+      SVACER_IMPORT_USER: "${{ secrets.SVACER_IMPORT_USER }}"
+      SVACER_IMPORT_PASSWORD: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
+    run: |
+      echo "CI_COMMIT_REF_NAME: ${CI_COMMIT_REF_NAME}"
+      echo "CI_COMMIT_HASH: ${CI_COMMIT_HASH}"
+      set -e
+      
+      # Define color codes
+      RED="\033[0;31m"   # Red for errors
+      YELLOW="\033[0;33m" # Yellow for warnings
+      GREEN="\033[0;32m"  # Green for success
+      BLUE="\033[0;34m"   # Blue for info
+      CYAN="\033[0;36m"   # Cyan fot datetime
+      NC="\033[0m"        # No color (reset)
+      error() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${RED}ERROR: ${1}${NC}" >&2; }
+      warning() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${YELLOW}WARNING: ${1}${NC}"; }
+      info() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${BLUE}INFO: ${1}${NC}"; }
+      success() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${GREEN}SUCCESS: ${1}${NC}"; }
+      SSH="ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=12"
+      send() {
+          # $1 - command to send
+          # $2 - retries count
+          local command="$1"
+          local retries="${2:-3}"
+          local attempt=0
+          local success=0
+          result=""
+          while [ "$attempt" -lt "$retries" ]; do
+              result=$($SSH ${SVACE_ANALYZE_SSH_USER}@${SVACE_ANALYZE_HOST} "${command}") && success=1 && break
+              error "Command failed. Retrying..."
+              attempt=$((attempt + 1))
+              sleep 2
+          done
+          if [ "$success" -eq 0 ]; then
+              error "All $retries attempts failed!"
+              return 1
+          else
+              echo "${result}"
+              return 0
+          fi
+      }
+      send_request () {
+          # $1 - request
+          # $2 - retries count
+          local request="${1}"
+          local expected_code="200"
+          local retries="${2:-3}"
+          local attempt=0
+          local success=0
+          local sleep_timeout=2
+          local max_sleep=500
+          local svacer_user=${SVACER_IMPORT_USER}
+          local svace_password=${SVACER_IMPORT_PASSWORD}
+          local token_response_code=""
+          local token_response=""
+          result=""
+          get_token="curl --write-out \"\\n%{http_code}\" -sS --request POST \
+          --url ${url}/api/public/login \
+          --header 'User-Agent: Curl' \
+          --header 'content-type: application/json' \
+          --data '{ \
+          \"auth_type\": \"svacer\", \
+          \"login\": \"${svacer_user}\", \
+          \"password\": \"${svace_password}\" \
+          }'"    
+          while [ "$attempt" -lt "$retries" ]; do
+              response=$($SSH ${SVACE_ANALYZE_SSH_USER}@${SVACE_ANALYZE_HOST} "${get_token}") && success=1 || success=0
+              
+              if [[ $success == 1 ]]; then
+                  token_response_code=$(echo "$response" | tail -n1)
+                  token_response=$(echo "${response}" | sed '$d')
+                  if [[ "${token_response_code}" == "${expected_code}" && -n "${token_response}" ]]; then
+                      token=$(jq -r '.token' <<< "${token_response}") && success=1 || success=0
+                      if [[ $success == 1 && -n "${token}" ]]; then
+                          request="${request} --header 'Authorization: Bearer ${token}'"
+                          response=$($SSH ${SVACE_ANALYZE_SSH_USER}@${SVACE_ANALYZE_HOST} "${request}") && success=1 || success=0
+                          if [[ $success == 1 ]]; then
+                              result=$(echo "${response}" | sed '$d')
+                              response_code=$(echo "$response" | tail -n1)
+                              [[ "${response_code}" == "${expected_code}" && -n "${result}" ]] || success=0 && success=1 && break
+                          fi
+                      fi
+                  fi
+              fi
+              
+              error "Request failed with code: ${response_code}. Retrying..."
+              error "Sleeping for ${sleep_timeout} sec ..."
+              sleep $sleep_timeout
+              sleep_timeout=$((sleep_timeout*2))
+              ((sleep_timeout > max_sleep)) && sleep_timeout=$max_sleep
+              attempt=$((attempt + 1))
+          done
+          if [ "$success" -eq 0 ]; then
+              error "All $retries attempts failed!"
+              return 1
+          else
+              echo "${result}"
+              return 0
+          fi
+      }
+      upload_to_svacer() {
+          # $1 - svacer project name
+          # $2 - branch name
+          # $3 - path to archive
+          # $4 - waiting timeout
+          # $5 - polling interval
+          # $6 - request attempts number
+          local url="${SVACER_URL}"
+          local project_name="${1}"
+          local branch_name="${2}"
+          local archive_name="${3}"
+          local timeout=${4:-1800}
+          local interval=${5:-10}
+          local retries=$((timeout/interval))
+          local request_attempts=${6:-10}
+          local import_task_id=""
+          local import_task_status=""
+          local success=0
+          local response=""
+          svacer_import="curl --write-out \"\\n%{http_code}\" -sS --request POST \
+          --url ${url}/api/public/svace/import\\?async\\=true \
+          --header 'User-Agent: Curl' \
+          --header 'content-type: multipart/form-data' \
+          --form project=\"${project_name}\" \
+          --form branch=\"${branch_name}\" \
+          --form file=@\"${archive_name}\" \
+          --form options=\"--field CI_COMMIT_HASH:${CI_COMMIT_HASH}\""
+          info "Importing \"${project_name}\"..."
+          response=$(send_request "${svacer_import}" $request_attempts)
+          read import_task_id import_task_status <<< $(jq -r '(.task_id|tostring)+" "+.status' <<< ${response})
+          success "Import task scheduled succesfully. Task id: ${import_task_id}"
+          get_import_log="curl --write-out \"\\n%{http_code}\" -sS --request GET \
+          --url ${url}/api/public/svace/import/logs/${import_task_id} \
+          --header 'User-Agent: Curl'"
+          info "Waiting for import to complete..."
+          for ((i = 0; i < retries; i++)); do
+              info "Checking import task status..."
+              response=$(send_request "${get_import_log}" $request_attempts)
+              if grep -Eqi '^## END OF TASK' <<< "${response}"; then
+                  if grep -Eqi 'Upload SUCCESS' <<< "${response}"; then
+                      success=1
+                      break
+                  else
+                      success=0
+                      break
+                  fi
+              fi
+              info "Import of ${project_name} in progress. Sleeping for $interval sec"
+              sleep $interval
+          done
+          if [ "$success" -eq 0 ]; then
+              error "All attempts failed!"
+              error "${response}"
+              return 1
+          else
+              return 0
+          fi
+      }
+      projects=$(send "{ for dir in /${SVACE_ANALYZE_DIR}/${CI_COMMIT_HASH}/*/*/; do echo \"\${dir%/}\"; done; }")
+      echo "${projects}"
+      info "Starting svace analyze..."
+      for proj in $projects; do
+          read module image <<< "$(echo ${proj} | grep -oE '[^/]+/[^/]+$' | sed 's/\// /g')"
+          [[ $image == "*" ]] && warning "Nothing to analyze in ${proj}" && echo "::warning file=$(realpath "$0")::Nothing to analyze" && exit 0
+          info "Start analyzing module \"${module}\" image \"${image}\"..."
+          send "svace analyze --quiet --svace-dir ${proj}"
+          success "Analysis completed successfully!"
+          info "Start archiving module \"${module}\" image \"${image}\"..."
+          send "cd ${proj} && tar -czf ${image}.tar.gz .svace-dir && rm -rf .svace-dir"
+          success "Archiving completed successfuly!"
+          info "Start importing module \"${module}\" image \"${image}\"..."
+          upload_to_svacer "${module}/${image}" "${CI_COMMIT_REF_NAME}" "${proj}/${image}.tar.gz"
+          success "Import completed successfuly!"
+          info "Cleaning up imported artifacts..."
+          send "rm -rf /${proj}"
+          success "Cleanup completed successfully"          
+      done
+  - name: Cleanup Svace artifacts
+    if: ${{ always() }}
+    env:
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ANALYZE_DIR: "svace-analyze"
+    run: |
+      set -e
+      # Define color codes
+      RED="\033[0;31m"   # Red for errors
+      YELLOW="\033[0;33m" # Yellow for warnings
+      GREEN="\033[0;32m"  # Green for success
+      BLUE="\033[0;34m"   # Blue for info
+      CYAN="\033[0;36m"   # Cyan fot datetime
+      NC="\033[0m"        # No color (reset)
+      error() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${RED}ERROR: ${1}${NC}" >&2; }
+      warning() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${YELLOW}WARNING: ${1}${NC}"; }
+      info() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${BLUE}INFO: ${1}${NC}"; }
+      success() { echo -e "${CYAN}$(date '+%Y-%m-%d %H:%M:%S') ${GREEN}SUCCESS: ${1}${NC}"; }
+      send() {
+          # $1 - command to send
+          # $2 - retries count
+          local command="$1"
+          local retries="${2:-3}"
+          local attempt=0
+          local success=0
+          result=""
+          while [ "$attempt" -lt "$retries" ]; do
+              result=$(ssh ${SVACE_ANALYZE_SSH_USER}@${SVACE_ANALYZE_HOST} "${command}") && success=1 && break
+              error "Command failed. Retrying..."
+              attempt=$((attempt + 1))
+              sleep 2
+          done
+          if [ "$success" -eq 0 ]; then
+              error "All $retries attempts failed!"
+              return 1
+          else
+              echo "${result}"
+              return 0
+          fi
+      }
+      info "Cleanup analyzed artifacts..."
+      send "rm -rf /${SVACE_ANALYZE_DIR}/${CI_COMMIT_HASH}"
+      success "Cleanup completed successfully"
+# </template: svace_analyze>      
+{!{ end}!}

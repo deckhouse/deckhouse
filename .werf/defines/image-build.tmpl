@@ -1,0 +1,28 @@
+{{- define "image-build.build" }}
+{{-   if eq $.SVACE_ENABLED "true" }}
+svace build --init --clear-build-dir {{ .BuildCommand }}
+attempt=0
+retries=5
+success=0
+set +e
+while [[ $attempt -lt $retries ]]; do
+  ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=12 {{ $.SVACE_ANALYZE_SSH_USER }}@{{ $.SVACE_ANALYZE_HOST }} mkdir -p /svace-analyze/{{ $.Commit.Hash }}/{{ .ProjectName }}/.svace-dir
+  rsync -zr --timeout=10 --compress-choice=zstd --partial --append-verify .svace-dir {{ $.SVACE_ANALYZE_SSH_USER }}@{{ $.SVACE_ANALYZE_HOST }}:/svace-analyze/{{ $.Commit.Hash }}/{{ .ProjectName }}/ && success=1 && break
+  sleep 10
+  attempt=$((attempt + 1))
+done
+set -e
+[[ $success == 1 ]] && rm -rf .svace-dir || exit 1
+{{ .BuildCommand }}
+{{-   else }}
+{{ .BuildCommand }}
+{{-   end }}
+{{- end }}
+
+{{- define "image-build.fromImage" }}
+{{-   if eq $.SVACE_ENABLED "true" }}
+fromImage: common/alt-p11-svace
+{{-   else }}
+fromImage: common/alt-p11-go
+{{-   end }}
+{{- end }}

@@ -1,11 +1,18 @@
-{{- $commit := "05fe7b3cd32f2b0340ea0068e140b6d3f0a4ea07" }}
+{{- $commit := "f52d52e16f868043dd2c3b4d79c4ff8ba5d90479" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - mkdir /wheels
   - cd /wheels
   - git reset --hard {{ $commit }}
+  - git init .
+  - git remote add origin $(cat /run/secrets/SOURCE_REPO)/python-modules/wheels
+  - git fetch origin {{ $commit }}
+  - git checkout {{ $commit }}  
   - rm -rf /wheels/.git
