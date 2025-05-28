@@ -21,7 +21,8 @@
       "flags": {
         "kubeconfig": {
           "description": "KubeConfig of the cluster.\n(default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-          "shorthand": "k"
+          "shorthand": "k",
+          "global": true
         }
       },
       "subcommands": [
@@ -15472,7 +15473,8 @@
       "flags": {
         "kubeconfig": {
           "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-          "shorthand": "k"
+          "shorthand": "k",
+          "global": true
         }
       },
       "subcommands": [
