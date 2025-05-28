@@ -478,5 +478,3 @@ properties:
               type: string
             dvpStorageClass:
               type: string
-            dvpStorageClass:
-              type: string
