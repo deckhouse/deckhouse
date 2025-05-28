@@ -58,7 +58,7 @@ properties:
       recommends disabling the `svcSourceRangeCheck` option.
 
       Do not enable if another balancer or any type of SNAT is running in front of the services.
-  lbSourceRangeAllTypes:
+  loadBalancerSourceRangeAllTypes:
     type: boolean
     default: true
     description: |

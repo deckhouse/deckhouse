@@ -119,8 +119,8 @@ data:
   enable-session-affinity: "true"
   {{- if .Values.cniCilium.svcSourceRangeCheck }}
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
-    {{- if .Values.cniCilium.lbSourceRangeAllTypes }}
-  bpf-lb-source-range-all-types: {{ .Values.cniCilium.lbSourceRangeAllTypes | quote }}
+    {{- if .Values.cniCilium.loadBalancerSourceRangeAllTypes }}
+  bpf-lb-source-range-all-types: {{ .Values.cniCilium.loadBalancerSourceRangeAllTypes | quote }}
     {{- end }}
   {{- end }}
 

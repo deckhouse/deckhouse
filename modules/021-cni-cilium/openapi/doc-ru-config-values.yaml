@@ -43,7 +43,7 @@ properties:
       рекомендует отключать проверку `svcSourceRangeCheck`.
 
       Не включайте, если перед сервисами есть другой балансировщик или какие-либо виды SNAT.
-  lbSourceRangeAllTypes:
+  loadBalancerSourceRangeAllTypes:
     description: |
       Включает проверку source IP для всех типов сервисов, а не только для LoadBalancer.
       К соответствующему NodePort или ClusterIP также будет применен фильтр CIDR.
