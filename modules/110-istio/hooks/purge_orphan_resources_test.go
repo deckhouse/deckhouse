@@ -239,14 +239,14 @@ metadata:
 			// Verify IstioFederation is deleted
 			_, err := f.KubeClient().Dynamic().Resource(federationGVR).Get(context.TODO(), "federation-1", metav1.GetOptions{})
 			Expect(err).To(HaveOccurred())
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from IstioFederation removed\",\"name\":\"federation-1\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"IstioFederation deleted\",\"name\":\"federation-1\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from IstioFederation removed\",\"finalizer_name\":\"federation-1\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"IstioFederation deleted\",\"finalizer_name\":\"federation-1\""))
 
 			// Verify IstioMulticluster is deleted
 			_, err = f.KubeClient().Dynamic().Resource(multiclusterGVR).Get(context.TODO(), "multicluster-1", metav1.GetOptions{})
 			Expect(err).To(HaveOccurred())
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from IstioMulticluster removed\",\"name\":\"multicluster-1\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"IstioMulticluster deleted\",\"name\":\"multicluster-1\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from IstioMulticluster removed\",\"finalizer_name\":\"multicluster-1\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"IstioMulticluster deleted\",\"finalizer_name\":\"multicluster-1\""))
 		})
 	})
 
