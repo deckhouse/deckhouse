@@ -1,5 +1,5 @@
 ---
-title: Введение
+title: Обзор
 permalink: ru/admin/integrations/public/yandex/yandex-overview.html
 lang: ru
 ---
