@@ -65,7 +65,7 @@ spec:
 {{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
   {{- end }}
 ---
-apiVersion: install.istio.io/v1alpha1 
+apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
   name: {{ $revision }}
@@ -91,10 +91,6 @@ spec:
   {{- if $.Values.istio.enableHTTP10 }}
         - name: PILOT_HTTP10
           value: "1"
-  {{- end }}
-  {{- if ($.Values.istio.internal.enableAmbientMode) }}
-        - name: PILOT_ENABLE_AMBIENT
-          value: "true"
   {{- end }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 8 }}
 
