@@ -16,8 +16,8 @@ lang: ru
 - Присвоение сетевого профиля vNIC при заказе ВМ;
 - Полная автоматизация создания и удаления узлов через API zVirt.
 
-![resources](../../images/cloud-provider-zvirt/zvirt-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
+![resources](../../../../images/cloud-provider-zvirt/zvirt-standard.png)
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11447&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации:
 

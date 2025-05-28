@@ -13,7 +13,7 @@ lang: ru
 Каждому узлу назначается публичный IP-адрес (Elastic IP), NAT-шлюз не используется. Такая схема обеспечивает прямой доступ к узлам по публичным IP-адресам и позволяет упростить маршрутизацию исходящего трафика.
 
 ![resources](../../../../images/cloud-provider-aws/aws-withoutnat.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1JDmeSY12EoZ3zBfanEDY-QvSgLekzw6Tzjj2pgY8giM/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10681&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -64,7 +64,7 @@ tags:
 В этой схеме размещения NAT Gateway используется для выхода в интернет, а публичные IP-адреса узлам не присваиваются. Доступ к узлам возможен только через bastion-хост, размещаемый в отдельной подсети.
 
 ![resources](../../../../images/cloud-provider-aws/aws-withnat.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1UPzygO3w8wsRNHEna2uoYB-69qvW6zDYB5s1OumUOes/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-9864&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации схемы размещения:
 

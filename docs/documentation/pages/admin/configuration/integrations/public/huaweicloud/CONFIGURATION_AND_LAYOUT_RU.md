@@ -13,7 +13,7 @@ lang: ru
 - Узлы, управляемые Cluster API, не имеют публичных IP-адресов.
 
 ![Схема размещения Standard](../../../../images/cloud-provider-huawei/huawei-standard.png)
-<!--- Source: https://docs.google.com/drawings/d/1sB_V7NhDiit8Gok2pq_8syQknCdC4GicpG3L2YF5QIU/edit --->
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации:
 
@@ -52,6 +52,8 @@ masterNodeGroup:
 - Виртуальные машины подключаются к заданной подсети.
 
 ![Схема размещения VpcPeering](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
+
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации:
 

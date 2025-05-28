@@ -18,7 +18,7 @@ DKP поддерживает две схемы размещения ресурс
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1VTAoz6-65q7m99KA933e1phWImirxvb9-OLH9DRtWPE/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -89,7 +89,7 @@ provider:
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1uhWbQFiycsFkG9D1vNbJNrb33Ih4YMdCxvOX5maW5XQ/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации схемы размещения:
 

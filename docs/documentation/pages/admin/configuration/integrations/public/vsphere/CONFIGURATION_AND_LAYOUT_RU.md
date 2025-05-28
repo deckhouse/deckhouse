@@ -17,7 +17,7 @@ lang: ru
 - Поддержка подключения сетей, включая дополнительную сетевую изоляцию (например, MetalLB + BGP).
 
 ![resources](../../../../images/cloud-provider-vsphere/vsphere-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1QOgPkq_xfBWMMI3SEU4Q9lyZM5mIWWbF_MwVsd06diE/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11345&t=Qb5yyWumzPiTBtfL-0 --->
 
 Пример конфигурации:
 
