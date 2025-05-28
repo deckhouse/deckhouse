@@ -22,4 +22,5 @@ docker run --rm \
   -v "${PWD}":/src \
   -v "${PWD}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt":/requirements.txt \
   -v "${PWD}/testing/webhooks/test.sh":/test.sh \
-  "${BASE}@${TAG}"
+  "${BASE}@${TAG}" \
+  /test.sh
