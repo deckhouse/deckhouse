@@ -28,13 +28,6 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dvp-common
-  to:  /src/dvp-common
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-      - "**/*.go"
 shell:
   install:
   - cd /src
