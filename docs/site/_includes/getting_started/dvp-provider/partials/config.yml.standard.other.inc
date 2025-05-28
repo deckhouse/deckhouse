@@ -16,12 +16,12 @@ cloud:
 # [<en>] must not overlap with the address space of DVP Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
 # [<ru>] не должно пересекаться с адресным пространством Pod'ов DVP.
-podSubnetCIDR: 10.111.0.0/16
+podSubnetCIDR: 10.112.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<en>] must not overlap with the address space of DVP services.
 # [<ru>] Адресное пространство для service’ов кластера.
 # [<ru>] не должно пересекаться с адресным пространством service'ов DVP.
-serviceSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.223.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
@@ -107,52 +107,75 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-standard:
-  # [<en>] Addressing for the internal network of the cluster nodes.
-  # [<ru>] Адресация для внутренней сети узлов кластера.
-  internalNetworkCIDR: 192.168.198.0/24
-  # [<en>] A list of recursive DNS addresses of the internal network.
-  # [<ru>] Список адресов рекурсивных DNS внутренней сети.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  internalNetworkDNSServers:
-    - 8.8.8.8
-    - 8.8.4.4
-  # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
-  # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
-  internalNetworkSecurity: true
-  # [<en>] Enable Elastic IP for the master nodes.
-  # [<ru>] Включите Elastic IP для master-узлов.
-  enableEIP: true
 masterNodeGroup:
   replicas: 1
-  # [<en>] Disk type array.
-  # [<ru>] Массив используемых типов дисков.
-  volumeTypeMap:
-    # [<en>] <availability zone>: <volume type>
-    # [<ru>] <availability zone>: <volume type>
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
-    # [<en>] Disk size for the root FS.
-    # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
+    # [<en>] Virtual machine settings for the created master node.
+    # [<ru>] Настройки виртуальной машины для созданного master-узла.
+    virtualMachine:
+      # [<en>] CPU settings for the virtual machine.
+      # [<ru>] Настройки процессора для виртуальной машины.
+      cpu:
+        # [<en>] Number of CPU cores for the virtual machine.
+        # [<ru>] Количество ядер процессора для виртуальной машины.
+        cores: 4
+        # [<en>] Guaranteed share of CPU that will be allocated to the virtual machine.
+        # [<ru>] Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
+        coreFraction: 100%
+      # [<en>] Specifies the memory settings for the virtual machine.
+      # [<ru>] Определяет параметры памяти для виртуальной машины.
+      memory:
+        # [<en>] Amount of memory resources allowed for the virtual machine.
+        # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
+        size: 8Gi
+      # [<en>] Static IP addresses (or Auto for automatic IP address assignment) to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
+      # [<ru>] Статические IP-адреса (или Auto для автоматического назначения IP-адреса), назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
+      ipAddresses:
+        - Auto
+    # [<en>] Specifies settings for the root disk of the virtual machine.
+    # [<ru>] Указывает настройки для корневого диска виртуальной машины.
+    rootDisk:
+      # [<en>] Root disk size.
+      # [<ru>] Размер корневого диска.
+      size: 50Gi
+      # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
+      # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+      # [<en>] Image parameters that will be used to create the virtual machine's root disk.
+      # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
+      image:
+        # [<en>] The kind of the image source.
+        # [<ru>] Тип источника изображения.
+        kind: ClusterVirtualImage
+        # [<en>] The name of the image that will be used to create the root disk.
+        # [<en>] > The installation requires Linux OS images with cloud-init pre-installed.
+        # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
+        # [<ru>] > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+        name: ubuntu-2204
+    # [<en>] Specifies settings for the etcd data disk.
+    # [<ru>] Указание настроек для диска данных etcd.
+    etcdDisk:
+      # [<en>] Etcd disk size.
+      # [<ru>] Размер диска etcd.
+      size: 15Gi
+      # [<en>] Name of the existing StorageClass will be used to create the etcd data disk.
+      # [<ru>] Имя существующего StorageClass будет использоваться для создания диска данных etcd.
+      storageClass: ceph-pool-r2-csi-rbd-immediate
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+# [<en>] Contains settings to connect to the Deckhouse Kubernetes Platform API.
+# [<ru>] Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+provider:
+  # [<en>] Kubeconfig to connect to Deckhouse Kubernetes Platform API, Base64-encoded.
+  # [<ru>] Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
+  kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
+  # [<en>] Namespace in which DKP cluster resources will be created.
+  # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
+  namespace: cloud-provider01
 ---
 # [<en>] Section containing the parameters of instance class for worker nodes.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
@@ -163,19 +186,47 @@ kind: DVPInstanceClass
 metadata:
   name: worker
 spec:
-  # [<en>] Flavor in use for this instance class.
-  # [<ru>] Используемый flavor для данного инстанс-класса.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  flavorName: Standard-2-4-50
-  # [<en>] The size of a root disk in gigabytes.
-  # [<ru>] Размер root-диска. Значение указывается в гигабайтах.
-  rootDiskSize: 40
-  # [<en>] VM image in use.
-  # [<ru>] Используемый образ виртуальной машины.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  # [<en>] Virtual machine settings for the created master node.
+  # [<ru>] Настройки виртуальной машины для созданного master-узла.
+  virtualMachine:
+    # [<en>] CPU settings for the virtual machine.
+    # [<ru>] Настройки процессора для виртуальной машины.
+    cpu:
+      # [<en>] Number of CPU cores for the virtual machine.
+      # [<ru>] Количество ядер процессора для виртуальной машины.
+      cores: 4
+      # [<en>] Guaranteed share of CPU that will be allocated to the virtual machine.
+      # [<ru>] Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
+      coreFraction: 100%
+    # [<en>] Specifies the memory settings for the virtual machine.
+    # [<ru>] Определяет параметры памяти для виртуальной машины.
+    memory:
+      # [<en>] Amount of memory resources allowed for the virtual machine.
+      # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
+      size: 8Gi
+    # [<en>] Defines a bootloader for the virtual machine.
+    # [<ru>] Определяет загрузчик для виртуальной машины.
+    bootloader: EFI
+  # [<en>] Specifies settings for the root disk of the virtual machine.
+  # [<ru>] Указывает настройки для корневого диска виртуальной машины.
+  rootDisk:
+    # [<en>] Root disk size.
+    # [<ru>] Размер корневого диска.
+    size: 50Gi
+    # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
+    # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+    storageClass: ceph-pool-r2-csi-rbd-immediate
+    # [<en>] Image parameters that will be used to create the virtual machine's root disk.
+    # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
+    image:
+      # [<en>] The kind of the image source.
+      # [<ru>] Тип источника изображения.
+      kind: ClusterVirtualImage
+      # [<en>] The name of the image that will be used to create the root disk.
+      # [<en>] > The installation requires Linux OS images with cloud-init pre-installed.
+      # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
+      # [<ru>] > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+      name: ubuntu-2204
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
@@ -198,14 +249,6 @@ spec:
     # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
     # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
     minPerZone: 1
-    # [<en>] List of availability zones to create instances in.
-    # [<ru>] Список зон, в которых создаются инстансы.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    zones:
-    - DP1
-  disruptions:
-    approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of NGINX Ingress controller.
