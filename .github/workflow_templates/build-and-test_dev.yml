@@ -146,7 +146,7 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   analyze_deckhouse:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') }}
+    if: ${{ (contains(github.event.pull_request.labels.*.name, 'analyze/svace')) && always() }}
     name: Deckhouse static analysis
     runs-on: [self-hosted]
     needs:
