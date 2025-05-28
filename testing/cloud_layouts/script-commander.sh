@@ -589,16 +589,16 @@ function run-test() {
     fi
   done
 
-  wait_upmeter_green
+  wait_upmeter_green || return $?
 
-  check_resources_state_results
+  check_resources_state_results || return $?
 
   if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
     echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
     sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
-  wait_alerts_resolve
+  wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
 
