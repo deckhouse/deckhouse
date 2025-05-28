@@ -3,7 +3,7 @@
 <p class="tile__descr">{{ site.data.i18n.common['guides_description'][page.lang] }}</p>
 
 <div class="block__tile">
-  {%- for guide in site.data.guides %}
+  {%- for guide in site.data[page.product_code]['guides'] %}
   <a class="button-tile" href="{{ guide.link }}">
     <h2 class="button-tile__title">{{ guide.name[page.lang] }}</h2>
     <p class="button-tile__descr">{{ guide.description[page.lang] }}</p>
