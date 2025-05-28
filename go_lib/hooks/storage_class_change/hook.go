@@ -290,7 +290,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 				input.Logger.Info("storage class changed, deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
-					input.Logger.Error("error occured", log.Err(err))
+					input.Logger.Error("error occurred", log.Err(err))
 				}
 			}
 		}
