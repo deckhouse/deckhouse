@@ -9,9 +9,8 @@ properties:
       minimalRequiredKernelVersionConstraint:
         type: string
         description: |
-          The minimal Linux kernel version constraint required for normal operation of the module
-          Constraint example: >= 4.9.17
-        default: ">= 4.9.17"
+          The minimal Linux kernel version constraint required for normal operation of the module.
+        default: ">= 5.8"
       mode:
         type: string
         enum: ["Direct", "DirectWithNodeRoutes", "VXLAN"]

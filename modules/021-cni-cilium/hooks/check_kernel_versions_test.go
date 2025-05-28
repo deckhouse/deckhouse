@@ -36,7 +36,7 @@ metadata:
     node.deckhouse.io/group: test
 status:
   nodeInfo:
-    kernelVersion: 5.4.0-90-generic
+    kernelVersion: 5.8.0-90-generic
 `
 		stateNode2 = `
 ---
@@ -91,9 +91,9 @@ status:
 
 	Context("Values cniCilium.internal.minimalRequiredKernelVersionConstraint is set when only cni-cilium enabled", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
 			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 
 			f.RunHook()
 		})
@@ -105,15 +105,15 @@ status:
 
 	Context("Values cniCilium.internal.minimalRequiredKernelVersionConstraint is set when cni-cilium,istio,openvpn enabled", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
-			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 5.8")
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
-			Expect(f.ValuesGet("cniCilium.internal.minimalRequiredKernelVersionConstraint").String()).To(Equal(">= 5.7"))
+			Expect(f.ValuesGet("cniCilium.internal.minimalRequiredKernelVersionConstraint").String()).To(Equal(">= 5.8"))
 		})
 	})
 
@@ -132,7 +132,7 @@ status:
 	Context("Cilium, istio, openvpn modules enabled, nodes with proper kernels", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
-			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 5.8")
 			f.BindingContexts.Set(f.KubeStateSet(stateNode3))
 
 			f.RunHook()
@@ -141,50 +141,27 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
+	})
 
-		Context("Cilium, istio, openvpn modules enabled, added node with improper kernel", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
-				f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+	Context("Cilium, istio, openvpn modules enabled, added node with improper kernel", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 5.8")
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 
-				f.RunHook()
-			})
+			f.RunHook()
+		})
 
-			It("Hook must execute successfully, metric must be set", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(6))
-				Expect(m[1].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium",
-					"constraint":      ">= 4.9.17",
-					"node":            "node-2",
-					"kernel_version":  "3.10.0-1127.el7.x86_64",
-				}))
-				Expect(m[2].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,istio",
-					"constraint":      ">= 5.7",
-					"node":            "node-1",
-					"kernel_version":  "5.4.0-90-generic",
-				}))
-				Expect(m[3].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,istio",
-					"constraint":      ">= 5.7",
-					"node":            "node-2",
-					"kernel_version":  "3.10.0-1127.el7.x86_64",
-				}))
-				Expect(m[4].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,openvpn",
-					"constraint":      ">= 5.7",
-					"node":            "node-1",
-					"kernel_version":  "5.4.0-90-generic",
-				}))
-				Expect(m[5].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,openvpn",
-					"constraint":      ">= 5.7",
-					"node":            "node-2",
-					"kernel_version":  "3.10.0-1127.el7.x86_64",
-				}))
-			})
+		It("Hook must execute successfully, metric must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1].Labels).To(Equal(map[string]string{
+				"affected_module": "cni-cilium",
+				"constraint":      ">= 5.8",
+				"node":            "node-2",
+				"kernel_version":  "3.10.0-1127.el7.x86_64",
+			}))
 		})
 	})
 })
