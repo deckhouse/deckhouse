@@ -21,11 +21,11 @@ import (
 	k8type "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/strings/slices"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 	eeInternal "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (

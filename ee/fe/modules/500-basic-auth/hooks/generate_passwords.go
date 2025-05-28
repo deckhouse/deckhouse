@@ -15,8 +15,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
+	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
 // Set locations from config values or set a default one with generated password.

@@ -22,8 +22,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

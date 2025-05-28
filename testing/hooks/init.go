@@ -59,6 +59,8 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/yaml"
 
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -67,7 +69,6 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
-	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 )
 
 var (

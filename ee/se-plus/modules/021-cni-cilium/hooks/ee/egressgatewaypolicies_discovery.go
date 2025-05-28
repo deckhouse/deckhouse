@@ -11,8 +11,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

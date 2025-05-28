@@ -26,8 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 type InternalValues struct {

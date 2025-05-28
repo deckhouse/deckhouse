@@ -21,8 +21,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
 // Scrape smoke-mini statefulset state before Helm rendering to avoid statefulset re-creation
