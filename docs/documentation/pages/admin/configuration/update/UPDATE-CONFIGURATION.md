@@ -98,6 +98,10 @@ To view the list and status of all releases in the cluster, run the following co
 sudo -i d8 k get deckhousereleases
 ```
 
+{% alert level="warning" %}
+Starting from DKP 1.70 patch releases (for example, an update from version `1.70.1` to version `1.70.2`) are installed taking into account the update windows. Prior to DKP 1.70, patch version updates ignore update windows settings and apply as soon as they are available.
+{% endalert %}
+
 #### Release pinning
 
 *Release pinning* refers to fully or partially disabling automatic updates.
@@ -129,9 +133,9 @@ There are three ways to restrict automatic updates in Deckhouse:
   Patch versions within the current minor version will be applied automatically,
   taking update windows into account if they are configured.
 
-  For example, if you have DKP version `v1.65.2` installed,
-  after enabling this mode, Deckhouse can automatically update to `v1.65.6`,
-  but it will not update to `v1.66.*` without manual approval.
+  For example, if you have DKP version `v1.70.1` installed,
+  after enabling this mode, Deckhouse can automatically update to `v1.70.2`,
+  but it will not update to `v1.71.*` without manual approval.
 
   To enable automatic updates for patch versions only,
   set the [`settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) parameter to `AutoPatch` in the `deckhouse` module configuration using the following command:
