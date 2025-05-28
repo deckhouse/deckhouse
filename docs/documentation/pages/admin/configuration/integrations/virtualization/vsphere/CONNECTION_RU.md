@@ -25,6 +25,7 @@ export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
+
 ## Конфигурация vSphere
 
 ### Создание тегов и категорий тегов

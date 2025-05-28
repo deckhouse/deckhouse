@@ -69,4 +69,3 @@ vpcPeering:
   internalNetworkSecurity: true
   subnet: subnet-43b4
 ```
-

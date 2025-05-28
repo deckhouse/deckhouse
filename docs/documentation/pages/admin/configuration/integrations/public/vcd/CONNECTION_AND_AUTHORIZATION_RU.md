@@ -165,4 +165,3 @@ lang: ru
    ![Шаблон шаг 11](../../../../images/cloud-provider-vcd/template/Screenshot11.png)
 
 > После создания шаблона обязательно попросите провайдера включить параметр `disk.enableUUID`.
-

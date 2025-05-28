@@ -252,12 +252,12 @@ shutdown -P now
 
 1. В созданном шаблоне перейдите на вкладку **Metadata** и добавьте шесть полей:
 
-  * `guestinfo.metadata`;
-  * `guestinfo.metadata.encoding`;
-  * `guestinfo.userdata`;
-  * `guestinfo.userdata.encoding`;
-  * `disk.enableUUID`;
-  * `guestinfo.hostname`.
+* `guestinfo.metadata`;
+* `guestinfo.metadata.encoding`;
+* `guestinfo.userdata`;
+* `guestinfo.userdata.encoding`;
+* `disk.enableUUID`;
+* `guestinfo.hostname`.
 
    ![Настройка шаблона, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
 
@@ -280,4 +280,3 @@ shutdown -P now
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
 * Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
 * Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
-

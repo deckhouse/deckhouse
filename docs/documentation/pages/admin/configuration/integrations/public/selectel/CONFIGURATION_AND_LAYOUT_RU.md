@@ -6,4 +6,3 @@ lang: ru
 ---
 
 {% include admin/integrations/openstack-based-configuration.md %}
-
