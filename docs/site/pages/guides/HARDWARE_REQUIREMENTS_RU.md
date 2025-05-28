@@ -33,7 +33,7 @@ lang: ru
       <th style="text-align: center;">Master-узлы</th>
       <th style="text-align: center;">Worker-узлы</th>
       <th style="text-align: center;">Frontend-узлы</th>
-      <th style="text-align: center;">Cистемные узлы</th>
+      <th style="text-align: center;">Системные узлы</th>
       <th style="text-align: center;">Узлы мониторинга</th>
     </tr>
   </thead>

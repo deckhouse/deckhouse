@@ -34,7 +34,7 @@ This section helps you **estimate the resources** required for the cluster based
       <th style="text-align: center;">Worker nodes</th>
       <th style="text-align: center;">Frontend nodes</th>
       <th style="text-align: center;">System nodes</th>
-      <th style="text-align: center;">Monitoring mnodes</th>
+      <th style="text-align: center;">Monitoring nodes</th>
     </tr>
   </thead>
   <tbody>
