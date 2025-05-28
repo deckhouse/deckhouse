@@ -1,9 +1,4 @@
-/*
-Copyright 2023 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
-*/
-
-package main
+package vcd
 
 import (
 	"context"
@@ -38,7 +33,7 @@ type Config struct {
 	Token    string `json:"token"`
 }
 
-func parseEnvToConfig() (*Config, error) {
+func ParseEnvToConfig() (*Config, error) {
 	c := &Config{}
 	password := os.Getenv("VCD_PASSWORD")
 	token := os.Getenv("VCD_TOKEN")
@@ -108,12 +103,7 @@ func (c *Config) client() (*govcd.VCDClient, error) {
 	return vcdClient, nil
 }
 
-func NewDiscoverer(logger *log.Logger) *Discoverer {
-	config, err := parseEnvToConfig()
-	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
-	}
-
+func NewDiscoverer(logger *log.Logger, config *Config) *Discoverer {
 	return &Discoverer{
 		logger: logger,
 		config: config,
