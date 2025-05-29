@@ -345,6 +345,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
+		"nodeFeatureDiscovery":     "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nvidiaDevicePlugin":       "imageHash-nodeManager-nvidiaDevicePlugin",
 	},
 	"nvidiaGpu": map[string]interface{}{
 		"nodeFeatureDiscovery": "imageHash-nvidiaGpu-nodeFeatureDiscovery",
