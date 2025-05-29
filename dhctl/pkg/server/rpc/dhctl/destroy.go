@@ -245,6 +245,11 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
+
+		err = sshClient.Start()
+		if err != nil {
+			return fmt.Errorf("starting ssh client: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
