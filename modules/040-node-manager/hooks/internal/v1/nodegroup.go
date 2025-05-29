@@ -137,8 +137,8 @@ func (c CRI) IsEmpty() bool {
 }
 
 type TimeSlicing struct {
-	// TimeSlicing count replicas
-	ResourceReplicas *int32 `json:"resourceReplicas,omitempty"`
+	// count replicas
+	GpuPartitionCount *int32 `json:"gpuPartitionCount,omitempty"`
 }
 
 type Mig struct {
