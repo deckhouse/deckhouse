@@ -16,6 +16,7 @@ import requests
 import os
 from datetime import datetime, timedelta, timezone
 import time
+import argparse
 
 e2e_commander_host = os.environ['E2E_COMMANDER_HOST']
 e2e_commander_token = os.environ['E2E_COMMANDER_TOKEN']
@@ -72,10 +73,9 @@ def get_clusters_delete_status(clusters: list[dict[str: str, str: str]]):
             raise DeletionError(deletion_failed=deletion_failed_clusters, timeout=clusters)
         time.sleep(sleep_time)
 
-if __name__ == "__main__":
-
+def remove_old_clusters():
+    print(f"Delete all clusters older than {HOURS_TO_REMOVE} hours")
     expire_time = datetime.now(timezone.utc) - timedelta(hours=HOURS_TO_REMOVE)
-    clusters = get_clusters().json()
     clusters_to_delete = []
     for i in clusters:
         cluster_id = i["id"]
@@ -103,3 +103,49 @@ if __name__ == "__main__":
         exit(1)
     else:
         print("All clusters were successfully removed.")
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="E2E autocleaner")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--auto", action="store_true", help=f"Delete all clusters older than {HOURS_TO_REMOVE} hours")
+    group.add_argument("--pr", type=int, help="Delete all clusters created in this pr")
+    args = parser.parse_args()
+
+    clusters = get_clusters().json()
+
+    if args.auto:
+        remove_old_clusters()
+    elif args.pr is not None:
+        print(f"Delete all clusters created in pr: {args.pr}")
+        clusters_to_delete = []
+        for i in clusters:
+            print(i)
+            cluster_id = i["id"]
+            cluster_name = i["name"]
+            created_at = datetime.strptime(i["created_at"], COMMANDER_TIME_FORMAT)
+            # exit(0)
+            if created_at < expire_time:
+                print(f"Cluster {cluster_name} created more than {HOURS_TO_REMOVE} hours ago, deleting")
+                url = f"https://{e2e_commander_host}/api/v1/clusters/{cluster_id}"
+                requests.delete(url=url, headers=commander_headers)
+                clusters_to_delete.append({"id": cluster_id, "name": cluster_name})
+            else:
+                print(f"Cluster {cluster_name} created less than {HOURS_TO_REMOVE} hours ago, skip")
+
+        try:
+            get_clusters_delete_status(clusters_to_delete)
+        except DeletionError as e:
+            if len(e.deletion_failed) > 0:
+                print("\nError deleting clusters, were not deleted:")
+                for i in e.deletion_failed:
+                    print(f"-  {i['name']}")
+            if len(e.timeout) > 0:
+                print("\nTimeout deleting clusters, were not deleted:")
+                for i in e.timeout:
+                    print(f"-  {i['name']}")
+            exit(1)
+    else:
+        print("All clusters were successfully removed.")
+        # найти кластера по номеру pr
+        # удалить
