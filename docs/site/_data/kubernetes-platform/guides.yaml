@@ -4,20 +4,20 @@
   link: "./production.html"
   #minutesToRead: 20
   description:
-    ru: Что нужно не забыть и о чем нужно позаботиться при подготовке кластера к работе с реальными нагрузками
-    en: What needs to be remembered and what should be taken care of when preparing the cluster for work with real workloads
+    ru: Что важно учесть и подготовить при настройке кластера для работы с реальными нагрузками.
+    en: What to consider and prepare when getting your cluster ready for real workloads.
   tags:
     - baremetal
     - cloud
     - production
 - name:
     ru: "Требования к кластеру на bare metal"
-    en: "Hardware requirements for bare metal cluster"
+    en: "Hardware requirements for bare-metal cluster"
   link: "./hardware-requirements.html"
   #minutesToRead: 45
   description:
-    ru: Поможет рассчитать параметры "железа" при развертывании на bare metal
-    en: It will help determine and calculate the hardware when deploying on bare metal
+    ru: Поможет рассчитать параметры "железа" при развертывании на bare metal.
+    en: Helps determine hardware specifications for deploying on bare metal.
   tags:
     - baremetal
     - production

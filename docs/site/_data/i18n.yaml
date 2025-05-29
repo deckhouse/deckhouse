@@ -234,8 +234,8 @@ common:
     en: Show more
     ru: Показать ещё
   guides_description:
-    en: They will help you achieve a specific goal or solve a specific problem.
-    ru: Помогут достичь конкретной цели или решить конкретную задачу.
+    en: Helping you achieve a goal or solve a problem with Deckhouse.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
