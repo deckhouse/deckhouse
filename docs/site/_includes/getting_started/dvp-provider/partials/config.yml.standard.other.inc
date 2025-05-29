@@ -175,7 +175,7 @@ provider:
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
   # [<en>] Namespace in which DKP cluster resources will be created.
   # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
-  namespace: cloud-provider01
+  namespace: demo
 ---
 # [<en>] Section containing the parameters of instance class for worker nodes.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
