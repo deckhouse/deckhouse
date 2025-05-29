@@ -42,7 +42,7 @@ module ReferenceGenerator
         'sitemap_include' => false
       }
 
-      self.content = renderD8Section(@referenceData, 1, [], {})
+      self.content = renderD8Section(@referenceData, 1, [])
       Jekyll::Hooks.trigger :pages, :post_init, self
     end
 
@@ -69,33 +69,41 @@ module ReferenceGenerator
       prepare_signature(signature) if signature
     end
 
-    def collect_global_flags(data, depth, inherited_flags)
-      current_flags = {}
-      
-      # Add flags from current level
-      if data['flags']
-        data['flags'].each do |flag_name, flag_data|
-          current_flags[flag_name] = flag_data
-          if flag_data['global'] == true
-            inherited_flags[flag_name] = flag_data
-          end
+    def render_flags(flags, depth)
+      return '' unless flags && flags.size > 0
+
+      # Separate flags to local and global
+      regular_flags = flags.reject { |_, f| f['global'] == true }
+      global_flags = flags.select { |_, f| f['global'] == true }
+
+      result = '<p>'
+      result += depth == 1 ? '<strong>Common options:</strong></br>' : '<strong>Options</strong></br>'
+      result += '<ul>'
+
+      # Render local flags
+      regular_flags.each do |flag_name, flag_data|
+        result += render_flag_item(flag_name, flag_data)
+      end
+
+      # Render global flags
+      if global_flags.any?
+        result += '</ul></p>'
+        result += '<p><strong>Global options</strong></br><ul>'
+        global_flags.each do |flag_name, flag_data|
+          result += render_flag_item(flag_name, flag_data)
         end
       end
-      
-      # Join flags from different levels
-      all_flags = inherited_flags.merge(current_flags)
-      
-      # Get global flags from subcommands
-      if data['subcommands']
-        data['subcommands'].each do |subcommand|
-          collect_global_flags(subcommand, depth + 1, inherited_flags.dup)
-        end
-      end
-      
-      all_flags
+
+      result += '</ul></p>'
     end
 
-    def renderD8Section(data, depth, parent_titles, inherited_flags)
+    def render_flag_item(flag_name, flag_data)
+      result = %Q(<li><p><code>--#{flag_name}</code>)
+      result += %Q(, <code>-#{flag_data['shorthand']}</code>) if flag_data['shorthand'].to_s.size > 0
+      result += %Q( — #{@converter.convert(flag_data['description']).sub(/^<p>|<\/p>$/, '')}</p></li>)
+    end
+
+    def renderD8Section(data, depth, parent_titles)
       result = ""
 
       unless depth == 1
@@ -115,37 +123,13 @@ module ReferenceGenerator
 
       result += "\n#{data['description']}\n\n" if data['description']
 
-      # Get all flags (current + global)
-      current_flags = {}
-      if data['flags']
-        data['flags'].each do |flag_name, flag_data|
-          current_flags[flag_name] = flag_data
-          if flag_data['global'] == true
-            inherited_flags[flag_name] = flag_data
-          end
-        end
-      end
-      all_flags = inherited_flags.merge(current_flags)
-
       # Render flags
-      if all_flags.size > 0
-        result += '<p>'
-        result += depth == 1 ? '<strong>Common options:</strong></br>' : '<strong>Options</strong></br>'
-        result += '<ul>'
-        all_flags.each do |flag_name, flag_data|
-          result += %Q(<li><p><code>--#{flag_name}</code>)
-          result += %Q(, <code>-#{flag_data['shorthand']}</code>) if flag_data['shorthand'].to_s.size > 0
-          result += %Q( — #{@converter.convert(flag_data['description']).sub(/^<p>|<\/p>$/, '')})
-          result += %Q( <span class="global-flag"><i>(global option)</i></span>) if flag_data['global'] == true
-          result += %Q(</p></li>)
-        end
-        result += '</ul></p>'
-      end
-      # Render commands
+      result += render_flags(data['flags'], depth) if data['flags'] && data['flags'].size > 0
+
       if data['subcommands'] && data['subcommands'].size > 0
         data['subcommands'].each do |subcommand|
           new_parent_titles = depth == 1 ? [] : parent_titles + [data['name']]
-          result += renderD8Section(subcommand, depth + 1, new_parent_titles, inherited_flags.dup)
+          result += renderD8Section(subcommand, depth + 1, new_parent_titles)
         end
       end
 
