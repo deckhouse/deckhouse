@@ -75,8 +75,6 @@ spec:
 
   namespace: d8-{{ $.Chart.Name }}
 
-  revision: {{ $revision }}
-
   values:
     global:
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
@@ -88,6 +86,35 @@ spec:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
+      proxy:
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+  {{- if $.Values.istio.sidecar.resourcesManagement }}
+    {{- if and (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static) }}
+        resources:
+          {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
+    {{- else }}
+        resources: {}
+    {{- end }}
+  {{- else }}
+        resources: {}
+  {{- end }}
+        logLevel: warning
+        componentLogLevel: "misc:error"
+        includeIPRanges:      {{ $.Values.istio.sidecar.includeOutboundIPRanges | default list "0.0.0.0/0" | join "," | quote }}
+        excludeIPRanges:      {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }}
+        excludeOutboundPorts: {{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," | quote }}
+        excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
+      proxy_init:
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+      revision: {{ $revision }}
 
     meshConfig:
       rootNamespace: d8-{{ $.Chart.Name }}
@@ -148,36 +175,6 @@ spec:
       imagePullPolicy: IfNotPresent
       imagePullSecrets:
       - d8-istio-sidecar-registry
-
-      proxy:
-        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
-        clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
-  {{- if $.Values.istio.sidecar.resourcesManagement }}
-    {{- if and (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static) }}
-        resources:
-          {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
-    {{- else }}
-        resources: {}
-    {{- end }}
-  {{- else }}
-        resources: {}
-  {{- end }}
-        logLevel: warning
-        componentLogLevel: "misc:error"
-        includeIPRanges:      {{ $.Values.istio.sidecar.includeOutboundIPRanges | default list "0.0.0.0/0" | join "," | quote }}
-        excludeIPRanges:      {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }}
-        excludeOutboundPorts: {{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," | quote }}
-        excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
-
-      proxy_init:
-        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
-        resources:
-          limits:
-            cpu: 100m
-            memory: 50Mi
-          requests:
-            cpu: 10m
-            memory: 10Mi
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
