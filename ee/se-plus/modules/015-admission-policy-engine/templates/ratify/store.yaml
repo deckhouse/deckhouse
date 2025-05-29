@@ -1,0 +1,65 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+
+{{- $dockerCfgList := list }}
+{{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
+  {{- $spname := $sp.metadata.name }}
+  {{- range $refid, $ref := $sp.spec.policies.verifyImageSignatures }}
+    {{- if $ref.dockerCfg }}
+      {{- $dockerCfgList = append $dockerCfgList $ref.dockerCfg }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- $dockerCfgList = $dockerCfgList | uniq }}
+
+{{- range $id, $dockerCfg := $dockerCfgList }}
+---
+apiVersion: v1
+data:
+  .dockerconfigjson: {{ $dockerCfg }}
+kind: Secret
+metadata:
+  name: {{ printf "ratify-dockercfg-%d" $id }}
+  namespace: d8-{{ $.Chart.Name }}
+type: kubernetes.io/dockerconfigjson
+{{- end }}
+
+---
+apiVersion: config.ratify.deislabs.io/v1beta1
+kind: Store
+metadata:
+  name: oras
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  name: oras
+  version: 1.0.0
+  parameters:
+    cosignEnabled: true
+    cacheEnabled: true
+    ttl: 180
+{{- $caList := list }}
+{{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
+  {{- range $vfs := $sp.spec.policies.verifyImageSignatures }}
+    {{- if $vfs.ca }}
+      {{- $caList = append $caList $vfs.ca }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- $caList = $caList | uniq }}
+{{- if gt (len $caList) 0 }}
+    ca:
+  {{- range $ca := $caList }}
+    - |
+{{ $ca | indent 6 }}
+  {{- end }}
+{{- end }}
+{{- if gt (len $dockerCfgList) 0 }}
+    authProvider:
+      name: k8Secrets
+      serviceAccountName: ratify
+      secrets:
+{{- range $id, $dockerCfg := $dockerCfgList }}
+      - secretName: {{ printf "ratify-dockercfg-%d" $id }}
+        namespace: d8-{{ $.Chart.Name }}
+{{- end }}
+{{- end }}
+{{- end }}
