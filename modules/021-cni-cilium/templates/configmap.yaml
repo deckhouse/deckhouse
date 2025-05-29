@@ -49,6 +49,7 @@ data:
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel-protocol: "vxlan"
   routing-mode: "tunnel"
+
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   routing-mode: "native"
   auto-direct-node-routes: "true"
