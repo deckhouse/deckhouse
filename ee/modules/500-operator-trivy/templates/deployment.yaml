@@ -203,6 +203,17 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
         ports:
         - containerPort: 8081
           name: https-metrics
