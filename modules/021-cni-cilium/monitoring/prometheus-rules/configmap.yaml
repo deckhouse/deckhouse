@@ -1,7 +1,7 @@
 - name: d8.cni-cilium.configmap
   rules:
   - alert: CniCiliumNonStandardVXLANPortFound
-    expr: max by (port) (d8_cni_cilium_non_standard_vxlan_port == 1)
+    expr: max by (currentPort,recommendedPort) (d8_cni_cilium_non_standard_vxlan_port == 1)
     for: 5m
     labels:
       severity_level: "4"
