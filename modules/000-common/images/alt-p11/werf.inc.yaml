@@ -40,6 +40,10 @@ import:
 shell:
   install:
     - apt-get install -y golang git binutils make gcc glibc-pthread glibc-devel glibc-devel-static
+imageSpec:
+  config:
+    env:
+      GOTOOLCHAIN: "local"
 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-svace
