@@ -110,7 +110,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4229"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4289"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
@@ -134,17 +134,17 @@ spec:
                     subresource: prometheus-metrics
                     name: monitoring-ping
         ports:
-          - containerPort: 4229
+          - containerPort: 4289
             name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 4229
+            port: 4289
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 4229
+            port: 4289
             scheme: HTTPS
         resources:
           requests:
