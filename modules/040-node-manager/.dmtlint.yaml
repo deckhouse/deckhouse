@@ -8,6 +8,21 @@ linters-settings:
       read-only-root-filesystem:
         - kind: Deployment
           name: caps-controller-manager
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-control-daemon-mounts
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-control-daemon-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
       resources:
         - kind: Deployment
           name: standby-holder-name
@@ -31,6 +46,27 @@ linters-settings:
         - kind: Deployment
           name: standby-holder-name
           container: reserve-resources
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-sidecar
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-sidecar
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-control-daemon-ctr
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-config-manager
+        - kind: Deployment
+          name: node-feature-discovery-gc
+          container: gc
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
       readiness-probe:
         - kind: Deployment
           name: standby-holder-name
@@ -38,6 +74,27 @@ linters-settings:
         - kind: Deployment
           name: machine-controller-manager
           container: controller
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-sidecar
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-sidecar
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-control-daemon-ctr
+        - kind: DaemonSet
+          name: mps-control-daemon
+          container: mps-config-manager
+        - kind: Deployment
+          name: node-feature-discovery-gc
+          container: gc
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
   templates:
     exclude-rules:
       pdb:
