@@ -1,5 +1,0 @@
-- name: NVIDIA GPU Operator
-  link: https://github.com/NVIDIA/gpu-operator
-  description: 'NVIDIA GPU Operator creates, configures, and manages GPUs in Kubernetes.'
-  logo: https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/_static/nvidia-logo-horiz-rgb-wht-for-screen.svg
-  license: Apache 2.0
