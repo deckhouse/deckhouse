@@ -46,7 +46,7 @@ jobs:
     {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - uses: {!{ index (ds "actions") "actions/setup-python" }!}
       with:
-        python-version: ${PYTHON_VERSION}
+        python-version: ${{ env.PYTHON_VERSION }}
     - name: Install deps
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
