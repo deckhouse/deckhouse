@@ -805,10 +805,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "EE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}         
+      WERF_ENV: "EE"    
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1098,10 +1095,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}         
+      WERF_ENV: "SE"   
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1391,10 +1385,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE-plus"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}      
+      WERF_ENV: "SE-plus"   
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1684,10 +1675,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "BE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}       
+      WERF_ENV: "BE"      
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1977,10 +1965,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "CE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}       
+      WERF_ENV: "CE"      
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:

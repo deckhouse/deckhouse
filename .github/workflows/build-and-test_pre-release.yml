@@ -24,6 +24,8 @@ on:
     branches:
       - 'release-*'
       - 'main'
+  schedule:
+    - cron: '0 1 * * 1'
 
 env:
 
@@ -284,7 +286,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: "true"      
+      SVACE_ENABLED: ${{ github.event_name == 'schedule' }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -2076,7 +2078,7 @@ jobs:
       # </template: send_fail_report>
 
   analyze_deckhouse:
-    if: ${{ always() }}
+    if: ${{ (github.event_name == 'schedule') && always() }}
     name: Deckhouse static analysis
     runs-on: [self-hosted]
     needs:

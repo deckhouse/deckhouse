@@ -22,6 +22,8 @@ on:
     branches:
       - 'release-*'
       - 'main'
+  schedule:
+    - cron: '0 1 * * 1'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -59,7 +61,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: "true"      
+      SVACE_ENABLED: ${{ github.event_name == 'schedule' }}
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
@@ -129,7 +131,7 @@ jobs:
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   analyze_deckhouse:
-    if: ${{ always() }}
+    if: ${{ (github.event_name == 'schedule') && always() }}
     name: Deckhouse static analysis
     runs-on: [self-hosted]
     needs:
