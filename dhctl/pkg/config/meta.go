@@ -73,6 +73,12 @@ type RegistryData struct {
 	DockerCfg string `json:"dockerCfg"`
 }
 
+type providerApiDiscoverMap map[string]func(*MetaConfig) (any, error)
+
+var providerApiDiscoverer = providerApiDiscoverMap{
+	ProviderVCD: (*MetaConfig).discoverVCDApi,
+}
+
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
@@ -132,19 +138,19 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
-	apiVersion := ""
-	apiVersionFunc, ok := providerApiVersionsDiscoverer[cloud.Provider]
+	var providerInfo interface{}
+	providerAPIInfoFunc, ok := providerApiDiscoverer[cloud.Provider]
 
 	if ok {
 		var err error
 
-		apiVersion, err = apiVersionFunc(m)
+		providerInfo, err = providerAPIInfoFunc(m)
 		if err != nil {
-			return nil, fmt.Errorf("unable to discover provider API version: %v", err)
+			return nil, fmt.Errorf("unable to discover provider info: %v", err)
 		}
 	}
 
-	if cloud.Provider == "Yandex" {
+	if cloud.Provider == ProviderYandex {
 		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
 			return nil, err
 		}
@@ -177,13 +183,18 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
-	if cloud.Provider == "VCD" {
+	if cloud.Provider == ProviderVCD {
 		// Set default version for terraform-provider-vcd to 3.10.0 if legacyMode is true
 		// This is a temporary solution to avoid breaking changes in the VCD API
 
-		version, err := semver.NewVersion(apiVersion)
+		VCDProviderInfo, ok := providerInfo.(*VCDProviderInfo)
+		if !ok {
+			return nil, fmt.Errorf("failed to get VCD provider info")
+		}
+
+		version, err := semver.NewVersion(VCDProviderInfo.ApiVersion)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse VCD API version '%s': %v", apiVersion, err)
+			return nil, fmt.Errorf("failed to parse VCD API version '%s': %v", VCDProviderInfo.ApiVersion, err)
 		}
 
 		versionConstraint, err := semver.NewConstraint("<37.2")
@@ -819,39 +830,28 @@ func GetIndexFromNodeName(name string) (int, error) {
 	return index, nil
 }
 
-type providerApiVersionsDiscoverMap map[string]func(*MetaConfig) (string, error)
-
-var providerApiVersionsDiscoverer = providerApiVersionsDiscoverMap{
-	"VCD": (*MetaConfig).discoverVCDApiVersion,
-}
-
-type VCDProviderConfig struct {
-	Server   string `json:"server"`
-	Insecure bool   `json:"insecure,omitempty"`
-}
-
-func (m *MetaConfig) discoverVCDApiVersion() (string, error) {
+func (m *MetaConfig) discoverVCDApi() (any, error) {
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return "", fmt.Errorf("current cluster type is not a cloud type")
+		return nil, fmt.Errorf("current cluster type is not a cloud type")
 	}
 
 	var cloud ClusterConfigCloudSpec
 	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
-		return "", fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
 	}
 
-	if cloud.Provider != "VCD" {
-		return "", fmt.Errorf("current provider type is not VCD")
+	if cloud.Provider != ProviderVCD {
+		return nil, fmt.Errorf("current provider type is not VCD")
 	}
 
 	var providerConfiguration VCDProviderConfig
 	if err := json.Unmarshal(m.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
-		return "", fmt.Errorf("unable to unmarshal provider configuration: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
 	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
 	if err != nil {
-		return "", nil
+		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
 	}
 	insecure := providerConfiguration.Insecure
 
@@ -862,5 +862,10 @@ func (m *MetaConfig) discoverVCDApiVersion() (string, error) {
 
 	vcdClient.Client.APIVCDMaxVersionIs("")
 
-	return vcdClient.Client.MaxSupportedVersion()
+	apiVersion, err := vcdClient.Client.MaxSupportedVersion()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get VCD API version: %v", err)
+	}
+
+	return &VCDProviderInfo{ApiVersion: apiVersion}, nil
 }
