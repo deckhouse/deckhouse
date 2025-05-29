@@ -18,21 +18,9 @@ linters-settings:
     exclude-rules:
       liveness-probe:
         - kind: Deployment
-          name: gatekeeper-controller-manager
-          container: kube-rbac-proxy
-        - kind: Deployment
           name: gatekeeper-audit
           container: constraint-exporter
-        - kind: Deployment
-          name: gatekeeper-audit
-          container: kube-rbac-proxy
       readiness-probe:
         - kind: Deployment
-          name: gatekeeper-controller-manager
-          container: kube-rbac-proxy
-        - kind: Deployment
           name: gatekeeper-audit
           container: constraint-exporter
-        - kind: Deployment
-          name: gatekeeper-audit
-          container: kube-rbac-proxy
