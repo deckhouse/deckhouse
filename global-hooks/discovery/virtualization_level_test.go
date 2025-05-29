@@ -1,4 +1,4 @@
-// Copyright 2022 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,11 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 
 		It("Hook runs successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Set global value dvpNestingLevel to 0", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
 		})
 	})
 

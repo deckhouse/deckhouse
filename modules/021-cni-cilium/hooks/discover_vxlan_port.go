@@ -85,7 +85,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 					// someone configured the port for setup without virtualization 8472 manually, will set the right one
 					{source: 8472, target: 4298},
 
-					// virtualization module was enabled on regular setup with the right port, will set the 4298
+					// virtualization module was enabled on regular setup with the right port, will set the 4298 port
 					{source: 4299, target: 4298},
 
 					// regular setup with enabled virtualization module and right port, will leave it as is
@@ -102,7 +102,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 					// our previous standard setup with explicitly configured 8472 port, will leave the 8472
 					{source: 8472, target: 8472},
 
-					// regular setup with standard 4298 port, will leave it as is
+					// virtualizaiton module was disabled on regular setup with standard 4298 port, will set the 4299 port
 					{source: 4298, target: 4299},
 
 					// regular setup with standard 4299 port, will leave it as is
@@ -112,24 +112,8 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 		}
 
 	case newInstallation: // (ConfigMap does not exist)
-		switch {
-		case virtNestingLevel > 0: // (Nested installation)
-			return []transitionRule{
-				{source: 0, target: 4298 - virtNestingLevel},
-			}
-
-		default:
-			switch virtStatus {
-			case virtualizationEnabled:
-				return []transitionRule{
-					{source: 0, target: 4298},
-				}
-
-			case virtualizationDisabled:
-				return []transitionRule{
-					{source: 0, target: 4299},
-				}
-			}
+		return []transitionRule{
+			{source: 0, target: 4298 - virtNestingLevel},
 		}
 	}
 
@@ -217,7 +201,10 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 
 	if !transitionFound {
 		targetPort = sourcePort
-		input.MetricsCollector.Set(metricNameNonStandardVxlanPort, 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup(metricGroupVxlanPort))
+		input.MetricsCollector.Set(metricNameNonStandardVxlanPort, 1, map[string]string{
+			"currentPort":     fmt.Sprintf("%d", targetPort),
+			"recommendedPort": fmt.Sprintf("%d", 4298-virtNestingLevel),
+		}, metrics.WithGroup(metricGroupVxlanPort))
 	}
 
 	input.Values.Set("cniCilium.internal.tunnelPortVXLAN", targetPort)

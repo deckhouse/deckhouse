@@ -222,17 +222,14 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.tpl
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
       edition: ce
       description: |
-        The Cilium configuration specifies a non-standard VXLAN port {{ $labels.port }}. This port falls outside the recommended range:
+        The Cilium configuration specifies a non-standard VXLAN port `{{ $labels.currentPort }}`. The recommend port number is `{{ $labels.recommendedPort }}`.
 
-        - `4298`: When the virtualization module is enabled.
-        - `4299`: For a standard Deckhouse setup.
-
-        To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended range.
+        To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended port.
 
         If you configured the non-standard port on purpose, ignore this alert.
       summary: |

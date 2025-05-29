@@ -38,9 +38,9 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", fun
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4299", func() {
+		It("VXLAN Tunnel Port should be 4298", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
 
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
