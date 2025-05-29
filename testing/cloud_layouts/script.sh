@@ -553,16 +553,82 @@ print(yaml.dump(data))
 
 rm /tmp/releaseFile.yaml
 
->&2 echo "Sleep 5 seconds before check..."
+>&2 echo "Waiting for DeckhouseRelease to be created..."
 
-sleep 5
+# Wait for the DeckhouseRelease resource to be created (up to 60 seconds)
+timeout=60
+elapsed=0
+while [ \$elapsed -lt \$timeout ]; do
+    if kubectl get deckhousereleases.deckhouse.io ${next_version} >/dev/null 2>&1; then
+        >&2 echo "DeckhouseRelease ${next_version} created successfully"
+        break
+    fi
+    >&2 echo "Waiting for DeckhouseRelease ${next_version} to be created... (\$elapsed/\$timeout seconds)"
+    sleep 5
+    elapsed=\$((elapsed + 5))
+done
+
+if [ \$elapsed -ge \$timeout ]; then
+    >&2 echo "Timeout: DeckhouseRelease ${next_version} was not created within \$timeout seconds"
+    exit 1
+fi
+
+>&2 echo "Waiting for DeckhouseRelease ${next_version} to reach final state..."
+
+# Wait for the DeckhouseRelease to reach a final state (Deployed, Superseded, or Suspended)
+# Timeout of 10 minutes (600 seconds) to allow for release processing
+if ! kubectl wait --for=condition=jsonpath='{.status.phase}' \
+    --timeout=600s \
+    deckhousereleases.deckhouse.io/${next_version} \
+    --jsonpath-value=Deployed \
+    --jsonpath-value=Superseded \
+    --jsonpath-value=Suspended 2>/dev/null; then
+    
+    # If the above wait fails, try individual phase waits
+    >&2 echo "Waiting for DeckhouseRelease ${next_version} phase to be one of: Deployed, Superseded, Suspended"
+    
+    # Use a more robust waiting approach with timeout
+    timeout=600
+    elapsed=0
+    while [ \$elapsed -lt \$timeout ]; do
+        phase=\$(kubectl get deckhousereleases.deckhouse.io ${next_version} -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+        
+        case "\$phase" in
+            "Deployed"|"Superseded"|"Suspended")
+                >&2 echo "DeckhouseRelease ${next_version} reached final phase: \$phase"
+                break
+                ;;
+            "Pending")
+                >&2 echo "DeckhouseRelease ${next_version} is in Pending phase, continuing to wait... (\$elapsed/\$timeout seconds)"
+                ;;
+            *)
+                >&2 echo "DeckhouseRelease ${next_version} is in phase '\$phase', waiting... (\$elapsed/\$timeout seconds)"
+                ;;
+        esac
+        
+        sleep 10
+        elapsed=\$((elapsed + 10))
+    done
+    
+    if [ \$elapsed -ge \$timeout ]; then
+        >&2 echo "Timeout: DeckhouseRelease ${next_version} did not reach final state within \$timeout seconds"
+        final_phase=\$(kubectl get deckhousereleases.deckhouse.io ${next_version} -o jsonpath='{.status.phase}' 2>/dev/null || echo "unknown")
+        >&2 echo "Final phase: \$final_phase"
+        if [ ! -z "\$(kubectl get deckhousereleases.deckhouse.io ${next_version} -o jsonpath='{.status.message}' 2>/dev/null)" ]; then
+            >&2 echo "Error message: \$(kubectl get deckhousereleases.deckhouse.io ${next_version} -o jsonpath='{.status.message}')"
+        fi
+        exit 1
+    fi
+fi
 
 >&2 echo "Release status: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
 if [ ! -z "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')" ]; then
   >&2 echo "Error message: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')"
 fi
 
-[[ "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
+# Check if the release was successfully deployed
+final_phase=\$(kubectl get deckhousereleases.deckhouse.io ${next_version} -o jsonpath='{.status.phase}')
+[[ "\$final_phase" == "Deployed" ]]
 ENDSC
 )
 
