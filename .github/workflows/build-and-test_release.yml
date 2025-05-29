@@ -658,9 +658,6 @@ jobs:
       - detect_editions
     env:
       WERF_ENV: "EE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -970,10 +967,7 @@ jobs:
       - build_fe
       - detect_editions
     env:
-      WERF_ENV: "SE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
+      WERF_ENV: "SE"    
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1272,9 +1266,6 @@ jobs:
       - detect_editions
     env:
       WERF_ENV: "SE-plus"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1573,9 +1564,6 @@ jobs:
       - detect_editions
     env:
       WERF_ENV: "BE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1874,9 +1862,6 @@ jobs:
       - detect_editions
     env:
       WERF_ENV: "CE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
