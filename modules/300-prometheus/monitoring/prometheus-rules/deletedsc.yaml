@@ -1,0 +1,23 @@
+- name: d8.deletedsc
+  rules:
+    - alert: DeckhouseModuleUsesDeletedStorageClass
+      expr: |
+        kube_persistentvolumeclaim_info{namespace=~"d8-.*"} unless(kube_persistentvolumeclaim_info{namespace=~"d8-.*"} * on(storageclass) group_left() kube_storageclass_info)
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__deckhouse_module_use_empty_dir: DeckhouseModuleUsesDeletedStorageClassGroup,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_group_for__deckhouse_module_use_empty_dir: DeckhouseModuleUsesDeletedStorageClassGroup,prometheus=deckhouse,kubernetes=~kubernetes
+      summary: StorageClass used by PVC {{ $labels.persistentvolumeclaim }}` is not found.
+      description: |
+        PVC `{{ $labels.persistentvolumeclaim }}` in namespace `{{ $labels.namespace }}` uses storageclass `{{ $labels.storageclass }}` which is not found in the cluster.
+
+        This could lead to missing data.
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get pvc {{ $labels.persistentvolumeclaim }}
+        ```
