@@ -402,7 +402,7 @@ check_e2e_labels:
 {!{- end }!}
     - git_info
 {!{- if ne $ctx.workflowName "Daily e2e tests" }!}
-    - block-e2e-until-image-is-not-ready
+    - block-until-image-is-not-ready
 {!{- end -}!}
 {!{- if coll.Has $ctx "manualRun" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
