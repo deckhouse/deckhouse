@@ -1,13 +1,15 @@
 <div class="breadcrumbs-container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation_title[page.lang] }}</li>
     </ol>
   </div>
   <div class="breadcrumbs__right">
     <ol class="breadcrumbs">
       {% if site.data.i18n.common.platform[page.lang] %}
         <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
+      {% else %}
+        <li class="breadcrumbs__item">{{ site.data.i18n.common[page.product_code] }}</li>
       {% endif %}
       <!--#include virtual="/includes/group-menu.html" -->
       {% include nav-breadcrumbs-pagepath.html %}

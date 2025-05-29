@@ -7,7 +7,11 @@
   {% else %}
     {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
     {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-    {%- assign breadcrumb = site.data[page.product_code]['breadcrumbs'][current_breadcrumb_url] %}
+    {% if page.product_code == "virtualization-platform" %}
+      {%- assign breadcrumb = site.data.dvp.['breadcrumbs'][current_breadcrumb_url] %}
+    {% else %}
+      {%- assign breadcrumb = site.data[page.product_code]['breadcrumbs'][current_breadcrumb_url] %}
+    {% endif %}
     {%- if breadcrumb %}
         <li class="breadcrumbs__item">
             {%- if breadcrumb.url %}<a href="{{ breadcrumb.url | true_relative_url }}">{% endif %}
