@@ -22,7 +22,7 @@ bb-dvp-nesting-level() {
     local DMI_SOURCE="/sys/devices/virtual/dmi/id/product_sku"
     local SKU=""
     if [ -f "$DMI_SOURCE" ]; then
-        $SKU="$(<${DMI_SOURCE})"
+        SKU="$(<${DMI_SOURCE})"
 	# check if $SKU is a number
         if [ "$SKU" -eq "$SKU" 2>/dev/null ]; then
             DVP_NESTING_LEVEL="$SKU"
