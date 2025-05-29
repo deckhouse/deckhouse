@@ -3,7 +3,7 @@
 .block__tile {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-around;
+    justify-content: flex-start;
     gap: 16px;
     margin-bottom: 40px;
 
