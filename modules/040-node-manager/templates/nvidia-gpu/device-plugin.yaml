@@ -2,14 +2,14 @@
   {{- if ($ng).gpu -}}
 
     {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
-    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -40,7 +40,7 @@ kind: DaemonSet
 metadata:
   name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -50,7 +50,7 @@ spec:
       labels:
         component: {{ $devicePluginName }}
     spec:
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -67,12 +67,12 @@ spec:
       shareProcessNamespace: true
       initContainers:
       - name: nvidia-device-plugin-init
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/config-manager"]
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
         {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
@@ -109,13 +109,13 @@ spec:
             mountPath: /config
       containers:
       - name: nvidia-device-plugin-sidecar
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/config-manager"]
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
         {{- end }}
@@ -150,7 +150,7 @@ spec:
           - name: config
             mountPath: /config
       - name: nvidia-device-plugin-ctr
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/nvidia-device-plugin"]
         env:
           - name: MPS_ROOT
@@ -192,8 +192,8 @@ spec:
             mountPath: /config
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
         {{- end }}
