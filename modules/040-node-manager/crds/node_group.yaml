@@ -1535,6 +1535,12 @@ spec:
                       description: |
                         Time-slicing parameters.
                       type: object
+                      properties:
+                        gpuPartitionCount:
+                          type: string
+                          description: |
+                            Count of partition per GPU with TimeSlicing.
+                          x-doc-default: "4"
                     exclusive:
                       type: object
                       description: |
