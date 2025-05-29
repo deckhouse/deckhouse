@@ -28,7 +28,7 @@ rules:
     verbs: [ "get", "list", "watch" ]
   - apiGroups: [ "coordination.k8s.io" ]
     resources: [ "leases" ]
-    verbs: [ "list", "watch", "get" ]
+    verbs: [ "list", "watch", "get", "create" ]
   - apiGroups: [ "discovery.k8s.io" ]
     resources: [ "endpointslices" ]
     verbs: [ "list", "watch", "get" ]
