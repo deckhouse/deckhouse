@@ -9,7 +9,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName "node-group" "$ng.name" )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -40,7 +40,7 @@ kind: DaemonSet
 metadata:
   name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName "node-group" "$ng.name")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -59,7 +59,7 @@ spec:
                   - key: nvidia.com/gpu.count
                     operator: Gt
                     values:
-                    - 0
+                    - "0"
       priorityClassName: system-node-critical
       imagePullSecrets:
         - name: deckhouse-registry
