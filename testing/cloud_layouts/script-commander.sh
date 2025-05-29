@@ -336,7 +336,7 @@ function wait_alerts_resolve() {
       echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
@@ -377,12 +377,24 @@ function wait_upmeter_green() {
       echo "  Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
   done
 
+}
+
+function check_resources_state_results() {
+  echo "Check applied resource status..."
+  response=$(get_cluster_status)
+  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response")
+  if [ -n "$errors" ]; then
+    echo "  Errors found:"
+    echo "${errors}"
+    return 1
+  fi
+  echo "Check applied resource status... Passed"
 }
 
 function change_deckhouse_image() {
@@ -577,14 +589,16 @@ function run-test() {
     fi
   done
 
-  wait_upmeter_green
+  wait_upmeter_green || return $?
+
+  check_resources_state_results || return $?
 
   if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
     echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
     sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
-  wait_alerts_resolve
+  wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
 

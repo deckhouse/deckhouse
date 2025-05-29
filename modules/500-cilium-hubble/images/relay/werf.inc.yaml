@@ -1,32 +1,15 @@
-{{- $ciliumVersion := "1.14.18" }}
+{{- $ciliumVersion := "1.17.4" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.16.5/images/hubble-relay/Dockerfile
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src
-  - rm -r /src/.git
-  - cd /src
-  - git apply /patches/*.patch --verbose
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 fromImage: builder/golang-alpine
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
+- image: cni-cilium/bin-cilium-src-artifact
+  add: /src/cilium
+  to: /src/cilium
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -36,18 +19,16 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash
-  install:
-  - cd /src
-  - go mod vendor && go mod download -x
+  - apk add --no-cache make bash binutils
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src/hubble-relay
-  - make
-  - go build -ldflags="-s -w" -o hubble-relay .
-  - chown 64535:64535 /src/hubble-relay/hubble-relay
-  - chmod 0700 /src/hubble-relay/hubble-relay
+  #
+  - cd /src/cilium
+  - go mod vendor && go mod download -x
+  - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
+  - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
+  - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
 ---
 # Distroless Main Image
 ---
@@ -55,7 +36,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/hubble-relay/hubble-relay
+  add: /out/linux/amd64/usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
 - image: cni-cilium/gops-artifact

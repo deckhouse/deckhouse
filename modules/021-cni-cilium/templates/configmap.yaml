@@ -6,6 +6,18 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
+  # For CiliumNetworkPolicy and NetworkPolicy
+  policy-cidr-match-mode: "nodes"
+  # For CiliumNetworkPolicy
+  enable-node-selector-labels: "true"
+  #
+  bpf-lb-sock-terminate-pod-connections: "true"
+  enable-tcx: "false"
+  #
+  exclude-node-label-patterns: "virtualization.deckhouse.io storage.deckhouse.io"
+  # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified
+  default-lb-service-ipam: none
+  #
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
 
@@ -30,8 +42,6 @@ data:
 
   enable-bpf-tproxy: "true"
 
-  bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
-
   {{- if .Values.cniCilium.labelsRegex }}
   labels: {{.Values.cniCilium.labelsRegex | join " " | quote }}
   {{- end }}
@@ -42,6 +52,7 @@ data:
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   routing-mode: "native"
   auto-direct-node-routes: "true"
+  direct-routing-skip-unreachable: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
   routing-mode: "native"
   auto-direct-node-routes: "false"
@@ -83,7 +94,7 @@ data:
 
   enable-host-firewall: "true"
 
-  kube-proxy-replacement: "strict"
+  kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
   bpf-lb-sock: "true"
@@ -106,9 +117,13 @@ data:
   netfilter-compatible-mode: "true"
 
   enable-session-affinity: "true"
+  {{- if .Values.cniCilium.svcSourceRangeCheck }}
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
+    {{- if .Values.cniCilium.loadBalancerSourceRangeAllTypes }}
+  bpf-lb-source-range-all-types: {{ .Values.cniCilium.loadBalancerSourceRangeAllTypes | quote }}
+    {{- end }}
+  {{- end }}
 
-  sockops-enable: "false"
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
@@ -122,9 +137,6 @@ data:
   enable-k8s-endpoint-slice: "true"
 
   enable-cilium-endpoint-slice: "true"
-
-  enable-k8s-terminating-endpoint: "true"
-  enable-remote-node-identity: "true"
 
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
@@ -145,10 +157,6 @@ data:
 
   # https://docs.cilium.io/en/v1.12/policy/language/#alpine-musl-deployments-and-dns-refused
   tofqdns-dns-reject-response-code: nameError
-
-  # disabled since they may generate absurd amount of requests in count and size
-  # we've found no use for status field of CNP and CCNP
-  disable-cnp-status-updates: "true"
 
   procfs: "/host/proc"
 
