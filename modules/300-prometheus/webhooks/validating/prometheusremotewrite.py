@@ -82,12 +82,8 @@ def check_verify_url_signatures(ctx: DotMap) -> Optional[str]:
     url = ctx.review.request.object.spec.url
     if len(url) == 0:
         return "Url has empty string"
-    if ctx.review.request.operation == "UPDATE":
-        filtered_name = ctx.review.request.name
-        if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url and rw.filterResult.name != filtered_name]) > 0:
-            return f"Remote write URL {url} is already in use"
-    if ctx.review.request.operation == "CREATE":
-        if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url]) > 0:
+      filtered_name = ctx.review.request.name
+      if len([rw for rw in ctx.snapshots.prometheusremotewrites if rw.filterResult.url == url and rw.filterResult.name != filtered_name]) > 0:
             return f"Remote write URL {url} is already in use"
     # search in all prometheusremote write if url alredy used
     return None
