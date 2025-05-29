@@ -42,11 +42,6 @@ spec:
                 stage:
                   type: string
                   description: The current stage of the module lifecycle.
-                  enum:
-                    - Sandbox
-                    - Incubating
-                    - Graduated
-                    - Deprecated
                 version:
                   type: string
                   description: The module version.
