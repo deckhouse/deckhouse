@@ -89,7 +89,7 @@ jobs:
     # </template: checkout_step>
     - uses: actions/setup-python@v5.6.0
       with:
-        python-version: ${PYTHON_VERSION}
+        python-version: ${{ env.PYTHON_VERSION }}
     - name: Install deps
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
