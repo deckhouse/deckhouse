@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
@@ -890,6 +891,12 @@ func (hec *HookExecutionConfig) RunGoHook() {
 				if snapshot.FilterResult == nil {
 					continue
 				}
+
+				rw := reflect.ValueOf(snapshot.FilterResult)
+				if rw.Kind() == reflect.Pointer && rw.IsNil() {
+					continue
+				}
+
 				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
 				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}

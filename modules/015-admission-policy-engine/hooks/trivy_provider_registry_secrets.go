@@ -178,7 +178,6 @@ func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.
 	if err != nil {
 		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
 	}
-
 	return dockerConfigBySecret(secret)
 }
 

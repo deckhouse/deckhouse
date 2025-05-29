@@ -189,7 +189,7 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// Secret d8-cni-configuration exist but key "cni" does not equal "flannel".
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
+	cniSecret := cniSecrets[0]
 	if cniSecret.cni != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
@@ -222,7 +222,7 @@ func checkCni(input *go_hook.HookInput) error {
 	if len(deckhouseCniMCs) == 0 {
 		needUpdateMC = true
 	} else {
-		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
+		cniModuleConfig := deckhouseCniMCs[0]
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
