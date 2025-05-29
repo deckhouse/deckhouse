@@ -190,6 +190,15 @@
     },
     "path": "modules/metallb/"
   },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
+  },
   "observability-platform": {
     "editions": [
       "ee"
