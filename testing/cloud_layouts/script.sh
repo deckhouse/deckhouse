@@ -465,8 +465,33 @@ function test_requirements() {
   release=${release//\"/\\\"}
 
   # Get current version from cluster and increment minor version
+  >&2 echo "Waiting for DeckhouseRelease in 'Deployed' status..."
+  
+  # Wait for DeckhouseRelease to reach 'Deployed' status with timeout
+  timeout=600  # 10 minutes timeout
+  elapsed=0
+  current_version=""
+  
+  while [ $elapsed -lt $timeout ]; do
+    current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Deployed")].spec.version}' | head -1)
+    if [ -n "${current_version}" ]; then
+      >&2 echo "Found DeckhouseRelease in 'Deployed' status: ${current_version}"
+      break
+    fi
+    
+    >&2 echo "Waiting for DeckhouseRelease in 'Deployed' status... ($elapsed/$timeout seconds)"
+    sleep 10
+    elapsed=$((elapsed + 10))
+  done
+  
+  if [ $elapsed -ge $timeout ]; then
+    >&2 echo "Timeout: No DeckhouseRelease with 'Deployed' status found within $timeout seconds"
+    # Fallback to 'Delivered' status as before
+    >&2 echo "Falling back to 'Delivered' status..."
+    current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
+  fi
+  
   >&2 echo "Getting current DeckhouseRelease version from cluster..."
-  current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
   if [ -z "${current_version}" ]; then
     >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
     next_version="v1.69.3"
