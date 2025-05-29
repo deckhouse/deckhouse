@@ -469,10 +469,10 @@ function test_requirements() {
   current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
   if [ -z "${current_version}" ]; then
     >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
-    next_version="v1.96.3"
+    next_version="v1.69.3"
   else
     >&2 echo "Current delivered version: ${current_version}"
-    # Extract version components (assuming format like v1.96.3)
+    # Extract version components (assuming format like v1.69.3)
     if [[ $current_version =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
       major="${BASH_REMATCH[1]}"
       minor="${BASH_REMATCH[2]}"
@@ -483,7 +483,7 @@ function test_requirements() {
       >&2 echo "Next version will be: ${next_version}"
     else
       >&2 echo "Unable to parse version format, using default"
-      next_version="v1.96.3"
+      next_version="v1.69.3"
     fi
   fi
 
