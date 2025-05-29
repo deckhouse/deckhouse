@@ -37,10 +37,6 @@ const (
 
 type installationStatus int
 
-type configMapInfo struct {
-	Port int
-}
-
 type transitionRule struct {
 	source int
 	target int
