@@ -582,10 +582,6 @@ entries:
                         ru: Настройка внутренней сети
                       url: /admin/configuration/network/configuration.html
                     - title:
-                        en: Encrypting traffic between nodes
-                        ru: Шифрование трафика между узлами
-                      url: /admin/configuration/network/encrypting-traffic-nodes.html
-                    - title:
                         en: Encrypting traffic between pods
                         ru: Шифрование трафика между подами
                       url: /admin/configuration/network/encrypting-traffic-pods.html

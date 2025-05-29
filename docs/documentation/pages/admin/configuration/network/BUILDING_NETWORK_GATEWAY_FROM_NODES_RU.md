@@ -2,6 +2,8 @@
 title: "Постройка сетевого шлюза из Kubernetes-узлов"
 permalink: ru/admin/configuration/network/building-network-gateway-from-nodes.html
 lang: ru
+searchable: false
+sitemap_include: false
 ---
 
 В Deckhouse Kubernetes Platform для постройки сетевого шлюза из Kubernetes-узлов можно использовать модуль [`network-gateway`](../../reference/mc/network-gateway/).
