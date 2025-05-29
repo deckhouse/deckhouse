@@ -1,6 +1,6 @@
 ---
 image: release-channel-version-prebuild
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 dependencies:
 - image: dev
   before: setup
@@ -38,7 +38,7 @@ git:
 
 ---
 image: release-channel-version
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: release-channel-version-prebuild
   add: /
