@@ -2165,7 +2165,7 @@ jobs:
 
 
   analyze_deckhouse:
-    if: ${{ (github.event.inputs.svace_enabled == true) && always() }}
+    if: ${{ (github.event.inputs.svace_enabled == 'true') && always() }}
     name: Deckhouse static analysis
     needs:
       - build_fe
