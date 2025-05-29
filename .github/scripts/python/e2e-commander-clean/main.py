@@ -12,140 +12,157 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
 import os
-from datetime import datetime, timedelta, timezone
 import time
+import requests
 import argparse
+from datetime import datetime, timedelta, timezone
+from typing import List, Dict
 
-e2e_commander_host = os.environ['E2E_COMMANDER_HOST']
-e2e_commander_token = os.environ['E2E_COMMANDER_TOKEN']
-HOURS_TO_REMOVE = 24 * 2 # 2 days
+# Constants and configuration
+E2E_COMMANDER_HOST = os.environ['E2E_COMMANDER_HOST']
+E2E_COMMANDER_TOKEN = os.environ['E2E_COMMANDER_TOKEN']
+HOURS_TO_REMOVE = 24 * 2  # 2 days
 COMMANDER_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
-commander_headers = {
-        'X-Auth-Token': e2e_commander_token,
-    }
+HEADERS = {'X-Auth-Token': E2E_COMMANDER_TOKEN}
+
 
 class DeletionError(Exception):
-    """
-    Exception that occurs when cluster deletion fails.
-    """
+    """Exception raised when cluster deletion fails."""
+
     def __init__(self, deletion_failed=None, timeout=None):
         self.deletion_failed = deletion_failed or []
         self.timeout = timeout or []
         super().__init__("Failed to delete clusters")
 
-def get_clusters():
-    cls = requests.get(f"https://{e2e_commander_host}/api/v1/clusters", headers = commander_headers)
-    return cls
+
+def get_clusters() -> List[Dict]:
+    """Fetch all clusters from the Commander API."""
+    response = requests.get(f"https://{E2E_COMMANDER_HOST}/api/v1/clusters", headers=HEADERS)
+    response.raise_for_status()
+    return response.json()
 
 
-def get_cluster_status(cluster_id: str):
-    url = f"https://{e2e_commander_host}/api/v1/clusters/{cluster_id}"
-    response = requests.get(url=url, headers=commander_headers).json()
-    return response["status"]
+def get_cluster_status(cluster_id: str) -> str:
+    """Get the current status of a cluster by ID."""
+    url = f"https://{E2E_COMMANDER_HOST}/api/v1/clusters/{cluster_id}"
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()["status"]
 
-def get_clusters_delete_status(clusters: list[dict[str: str, str: str]]):
+
+def wait_for_cluster_deletion(clusters: List[Dict[str, str]]) -> None:
+    """Poll the status of clusters until deletion is confirmed or timeout."""
     sleep_time = 30
+    max_attempts = 60
     attempt = 0
-    max_attempt = 60
-    deletion_failed_clusters = []
-    while len(clusters) > 0:
+    deletion_failed = []
+
+    while clusters and attempt < max_attempts:
         attempt += 1
-        print(f"\nWait to cluster delete, attempt {attempt}/{max_attempt}")
+        print(f"\nWaiting for clusters to be deleted, attempt {attempt}/{max_attempts}")
         print("=" * 40)
-        for cluster in clusters:
+
+        clusters_copy = clusters.copy()
+        for cluster in clusters_copy:
             try:
                 status = get_cluster_status(cluster["id"])
             except Exception as e:
-                print(e)
-                print("Error getting cluster status, continue...")
+                print(f"Error fetching status for {cluster['name']}: {e}")
                 continue
-            print(f'-  {cluster["name"]} --- {status}')
+
+            print(f"- {cluster['name']} --- {status}")
+
             if status == "deleted":
-                clusters.remove({"id": cluster["id"], "name": cluster["name"]})
+                clusters.remove(cluster)
             elif status == "deletion_failed":
-                deletion_failed_clusters.append({"id": cluster["id"], "name": cluster["name"]})
-                clusters.remove({"id": cluster["id"], "name": cluster["name"]})
-            else:
-                continue
-        if (len(deletion_failed_clusters) > 0 and len(clusters) == 0) or attempt >= max_attempt:
-            raise DeletionError(deletion_failed=deletion_failed_clusters, timeout=clusters)
+                deletion_failed.append(cluster)
+                clusters.remove(cluster)
+
+        if not clusters:
+            break
         time.sleep(sleep_time)
 
-def remove_old_clusters():
-    print(f"Delete all clusters older than {HOURS_TO_REMOVE} hours")
-    expire_time = datetime.now(timezone.utc) - timedelta(hours=HOURS_TO_REMOVE)
-    clusters_to_delete = []
-    for i in clusters:
-        cluster_id = i["id"]
-        cluster_name = i["name"]
-        created_at = datetime.strptime(i["created_at"], COMMANDER_TIME_FORMAT)
-        if created_at < expire_time:
-            print(f"Cluster {cluster_name} created more than {HOURS_TO_REMOVE} hours ago, deleting")
-            url = f"https://{e2e_commander_host}/api/v1/clusters/{cluster_id}"
-            requests.delete(url=url, headers=commander_headers)
-            clusters_to_delete.append({"id": cluster_id, "name": cluster_name})
-        else:
-            print(f"Cluster {cluster_name} created less than {HOURS_TO_REMOVE} hours ago, skip")
+    if deletion_failed or clusters:
+        raise DeletionError(deletion_failed=deletion_failed, timeout=clusters)
+
+
+def delete_clusters_by_list(clusters_to_delete: List[Dict[str, str]]) -> None:
+    """Delete specified list of clusters and verify their deletion."""
+    for cluster in clusters_to_delete:
+        cluster_id = cluster["id"]
+        url = f"https://{E2E_COMMANDER_HOST}/api/v1/clusters/{cluster_id}"
+        try:
+            requests.delete(url, headers=HEADERS)
+        except Exception as e:
+            print(f"Error deleting {cluster['name']} ({cluster_id}): {e}")
+            continue
 
     try:
-        get_clusters_delete_status(clusters_to_delete)
+        wait_for_cluster_deletion(clusters_to_delete)
     except DeletionError as e:
-        if len(e.deletion_failed) > 0:
-            print("\nError deleting clusters, were not deleted:")
-            for i in e.deletion_failed:
-                print(f"-  {i['name']}")
-        if len(e.timeout) > 0:
-            print("\nTimeout deleting clusters, were not deleted:")
-            for i in e.timeout:
-                print(f"-  {i['name']}")
+        if e.deletion_failed:
+            print("\nDeletion failed for clusters:")
+            for cluster in e.deletion_failed:
+                print(f"- {cluster['name']}")
+        if e.timeout:
+            print("\nTimeout while deleting clusters:")
+            for cluster in e.timeout:
+                print(f"- {cluster['name']}")
         exit(1)
     else:
-        print("All clusters were successfully removed.")
+        print("All specified clusters were successfully deleted.")
+
+
+def remove_old_clusters(clusters: List[Dict]) -> None:
+    """Remove clusters older than a specified number of hours."""
+    print(f"Removing all clusters older than {HOURS_TO_REMOVE} hours")
+    expire_time = datetime.now(timezone.utc) - timedelta(hours=HOURS_TO_REMOVE)
+    clusters_to_delete = []
+
+    for cluster in clusters:
+        try:
+            created_at = datetime.strptime(cluster["created_at"], COMMANDER_TIME_FORMAT)
+        except Exception as e:
+            print(f"Failed to parse created_at for cluster {cluster['name']}: {e}")
+            continue
+
+        if created_at < expire_time:
+            print(f"Cluster {cluster['name']} was created more than {HOURS_TO_REMOVE} hours ago. Deleting.")
+            clusters_to_delete.append({"id": cluster["id"], "name": cluster["name"]})
+        else:
+            print(f"Cluster {cluster['name']} is younger than {HOURS_TO_REMOVE} hours. Skipping.")
+
+    delete_clusters_by_list(clusters_to_delete)
+
+
+def remove_clusters_by_pr(clusters: List[Dict], pr_number: int) -> None:
+    """Remove clusters created from a specific pull request."""
+    print(f"Removing all clusters created in PR: {pr_number}")
+    clusters_to_delete = []
+
+    for cluster in clusters:
+        pr_tag = cluster.get("values", {}).get("branch")
+        if pr_tag == f"pr{pr_number}":
+            print(f"Cluster {cluster['name']} was created in PR {pr_number}. Deleting.")
+            clusters_to_delete.append({"id": cluster["id"], "name": cluster["name"]})
+
+    if clusters_to_delete:
+        delete_clusters_by_list(clusters_to_delete)
+    else:
+        print("No clusters found for the specified PR.")
+
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="E2E autocleaner")
+    parser = argparse.ArgumentParser(description="E2E Cluster Autocleaner")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--auto", action="store_true", help=f"Delete all clusters older than {HOURS_TO_REMOVE} hours")
-    group.add_argument("--pr", type=int, help="Delete all clusters created in this pr")
+    group.add_argument("--auto", action="store_true", help=f"Delete clusters older than {HOURS_TO_REMOVE} hours")
+    group.add_argument("--pr", type=int, help="Delete clusters created by the specified pull request")
     args = parser.parse_args()
 
-    clusters = get_clusters().json()
+    clusters_data = get_clusters()
 
     if args.auto:
-        remove_old_clusters()
+        remove_old_clusters(clusters_data)
     elif args.pr is not None:
-        print(f"Delete all clusters created in pr: {args.pr}")
-        clusters_to_delete = []
-        for i in clusters:
-            print(i)
-            cluster_id = i["id"]
-            cluster_name = i["name"]
-            created_at = datetime.strptime(i["created_at"], COMMANDER_TIME_FORMAT)
-            # exit(0)
-            if created_at < expire_time:
-                print(f"Cluster {cluster_name} created more than {HOURS_TO_REMOVE} hours ago, deleting")
-                url = f"https://{e2e_commander_host}/api/v1/clusters/{cluster_id}"
-                requests.delete(url=url, headers=commander_headers)
-                clusters_to_delete.append({"id": cluster_id, "name": cluster_name})
-            else:
-                print(f"Cluster {cluster_name} created less than {HOURS_TO_REMOVE} hours ago, skip")
-
-        try:
-            get_clusters_delete_status(clusters_to_delete)
-        except DeletionError as e:
-            if len(e.deletion_failed) > 0:
-                print("\nError deleting clusters, were not deleted:")
-                for i in e.deletion_failed:
-                    print(f"-  {i['name']}")
-            if len(e.timeout) > 0:
-                print("\nTimeout deleting clusters, were not deleted:")
-                for i in e.timeout:
-                    print(f"-  {i['name']}")
-            exit(1)
-    else:
-        print("All clusters were successfully removed.")
-        # найти кластера по номеру pr
-        # удалить
+        remove_clusters_by_pr(clusters_data, args.pr)

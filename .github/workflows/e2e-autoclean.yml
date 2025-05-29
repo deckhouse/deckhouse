@@ -31,16 +31,13 @@ env:
   PYTHON_VERSION: '3.13'
 
 jobs:
-
-  # <template: skip_tests_repos>
   skip_tests_repos:
     name: Skip tests repos
     runs-on: ubuntu-latest
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
-  # </template: skip_tests_repos>
   e2e-autoclean:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: Run

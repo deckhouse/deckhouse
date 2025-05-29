@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{!{- $enableWorkflowOnTestRepos := true }!}
+
 name: E2E Autoclean
 on:
   schedule:
@@ -27,7 +29,13 @@ env:
   PYTHON_VERSION: '3.13'
 
 jobs:
-  {!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
   e2e-autoclean:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: Run
