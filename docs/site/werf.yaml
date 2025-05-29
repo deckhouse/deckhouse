@@ -295,8 +295,20 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
+  - image: sidebars-builder
+    add: /app/results/virtualization-platform/breadcrumbs.yml
+    to: /srv/jekyll-data/site/_data/dvp/breadcrumbs.yml
+    before: setup
+  - image: sidebars-builder
+    add: /app/results/stronghold/breadcrumbs.yml
+    to: /srv/jekyll-data/site/_data/stronghold/breadcrumbs.yml
+    before: setup
+  - image: sidebars-builder
+    add: /app/results/code/breadcrumbs.yml
+    to: /srv/jekyll-data/site/_data/code/breadcrumbs.yml
+    before: setup
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
   - image: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json
@@ -413,3 +425,26 @@ import:
     add: /go/src/app/registry-modules-watcher
     to: /app/registry-modules-watcher
     before: setup
+---
+image: sidebars-builder
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+shell:
+  setup:
+  - |
+        echo "Generate sidebars..."
+        cd /app
+        go run main.go
+git:
+  - add: /docs/site/_tools/breadcrumbs-builder
+    to: /app
+    stageDependencies:
+      setup:
+        - "**/*.go"
+        - "**/*.mod"
+        - "**/*.sum"
+  - add: /docs/site/_data/sidebars
+    to: /app/sidebars
+    stageDependencies:
+      setup:
+        - "**/*.yml"

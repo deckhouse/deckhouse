@@ -236,6 +236,8 @@ common:
   guides_description:
     en: Helping you achieve a goal or solve a problem with Deckhouse.
     ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
+  virtualization-platform: Virtualization Platform
+  stronghold: Stronghold
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
