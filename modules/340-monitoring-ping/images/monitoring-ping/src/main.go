@@ -38,7 +38,7 @@ func main() {
 	flag.BoolVar(&cleanupNodeExporterMetrics, "cleanup-node-exporter-metrics", false, "Clean up node exporter metrics")
 	flag.Parse()
 	if cleanupNodeExporterMetrics {
-		// TODO remove volumes in future, need for clean staled medtrics
+		// TODO remove volumes in future, need for clean staled metrics
 		log.Info("cleanup mode enabled, running CleanUpDeprecatedExporterFile")
 		CleanUpDeprecatedExporterFile()
 		return
