@@ -19,13 +19,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/iancoleman/strcase"
+	"github.com/vmware/go-vcloud-director/v3/govcd"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -129,6 +132,18 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
+	apiVersion := ""
+	apiVersionFunc, ok := providerApiVersionsDiscoverer[cloud.Provider]
+
+	if ok {
+		var err error
+
+		apiVersion, err = apiVersionFunc(m)
+		if err != nil {
+			return nil, fmt.Errorf("unable to discover provider API version: %v", err)
+		}
+	}
+
 	if cloud.Provider == "Yandex" {
 		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
 			return nil, err
@@ -166,26 +181,26 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		// Set default version for terraform-provider-vcd to 3.10.0 if legacyMode is true
 		// This is a temporary solution to avoid breaking changes in the VCD API
 
-		var legacyMode bool
+		version, err := semver.NewVersion(apiVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse VCD API version '%s': %v", apiVersion, err)
+		}
 
-		_, ok := m.ProviderClusterConfig["legacyMode"]
-		if ok {
-			err := json.Unmarshal(m.ProviderClusterConfig["legacyMode"], &legacyMode)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal legacyMode from provider cluster configuration: %v", err)
-			}
+		versionConstraint, err := semver.NewConstraint("<37.2")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraint, err)
 		}
 
 		infrastructureModulesDir := getInfrastructureModulesDir("vcd")
 
 		versionsFilePath := filepath.Join(infrastructureModulesDir, "versions.tf")
 
-		err := os.Remove(versionsFilePath)
+		err = os.Remove(versionsFilePath)
 		if err != nil && !os.IsNotExist(err) {
 			return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
 		}
 
-		if legacyMode {
+		if versionConstraint.Check(version) {
 			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
@@ -802,4 +817,50 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+type providerApiVersionsDiscoverMap map[string]func(*MetaConfig) (string, error)
+
+var providerApiVersionsDiscoverer = providerApiVersionsDiscoverMap{
+	"VCD": (*MetaConfig).discoverVCDApiVersion,
+}
+
+type VCDProviderConfig struct {
+	Server   string `json:"server"`
+	Insecure bool   `json:"insecure,omitempty"`
+}
+
+func (m *MetaConfig) discoverVCDApiVersion() (string, error) {
+	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
+		return "", fmt.Errorf("current cluster type is not a cloud type")
+	}
+
+	var cloud ClusterConfigCloudSpec
+	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
+		return "", fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	}
+
+	if cloud.Provider != "VCD" {
+		return "", fmt.Errorf("current provider type is not VCD")
+	}
+
+	var providerConfiguration VCDProviderConfig
+	if err := json.Unmarshal(m.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
+		return "", fmt.Errorf("unable to unmarshal provider configuration: %v", err)
+	}
+
+	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
+	if err != nil {
+		return "", nil
+	}
+	insecure := providerConfiguration.Insecure
+
+	vcdClient := govcd.NewVCDClient(
+		*vcdUrl,
+		insecure,
+	)
+
+	vcdClient.Client.APIVCDMaxVersionIs("")
+
+	return vcdClient.Client.MaxSupportedVersion()
 }
