@@ -7,7 +7,7 @@ kind: ConfigMap
 metadata:
   name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu")) | nindent 2 }}
 data:
   Exclusive: |-
     version: v1

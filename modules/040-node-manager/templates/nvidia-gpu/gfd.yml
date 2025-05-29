@@ -2,14 +2,14 @@
   {{- if ($ng).gpu -}}
     {{ $gfdName := printf "gpu-feature-discovery-%s" ( $ng.name | sha256sum | trunc 7 ) }}
     {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
-    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $gfdName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "gpu-feature-discovery")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" "gpu-feature-discovery")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -40,7 +40,7 @@ kind: DaemonSet
 metadata:
   name: {{ $gfdName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" $gfdName )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $gfdName )) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -50,7 +50,7 @@ spec:
       labels:
         component: {{ $gfdName }}
     spec:
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -79,11 +79,11 @@ spec:
       shareProcessNamespace: true
       initContainers:
       - name: gpu-feature-discovery-init
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/config-manager"]
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
         {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
@@ -111,7 +111,7 @@ spec:
           value: ""
         - name: PROCESS_TO_SIGNAL
           value: ""
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
         volumeMounts:
           - name: available-configs
             mountPath: /available-configs
@@ -119,11 +119,11 @@ spec:
             mountPath: /config
       containers:
       - name: gpu-feature-discovery-ctr
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/gpu-feature-discovery"]
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
         {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
@@ -141,7 +141,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged" $ | nindent 8 }}
         volumeMounts:
           - name: output-dir
             mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
@@ -152,11 +152,11 @@ spec:
           - name: config
             mountPath: /config
       - name: gpu-feature-discovery-sidecar
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/config-manager"]
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
         {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
@@ -184,7 +184,7 @@ spec:
           value: "1" # SIGHUP
         - name: PROCESS_TO_SIGNAL
           value: "gpu-feature-discovery"
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
         volumeMounts:
           - name: available-configs
             mountPath: /available-configs
