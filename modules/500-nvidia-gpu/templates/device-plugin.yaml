@@ -33,7 +33,7 @@ spec:
       maxAllowed:
         cpu: 100m
         memory: 128Mi
-{{- end }}
+    {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -220,6 +220,5 @@ spec:
             name: {{ $devicePluginName }}
         - name: config
           emptyDir: {}
-    {{- end }}
   {{- end }}
 {{- end }}
