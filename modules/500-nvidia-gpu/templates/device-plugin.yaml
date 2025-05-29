@@ -1,16 +1,20 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if ($ng).gpu -}}
+
+    {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
+    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: nvidia-device-plugin
+  name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-device-plugin")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: nvidia-device-plugin
+    name: {{ $devicePluginName }}
   updatePolicy:
     updateMode: "Initial"
   resourcePolicy:
@@ -34,17 +38,17 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nvidia-device-plugin
+  name: {{ $devicePluginName }}
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-device-plugin")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" $devicePluginName )) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      component: nvidia-device-plugin
+      component: {{ $devicePluginName }}
   template:
     metadata:
       labels:
-        component: nvidia-device-plugin
+        component: {{ $devicePluginName }}
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       affinity:
@@ -213,6 +217,9 @@ spec:
             type: DirectoryOrCreate
         - name: available-configs
           configMap:
-            name: device-plugin-config
+            name: {{ $devicePluginName }}
         - name: config
           emptyDir: {}
+    {{- end }}
+  {{- end }}
+{{- end }}
