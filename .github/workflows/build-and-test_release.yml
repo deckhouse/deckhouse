@@ -37,7 +37,7 @@ on:
         required: false
         type: string
       svace_enabled:
-        description: 'A boolean value which indicates whether svace analyze will be performed'
+        description: 'Enable svace build and analyze'
         type: boolean
         required: false
 
