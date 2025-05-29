@@ -73,7 +73,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             cpu: 50m
             memory: 64Mi
         {{- end }}
