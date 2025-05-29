@@ -212,7 +212,7 @@ groups:
     description:
       en: chrony-exporter metrics port
       ru: Метрики chrony-exporter
-  - ports: "4288, 4229"
+  - ports: "4288, 4289"
     protocol: TCP
     description:
       en: "monitoring-ping metrics"
