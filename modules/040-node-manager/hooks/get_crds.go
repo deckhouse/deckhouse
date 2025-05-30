@@ -474,6 +474,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
 
+		gpu, ok := ngForValues["gpu"].(ngv1.GPU)
+		if ok {
+			ngForValues["gpu"] = gpu
+		}
+
 		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
 		if ok {
 			ngForValues["fencing"] = fencing
@@ -519,6 +524,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	res["nodeType"] = nodeGroupSpec.NodeType
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI
+	}
+	if !nodeGroupSpec.GPU.IsEmpty() {
+		res["gpu"] = nodeGroupSpec.GPU
 	}
 	if nodeGroupSpec.StaticInstances != nil {
 		res["staticInstances"] = *nodeGroupSpec.StaticInstances
