@@ -63,6 +63,9 @@ bb-sync-file "/etc/containerd/registry_prepull.d/{{ $hostName }}/hosts.toml" - <
 
   [host.{{ $mirrorHostWithScheme | quote }}]
   capabilities = ["pull", "resolve"]
+  {{- if eq $mirror.scheme "http" }}
+  skip_verify = true
+  {{- end }}
   {{- if and (eq $mirror.scheme "https") (gt (len $ca_files_path) 0) }}
   ca = [{{- range $i, $path := $ca_files_path }}{{ if $i }}, {{ end }}{{ $path | quote }}{{- end }}]
   {{- end }}
