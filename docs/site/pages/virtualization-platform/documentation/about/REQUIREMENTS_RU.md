@@ -1,6 +1,6 @@
 ---
 title: "Требования"
-permalink: ru/virtualization-platform/documentation/admin/install/requirements.html
+permalink: ru/virtualization-platform/documentation/about/requirements.html
 lang: ru
 ---
 

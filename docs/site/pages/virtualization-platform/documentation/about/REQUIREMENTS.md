@@ -1,6 +1,6 @@
 ---
 title: "Requirements"
-permalink: en/virtualization-platform/documentation/admin/install/requirements.html
+permalink: en/virtualization-platform/documentation/about/requirements.html
 ---
 
 {% alert level="warning" %}

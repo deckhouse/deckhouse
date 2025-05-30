@@ -1,6 +1,6 @@
 ---
 title: "Update channels"
-permalink: en/virtualization-platform/documentation/admin/release-channels.html
+permalink: en/virtualization-platform/documentation/about/release-channels.html
 lang: en
 ---
 
