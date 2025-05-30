@@ -320,6 +320,7 @@ type moduleRequirementsCheck struct {
 func newModuleRequirementsCheck(exts *extenders.ExtendersBundle) *moduleRequirementsCheck {
 	return &moduleRequirementsCheck{
 		name: "deckhouse requirements check",
+		exts: exts,
 	}
 }
 
