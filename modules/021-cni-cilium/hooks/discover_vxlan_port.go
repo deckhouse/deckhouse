@@ -27,6 +27,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -125,8 +127,11 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func discoverVXLANPort(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_config")
 	var installationStatus = New
-
-	if len(input.Snapshots["cilium-configmap"]) > 0 {
+	cms, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.NewSnapshots, "cilium-configmap")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cilium-configmap snapshot: %w", err)
+	}
+	if len(cms) > 0 {
 		installationStatus = Existing
 	}
 
@@ -137,8 +142,8 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 	}
 
 	var targetPort, sourcePort int
-	if len(input.Snapshots["cilium-configmap"]) > 0 {
-		cm := input.Snapshots["cilium-configmap"][0].(ConfigMapInfo)
+	if len(cms) > 0 {
+		cm := cms[0]
 		sourcePort = cm.Port
 	}
 

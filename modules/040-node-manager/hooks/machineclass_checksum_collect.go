@@ -26,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -146,7 +148,7 @@ type nodeGroupValue struct {
 	Raw  interface{}   `json:"-"`
 }
 
-func parseNodeGroupValues(values go_hook.PatchableValuesCollector) ([]*nodeGroupValue, error) {
+func parseNodeGroupValues(values sdkpkg.PatchableValuesCollector) ([]*nodeGroupValue, error) {
 	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
 	var ng []*nodeGroupValue
 

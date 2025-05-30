@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -61,17 +63,16 @@ func hostNetworkFalse(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func handleHostNetworkFalseWithHostPorts(input *go_hook.HookInput, dc dependency.Container) error {
-	snap, ok := input.Snapshots["daemonset"]
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "daemonset")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal daemonset snapshot: %w", err)
+	}
 
-	if !ok {
+	if len(snaps) == 0 {
 		return nil
 	}
 
-	if len(snap) == 0 {
-		return nil
-	}
-
-	if !snap[0].(bool) {
+	if !snaps[0] {
 		return nil
 	}
 

@@ -25,6 +25,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const initialHostAddressAnnotation = "node.deckhouse.io/initial-host-ip"
@@ -83,14 +85,17 @@ func wrapChangeAddressHandler(namespace string) func(input *go_hook.HookInput) e
 }
 
 func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error {
-	pods := input.Snapshots["pod"]
+	pods := input.NewSnapshots.Get("pod")
 	if len(pods) == 0 {
 		return nil
 	}
 
-	for _, pod := range pods {
-		podAddress := pod.(address)
+	addresses, err := sdkobjectpatch.UnmarshalToStruct[address](input.NewSnapshots, "pod")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pods: %v", err)
+	}
 
+	for _, podAddress := range addresses {
 		if podAddress.Host == "" {
 			// Pod doesn't exist, we can skip it
 			continue
@@ -112,5 +117,6 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 			input.PatchCollector.Delete("v1", "Pod", namespace, podAddress.Name)
 		}
 	}
+
 	return nil
 }

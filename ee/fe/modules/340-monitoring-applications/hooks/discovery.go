@@ -104,11 +104,12 @@ func discoverApps(input *go_hook.HookInput) error {
 	}
 	input.Values.Set(allowedApplicationsPath, allowedApplications.Slice())
 
-	enabledApps := set.NewFromSnapshot(input.Snapshots["service-old"])
+	enabledApps := set.NewFromSnapshot(input.NewSnapshots.Get("service-old"))
+
 	input.MetricsCollector.Set("d8_monitoring_applications_old_prometheus_target_total", float64(len(enabledApps)), nil)
 
 	enabledApps.
-		AddSet(set.NewFromSnapshot(input.Snapshots["service"])).
+		AddSet(set.NewFromSnapshot(input.NewSnapshots.Get("service"))).
 		AddSet(set.NewFromValues(input.Values, enabledApplicationsPath))
 
 	// Add dashboards for default applications to the cluster
