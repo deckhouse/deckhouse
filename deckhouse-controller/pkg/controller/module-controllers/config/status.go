@@ -204,7 +204,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 
 	case d7sversionextender.Name:
 		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
-		_, errMsg := d7sversionextender.Instance().Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.DeckhouseVersion.Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()

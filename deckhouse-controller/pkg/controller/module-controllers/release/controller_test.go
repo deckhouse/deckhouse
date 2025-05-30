@@ -55,6 +55,7 @@ import (
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
@@ -588,6 +589,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
+		exts:           extenders.NewExtendersBundle("", log.NewNop()),
 	}
 
 	for _, option := range options {
