@@ -2080,7 +2080,7 @@ jobs:
   analyze_deckhouse:
     if: ${{ (github.event_name == 'schedule') && always() }}
     name: Deckhouse static analysis
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, regular]
     needs:
       - build_fe
     steps:
