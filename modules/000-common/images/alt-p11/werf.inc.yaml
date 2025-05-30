@@ -30,3 +30,29 @@ shell:
 imageSpec:
   config:
     user: "64535:64535"
+
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-go
+fromImage: builder/alt
+final: false
+import:
+{{ include "base components imports" (dict "k8sVersions" $.k8sVersions "CandiVersionMap" $.CandiVersionMap ) }}
+shell:
+  install:
+    - apt-get install -y golang git binutils make gcc glibc-pthread glibc-devel glibc-devel-static
+imageSpec:
+  config:
+    env:
+      GOTOOLCHAIN: "local"
+
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-svace
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-go
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch v4.0.250415 $(cat /run/secrets/SOURCE_REPO)/ispras/svace.git /opt/svace
+    - ln -s /opt/svace/bin/svace /usr/local/bin/svace
