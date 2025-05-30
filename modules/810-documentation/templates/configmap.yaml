@@ -79,11 +79,11 @@ data:
                 set $cookie_lang $1;
             }
 
-            rewrite ^/$ $scheme://$host/$cookie_lang/platform/$is_args$args redirect;
-            rewrite ^/modules/(.+)$ $scheme://$host/$cookie_lang/modules/$1$is_args$args redirect;
-            rewrite ^/platform/(.+)$ $scheme://$host/$cookie_lang/platform/$1$is_args$args redirect;
-            rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ $scheme://$host/$cookie_lang/platform/$2$is_args$args redirect;
-            rewrite ^/(ru/|en/)?(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ $scheme://$host/$cookie_lang/platform/$2$is_args$args redirect;
+            rewrite ^/$ /$cookie_lang/platform/$is_args$args redirect;
+            rewrite ^/modules/(.+)$ /$cookie_lang/modules/$1$is_args$args redirect;
+            rewrite ^/platform/(.+)$ /$cookie_lang/platform/$1$is_args$args redirect;
+            rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ /$cookie_lang/platform/$2$is_args$args redirect;
+            rewrite ^/(ru/|en/)?(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ /$cookie_lang/platform/$2$is_args$args redirect;
         }
 
         location /link_test_report.txt {
@@ -123,11 +123,11 @@ data:
             set $ext_module_url "/$1/modules/$2/";
 
             if (-d $document_root/$platform_module_folder_path) {
-                return 301 $scheme://$host$platform_module_url$is_args$args;
+                return 301 $platform_module_url$is_args$args;
             }
 
             if (-d $document_root/$ext_module_folder_path) {
-                return 301 $scheme://$host$ext_module_url$is_args$args;
+                return 301 $ext_module_url$is_args$args;
             }
         }
 
@@ -139,11 +139,11 @@ data:
             set $module_doc "$3";
 
             if (-d $document_root/$platform_module_folder_path) {
-               return 301 $scheme://$host$platform_module_url$is_args$args;
+               return 301 $platform_module_url$is_args$args;
             }
 
             # Redirect to stable version for module from source (doc for such modules is always has URL /LANG/modules/NAME/stable/DOC_URL).
-            rewrite ^/(ru|en)/modules/([^/]+)/(?!(rock-solid|stable|early-access|beta|alpha))(.*)$ $scheme://$host/$1/modules/$2/stable/$3$is_args$args redirect;
+            rewrite ^/(ru|en)/modules/([^/]+)/(?!(rock-solid|stable|early-access|beta|alpha))(.*)$ /$1/modules/$2/stable/$3$is_args$args redirect;
 
             # Serve modules from sources
             try_files /modules/$lang/$module/$module_doc /modules/$lang/$module/$module_doc/ =404;
