@@ -3,6 +3,8 @@
 ## [MALFORMED]
 
 
+ - #12318 unknown section "static-routing-manager"
+ - #12510 unknown section "static-routing-manager"
  - #12723 unknown section "ceph-csi"
  - #13174 unknown section "ceph-csi"
  - #13409 unknown section "ceph-csi"
@@ -129,8 +131,10 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
+ - **[keepalived]** fix python [#13617](https://github.com/deckhouse/deckhouse/pull/13617)
  - **[kube-dns]** Fixed release upgrade issue with removed d8-kube-dns-redirect service. [#13487](https://github.com/deckhouse/deckhouse/pull/13487)
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
@@ -152,8 +156,6 @@
  - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
  - **[runtime-audit-engine]** Added support for customization of a built-in rule list of the `runtime-audit-engine` module. [#12185](https://github.com/deckhouse/deckhouse/pull/12185)
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
- - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
- - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
  - **[upmeter]** upmeter sa token rotation [#13201](https://github.com/deckhouse/deckhouse/pull/13201)
  - **[user-authn]** Add separate ServiceAccount to basic-auth-proxy. [#13214](https://github.com/deckhouse/deckhouse/pull/13214)
  - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
@@ -172,6 +174,7 @@
  - **[cloud-provider-yandex]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-zvirt]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cni-cilium]** Added an option to enable/disable exclusive management for CNI configuration file (`cni-exclusive`). [#12403](https://github.com/deckhouse/deckhouse/pull/12403)
+ - **[control-plane-manager]** fix audit policy rules for virtualization [#13666](https://github.com/deckhouse/deckhouse/pull/13666)
  - **[control-plane-manager]** add audit policy rules for virtualization [#13086](https://github.com/deckhouse/deckhouse/pull/13086)
  - **[dashboard]** Set Grafana dashboard JSON files to render into the new `ClusterObservabilityDashboard` and `ClusterObservabilityPropagatedDashboard` CRs if `observability` module is enabled. [#12614](https://github.com/deckhouse/deckhouse/pull/12614)
  - **[deckhouse]** Removed Alpine image. [#12726](https://github.com/deckhouse/deckhouse/pull/12726)
