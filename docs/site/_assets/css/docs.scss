@@ -1136,6 +1136,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .highlight {
     border-radius: 4px;
+  
+    .code__transfer {
+      position: relative;
+      padding-right: 70px;
+      padding-left: 30px;
+    }
 }
 
 .docs div.highlight {
@@ -1579,8 +1585,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .snippetcut_limited pre.highlight {
   max-height: 200px;
-  display: block; }
-
+  display: block; 
+}
 
 .action-toast {
   display: none;
@@ -2026,3 +2032,67 @@ select#contact-select {
   }
 }
 
+.docs {
+  .code__transfer {
+    overflow-x: auto;
+    white-space: pre;
+    overflow-x: auto;
+    display: block;
+
+    .wrap {
+      white-space: pre-wrap;
+      overflow-x: auto;
+      word-wrap: break-word;
+    }
+
+    button.wrap__button {
+      position: absolute;
+      top: 10px;
+      right: 41px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+      transition: opacity .25s;
+
+      .wrap__icon {
+        width: 25px;
+        height: 23px;
+      }
+
+      &.show {
+        opacity: .75;
+
+        &:hover {
+            opacity: 1;
+        }
+      }
+    }
+
+
+
+    .code__wrapper {
+      display: flex;
+    }
+
+    .line-number {
+      position: absolute;
+      left: 10px;
+      display: inline-block;
+      line-height: 22px;
+      user-select: none;
+      list-style-type: none;
+      color: #444;
+
+      li {
+        padding: 0;
+        margin: 0;
+
+        &::before {
+          content: none;
+        }
+      }
+    }
+  }
+}
