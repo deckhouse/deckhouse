@@ -423,7 +423,7 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 			Level: audit.LevelMetadata,
 			Verbs: []string{"update", "patch"},
 			Resources: []audit.GroupResources{{
-				Group:     "subresources.virtualization.deckhouse.io",
+				Group:     "internal.virtualization.deckhouse.io",
 				Resources: []string{"internalvirtualizationvirtualmachineinstances"},
 			}},
 		}
