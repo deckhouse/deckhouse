@@ -132,7 +132,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
+      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
@@ -160,7 +160,7 @@ jobs:
       - build_fe
       - detect_editions
     env:
-      WERF_ENV: "SE"    
+      WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 
   build_se_plus:

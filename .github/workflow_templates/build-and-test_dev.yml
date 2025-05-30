@@ -62,7 +62,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}         
+      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   build_ee:
@@ -75,7 +75,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "EE"    
+      WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   build_se:
@@ -88,7 +88,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE"   
+      WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   build_se_plus:
@@ -101,7 +101,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE-plus"   
+      WERF_ENV: "SE-plus"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   build_be:
@@ -114,7 +114,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "BE"      
+      WERF_ENV: "BE"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   build_ce:
@@ -127,7 +127,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "CE"      
+      WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   analyze_deckhouse:

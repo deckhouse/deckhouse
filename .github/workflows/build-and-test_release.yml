@@ -347,7 +347,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}      
+      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -486,7 +486,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -796,7 +796,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -967,7 +967,7 @@ jobs:
       - build_fe
       - detect_editions
     env:
-      WERF_ENV: "SE"    
+      WERF_ENV: "SE"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1106,7 +1106,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1404,7 +1404,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1702,7 +1702,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -2000,7 +2000,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
