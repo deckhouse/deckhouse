@@ -172,6 +172,8 @@ github.com/flant/kube-client v1.3.0 h1:iVxwpUZO4AhURkq6n44qfzp0Bjs5WatzTtJrfxeRD
 github.com/flant/kube-client v1.3.0/go.mod h1:yaFoNwyomNm0/OLXRxGYvR7or2pfLv9M9qPDSPPwljI=
 github.com/flant/shell-operator v1.7.3 h1:lAmylHFxC+p1ZDTzBj3++GoDdDJW9GNKPLeEtt/eXiU=
 github.com/flant/shell-operator v1.7.3/go.mod h1:Q/y6q+s8T1EEoJcl4aHm+WqAjXuOfBqUVXzGx/H8VS4=
+github.com/flant/shell-operator v1.7.3 h1:lAmylHFxC+p1ZDTzBj3++GoDdDJW9GNKPLeEtt/eXiU=
+github.com/flant/shell-operator v1.7.3/go.mod h1:Q/y6q+s8T1EEoJcl4aHm+WqAjXuOfBqUVXzGx/H8VS4=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
