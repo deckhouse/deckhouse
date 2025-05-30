@@ -61,7 +61,7 @@ func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCol
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "IstioFederation", "", i.Name, object_patch.WithSubresource("/status"))
+	pc.PatchWithMerge(patch, "deckhouse.io/v1alpha1", "IstioFederation", "", i.Name, object_patch.WithSubresource("/status"))
 	return nil
 }
 

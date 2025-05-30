@@ -345,7 +345,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 
 		patchStatus := makeEGStatusPatchForState(egState, egressGatewayInstanceInfos)
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			patchStatus,
 			"network.deckhouse.io/v1alpha1",
 			"EgressGateway",
@@ -377,7 +377,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(deleteFinalizersPatch,
+		input.PatchCollector.PatchWithMerge(deleteFinalizersPatch,
 			"internal.network.deckhouse.io/v1alpha1",
 			"SDNInternalEgressGatewayInstance",
 			"",
