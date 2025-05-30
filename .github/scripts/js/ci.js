@@ -1485,7 +1485,7 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
 
   // Run workflow without commenting on release issue.
   if (gitRefInfo.isDeveloperTag) {
-    return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref, inputs: { 'svace_enabled': 'true' } });
+    return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref });
   }
 
   if (gitRefInfo.tagVersion) {
