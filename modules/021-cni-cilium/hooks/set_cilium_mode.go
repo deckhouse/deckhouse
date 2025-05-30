@@ -81,13 +81,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func setCiliumMode(input *go_hook.HookInput) error {
 	// if secret exists, use it
-	ciliumConfigs, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
-	if len(ciliumConfigs) > 0 {
-		ciliumConfig := ciliumConfigs[0]
+	if len(cniConfigurationSecrets) > 0 {
+		ciliumConfig := cniConfigurationSecrets[0]
 		if ciliumConfig.Mode != "" {
 			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
 		}

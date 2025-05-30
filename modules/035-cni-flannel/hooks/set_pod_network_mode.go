@@ -74,14 +74,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setPodNetworkMode)
 
 func setPodNetworkMode(input *go_hook.HookInput) error {
-	flannelConfigs, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.NewSnapshots, "cni_configuration_secret")
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal cni_configuration_secret to FlannelConfig: %w", err)
 	}
 
 	var flannelConfig FlannelConfig
-	if len(flannelConfigs) > 0 {
-		flannelConfig = flannelConfigs[0]
+	if len(cniConfigurationSecrets) > 0 {
+		flannelConfig = cniConfigurationSecrets[0]
 	}
 
 	podNetworkMode := "host-gw"

@@ -52,7 +52,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 	}
 
 	snaps := input.NewSnapshots.Get("logo-cm")
-	if len(snaps) == 0 || snaps[0] == nil {
+	if len(snaps) == 0 {
 		input.Values.Set("userAuthn.internal.customLogo.enabled", false)
 		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)
 		return nil
