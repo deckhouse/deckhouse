@@ -42,14 +42,7 @@ module ReferenceGenerator
         'sitemap_include' => false
       }
 
-      # Add alert for ru page
-      @language_alert = if @lang == 'ru'
-        "\n{% alert level=\"info\" %}\nСтраница генерируется автоматически, информация представлена только на английском языке.\n{% endalert %}\n"
-      else
-        ""
-      end
-
-      self.content = @language_alert + renderD8Section(@referenceData, 1, [])
+      self.content = renderD8Section(@referenceData, 1, [])
       Jekyll::Hooks.trigger :pages, :post_init, self
     end
 
@@ -116,15 +109,18 @@ module ReferenceGenerator
     def renderD8Section(data, depth, parent_titles)
       result = ""
 
+      # Add alert for page in Russian
+      result += %Q({% if page.lang == 'ru'%}{% alert level="info" %}Эта страница генерируется автоматически, информация доступна только на английском языке.{% endalert %}{% endif %}) if depth == 1
+
       unless depth == 1
-        # Apply styles to headings depending on nesting 
+        # Apply styles to headings depending on nesting
         header_tag = depth == 2 ? 'h2' : 'h3'
         style = depth == 2 ? ' style="text-decoration: underline;"' : ''
-        
+
         header_title = build_header_title(parent_titles, data['name'])
-        
+
         result += %Q(<#{header_tag}#{style}>#{header_title}</#{header_tag}>\n)
-        
+
         if header_tag == 'h3'
           signature = build_full_signature(parent_titles, data['name'])
           result += %Q(<b>Usage:</b><div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#{signature}</code></pre></div></div>\n\n)
