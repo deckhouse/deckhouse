@@ -184,7 +184,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if cloud.Provider == ProviderVCD {
-		// Set default version for terraform-provider-vcd to 3.10.0 if legacyMode is true
+		// Set default version for terraform-provider-vcd to 3.10.0 if VCD API version is less than 37.2
 		// This is a temporary solution to avoid breaking changes in the VCD API
 
 		VCDProviderInfo, ok := providerInfo.(*VCDProviderInfo)
@@ -212,7 +212,17 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 
 		if versionConstraint.Check(version) {
-			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
+
+			if _, ok := m.ProviderClusterConfig["legacy"]; !ok {
+				legacyMode, err := json.Marshal(true)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal legacyMode: %v", err)
+				}
+
+				m.ProviderClusterConfig["legacy"] = legacyMode
+			}
+
+			err = os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
 			}
