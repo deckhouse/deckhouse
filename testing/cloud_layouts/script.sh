@@ -496,12 +496,12 @@ if [ \$elapsed -ge \$timeout ]; then
   # Fallback to 'Delivered' status as before
   >&2 echo "Falling back to 'Delivered' status..."
   current_version=\$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
-fi
+fi  >&2 echo "Getting current DeckhouseRelease version from cluster..."
+# Always initialize next_version with a default value to avoid 'unbound variable' error
+next_version="v1.69.3"
 
->&2 echo "Getting current DeckhouseRelease version from cluster..."
 if [ -z "\${current_version}" ]; then
   >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
-  next_version="v1.69.3"
 else
   >&2 echo "Current delivered version: \${current_version}"
 
@@ -516,7 +516,7 @@ else
     >&2 echo "Next version will be: \${next_version}"
   else
     >&2 echo "Unable to parse version format, using default"
-    next_version="v1.69.3"
+    # next_version is already set to default value
   fi
 fi
 
@@ -571,7 +571,14 @@ import yaml, sys
 data = yaml.safe_load(sys.stdin)
 with open('/tmp/releaseFile.yaml') as f:
   d1 = yaml.safe_load(f)
-data['spec']['requirements'] = d1.get('requirements', {})
+  
+# Ensure d1 is not None and has 'requirements' key
+if d1 is not None and 'requirements' in d1:
+  data['spec']['requirements'] = d1['requirements']
+else:
+  # Set default empty requirements if not found
+  data['spec']['requirements'] = {}
+  
 print(yaml.dump(data))
 " | kubectl apply -f -
 
