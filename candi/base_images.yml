@@ -106,8 +106,8 @@ tools/lvm2: "sha256:7ce91b1fafbac6390372beefac9152d50f9904d524ed8f90e36d31bfbcc8
 tools/lvm2-v2_03_31: "sha256:7ce91b1fafbac6390372beefac9152d50f9904d524ed8f90e36d31bfbcc8fc5b" # fromImage: builder/scratch
 tools/nfs-utils: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa9d1dcb147" # fromImage: builder/scratch
 tools/nfs-utils-nfs-utils-2-8-2: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa9d1dcb147" # fromImage: builder/scratch
-tools/openssl: "sha256:49b4d4134046e66057d8aee8070cb53608bb0ce09ddd065dea0c618dfbf583c2" # fromImage: builder/scratch
-tools/openssl-openssl-3.5.0: "sha256:49b4d4134046e66057d8aee8070cb53608bb0ce09ddd065dea0c618dfbf583c2" # fromImage: builder/scratch
+tools/openssl: "sha256:29a91db0074a3959619a9c9b75b40149e6a32cdd31eb84329e8c195b8d63c3f8" # fromImage: builder/scratch
+tools/openssl-openssl-3.5.0: "sha256:29a91db0074a3959619a9c9b75b40149e6a32cdd31eb84329e8c195b8d63c3f8" # fromImage: builder/scratch
 tools/sed: "sha256:634e5ba9fb711a2ee89e8502a8260f6a76515525bcccd102ee7b145aa7e03a9a" # fromImage: builder/scratch
 tools/sed-v4.9: "sha256:634e5ba9fb711a2ee89e8502a8260f6a76515525bcccd102ee7b145aa7e03a9a" # fromImage: builder/scratch
 tools/semver: "sha256:2f6f36dc40ad42e1a3cef0aafcc8dd9a16cb4bb0fd719818101cbd99b3a46c11" # fromImage: builder/scratch
