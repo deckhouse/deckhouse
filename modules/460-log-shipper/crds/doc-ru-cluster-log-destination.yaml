@@ -423,33 +423,49 @@ spec:
                 transformations:
                   maxItems: 3
                   description: >
-                    Список шагов трансформации. Каждый шаг определяет определенное действие и параметры к нему.
+                    Список трансформаций, которые могут применяться к логам перед отправкой.
                   items:
                     properties:
                       action:
                         enum: ["NormalizeLabelKeys", "EnsureStructuredMessage", "DropLabels"]
                         description: |
-                           Действия для трансформации
-                           - NormalizeLabelKeys - заменяет в лейбле pod_labels точки на подчеркивания
-                             Пример:
-                               transformation:
-                               - action: NormalizeLabelKays
-                           - EnsureStructuredMessage - проверяет что message содержит json объект если нет упаковывает в json
-                             Привер:
-                               transformation:
-                               - action: EnsureStructuredMessage
-                                 targetField: msg
-                            - DropLabels - удаляет лейблы
-                              Привер:
-                                transformation:
-                                - action: DropLabels
-                                  labels:
-                                  - first
-                                  - second 
+                          Вид трансформации. Возможные варианты:
+
+                          - `NormalizeLabelKeys` — заменяет точки на нижние подчеркивания в лейбле `pod_labels`.
+
+                            Пример:
+
+                            ```yaml
+                            transformation:
+                            - action: NormalizeLabelKeys
+                            ```
+
+                          - `EnsureStructuredMessage` — проверяет, что сообщение структурировано в формате JSON и при необходимости оборачивает его в JSON-объект.
+
+                            Пример:
+
+                            ```yaml
+                            transformation:
+                            - action: EnsureStructuredMessage
+                              targetField: msg
+                            ```
+
+                          - `DropLabels` — удаляет указанные лейблы.
+
+                            Пример:
+
+                            ```yaml
+                            transformation:
+                            - action: DropLabels
+                              labels:
+                              - first
+                              - second
+                            ```
+
                       targetField:
-                        description: "Целевое поле, в которое помещается обертка сообщения"
+                        description: Имя поля, в которое помещается структурированное сообщение.
                       labels:
-                        description: "Список меток, которые необходимо удалить"
+                        description: Список лейблов, которые необходимо удалить.
                 buffer:
                   description: Параметры буфера.
                   properties:

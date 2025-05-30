@@ -843,7 +843,7 @@ spec:
                   maxItems: 3
                   type: array
                   description: >
-                    List of transformation steps. Each step defines a specific action and parameters for it
+                    List of transformations that can be applied to logs before sending them to the destination.
                   items:
                     type: object
                     oneOf:
@@ -869,30 +869,46 @@ spec:
                         type: string
                         enum: ["NormalizeLabelKeys", "EnsureStructuredMessage", "DropLabels"]
                         description: |
-                           Transformation action
-                           - NormalizeLabelKeys - replace dot to underscore in the label pod_labels
-                             Example:
-                               transformation:
-                               - action: NormalizeLabelKays
-                           - EnsureStructuredMessage - checked message json if not valid package message in json
-                             Example:
-                               transformation:
-                               - action: EnsureStructuredMessage
-                                 targetField: msg
-                            - DropLabels - delete labels
-                              Example:
-                                transformation:
-                                - action: DropLabels
-                                  labels:
-                                  - first
-                                  - second 
+                          Type of transformation. Available options:
+
+                          - `NormalizeLabelKeys`: Replaces dots with underscores in the `pod_labels` field.
+
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: NormalizeLabelKeys
+                            ```
+
+                          - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                            
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: EnsureStructuredMessage
+                              targetField: msg
+                            ```
+
+                          - `DropLabels`: Removes the specified labels.
+                            
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: DropLabels
+                              labels:
+                              - first
+                              - second
+                            ```
+
                       targetField:
                         type: string
-                        description: "The target field into which wrapped string is placed"
+                        description: Name of the field where the structured message will be placed.
                       labels:
                         type: array
                         minItems: 1
-                        description: "List of labels to remove"
+                        description: List of labels to be removed.
                         items:
                           type: string
                 buffer:
