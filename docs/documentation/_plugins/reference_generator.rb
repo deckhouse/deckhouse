@@ -42,14 +42,21 @@ module ReferenceGenerator
         'sitemap_include' => false
       }
 
-      self.content = renderD8Section(@referenceData, 1, [])
+      # Add alert for ru page
+      @language_alert = if @lang == 'ru'
+        "\n{% alert level=\"info\" %}\nСтраница генерируется автоматически, информация представлена только на английском языке.\n{% endalert %}\n"
+      else
+        ""
+      end
+
+      self.content = @language_alert + renderD8Section(@referenceData, 1, [])
       Jekyll::Hooks.trigger :pages, :post_init, self
     end
 
     def extract_first_word(name)
       name.split(' ').first
     end
-    # Build a header
+
     def build_header_title(parent_titles, current_name)
       parts = parent_titles.map { |n| extract_first_word(n) }
       parts << extract_first_word(current_name)
@@ -57,7 +64,6 @@ module ReferenceGenerator
     end
 
     def prepare_signature(signature)
-      # Shield HTML characters with CGI.escapeHTML
       escaped = CGI.escapeHTML(signature)
       escaped += ' [options]' unless escaped.include?('[options]')
       escaped
@@ -76,25 +82,29 @@ module ReferenceGenerator
       regular_flags = flags.reject { |_, f| f['global'] == true }
       global_flags = flags.select { |_, f| f['global'] == true }
 
-      result = '<p>'
-      result += depth == 1 ? '<strong>Common options:</strong></br>' : '<strong>Options</strong></br>'
-      result += '<ul>'
+      result = ''
 
-      # Render local flags
-      regular_flags.each do |flag_name, flag_data|
-        result += render_flag_item(flag_name, flag_data)
+      # Render flags if exist
+      if regular_flags.any?
+        result += '<p>'
+        result += depth == 1 ? '<strong>Common options:</strong></br>' : '<strong>Options</strong></br>'
+        result += '<ul>'
+        regular_flags.each do |flag_name, flag_data|
+          result += render_flag_item(flag_name, flag_data)
+        end
+        result += '</ul></p>'
       end
 
-      # Render global flags
+      # Render global flags if exist
       if global_flags.any?
-        result += '</ul></p>'
         result += '<p><strong>Global options</strong></br><ul>'
         global_flags.each do |flag_name, flag_data|
           result += render_flag_item(flag_name, flag_data)
         end
+        result += '</ul></p>'
       end
 
-      result += '</ul></p>'
+      result
     end
 
     def render_flag_item(flag_name, flag_data)
