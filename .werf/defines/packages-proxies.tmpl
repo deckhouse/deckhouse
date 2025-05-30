@@ -53,6 +53,13 @@
   {{- end }}
 {{- end }}
 
+{{- define "yarn3 packages proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- yarn config set registry http://{{ $.DistroPackagesProxy }}/repository/npmjs/
+- yarn config set unsafeHttpWhitelist {{ (split ":" $.DistroPackagesProxy)._0 }}
+  {{- end }}
+{{- end }}
+
 {{- define "pypi proxy" }}
   {{- if $.DistroPackagesProxy }}
 - |
