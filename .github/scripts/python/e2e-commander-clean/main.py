@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="E2E Cluster Autocleaner")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--auto", action="store_true", help=f"Delete clusters older than {HOURS_TO_REMOVE} hours")
-    group.add_argument("--pr", type=int, help="Delete clusters created by the specified pull request")
+    group.add_argument("--pr", type=str, help="Delete clusters created by the specified pull request")
     args = parser.parse_args()
 
     clusters_data = get_clusters()
