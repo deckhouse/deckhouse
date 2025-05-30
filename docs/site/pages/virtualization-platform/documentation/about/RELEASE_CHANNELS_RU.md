@@ -1,6 +1,6 @@
 ---
 title: "Каналы обновлений"
-permalink: ru/virtualization-platform/documentation/admin/release-channels.html
+permalink: ru/virtualization-platform/documentation/about/release-channels.html
 lang: ru
 ---
 
