@@ -1,0 +1,105 @@
+package extenders
+
+import (
+	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
+)
+
+type ExtendersBundle struct {
+	DeckhouseVersion  *deckhouseversion.Extender
+	KubernetesVersion *kubernetesversion.Extender
+	Bootstrapped      *bootstrapped.Extender
+	ModuleDependency  *moduledependency.Extender
+}
+
+func NewExtendersBundle(deckhouseVersion string, logger *log.Logger) *ExtendersBundle {
+	return &ExtendersBundle{
+		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
+		KubernetesVersion: kubernetesversion.Instance(),
+		Bootstrapped:      bootstrapped.Instance(),
+		ModuleDependency:  moduledependency.Instance(),
+	}
+}
+
+func (b *ExtendersBundle) GetExtenders() []extenders.Extender {
+	return []extenders.Extender{
+		b.DeckhouseVersion,
+		b.KubernetesVersion,
+		b.Bootstrapped,
+		b.ModuleDependency,
+	}
+}
+
+func (b *ExtendersBundle) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
+	if requirements == nil {
+		// no requirements
+		return nil
+	}
+
+	if len(requirements.Deckhouse) > 0 {
+		if err := b.DeckhouseVersion.AddConstraint(module, requirements.Deckhouse); err != nil {
+			return err
+		}
+	}
+
+	if len(requirements.Kubernetes) > 0 {
+		if err := b.KubernetesVersion.AddConstraint(module, requirements.Kubernetes); err != nil {
+			return err
+		}
+	}
+
+	if len(requirements.Bootstrapped) > 0 {
+		if err := b.Bootstrapped.AddConstraint(module, requirements.Bootstrapped); err != nil {
+			return err
+		}
+	}
+
+	if len(requirements.ParentModules) > 0 {
+		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *ExtendersBundle) DeleteConstraints(module string) {
+	b.DeckhouseVersion.DeleteConstraint(module)
+	b.KubernetesVersion.DeleteConstraint(module)
+	b.Bootstrapped.DeleteConstraint(module)
+	b.ModuleDependency.DeleteConstraint(module)
+}
+
+func (b *ExtendersBundle) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
+	if requirements == nil {
+		// no requirements
+		return nil
+	}
+
+	if len(requirements.Deckhouse) > 0 {
+		if err := b.DeckhouseVersion.ValidateRelease(moduleRelease, requirements.Deckhouse); err != nil {
+			return err
+		}
+	}
+
+	if len(requirements.Kubernetes) > 0 {
+		if err := b.KubernetesVersion.ValidateRelease(moduleRelease, requirements.Kubernetes); err != nil {
+			return err
+		}
+	}
+
+	if len(requirements.ParentModules) > 0 {
+		if err := b.ModuleDependency.ValidateRelease(moduleName, moduleRelease, moduleReleaseVersion, requirements.ParentModules); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
