@@ -2,6 +2,10 @@
 
     padding-top: 50px;
 
+    #toc-sidebar ul li {
+        padding: 0;
+    }
+
     .toc-sidebar__item {
         font-weight: 700;
         font-size: 14px;
@@ -9,21 +13,16 @@
         letter-spacing: .3px;
     }
 
-    #toc-sidebar ul li {
+    .toc-sidebar__item-link {
         padding: 0;
-        border-left: 4px solid transparent;
-        transition: border-left 0.3s ease;
-    }
-
-    #toc-sidebar a {
         padding: 13px 12px;
         border-left: 4px solid transparent;
         transition: border-left 0.3s ease;
-    }
 
-    #toc-sidebar a:hover {
-        background-color: #F7F9FC;
-        border-left: 4px solid #0064FF;
+        &.active {
+            background-color: #F7F9FC;
+            border-left: 4px solid #0064FF;
+        }
     }
 }
 
