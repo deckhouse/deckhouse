@@ -464,60 +464,61 @@ function test_requirements() {
   if [ -z "${release:-}" ]; then return 1; fi
   release=${release//\"/\\\"}
 
-  # Get current version from cluster and increment minor version
-  >&2 echo "Waiting for DeckhouseRelease in 'Deployed' status..."
-  
-  # Wait for DeckhouseRelease to reach 'Deployed' status with timeout
-  timeout=600  # 10 minutes timeout
-  elapsed=0
-  current_version=""
-  
-  while [ $elapsed -lt $timeout ]; do
-    current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Deployed")].spec.version}' | head -1)
-    if [ -n "${current_version}" ]; then
-      >&2 echo "Found DeckhouseRelease in 'Deployed' status: ${current_version}"
-      break
-    fi
-    
-    >&2 echo "Waiting for DeckhouseRelease in 'Deployed' status... ($elapsed/$timeout seconds)"
-    sleep 10
-    elapsed=$((elapsed + 10))
-  done
-  
-  if [ $elapsed -ge $timeout ]; then
-    >&2 echo "Timeout: No DeckhouseRelease with 'Deployed' status found within $timeout seconds"
-    # Fallback to 'Delivered' status as before
-    >&2 echo "Falling back to 'Delivered' status..."
-    current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
-  fi
-  
-  >&2 echo "Getting current DeckhouseRelease version from cluster..."
-  if [ -z "${current_version}" ]; then
-    >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
-    next_version="v1.69.3"
-  else
-    >&2 echo "Current delivered version: ${current_version}"
-    # Extract version components (assuming format like v1.69.3)
-    if [[ $current_version =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-      major="${BASH_REMATCH[1]}"
-      minor="${BASH_REMATCH[2]}"
-      patch="${BASH_REMATCH[3]}"
-      # Increment minor version
-      next_minor=$((minor + 1))
-      next_version="v${major}.${next_minor}.${patch}"
-      >&2 echo "Next version will be: ${next_version}"
-    else
-      >&2 echo "Unable to parse version format, using default"
-      next_version="v1.69.3"
-    fi
-  fi
-
   >&2 echo "Run script ... "
 
   testScript=$(cat <<ENDSC
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
+
+# Get current version from cluster and increment minor version
+>&2 echo "Waiting for DeckhouseRelease in 'Deployed' status..."
+
+# Wait for DeckhouseRelease to reach 'Deployed' status with timeout
+timeout=600  # 10 minutes timeout
+elapsed=0
+current_version=""
+
+while [ \$elapsed -lt \$timeout ]; do
+  current_version=\$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Deployed")].spec.version}' | head -1)
+  if [ -n "\${current_version}" ]; then
+    >&2 echo "Found DeckhouseRelease in 'Deployed' status: \${current_version}"
+    break
+  fi
+  
+  >&2 echo "Waiting for DeckhouseRelease in 'Deployed' status... (\$elapsed/\$timeout seconds)"
+  sleep 10
+  elapsed=\$((elapsed + 10))
+done
+
+if [ \$elapsed -ge \$timeout ]; then
+  >&2 echo "Timeout: No DeckhouseRelease with 'Deployed' status found within \$timeout seconds"
+  # Fallback to 'Delivered' status as before
+  >&2 echo "Falling back to 'Delivered' status..."
+  current_version=\$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
+fi
+
+>&2 echo "Getting current DeckhouseRelease version from cluster..."
+if [ -z "\${current_version}" ]; then
+  >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
+  next_version="v1.69.3"
+else
+  >&2 echo "Current delivered version: \${current_version}"
+
+  # Extract version components (assuming format like v1.69.3)
+  if [[ \$current_version =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    major="\${BASH_REMATCH[1]}"
+    minor="\${BASH_REMATCH[2]}"
+    patch="\${BASH_REMATCH[3]}"
+    # Increment minor version
+    next_minor=\$((minor + 1))
+    next_version="v\${major}.\${next_minor}.\${patch}"
+    >&2 echo "Next version will be: \${next_version}"
+  else
+    >&2 echo "Unable to parse version format, using default"
+    next_version="v1.69.3"
+  fi
+fi
 
 >&2 echo "Check python ..."
 function check_python() {
