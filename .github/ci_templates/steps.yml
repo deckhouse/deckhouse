@@ -269,7 +269,7 @@
             ssh-keygen -R $host_ip
         fi
         echo "$KEY_LINE" >> ~/.ssh/known_hosts
-    done <<< "$HOST_KEYS"    
+    done <<< "$HOST_KEYS"
 # </template: add_ssh_keys>
 {!{- end -}!}
 

@@ -515,7 +515,7 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}         
+      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -646,7 +646,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -805,7 +805,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "EE"    
+      WERF_ENV: "EE"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -936,7 +936,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1095,7 +1095,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE"   
+      WERF_ENV: "SE"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1226,7 +1226,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1385,7 +1385,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "SE-plus"   
+      WERF_ENV: "SE-plus"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1516,7 +1516,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1675,7 +1675,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "BE"      
+      WERF_ENV: "BE"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -1806,7 +1806,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
@@ -1965,7 +1965,7 @@ jobs:
       - workflow_render
       - build_fe
     env:
-      WERF_ENV: "CE"      
+      WERF_ENV: "CE"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -2096,7 +2096,7 @@ jobs:
                   ssh-keygen -R $host_ip
               fi
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"    
+          done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images

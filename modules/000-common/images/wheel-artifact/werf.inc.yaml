@@ -13,5 +13,5 @@ shell:
   - git init .
   - git remote add origin $(cat /run/secrets/SOURCE_REPO)/python-modules/wheels
   - git fetch origin {{ $commit }}
-  - git checkout {{ $commit }}  
+  - git checkout {{ $commit }}
   - rm -rf /wheels/.git
