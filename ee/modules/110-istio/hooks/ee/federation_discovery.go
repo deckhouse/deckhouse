@@ -135,12 +135,6 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}
-	}
-
-	for _, federationInfo := range federations {
-		if federationInfo.TrustDomain == myTrustDomain {
-			continue
-		}
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
