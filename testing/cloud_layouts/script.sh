@@ -561,9 +561,9 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     dryrun: \"true\"
-  name: ${next_version}
+  name: \${next_version}
 spec:
-  version: ${next_version}
+  version: \${next_version}
   requirements: {}
 " | \$python_binary -c "
 import yaml, sys
