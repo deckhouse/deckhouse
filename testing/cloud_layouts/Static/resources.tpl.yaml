@@ -18,7 +18,7 @@ spec:
       matchLabels:
         role: master
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps-master
@@ -26,7 +26,7 @@ spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${MASTER_USER}'
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: master
@@ -56,7 +56,7 @@ spec:
       key: dedicated.deckhouse.io
       value: system
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps-redos
@@ -64,7 +64,7 @@ spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${WORKER_REDOS_USER}'
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: worker-redos
@@ -74,7 +74,7 @@ spec:
     kind: SSHCredentials
     name: caps-redos
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps-opensuse
@@ -82,7 +82,7 @@ spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${WORKER_OPENSUSE_USER}'
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: worker-opensuse
@@ -92,7 +92,7 @@ spec:
     kind: SSHCredentials
     name: caps-opensuse
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps-rosa
@@ -100,7 +100,7 @@ spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${WORKER_ROSA_USER}'
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-rosa
