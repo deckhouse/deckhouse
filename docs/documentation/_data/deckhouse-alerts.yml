@@ -3698,6 +3698,15 @@ alerts:
         Deckhouse module {{ $labels.module_name }} is using emptyDir for storage.
       severity: "9"
       markupFormat: markdown
+    - name: DeckhouseModuleUsesDeletedStorageClass
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deletedsc.yaml
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: ""
+      summary: ""
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
