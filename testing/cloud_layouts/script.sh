@@ -747,6 +747,38 @@ d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
+
+# Checking that it's FE-UPGRADE
+# Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
+dh_version="${DECKHOUSE_IMAGE_TAG#release-}"
+dh_major="\${dh_version%%.*}"
+
+# Handle both 'release-x.y' and 'release-x.y-test-z'
+dh_minor_version_part="\${dh_version#*.}"
+dh_minor_number="\${dh_minor_version_part%%-*}"
+dh_minor="\${dh_minor_number%.*}"
+
+# Extracting the major and minor versions from INITIAL_IMAGE_TAG
+initial_version="${INITIAL_IMAGE_TAG#release-}"
+initial_major="\${initial_version%%.*}"
+
+initial_minor_version_part="\${initial_version#*.}"
+initial_minor_number="\${initial_minor_version_part%%-*}"
+initial_minor="\${initial_minor_number%.*}"
+
+echo "Initial Minor Version: \$initial_minor"
+echo "Deckhouse Minor Version: \$dh_minor"
+
+# Check that the major versions match and the minor differs by +1
+if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor + 1))" ]; then
+    >&2 echo "Pull both versions of fe-upgrade"
+    # pull
+    d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+    --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
+    # push
+    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login mirror --registry-password ${LOCAL_REGISTRY_MIRROR_PASSWORD}
+fi
+
 set +x
 EOF
        chmod +x /tmp/install-d8-and-pull-push-images.sh
@@ -755,6 +787,7 @@ EOF
        # cleanup
        rm -f /tmp/install-d8-and-pull-push-images.sh
        rm -rf d8
+       rm -rf d8-upgrade
 
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
