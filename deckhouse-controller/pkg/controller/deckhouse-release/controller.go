@@ -108,6 +108,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
+		exts:               exts,
 		logger:             logger,
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
