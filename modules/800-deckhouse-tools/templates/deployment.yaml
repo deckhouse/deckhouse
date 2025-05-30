@@ -25,7 +25,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: web
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "web") }}
         ports:
           - containerPort: 8080
