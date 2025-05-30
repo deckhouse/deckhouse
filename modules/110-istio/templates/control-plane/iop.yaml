@@ -86,7 +86,7 @@ spec:
           value: "true"
         - name: ENABLE_ENHANCED_RESOURCE_SCOPING
           value: "true"
-  {{- if $.Values.istio.enableHTTP10 }}
+  {{- if $.Values.istio.dataPlane.enableHTTP10 }}
         - name: PILOT_HTTP10
           value: "1"
   {{- end }}
@@ -132,8 +132,8 @@ spec:
         ISTIO_META_DNS_CAPTURE: "true"
         ISTIO_META_DNS_AUTO_ALLOCATE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
-        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.proxyConfig.idleTimeout }}
-      holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
+        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+      holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
         sampling: {{ $.Values.istio.tracing.sampling }}
