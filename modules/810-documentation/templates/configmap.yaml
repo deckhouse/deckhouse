@@ -8,6 +8,7 @@ metadata:
 data:
   nginx.conf: |-
     worker_processes 1;
+
     error_log /dev/stderr warn;
     pid       /tmp/nginx.pid;
 
@@ -44,6 +45,7 @@ data:
       ssi on;
       gzip off;
       port_in_redirect off;
+      absolute_redirect off;
 
       map $http_accept_language $preferred_browser_lang {
         default       "en";
