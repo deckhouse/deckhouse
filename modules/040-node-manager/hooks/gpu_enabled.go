@@ -17,15 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -47,9 +43,15 @@ var _ = sdk.RegisterFunc(
 				Kind:       "NodeGroup",
 				FilterFunc: filterGPUSpec,
 			},
+			{
+				Name:       "nodes",
+				ApiVersion: "v1",
+				Kind:       "Node",
+				FilterFunc: nodeFilterFunc,
+			},
 		},
 	},
-	dependency.WithExternalDependencies(setGPULabel))
+	setGPULabel)
 
 type nodeGroupInfo struct {
 	Name       string
@@ -74,11 +76,24 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}, nil
 }
 
-func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
+func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node v1.Node
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return "", err
+	}
+
+	return NodeInfo{
+		Name:   node.Name,
+		Labels: node.Labels,
+	}, nil
+}
+
+func setGPULabel(input *go_hook.HookInput) error {
 	ngs := input.Snapshots["nodegroups"]
+	nodes := input.Snapshots["nodes"]
 
 	for _, ng := range ngs {
-		var nodes *v1.NodeList
 		ngName := ng.(nodeGroupInfo).Name
 		gpuSharing := ng.(nodeGroupInfo).GpuSharing
 		if gpuSharing == "" {
@@ -86,22 +101,21 @@ func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		input.Logger.Info("Processing GPU nodegroup %s", ngName)
 
-		kubeClient := dc.MustGetK8sClient()
-
-		nodes, _ = kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "node.deckhouse.io/group=" + ngName,
-		})
-
-		for _, node := range nodes.Items {
-			if _, ok := node.Labels[gpuEnabledLabel]; ok {
-				if sharingType, ok := node.Labels[devicePluginLabel]; ok {
+		for _, node := range nodes {
+			if _, ok := node.(NodeInfo).Labels[ngLabel]; ok {
+				if node.(NodeInfo).Labels[ngLabel] != ngName {
+					continue
+				}
+			}
+			if _, ok := node.(NodeInfo).Labels[gpuEnabledLabel]; ok {
+				if sharingType, ok := node.(NodeInfo).Labels[devicePluginLabel]; ok {
 					if sharingType == gpuSharing {
 						continue
 					}
 				}
 			}
 
-			input.Logger.Info("Labeling %s node with %s=%v label", node.Name, devicePluginLabel, gpuSharing)
+			input.Logger.Info("Labeling %s node with %s=%v label", node.(NodeInfo).Name, devicePluginLabel, gpuSharing)
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"labels": map[string]interface{}{
@@ -111,7 +125,7 @@ func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
 				},
 			}
 
-			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.(NodeInfo).Name)
 		}
 	}
 	return nil

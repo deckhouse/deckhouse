@@ -103,7 +103,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 
 			// BindingContexts work with Dynamic client but setGPULabel works with CoreV1 from kubernetes.Interface client. Reused func from modules/040-node-manager/hooks/handle_draining_test.go
-			testMoveNodesToStaticClient(f)
+			// testMoveNodesToStaticClient(f)
 
 			f.RunGoHook()
 		})
