@@ -13,9 +13,29 @@
     width: 297px;
     margin-right: 64px;
 
-      @media screen and (width < 1500px) {
-        margin-right: 54px;
-      }
+    @media screen and (width < 1500px) {
+      margin-right: 54px;
+    }
+
+    &--link {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+      border-radius: 4px;
+      border: 1px solid #bbb;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    &--descr {
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 24px;
+      letter-spacing: 1%;
+      color: #0D69F2;
+    }
 }
 
 .breadcrumbs__right {
@@ -2026,3 +2046,16 @@ select#contact-select {
   }
 }
 
+.layout-sidebar__content--guides {
+  .docs {
+    h1 {
+        margin: 0;
+        margin-bottom: 22px;
+    }
+
+    h2 {
+      margin: 0;
+      margin-bottom: 28px;
+    }
+  }
+}

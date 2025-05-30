@@ -3,6 +3,8 @@ title: Picking resources for a bare metal cluster
 permalink: en/guides/hardware-requirements.html
 description: Hardware requirements for cluster nodes managed by Deckhouse Kubernetes Platform.
 lang: en
+layout: sidebar-guides
+toc: true
 ---
 
 Before deploying a cluster running Deckhouse Kubernetes Platform, you have to plan the configuration of the future cluster and decide on the parameters if its nodes (e. g., RAM, CPU, etc.).
