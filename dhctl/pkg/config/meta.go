@@ -213,13 +213,13 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if versionConstraint.Check(version) {
 
-			if _, ok := m.ProviderClusterConfig["legacy"]; !ok {
+			if _, ok := m.ProviderClusterConfig["legacyMode"]; !ok {
 				legacyMode, err := json.Marshal(true)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal legacyMode: %v", err)
 				}
 
-				m.ProviderClusterConfig["legacy"] = legacyMode
+				m.ProviderClusterConfig["legacyMode"] = legacyMode
 			}
 
 			err = os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
