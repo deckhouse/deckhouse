@@ -1,0 +1,20 @@
+deckhouse-controller:
+  fixes:
+    - summary: dix deckhouse crds mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13712
+docs:
+  features:
+    - summary: >-
+        Display “No additional parameters are available for this module” on configuration pages for
+        external modules with no defined parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13715
+monitoring-ping:
+  fixes:
+    - summary: Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13684
+prometheus:
+  features:
+    - summary: Validation prometheus remotewrite ca webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13654
+      impact: prometheus
+
