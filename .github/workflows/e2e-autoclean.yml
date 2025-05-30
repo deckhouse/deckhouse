@@ -75,7 +75,7 @@ jobs:
   e2e-pr-clean:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     env:
-      PULL_REQUEST_NEMBER: ${{ github.event.pull_request.number }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
     name: Run
     needs:
     - skip_tests_repos
@@ -95,4 +95,9 @@ jobs:
         pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
       run: |
-        python ${SCRIPT_DIR}/main.py --pr ${PULL_REQUEST_NEMBER}
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+        python ${SCRIPT_DIR}/main.py --pr ${PULL_REQUEST_NUMBER}${REPO_SUFFIX:+-${REPO_SUFFIX}}
