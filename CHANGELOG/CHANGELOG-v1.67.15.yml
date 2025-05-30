@@ -1,0 +1,11 @@
+cert-manager:
+  features:
+    - summary: >-
+        Bump cert-manager version up to 1.17.1. This fixes acme confirmation for cloudflare
+        provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12830
+deckhouse:
+  fixes:
+    - summary: Remove harmful enum limitation from the Module CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13689
+
