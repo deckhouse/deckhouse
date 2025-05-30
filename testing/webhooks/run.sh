@@ -15,12 +15,12 @@
 # limitations under the License.
 set -Eeo pipefail
 
-BASE="$(bin/yq '.REGISTRY_PATH' < candi/image_versions.yml)"
-TAG="$(bin/yq '.BASE_ALT_P11' < candi/image_versions.yml)"
+BASE="$(bin/yq '.REGISTRY_PATH' < candi/base_images.yml)"
+TAG="$(bin/yq '."builder/alpine"' < candi/base_images.yml)"
 
 docker run --rm \
   -v "${PWD}":/src \
   -v "${PWD}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt":/requirements.txt \
   -v "${PWD}/testing/webhooks/test.sh":/test.sh \
-  "${BASE}${TAG}" \
-  /test.sh
+  "${BASE}@${TAG}" \
+  sh /test.sh
