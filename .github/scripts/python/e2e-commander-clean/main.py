@@ -136,7 +136,7 @@ def remove_old_clusters(clusters: List[Dict]) -> None:
     delete_clusters_by_list(clusters_to_delete)
 
 
-def remove_clusters_by_pr(clusters: List[Dict], pr_number: int) -> None:
+def remove_clusters_by_pr(clusters: List[Dict], pr_number: str) -> None:
     """Remove clusters created from a specific pull request."""
     print(f"Removing all clusters created in PR: {pr_number}")
     clusters_to_delete = []
