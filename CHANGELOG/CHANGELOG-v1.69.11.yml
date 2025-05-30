@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: proxy-buffer-size increased in kiali Ingress.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13721
+
