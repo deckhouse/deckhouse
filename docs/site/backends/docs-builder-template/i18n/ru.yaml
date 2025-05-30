@@ -59,3 +59,4 @@ version: версия
 version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
+no_custom_configuration: У модуля нет параметров для настройки.

@@ -59,4 +59,4 @@ version: version
 version_of_module: "### module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
-
+no_custom_configuration: The module has no configuration parameters.

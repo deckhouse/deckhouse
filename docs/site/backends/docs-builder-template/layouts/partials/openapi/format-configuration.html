@@ -15,7 +15,7 @@ Context:
 
 {{/* TODO: format_examples $data */}}
 
-{{- if $data.properties }}
+{{- if gt (len $data.properties) 0 }}
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
 
 <ul class="resources">
@@ -27,4 +27,7 @@ Context:
   {{- end }}
 
 </ul>
+
+{{- else }}
+<p>{{ T "no_custom_configuration" }}</p>
 {{- end }}
