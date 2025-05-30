@@ -1,0 +1,54 @@
+admission-policy-engine:
+  fixes:
+    - summary: remove redundant namespace from RoleBinding
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13695
+candi:
+  features:
+    - summary: Added support for Kubernetes 1.33 and discontinued support for Kubernetes 1.28.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13357
+      impact: >-
+        The minimum supported version of Kubernetes is now 1.29. All control plane components will
+        restart.
+  fixes:
+    - summary: fix double preview version in candi/version_map
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13670
+ci:
+  features:
+    - summary: Add wait for image build in CVE scans.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13616
+    - summary: Add automatic vulnerability checks to pull requests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13601
+  fixes:
+    - summary: Add a check for successful application of manifests in e2e.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13660
+deckhouse-controller:
+  features:
+    - summary: add LTS release channel
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13546
+  fixes:
+    - summary: fix deckhouse crds mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13708
+    - summary: convert MUP CRD v1alpha2 storage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13646
+docs:
+  features:
+    - summary: Add the Picking resources for a bare-metal cluster guide
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10700
+  fixes:
+    - summary: Added link to GS to upload images into private registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13585
+loki:
+  fixes:
+    - summary: Lower Loki retention disk threshold to 92%
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13570
+node-manager:
+  features:
+    - summary: >-
+        Add capiEmergencyBrake setting to node-manager ModuleConfig, what can disable CAPI if set to
+        true.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13614
+upmeter:
+  features:
+    - summary: add automatic detection of frozen or growing deckhouse queue in upmeter-agent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13179
+
