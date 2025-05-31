@@ -15,7 +15,6 @@
 package moduleloader
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -86,7 +85,6 @@ type ModuleLoaderTestSuite struct {
 	loader *Loader
 
 	testDataFileName string
-	testMPOName      string
 
 	tmpDir string
 }
@@ -633,40 +631,6 @@ func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.Mo
 	require.NoError(suite.T(), err)
 
 	return mpo
-}
-
-func (suite *ModuleLoaderTestSuite) moduleRelease(name string) *v1alpha1.ModuleRelease {
-	release := new(v1alpha1.ModuleRelease)
-	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
-	require.NoError(suite.T(), err)
-
-	return release
-}
-
-func (suite *ModuleLoaderTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	sources := new(v1alpha1.ModuleSourceList)
-	err := suite.client.List(context.TODO(), sources)
-	require.NoError(suite.T(), err)
-
-	for _, item := range sources.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	mpos := new(v1alpha2.ModulePullOverrideList)
-	err = suite.client.List(context.TODO(), mpos)
-	require.NoError(suite.T(), err)
-
-	for _, item := range mpos.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
 }
 
 func (suite *ModuleLoaderTestSuite) parseTestdata(scope, filename string) []byte {

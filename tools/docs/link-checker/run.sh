@@ -27,6 +27,7 @@ IMAGE_PATH="${REGISTRY_PATH}${BASE_IMAGE}"
 
 BASEDIR=$PWD/docs
 export WERF_REPO=:local
+export WERF_REPO='localhost:4999/docs'
 export SECONDARY_REPO=""
 export DOC_API_URL=dev
 export DOC_API_KEY=dev

@@ -13,7 +13,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v3.5.17 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
+  - git clone -b v3.5.21 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf tools
@@ -38,7 +38,7 @@ imageSpec:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

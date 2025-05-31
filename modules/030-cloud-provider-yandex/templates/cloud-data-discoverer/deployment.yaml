@@ -64,6 +64,7 @@ spec:
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
@@ -112,6 +113,7 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
         ports:
           - containerPort: 8080
             name: https-metrics
@@ -135,6 +137,16 @@ spec:
                     resource: deployments
                     subresource: prometheus-metrics
                     name: cloud-data-discoverer
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:unused
 package openapi_validation
 
 import (
@@ -43,11 +44,13 @@ type fileValidation struct {
 	validationError error
 }
 
+//nolint:unused // Uses for tests
 type moduleVersions struct {
 	specVersion        int
 	conversionsVersion int
 }
 
+//nolint:unused // Uses for tests
 func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
 	result := map[string]*moduleVersions{}
 	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {

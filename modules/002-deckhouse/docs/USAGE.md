@@ -62,10 +62,10 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
 
   This means that the parameter [settings.update.mode](configuration.html#parameters-update-mode) in the ModuleConfig `deckhouse` is set to `Manual` (confirmation for both patch and minor versions of Deckhouse) or `AutoPatch` (confirmation for the minor version of Deckhouse).
   
-  To confirm the update, it is necessary to execute the following command, specifying the required version of Deckhouse:
+  Run the following command to confirm the update (use the corresponding Deckhouse version):
 
   ```shell
-  kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
+  kubectl patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - If automatic application of disruptive updates is disabled for a node group.

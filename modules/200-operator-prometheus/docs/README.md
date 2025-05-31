@@ -120,10 +120,10 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 ### What does Prometheus Operator do?
 
 * Prometheus Operator defines four custom resources using the CRD (Custom Resource Definitions) mechanism:
-  * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — defines the Prometheus installation (cluster);
-  * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — defines the method for monitoring (collecting metrics) a set of services;
-  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — defines the Alertmanager cluster;
-  * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — defines a list of Prometheus rules;
+  * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — defines the Prometheus installation (cluster);
+  * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — defines the method for monitoring (collecting metrics) a set of services;
+  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#alertmanager) — defines the Alertmanager cluster;
+  * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — defines a list of Prometheus rules;
 * Monitors `prometheus` resources and generates for each resource:
   * StatefulSet (with Prometheus);
   * Secret containing `prometheus.yaml` (the Prometheus config) and `configmaps.json` (the `prometheus-config-reloader` config);
@@ -133,12 +133,13 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 ![What does the Prometheus Pod contain](../../images/operator-prometheus/pod.png)
 
-* The Prometheus Pod has two containers inside:
+* The Prometheus Pod has three containers inside:
   * `prometheus` —  the container with the Prometheus itself;
   * `prometheus-config-reloader` — a [wrapping](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
     * monitors `prometheus.yaml` for changes and, if necessary, reloads the Prometheus configuration (via a dedicated HTTP request, see more [below](#how-are-service-monitors-handled));
     * monitors PrometheusRules (see more [below](#how-are-custom-resources-with-rules-processed)) and, if necessary, pulls them and restarts Prometheus.
-* The Pod uses three volumes:
+  * `kube-rbac-proxy` — serves as an authentication and authorization proxy server based on RBAC for accessing Prometheus metrics.
+* The Pod uses several volumes, three of which are essential for Prometheus operation:
   * config —  the secret (it contains `prometheus.yaml` and `configmaps.json`). It is mounted to both containers.
   * rules — an `emptyDir` volume that reads the `prometheus` container and supplies data to the `prometheus-config-reloader` container. It is mounted to both containers (in read-only mode in the case of the Prometheus container).
   * data — a Prometheus data volume. This one mounted to `prometheus` only.
@@ -147,9 +148,9 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 ![How are Service Monitors handled](../../images/operator-prometheus/servicemonitors.png)
 
-* **(1)** Prometheus Operator reads Service Monitors (and tracks their addition/removal/modification). The list of Service Monitors to follow is specified in the `prometheus`; see the [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)) for more details.
+* **(1)** Prometheus Operator reads Service Monitors (and tracks their addition/removal/modification). The list of Service Monitors to follow is specified in the `prometheus`; see the [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusspec)) for more details.
 * **(2)** For each Service Monitor (if it doesn't have a specific list of namespaces, i.e., `any: true` is set), Prometheus Operator determines (using the Kubernetes API) a list of namespaces where Services matching the Service Monitor's labels are running.
-* **(3)** Based on the `servicemonitor` resources read (see the [official documentation)](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) and a list of namespaces determined, Prometheus Operator generates the `scrape_configs` config section and saves it to the corresponding Secret.
+* **(3)** Based on the `servicemonitor` resources read (see the [official documentation)](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitorspec)) and a list of namespaces determined, Prometheus Operator generates the `scrape_configs` config section and saves it to the corresponding Secret.
 * **(4)** The Secret's data then passed to the Pod using standard Kubernetes mechanisms (the `prometheus.yaml` file gets updated).
 * **(5)** `prometheus-config-reloader` notices the change and sends an HTTP request to Prometheus to reload.
 * **(6)** Prometheus rereads the config and notices changes in the scrape_configs section, which it processes according to internal logic (you can find more details above).

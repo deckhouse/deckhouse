@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.28"
+      kubernetesVersion: "1.29"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -71,6 +71,7 @@ apiVersions:
             - "Zvirt"
             - "Dynamix"
             - "Huaweicloud"
+            - "DVP"
           prefix:
             type: string
             description: |
@@ -129,12 +130,37 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.28"
         - "1.29"
         - "1.30"
         - "1.31"
         - "1.32"
+        - "1.33"
         - "Automatic"
+      encryptionAlgorithm:
+        type: string
+        description: |
+          In Kubernetes version **1.30** and earlier, only the `RSA-2048` algorithm is supported.
+
+          Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
+          when generating keys and certificates for the following control-plane components:
+
+          - `apiserver`
+          - `apiserver-kubelet-client`
+          - `apiserver-etcd-client`
+          - `front-proxy-client`
+          - `etcd-server`
+          - `etcd-peer`
+          - `etcd-healthcheck-client`
+
+          Certificates for the components listed above will be reissued using the selected algorithm and key length.
+
+          > **Warning.** When reissuing certificates, the root certificate (**CA**) is not rotated. The root certificate is created with the selected algorithm only during the initial cluster bootstrap.
+        enum:
+        - "RSA-2048"
+        - "RSA-3072"
+        - "RSA-4096"
+        - "ECDSA-P256"
+        default: "RSA-2048"
       proxy:
         x-doc-d8Editions:
           - be

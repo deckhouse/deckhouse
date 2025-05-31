@@ -110,7 +110,7 @@
 
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other
 {% if revision == 'ce' %} active{% endif %}
-{% if page.ee_only == true and page.se_support != true %} active{% endif %}
+{% if revision == 'ee' and page.ee_only == true and page.se_support != true %} active{% endif %}
 {% if revision == 'se' and page.se_support == true %} active{% endif %}
 {% if revision == 'se-plus' and page.se_support == true %} active{% endif %}
 " markdown="1">
