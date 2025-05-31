@@ -496,7 +496,8 @@ if [ \$elapsed -ge \$timeout ]; then
   # Fallback to 'Delivered' status as before
   >&2 echo "Falling back to 'Delivered' status..."
   current_version=\$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
-fi  >&2 echo "Getting current DeckhouseRelease version from cluster..."
+fi
+>&2 echo "Getting current DeckhouseRelease version from cluster..."
 # Always initialize next_version with a default value to avoid 'unbound variable' error
 next_version="v1.69.3"
 
