@@ -1,9 +1,15 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package vcd
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"sort"
@@ -135,8 +141,11 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("failed to get sizing policies: %v", err)
 	}
 
-	if sp != nil {
-		sizingPolicies = append(sizingPolicies, sp...)
+	policiesDetails := make([]v1alpha1.VCDSizingPolicyDetails, 0, len(sp))
+
+	for _, s := range sp {
+		sizingPolicies = append(sizingPolicies, s.VdcComputePolicyV2.Name)
+		policiesDetails = append(policiesDetails, sizingPolicyDetails(s.VdcComputePolicyV2))
 	}
 
 	if discoveryData.SizingPolicies != nil {
@@ -146,15 +155,22 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	sizingPolicies = removeDuplicatesStrings(sizingPolicies)
 
 	discoveryData.SizingPolicies = sizingPolicies
+	discoveryData.SizingPoliciesDetails = policiesDetails
 
 	networks := make([]string, 0)
+
 	nt, err := d.getInternalNetworks(vcdClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get internal networks: %v", err)
 	}
 
-	if nt != nil {
-		networks = append(networks, nt...)
+	networksDetails := make([]v1alpha1.VCDInternalNetworkDetails, 0, len(nt))
+	for _, net := range nt {
+		networks = append(networks, net.Name)
+		networksDetails = append(networksDetails, v1alpha1.VCDInternalNetworkDetails{
+			Name: net.Name,
+			CIDR: cidrNotation(net.Netmask, net.DefaultGateway),
+		})
 	}
 
 	if discoveryData.InternalNetworks != nil {
@@ -162,6 +178,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	}
 	networks = removeDuplicatesStrings(networks)
 	discoveryData.InternalNetworks = networks
+	discoveryData.InternalNetworksDetails = networksDetails
 
 	storageProfiles := make([]v1alpha1.VCDStorageProfile, 0)
 	st, err := d.getStorageProfiles(vcdClient)
@@ -192,6 +209,18 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	}
 	discoveryData.VCDAPIVersion = vcdAPIVersion
 
+	vApps, err := d.getVAPPs(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("could not get vApps: %w", err)
+	}
+	discoveryData.VApps = vApps
+
+	vDCs, err := d.getVDCs(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("could not get vDCs: %w", err)
+	}
+	discoveryData.VDCs = vDCs
+
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
@@ -201,26 +230,16 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	return discoveryDataJson, nil
 }
 
-func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, error) {
+func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]*govcd.VdcComputePolicyV2, error) {
 	sizingPolicies, err := vcdClient.GetAllVdcComputePoliciesV2(url.Values{})
 	if err != nil {
 		return nil, err
 	}
 
-	if len(sizingPolicies) == 0 {
-		return nil, nil
-	}
-
-	policies := make([]string, 0, len(sizingPolicies))
-
-	for _, s := range sizingPolicies {
-		policies = append(policies, s.VdcComputePolicyV2.Name)
-	}
-
-	return policies, nil
+	return sizingPolicies, nil
 }
 
-func (d *Discoverer) getInternalNetworks(vcdClient *govcd.VCDClient) ([]string, error) {
+func (d *Discoverer) getInternalNetworks(vcdClient *govcd.VCDClient) ([]*types.QueryResultOrgVdcNetworkRecordType, error) {
 	results, err := vcdClient.QueryWithNotEncodedParams(nil, map[string]string{
 		"type": types.QtOrgVdcNetwork,
 	})
@@ -232,13 +251,7 @@ func (d *Discoverer) getInternalNetworks(vcdClient *govcd.VCDClient) ([]string, 
 		return nil, nil
 	}
 
-	networks := make([]string, 0, len(results.Results.OrgVdcNetworkRecord))
-
-	for _, n := range results.Results.OrgVdcNetworkRecord {
-		networks = append(networks, n.Name)
-	}
-
-	return networks, nil
+	return results.Results.OrgVdcNetworkRecord, nil
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.VCDStorageProfile, error) {
@@ -306,6 +319,35 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 	instanceTypes = removeDuplicatesInstanceTypes(instanceTypes)
 	return instanceTypes, nil
+}
+
+func (d *Discoverer) getVDCs(client *govcd.VCDClient) ([]string, error) {
+	vdcAll, err := client.Client.QueryAllVdcs()
+	if err != nil {
+		return nil, fmt.Errorf("error getting VDCs: %w", err)
+	}
+
+	vdcs := make([]string, 0, len(vdcAll))
+	for _, v := range vdcAll {
+		vdcs = append(vdcs, v.Name)
+	}
+	return vdcs, nil
+}
+
+func (d *Discoverer) getVAPPs(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, error) {
+	vAppAll, err := client.Client.QueryVappList()
+	if err != nil {
+		return nil, fmt.Errorf("error getting vApps: %w", err)
+	}
+
+	vApps := make([]v1alpha1.VCDvApp, 0, len(vAppAll))
+	for _, v := range vAppAll {
+		vApps = append(vApps, v1alpha1.VCDvApp{
+			Name:    v.Name,
+			VDCName: v.VdcName,
+		})
+	}
+	return vApps, nil
 }
 
 // NotImplemented
@@ -385,4 +427,26 @@ func removeDuplicatesInstanceTypes(list []v1alpha1.InstanceType) []v1alpha1.Inst
 		return uniqueList[i].Name < uniqueList[j].Name
 	})
 	return uniqueList
+}
+
+func cidrNotation(netMask, gateway string) string {
+	mask := net.IPMask(net.ParseIP(netMask).To4())
+	cidr, _ := mask.Size()
+
+	ip := net.ParseIP(gateway)
+
+	return fmt.Sprintf("%s/%d", ip.Mask(mask), cidr)
+}
+
+func sizingPolicyDetails(policy *types.VdcComputePolicyV2) v1alpha1.VCDSizingPolicyDetails {
+	details := v1alpha1.VCDSizingPolicyDetails{Name: policy.Name}
+
+	if policy.CPUCount != nil {
+		details.VCPUs = *policy.CPUCount
+	}
+	if policy.Memory != nil {
+		details.RAM = *policy.Memory
+	}
+
+	return details
 }
