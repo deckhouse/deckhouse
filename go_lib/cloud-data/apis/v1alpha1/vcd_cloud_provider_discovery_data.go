@@ -18,15 +18,38 @@ type VCDCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	SizingPolicies         []string            `json:"sizingPolicies,omitempty"`
-	InternalNetworks       []string            `json:"internalNetworks,omitempty"`
-	StorageProfiles        []VCDStorageProfile `json:"storageProfiles,omitempty"`
-	VCDAPIVersion          string              `json:"vcdAPIVersion,omitempty"`
-	VCDInstallationVersion string              `json:"vcdInstallationVersion,omitempty"`
+	SizingPolicies  []string            `json:"sizingPolicies,omitempty"`
+	StorageProfiles []VCDStorageProfile `json:"storageProfiles,omitempty"`
+
+	InternalNetworks []string `json:"internalNetworks,omitempty"`
+
+	VCDAPIVersion          string `json:"vcdAPIVersion,omitempty"`
+	VCDInstallationVersion string `json:"vcdInstallationVersion,omitempty"`
+
+	InternalNetworksDetails []VCDInternalNetworkDetails `json:"internalNetworksDetails"`
+	VApps                   []VCDvApp                   `json:"vApps,omitempty"`
+	VDCs                    []string                    `json:"vDCs,omitempty"`
+	SizingPoliciesDetails   []VCDSizingPolicyDetails    `json:"sizingNetworksDetails"`
 }
 
 type VCDStorageProfile struct {
 	Name                    string `json:"name"`
 	IsEnabled               bool   `json:"isEnabled,omitempty"`
 	IsDefaultStorageProfile bool   `json:"isDefaultStorageProfile,omitempty"`
+}
+
+type VCDvApp struct {
+	Name    string `json:"name"`
+	VDCName string `json:"vDCName"`
+}
+
+type VCDInternalNetworkDetails struct {
+	Name string `json:"name"`
+	CIDR string `json:"cidr"`
+}
+
+type VCDSizingPolicyDetails struct {
+	Name  string `json:"name"`
+	VCPUs int    `json:"vcpus"`
+	RAM   int    `json:"ram"`
 }
