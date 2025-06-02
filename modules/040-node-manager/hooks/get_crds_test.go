@@ -1403,4 +1403,169 @@ spec:
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
 		})
 	})
+
+	Context("Serialized labels and taints", func() {
+		Context("NG without labels and taints", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set empty serializedLabels and serializedTaints", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal(""))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal(""))
+			})
+		})
+
+		Context("NG with labels only", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      environment: production
+      app: warp-drive-ai
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedLabels in desired format and empty serializedTaints", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal("app=warp-drive-ai,environment=production"))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal(""))
+			})
+		})
+
+		Context("NG with taints only", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: b
+      value: v
+    - key: a
+    - effect: NoExecute
+      key: d
+    - key: c
+      value: v1
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedTaints in desired format and empty serializedLabels", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal(""))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal("b=v:NoExecute,a,d:NoExecute,c=v1:"))
+			})
+		})
+
+		Context("NG with taints and labels", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      environment: production
+      app: warp-drive-ai
+    taints:
+    - effect: NoExecute
+      key: b
+      value: v
+    - key: a
+    - effect: NoExecute
+      key: d
+    - key: c
+      value: v1
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedLabels and serializedTaints in desired format", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal("app=warp-drive-ai,environment=production"))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal("b=v:NoExecute,a,d:NoExecute,c=v1:"))
+			})
+		})
+	})
 })

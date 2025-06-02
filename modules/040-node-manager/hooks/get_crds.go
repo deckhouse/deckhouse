@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"k8s.io/apimachinery/pkg/labels"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -467,6 +469,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 
+		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
+		ngForValues["serializedTaints"] = serializeTaints(nodeGroup)
+
 		if ngForValues["cri"] == nil {
 			ngForValues["cri"] = ngv1.CRI{}
 		}
@@ -596,4 +601,25 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	absWindowStart := ((ts - drift - 1) / EpochWindowSize) * EpochWindowSize
 	epoch := absWindowStart + EpochWindowSize + drift
 	return strconv.FormatInt(epoch, 10)
+}
+
+func serializeLabels(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Labels) == 0 {
+		return ""
+	}
+
+	return labels.FormatLabels(info.Spec.NodeTemplate.Labels)
+}
+
+func serializeTaints(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Taints) == 0 {
+		return ""
+	}
+
+	res := make([]string, 0, len(info.Spec.NodeTemplate.Taints))
+	for _, taint := range info.Spec.NodeTemplate.Taints {
+		res = append(res, taint.ToString())
+	}
+
+	return strings.Join(res, ",")
 }
