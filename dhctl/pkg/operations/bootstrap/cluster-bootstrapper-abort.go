@@ -62,9 +62,6 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	sshClient := wrapper.Client()
-	if err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
-	}
 
 	if len(sshClient.Session().AvailableHosts()) == 0 {
 		mastersIPs, err := GetMasterHostsIPs()
@@ -83,6 +80,10 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 
 	if bastionHost != "" {
 		sshClient.Session().BastionHost = bastionHost
+	}
+
+	if err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
 	return nil
@@ -170,9 +171,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		if err := b.initSSHClient(); err != nil {
 			return err
 		}
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
 
 		if !b.CommanderMode {
 			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
@@ -213,10 +211,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	})
 
 	if err != nil {
-		return err
-	}
-
-	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 
