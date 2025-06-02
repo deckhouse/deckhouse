@@ -28,7 +28,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "node-shutdown-inhibitor": "{{ $version }}" }
+    labels: {"distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
