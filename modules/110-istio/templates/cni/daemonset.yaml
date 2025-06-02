@@ -192,8 +192,13 @@ spec:
                     subresource: prometheus-metrics
                     name: istio-cni-node
           ports:
+            {{- if ($.Values.istio.internal.enableAmbientMode) }}
+            - containerPort: 4287
+              name: https-metrics
+            {{- else }}
             - containerPort: 9734
               name: https-metrics
+            {{- end }}
           resources:
             requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
