@@ -27,8 +27,8 @@ spec:
     {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
     {{- $inhibitorImageKey := "d8ShutdownInhibitor" }}
     {{- $moduleKey := "nodeManager" }}
-    {{- $moduleImagesDigests :=  pluck .Values.global.modulesImages.digests $moduleKey | first }}
-    {{- $inhibitorDigest := pluck $moduleImagesDigests $inhibitorImageKey | first }}
+    {{- $moduleImagesDigests :=  pluck $moduleKey .Values.global.modulesImages.digests | first }}
+    {{- $inhibitorDigest := pluck $inhibitorImageKey $moduleImagesDigests | first }}
 
     inhibitorServiceName="{{ $inhibitorPkgName }}.service"
 
