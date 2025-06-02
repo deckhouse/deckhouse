@@ -67,17 +67,6 @@
                     color: #A7B0BE;
                 }
 
-                &::after {
-                    content: '...';
-                    position: absolute;
-                    top: 12px;
-                    left: 18px;
-                    color: #A7B0BE;
-                    font-weight: 500;
-                    font-size: 8px;
-                    line-height: 18px;
-                }
-
                 code {
                     font-weight: 400;
                     font-size: 15px;
