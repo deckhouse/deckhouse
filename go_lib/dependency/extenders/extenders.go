@@ -122,7 +122,7 @@ func (b *ExtendersBundle) CheckModuleReleaseRequirements(moduleName, moduleRelea
 	return nil
 }
 
-func IsExtendersField(field string) bool {
+func (b *ExtendersBundle) IsExtendersField(field string) bool {
 	return slices.Contains([]string{
 		v1alpha1.KubernetesRequirementFieldName,
 		v1alpha1.DeckhouseRequirementFieldName,

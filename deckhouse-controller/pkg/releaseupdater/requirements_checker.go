@@ -99,7 +99,7 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 	return &Checker[v1alpha1.DeckhouseRelease]{
 		fns: []Check[v1alpha1.DeckhouseRelease]{
 			newDeckhouseVersionCheck(enabledModules, exts),
-			newDeckhouseRequirementsCheck(enabledModules),
+			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
 		},
 		logger: logger,
@@ -219,13 +219,15 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 
 type deckhouseRequirementsCheck struct {
 	name string
+	exts *extenders.ExtendersBundle
 
 	enabledModules set.Set
 }
 
-func newDeckhouseRequirementsCheck(enabledModules []string) *deckhouseRequirementsCheck {
+func newDeckhouseRequirementsCheck(enabledModules []string, exts *extenders.ExtendersBundle) *deckhouseRequirementsCheck {
 	return &deckhouseRequirementsCheck{
 		name:           "deckhouse requirements check",
+		exts:           exts,
 		enabledModules: set.New(enabledModules...),
 	}
 }
@@ -237,7 +239,7 @@ func (c *deckhouseRequirementsCheck) GetName() string {
 func (c *deckhouseRequirementsCheck) Verify(_ context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	for key, value := range dr.GetRequirements() {
 		// these fields are checked by extenders in module release controller
-		if extenders.IsExtendersField(key) {
+		if c.exts.IsExtendersField(key) {
 			continue
 		}
 
