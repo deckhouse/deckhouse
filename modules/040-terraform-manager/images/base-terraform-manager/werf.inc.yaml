@@ -65,7 +65,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ .TF.terraform }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform.git /src
   - cd /src
-#  - git apply /patches/*.patch --verbose
+  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact

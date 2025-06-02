@@ -1,7 +1,7 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
 
-terraform: 1.6.6
+terraform: 0.14.8
 
 opentofu: 1.9.0
 
