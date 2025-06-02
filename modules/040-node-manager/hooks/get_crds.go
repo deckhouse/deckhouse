@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"k8s.io/apimachinery/pkg/labels"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -34,6 +33,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
