@@ -49,32 +49,6 @@
             font-size: 24px;
         }
 
-        div.highlight {
-            pre {
-                padding-left: 48px;
-                position: relative;
-                margin-bottom: 39px;
-
-                &::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    bottom: 0;
-                    width: 36px;
-                    background-color: #F6F7F8;
-                    border-right: 1px solid #C4CAD4;
-                    color: #A7B0BE;
-                }
-
-                code {
-                    font-weight: 400;
-                    font-size: 15px;
-                    line-height: 22px;
-                }
-            }
-        }
-
         ul {
             font-weight: 400;
             font-size: 16px;
