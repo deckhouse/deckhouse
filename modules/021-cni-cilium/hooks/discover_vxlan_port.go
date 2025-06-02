@@ -33,6 +33,7 @@ import (
 const (
 	metricGroupVxlanPort           = "d8_cni_cilium_config_vxlan_port"
 	metricNameNonStandardVxlanPort = "d8_cni_cilium_non_standard_vxlan_port"
+	defaultVxlanPort               = 4298
 )
 
 type installationStatus int
@@ -61,10 +62,10 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 		case virtNestingLevel > 0: // (Nested installation)
 			return []transitionRule{
 				// regular setup with certain nesting level
-				{source: 4298 - virtNestingLevel, target: 4298 - virtNestingLevel},
+				{source: defaultVxlanPort - virtNestingLevel, target: defaultVxlanPort - virtNestingLevel},
 
 				// empty configmap for some reason - reset the port considering the nesting level
-				{source: 0, target: 4298 - virtNestingLevel},
+				{source: 0, target: defaultVxlanPort - virtNestingLevel},
 			}
 
 		default:
@@ -79,13 +80,13 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 
 					// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
 					// someone configured the port for setup without virtualization 8472 manually, will set the right one
-					{source: 8472, target: 4298},
+					{source: 8472, target: defaultVxlanPort},
 
 					// virtualization module was enabled on regular setup with the right port, will set the 4298 port
-					{source: 4299, target: 4298},
+					{source: 4299, target: defaultVxlanPort},
 
 					// regular setup with enabled virtualization module and right port, will leave it as is
-					{source: 4298, target: 4298},
+					{source: defaultVxlanPort, target: defaultVxlanPort},
 
 					// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
 				}
@@ -99,7 +100,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 					{source: 8472, target: 8472},
 
 					// virtualizaiton module was disabled on regular setup with standard 4298 port, will set the 4299 port
-					{source: 4298, target: 4299},
+					{source: defaultVxlanPort, target: defaultVxlanPort - virtNestingLevel},
 
 					// regular setup with standard 4299 port, will leave it as is
 					{source: 4299, target: 4299},
@@ -109,7 +110,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 
 	case newInstallation: // (ConfigMap does not exist)
 		return []transitionRule{
-			{source: 0, target: 4298 - virtNestingLevel},
+			{source: 0, target: defaultVxlanPort - virtNestingLevel},
 		}
 	}
 
@@ -199,7 +200,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 		targetPort = sourcePort
 		input.MetricsCollector.Set(metricNameNonStandardVxlanPort, 1, map[string]string{
 			"current_port":     fmt.Sprintf("%d", targetPort),
-			"recommended_port": fmt.Sprintf("%d", 4298-virtNestingLevel),
+			"recommended_port": fmt.Sprintf("%d", defaultVxlanPort-virtNestingLevel),
 		}, metrics.WithGroup(metricGroupVxlanPort))
 	}
 
