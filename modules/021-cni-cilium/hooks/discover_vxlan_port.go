@@ -198,8 +198,8 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 	if !transitionFound {
 		targetPort = sourcePort
 		input.MetricsCollector.Set(metricNameNonStandardVxlanPort, 1, map[string]string{
-			"currentPort":     fmt.Sprintf("%d", targetPort),
-			"recommendedPort": fmt.Sprintf("%d", 4298-virtNestingLevel),
+			"current_port":     fmt.Sprintf("%d", targetPort),
+			"recommended_port": fmt.Sprintf("%d", 4298-virtNestingLevel),
 		}, metrics.WithGroup(metricGroupVxlanPort))
 	}
 

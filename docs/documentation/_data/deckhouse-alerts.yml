@@ -227,7 +227,7 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        The Cilium configuration specifies a non-standard VXLAN port `{{ $labels.currentPort }}`. The recommend port number is `{{ $labels.recommendedPort }}`.
+        The Cilium configuration specifies a non-standard VXLAN port `{{ $labels.current_port }}`. The recommended port number is `{{ $labels.recommended_port }}`.
 
         To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended port.
 
