@@ -1,5 +1,5 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
