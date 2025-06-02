@@ -29,6 +29,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -760,7 +761,7 @@ func singleDocToManifests(doc []byte) []string {
 }
 
 func TestValidateModule(t *testing.T) {
-	check := func(name string, failed bool) {
+	check := func(name string, failed bool, values addonutils.Values) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
 			def := moduletypes.Definition{
@@ -768,7 +769,7 @@ func TestValidateModule(t *testing.T) {
 				Weight: 900,
 				Path:   filepath.Join("./testdata", name),
 			}
-			err := def.Validate(nil, log.NewNop())
+			err := def.Validate(values, log.NewNop())
 			if !failed {
 				require.NoError(t, err, "%s: unexpected error: %v", name, err)
 			}
@@ -779,9 +780,21 @@ func TestValidateModule(t *testing.T) {
 		})
 	}
 
-	check("validation/module", false)
-	check("validation/module-not-valid", true)
-	check("validation/module-failed", true)
-	check("validation/module-values-failed", true)
-	check("validation/virtualization", false)
+	check("validation/module", false, nil)
+	check("validation/module-not-valid", true, nil)
+	check("validation/module-failed", true, nil)
+	check("validation/module-values-failed", true, nil)
+	check("validation/virtualization", false, addonutils.Values{
+		"virtualMachineCIDRs": []any{},
+		"dvcr": map[string]any{
+			"storage": map[string]any{
+				"persistentVolumeClaim": map[string]any{
+					"size": "50G",
+				},
+
+				"type": "PersistentVolumeClaim",
+			},
+		},
+	})
+	check("validation/virtualization", true, nil)
 }
