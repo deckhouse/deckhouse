@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
+mkdir -p /opt/deckhouse/share/ca-certificates/
 
-REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+{{- if eq .runType "Normal" }}
+	{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+		{{- if $ca }}
 
-{{- if .registry.ca }}
-bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
-{{ .registry.ca }}
+bb-log-info "Sync moduleSource CA for {{ $registryAddr }}"
+bb-sync-file /opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt - << "EOF"
+{{ $ca }}
 EOF
-{{- else }}
-if [ -f $REGISTRY_CACERT_PATH ]; then
-  rm -f $REGISTRY_CACERT_PATH
-fi
+		{{- end }}
+	{{- end }}
 {{- end }}

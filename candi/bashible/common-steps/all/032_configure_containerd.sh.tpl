@@ -134,7 +134,34 @@ oom_score = 0
       max_conf_num = 1
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
+{{- if true }}
     config_path = "/etc/containerd/registry.d"
+{{- else }}
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
+          auth = "{{ .registry.auth | default "" }}"
+  {{- if .registry.ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- end }}
+  {{- if eq .registry.scheme "http" }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+          insecure_skip_verify = true
+  {{- end }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+      {{- if $ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
