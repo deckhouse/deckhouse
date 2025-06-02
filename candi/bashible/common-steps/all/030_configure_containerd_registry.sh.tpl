@@ -42,16 +42,16 @@
 
 discovered_node_ip="$(bb-d8-node-ip)"
 
-{{- range $hostName, $hostValues := .registry.hosts }}
-  {{- if not (has $hostName $exist_registry_host_list) }}
-    {{- $exist_registry_host_list = append $exist_registry_host_list $hostName }}
+{{- range $host_name, $host_values := .registry.hosts }}
+  {{- if not (has $host_name $exist_registry_host_list) }}
+    {{- $exist_registry_host_list = append $exist_registry_host_list $host_name }}
   {{- end }}
 
-mkdir -p "/etc/containerd/registry.d/{{ $hostName }}"
+mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
 
 # Create CA cert files for mirrors
-{{- range $mirror := $hostValues.mirrors }}
-  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $hostName $mirror.scheme $mirror.host }}
+{{- range $mirror := $host_values.mirrors }}
+  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $host_name $mirror.scheme $mirror.host }}
   {{- if $mirror.ca }}
 bb-sync-file {{ $mirror_ca_file_path | quote }} - << EOF
 {{ $mirror.ca }}
@@ -60,13 +60,13 @@ EOF
 {{- end }}
 
 # Create hosts.toml files for registries
-bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
+bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 [host]
-{{- range $mirror := $hostValues.mirrors }}
-  {{- $mirrorHostWithScheme := (printf "%s://%s" $mirror.scheme $mirror.host) }}
-  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $hostName $mirror.scheme $mirror.host }}
+{{- range $mirror := $host_values.mirrors }}
+  {{- $mirror_host_with_scheme := (printf "%s://%s" $mirror.scheme $mirror.host) }}
+  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $host_name $mirror.scheme $mirror.host }}
 
-  [host.{{ $mirrorHostWithScheme | quote }}]
+  [host.{{ $mirror_host_with_scheme | quote }}]
   capabilities = ["pull", "resolve"]
   {{- if eq $mirror.scheme "http" }}
   skip_verify = true
@@ -77,7 +77,7 @@ bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
 
     {{- with $mirror.auth }}
       {{- if or .auth .username }}
-    [host.{{ $mirrorHostWithScheme | quote }}.auth]
+    [host.{{ $mirror_host_with_scheme | quote }}.auth]
         {{- if .auth }}
     auth = {{ .auth | quote }}
         {{- else }}
@@ -88,7 +88,7 @@ bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
     {{- end }}
 
     {{- range $mirror.rewrites }}
-    [[host.{{ $mirrorHostWithScheme | quote }}.rewrite]]
+    [[host.{{ $mirror_host_with_scheme | quote }}.rewrite]]
     regex = {{ .from | quote }}
     replace = {{ .to | quote }}
     {{- end }}
@@ -98,19 +98,19 @@ EOF
 {{- end }}
 
 {{- if eq .runType "Normal" }}
-  {{- range $hostName, $CA := .normal.moduleSourcesCA }}
-    {{- if and (not (has $hostName $exist_registry_host_list)) $CA }}
-      {{- $exist_registry_host_list = append $exist_registry_host_list $hostName }}
+  {{- range $host_name, $CA := .normal.moduleSourcesCA }}
+    {{- if and (not (has $host_name $exist_registry_host_list)) $CA }}
+      {{- $exist_registry_host_list = append $exist_registry_host_list $host_name }}
 
 # Sync module sources host.toml and ca.crt
-mkdir -p "/etc/containerd/registry.d/{{ $hostName }}"
-bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/ca.crt" - << EOF
+mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
+bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/ca.crt" - << EOF
 {{ $CA }}
 EOF
 
-bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
-server = {{ $hostName | quote }}
-ca = ["/etc/containerd/registry.d/{{ $hostName }}/ca.crt"]
+bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
+server = {{ $host_name | quote }}
+ca = ["/etc/containerd/registry.d/{{ $host_name }}/ca.crt"]
 [host]
 EOF
     {{- end }}
