@@ -1,5 +1,176 @@
+From 1d0a465d291beec75bc2bf2220c85fca19e57dfb Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 2 Jun 2025 14:44:31 +0300
+Subject: [PATCH] add: priority patch
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ cilium-dbg/cmd/bpf_endpoint_delete.go         |   2 +-
+ cilium-dbg/cmd/bpf_endpoint_list.go           |   2 +-
+ daemon/cmd/daemon.go                          |  13 +-
+ daemon/cmd/datapath.go                        |   2 +-
+ daemon/cmd/hostips-sync.go                    |   2 +-
+ daemon/cmd/state.go                           |   2 +-
+ daemon/cmd/status.go                          |   2 +-
+ .../pkg/ciliumendpointslice/endpointslice.go  | 250 +++++++++++-
+ operator/watchers/cilium_endpoint.go          |   1 +
+ pkg/datapath/alignchecker/alignchecker.go     |   2 +-
+ pkg/datapath/linux/config/config.go           |   2 +-
+ pkg/endpoint/bpf.go                           |   2 +-
+ pkg/ipcache/ipcache.go                        | 356 ++++++++++++++++++
+ pkg/k8s/watchers/cilium_endpoint.go           |  15 +
+ .../cilium_endpoint_slice_subscriber.go       |   9 +-
+ pkg/k8s/watchers/watcher.go                   |   1 +
+ pkg/labels/labels.go                          |   4 +
+ pkg/maps/bwmap/bwmap.go                       |   2 +-
+ pkg/maps/lxcmap/doc.go                        |   9 -
+ pkg/maps/lxcmap/lxcmap.go                     | 252 -------------
+ 20 files changed, 642 insertions(+), 288 deletions(-)
+ delete mode 100644 pkg/maps/lxcmap/doc.go
+ delete mode 100644 pkg/maps/lxcmap/lxcmap.go
+
+diff --git a/cilium-dbg/cmd/bpf_endpoint_delete.go b/cilium-dbg/cmd/bpf_endpoint_delete.go
+index fb2e5f7682..434d78f164 100644
+--- a/cilium-dbg/cmd/bpf_endpoint_delete.go
++++ b/cilium-dbg/cmd/bpf_endpoint_delete.go
+@@ -9,7 +9,7 @@ import (
+ 	"github.com/spf13/cobra"
+ 
+ 	"github.com/cilium/cilium/pkg/common"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ )
+ 
+ var bpfEndpointDeleteCmd = &cobra.Command{
+diff --git a/cilium-dbg/cmd/bpf_endpoint_list.go b/cilium-dbg/cmd/bpf_endpoint_list.go
+index ce72120d24..0249739c44 100644
+--- a/cilium-dbg/cmd/bpf_endpoint_list.go
++++ b/cilium-dbg/cmd/bpf_endpoint_list.go
+@@ -10,7 +10,7 @@ import (
+ 
+ 	"github.com/cilium/cilium/pkg/command"
+ 	"github.com/cilium/cilium/pkg/common"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ )
+ 
+ const (
+diff --git a/daemon/cmd/daemon.go b/daemon/cmd/daemon.go
+index 8161060573..7c672f9dea 100644
+--- a/daemon/cmd/daemon.go
++++ b/daemon/cmd/daemon.go
+@@ -13,12 +13,6 @@ import (
+ 	"runtime"
+ 	"sync"
+ 
+-	"github.com/cilium/hive/job"
+-	"github.com/cilium/statedb"
+-	"github.com/sirupsen/logrus"
+-	"github.com/vishvananda/netlink"
+-	"golang.org/x/sync/semaphore"
+-
+ 	"github.com/cilium/cilium/api/v1/models"
+ 	health "github.com/cilium/cilium/cilium-health/launch"
+ 	"github.com/cilium/cilium/daemon/cmd/cni"
+@@ -80,6 +74,11 @@ import (
+ 	"github.com/cilium/cilium/pkg/status"
+ 	"github.com/cilium/cilium/pkg/time"
+ 	wireguard "github.com/cilium/cilium/pkg/wireguard/agent"
++	"github.com/cilium/hive/job"
++	"github.com/cilium/statedb"
++	"github.com/sirupsen/logrus"
++	"github.com/vishvananda/netlink"
++	"golang.org/x/sync/semaphore"
+ )
+ 
+ const (
+@@ -411,6 +410,8 @@ func newDaemon(ctx context.Context, cleaner *daemonCleanup, params *daemonParams
+ 		maglevConfig:      params.MaglevConfig,
+ 	}
+ 
++	ipcache.SetGlobalIPCache(d.ipcache)
++
+ 	// initialize endpointRestoreComplete channel as soon as possible so that subsystems
+ 	// can wait on it to get closed and not block forever if they happen so start
+ 	// waiting when it is not yet initialized (which causes them to block forever).
+diff --git a/daemon/cmd/datapath.go b/daemon/cmd/datapath.go
+index a8680acbac..f6e8efcd0d 100644
+--- a/daemon/cmd/datapath.go
++++ b/daemon/cmd/datapath.go
+@@ -21,6 +21,7 @@ import (
+ 	datapath "github.com/cilium/cilium/pkg/datapath/types"
+ 	"github.com/cilium/cilium/pkg/defaults"
+ 	"github.com/cilium/cilium/pkg/endpointmanager"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
+ 	"github.com/cilium/cilium/pkg/maps/encrypt"
+@@ -28,7 +29,6 @@ import (
+ 	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
+ 	"github.com/cilium/cilium/pkg/maps/ipmasq"
+ 	"github.com/cilium/cilium/pkg/maps/lbmap"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/maps/metricsmap"
+ 	"github.com/cilium/cilium/pkg/maps/nat"
+ 	"github.com/cilium/cilium/pkg/maps/neighborsmap"
+diff --git a/daemon/cmd/hostips-sync.go b/daemon/cmd/hostips-sync.go
+index 175158b92e..ca51ac71eb 100644
+--- a/daemon/cmd/hostips-sync.go
++++ b/daemon/cmd/hostips-sync.go
+@@ -19,10 +19,10 @@ import (
+ 	"github.com/cilium/cilium/pkg/identity"
+ 	ippkg "github.com/cilium/cilium/pkg/ip"
+ 	"github.com/cilium/cilium/pkg/ipcache"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ 	ipcachetypes "github.com/cilium/cilium/pkg/ipcache/types"
+ 	"github.com/cilium/cilium/pkg/labels"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/metrics"
+ 	"github.com/cilium/cilium/pkg/option"
+ 	"github.com/cilium/cilium/pkg/source"
+diff --git a/daemon/cmd/state.go b/daemon/cmd/state.go
+index 342c7c49dc..7728eb165c 100644
+--- a/daemon/cmd/state.go
++++ b/daemon/cmd/state.go
+@@ -19,6 +19,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/datapath/linux/safenetlink"
+ 	"github.com/cilium/cilium/pkg/endpoint"
+ 	"github.com/cilium/cilium/pkg/ipam"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ 	"github.com/cilium/cilium/pkg/k8s"
+ 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
+ 	"github.com/cilium/cilium/pkg/k8s/watchers/resources"
+@@ -26,7 +27,6 @@ import (
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	nodeTypes "github.com/cilium/cilium/pkg/node/types"
+ 	"github.com/cilium/cilium/pkg/option"
+ )
+diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
+index b678668ac0..d42dae075b 100644
+--- a/daemon/cmd/status.go
++++ b/daemon/cmd/status.go
+@@ -24,6 +24,7 @@ import (
+ 	datapathTables "github.com/cilium/cilium/pkg/datapath/tables"
+ 	datapath "github.com/cilium/cilium/pkg/datapath/types"
+ 	"github.com/cilium/cilium/pkg/identity"
++	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ 	k8smetrics "github.com/cilium/cilium/pkg/k8s/metrics"
+ 	"github.com/cilium/cilium/pkg/kvstore"
+ 	"github.com/cilium/cilium/pkg/lock"
+@@ -31,7 +32,6 @@ import (
+ 	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
+ 	ipmasqmap "github.com/cilium/cilium/pkg/maps/ipmasq"
+ 	"github.com/cilium/cilium/pkg/maps/lbmap"
+-	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/maps/metricsmap"
+ 	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
+ 	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 3b3ffc13ef..66159bcaa5 100644
+index 3b3ffc13ef..ced1f484b8 100644
 --- a/operator/pkg/ciliumendpointslice/endpointslice.go
 +++ b/operator/pkg/ciliumendpointslice/endpointslice.go
 @@ -6,6 +6,9 @@ package ciliumendpointslice
@@ -10,7 +181,7 @@ index 3b3ffc13ef..66159bcaa5 100644
 +	"strconv"
 +	"strings"
  	"time"
-
+ 
  	"github.com/cilium/hive/cell"
 @@ -18,6 +21,7 @@ import (
  	cilium_api_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
@@ -19,18 +190,18 @@ index 3b3ffc13ef..66159bcaa5 100644
 +	"github.com/cilium/cilium/pkg/labels"
  	"github.com/cilium/cilium/pkg/logging/logfields"
  )
-
-@@ -49,10 +53,209 @@ const (
+ 
+@@ -49,10 +53,216 @@ const (
  	// batched and synced together after a short delay.
  	DefaultCESSyncTime = 500 * time.Millisecond
-
+ 
 +	// Force CES update
 +	ForceCESSyncTime = 5 * time.Millisecond
 +
  	CESWriteQPSLimitMax = 50
  	CESWriteQPSBurstMax = 100
  )
-
+ 
 +type cepPriority uint32
 +
 +const (
@@ -118,6 +289,10 @@ index 3b3ffc13ef..66159bcaa5 100644
 +		isInserted := false
 +		// new cep will have higher priority than old ceps with same priority
 +		highest := &info
++		if len(cepList) > 1 {
++			fmt.Printf("DEBUG len(cepList) > 1: %v\n", cepList)
++		}
++
 +		currentOwner := cepList[0].cep
 +		for i := range cepList {
 +			if len(cepList[i].cep.Status.Networking.Addressing) != 0 {
@@ -161,11 +336,14 @@ index 3b3ffc13ef..66159bcaa5 100644
 +			highest.cep.Status.Networking.Addressing = append(emptyAddrList, addr)
 +			oldOwner = cep
 +			newOwner = highest.cep
++			fmt.Printf("DEBUG isOwner && !isHighest old, new: %v %v\n", oldOwner, newOwner)
 +		} else if !isOwner && isHighest {
 +			currentOwner.Status.Networking.Addressing = emptyAddrList
 +			oldOwner = currentOwner
++			fmt.Printf("DEBUG !isOwner && isHighest old, new: %v %v\n", oldOwner, newOwner)
 +		} else { // !isOwner && !isHighest
 +			cep.Status.Networking.Addressing = emptyAddrList
++			fmt.Printf("DEBUG !isOwner && !isHighest old, new: %v %v\n", oldOwner, newOwner)
 +		}
 +	} else {
 +		c.ipToCepList[shared.IPV4] = []coreCiliumEndpointInfo{info}
@@ -230,35 +408,80 @@ index 3b3ffc13ef..66159bcaa5 100644
  func (c *Controller) initializeQueue() {
  	c.logger.Info("CES controller workqueue configuration",
  		logfields.WorkQueueQPSLimit, c.rateLimit.current.Limit,
-@@ -73,11 +276,26 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
+@@ -73,31 +283,46 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
  	if cep.Status.Networking == nil || cep.Status.Identity == nil || cep.GetName() == "" || cep.Namespace == "" {
  		return
  	}
 -	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
+-	c.enqueueCESReconciliation(touchedCESs)
 +
-+	// TODO use delay
-+	oldOwner, _, newOwner := filter.filterAddressByPriority(cep)
++	oldOwner, delay, newOwner := filter.filterAddressByPriority(cep)
 +	if oldOwner != nil {
 +		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(oldOwner), oldOwner.Namespace)
-+		c.enqueueCESReconciliation(touchedCESs)
++		c.enqueueCESReconciliation(touchedCESs, delay)
 +	}
 +
 +	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(newOwner), newOwner.Namespace)
- 	c.enqueueCESReconciliation(touchedCESs)
++	c.enqueueCESReconciliation(touchedCESs, delay)
  }
-
+ 
  func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
 +	hiddenCep := filter.removeCEPFromFilter(cep)
 +
 +	if hiddenCep != nil {
++		fmt.Printf("DEBUG onEndpointDelete: %v\n", hiddenCep)
 +		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace)
-+		c.enqueueCESReconciliation(touchedCESs)
++		c.enqueueCESReconciliation(touchedCESs, DefaultCESSyncTime)
 +	}
 +
  	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
- 	c.enqueueCESReconciliation([]CESKey{touchedCES})
+-	c.enqueueCESReconciliation([]CESKey{touchedCES})
++	c.enqueueCESReconciliation([]CESKey{touchedCES}, DefaultCESSyncTime)
  }
-@@ -186,6 +404,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
+ 
+ func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
+-	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
++	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
+ }
+ 
+ func (c *Controller) onSliceDelete(ces *capi_v2a1.CiliumEndpointSlice) {
+-	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
++	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
+ }
+ 
+-func (c *Controller) addToQueue(ces CESKey) {
++func (c *Controller) addToQueue(ces CESKey, delay time.Duration) {
+ 	c.priorityNamespacesLock.RLock()
+ 	_, exists := c.priorityNamespaces[ces.Namespace]
+ 	c.priorityNamespacesLock.RUnlock()
+-	time.AfterFunc(c.syncDelay, func() {
++	time.AfterFunc(delay, func() {
+ 		c.cond.L.Lock()
+ 		defer c.cond.L.Unlock()
+-		if exists {
++		if exists || delay == ForceCESSyncTime {
+ 			c.fastQueue.Add(ces)
+ 		} else {
+ 			c.standardQueue.Add(ces)
+@@ -108,7 +333,7 @@ func (c *Controller) addToQueue(ces CESKey) {
+ 
+ }
+ 
+-func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
++func (c *Controller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
+ 	for _, ces := range cess {
+ 		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
+ 		if ces.Name != "" {
+@@ -117,7 +342,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
+ 				c.enqueuedAt[ces] = time.Now()
+ 			}
+ 			c.enqueuedAtLock.Unlock()
+-			c.addToQueue(ces)
++			c.addToQueue(ces, delay)
+ 		}
+ 	}
+ }
+@@ -186,6 +411,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
  			return c.processNamespaceEvents(ctx)
  		}),
  	)
@@ -282,151 +505,6 @@ index 40bf20429a..765ceb9614 100644
  			},
  			Status: cilium_api_v2.EndpointStatus{
  				Identity:   concreteObj.Status.Identity,
-diff --git a/pkg/labels/labels.go b/pkg/labels/labels.go
-index 40c714ee0f..9541281c22 100644
---- a/pkg/labels/labels.go
-+++ b/pkg/labels/labels.go
-@@ -80,6 +80,10 @@ const (
- 	// IDNameUnknown is the label used to to identify an endpoint with an
- 	// unknown identity.
- 	IDNameUnknown = "unknown"
-+
-+	// IDNamePriority is the label used to set pod priority on shared ip4-address
-+	// network access
-+	IDNamePriority = "network.deckhouse.io/pod-common-ip-priority"
- )
-
- var (
---
-2.34.1
-
-
-From b1e78ba176092400a918de2eb77982389e3a13be Mon Sep 17 00:00:00 2001
-From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date: Fri, 25 Apr 2025 12:21:17 +0300
-Subject: [PATCH 2/4] move lxcmap module to ipcache
-
-Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
----
- cilium-dbg/cmd/bpf_endpoint_delete.go     |   2 +-
- cilium-dbg/cmd/bpf_endpoint_list.go       |   2 +-
- daemon/cmd/datapath.go                    |   2 +-
- daemon/cmd/hostips-sync.go                |   2 +-
- daemon/cmd/state.go                       |   2 +-
- daemon/cmd/status.go                      |   2 +-
- pkg/datapath/alignchecker/alignchecker.go |   2 +-
- pkg/datapath/linux/config/config.go       |   2 +-
- pkg/endpoint/bpf.go                       |   2 +-
- pkg/ipcache/ipcache.go                    | 243 +++++++++++++++++++++
- pkg/maps/bwmap/bwmap.go                   |   2 +-
- pkg/maps/lxcmap/doc.go                    |   9 -
- pkg/maps/lxcmap/lxcmap.go                 | 252 ----------------------
- 13 files changed, 253 insertions(+), 271 deletions(-)
- delete mode 100644 pkg/maps/lxcmap/doc.go
- delete mode 100644 pkg/maps/lxcmap/lxcmap.go
-
-diff --git a/cilium-dbg/cmd/bpf_endpoint_delete.go b/cilium-dbg/cmd/bpf_endpoint_delete.go
-index fb2e5f7682..434d78f164 100644
---- a/cilium-dbg/cmd/bpf_endpoint_delete.go
-+++ b/cilium-dbg/cmd/bpf_endpoint_delete.go
-@@ -9,7 +9,7 @@ import (
- 	"github.com/spf13/cobra"
-
- 	"github.com/cilium/cilium/pkg/common"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- )
-
- var bpfEndpointDeleteCmd = &cobra.Command{
-diff --git a/cilium-dbg/cmd/bpf_endpoint_list.go b/cilium-dbg/cmd/bpf_endpoint_list.go
-index ce72120d24..0249739c44 100644
---- a/cilium-dbg/cmd/bpf_endpoint_list.go
-+++ b/cilium-dbg/cmd/bpf_endpoint_list.go
-@@ -10,7 +10,7 @@ import (
-
- 	"github.com/cilium/cilium/pkg/command"
- 	"github.com/cilium/cilium/pkg/common"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- )
-
- const (
-diff --git a/daemon/cmd/datapath.go b/daemon/cmd/datapath.go
-index a8680acbac..f6e8efcd0d 100644
---- a/daemon/cmd/datapath.go
-+++ b/daemon/cmd/datapath.go
-@@ -21,6 +21,7 @@ import (
- 	datapath "github.com/cilium/cilium/pkg/datapath/types"
- 	"github.com/cilium/cilium/pkg/defaults"
- 	"github.com/cilium/cilium/pkg/endpointmanager"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- 	"github.com/cilium/cilium/pkg/logging/logfields"
- 	"github.com/cilium/cilium/pkg/maps/ctmap"
- 	"github.com/cilium/cilium/pkg/maps/encrypt"
-@@ -28,7 +29,6 @@ import (
- 	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
- 	"github.com/cilium/cilium/pkg/maps/ipmasq"
- 	"github.com/cilium/cilium/pkg/maps/lbmap"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
- 	"github.com/cilium/cilium/pkg/maps/metricsmap"
- 	"github.com/cilium/cilium/pkg/maps/nat"
- 	"github.com/cilium/cilium/pkg/maps/neighborsmap"
-diff --git a/daemon/cmd/hostips-sync.go b/daemon/cmd/hostips-sync.go
-index 175158b92e..ca51ac71eb 100644
---- a/daemon/cmd/hostips-sync.go
-+++ b/daemon/cmd/hostips-sync.go
-@@ -19,10 +19,10 @@ import (
- 	"github.com/cilium/cilium/pkg/identity"
- 	ippkg "github.com/cilium/cilium/pkg/ip"
- 	"github.com/cilium/cilium/pkg/ipcache"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- 	ipcachetypes "github.com/cilium/cilium/pkg/ipcache/types"
- 	"github.com/cilium/cilium/pkg/labels"
- 	"github.com/cilium/cilium/pkg/logging/logfields"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
- 	"github.com/cilium/cilium/pkg/metrics"
- 	"github.com/cilium/cilium/pkg/option"
- 	"github.com/cilium/cilium/pkg/source"
-diff --git a/daemon/cmd/state.go b/daemon/cmd/state.go
-index 74ee125ca8..7effe86fbf 100644
---- a/daemon/cmd/state.go
-+++ b/daemon/cmd/state.go
-@@ -19,6 +19,7 @@ import (
- 	"github.com/cilium/cilium/pkg/datapath/linux/safenetlink"
- 	"github.com/cilium/cilium/pkg/endpoint"
- 	"github.com/cilium/cilium/pkg/ipam"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- 	"github.com/cilium/cilium/pkg/k8s"
- 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
- 	"github.com/cilium/cilium/pkg/k8s/watchers/resources"
-@@ -26,7 +27,6 @@ import (
- 	"github.com/cilium/cilium/pkg/lock"
- 	"github.com/cilium/cilium/pkg/logging/logfields"
- 	"github.com/cilium/cilium/pkg/maps/ctmap"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
- 	nodeTypes "github.com/cilium/cilium/pkg/node/types"
- 	"github.com/cilium/cilium/pkg/option"
- )
-diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index 84970920aa..59be900c03 100644
---- a/daemon/cmd/status.go
-+++ b/daemon/cmd/status.go
-@@ -24,6 +24,7 @@ import (
- 	datapathTables "github.com/cilium/cilium/pkg/datapath/tables"
- 	datapath "github.com/cilium/cilium/pkg/datapath/types"
- 	"github.com/cilium/cilium/pkg/identity"
-+	lxcmap "github.com/cilium/cilium/pkg/ipcache"
- 	k8smetrics "github.com/cilium/cilium/pkg/k8s/metrics"
- 	"github.com/cilium/cilium/pkg/kvstore"
- 	"github.com/cilium/cilium/pkg/lock"
-@@ -31,7 +32,6 @@ import (
- 	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
- 	ipmasqmap "github.com/cilium/cilium/pkg/maps/ipmasq"
- 	"github.com/cilium/cilium/pkg/maps/lbmap"
--	"github.com/cilium/cilium/pkg/maps/lxcmap"
- 	"github.com/cilium/cilium/pkg/maps/metricsmap"
- 	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
- 	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/pkg/datapath/alignchecker/alignchecker.go b/pkg/datapath/alignchecker/alignchecker.go
 index 56e7ee2b93..6ed225938c 100644
 --- a/pkg/datapath/alignchecker/alignchecker.go
@@ -468,7 +546,7 @@ index a3243d93e3..5b146026fc 100644
  	"github.com/cilium/cilium/pkg/maps/nat"
  	"github.com/cilium/cilium/pkg/maps/neighborsmap"
 diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
-index 06763bb552..697b014ee7 100644
+index 59e81f5bd1..37b0e54781 100644
 --- a/pkg/endpoint/bpf.go
 +++ b/pkg/endpoint/bpf.go
 @@ -30,11 +30,11 @@ import (
@@ -485,25 +563,26 @@ index 06763bb552..697b014ee7 100644
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/policy"
 diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
-index 34e46fba68..4325fbc6b3 100644
+index 34e46fba68..4a29583038 100644
 --- a/pkg/ipcache/ipcache.go
 +++ b/pkg/ipcache/ipcache.go
 @@ -12,6 +12,9 @@ import (
-
+ 
  	"github.com/sirupsen/logrus"
-
+ 
 +	"fmt"
 +
 +	"github.com/cilium/cilium/pkg/bpf"
  	cmtypes "github.com/cilium/cilium/pkg/clustermesh/types"
  	"github.com/cilium/cilium/pkg/controller"
  	"github.com/cilium/cilium/pkg/counter"
-@@ -22,12 +25,252 @@ import (
+@@ -22,12 +25,355 @@ import (
  	"github.com/cilium/cilium/pkg/labels"
  	"github.com/cilium/cilium/pkg/lock"
  	"github.com/cilium/cilium/pkg/logging/logfields"
 +	"github.com/cilium/cilium/pkg/mac"
  	"github.com/cilium/cilium/pkg/metrics"
++	"github.com/cilium/cilium/pkg/node"
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/source"
  	"github.com/cilium/cilium/pkg/types"
@@ -528,6 +607,74 @@ index 34e46fba68..4325fbc6b3 100644
 +	lxcMapOnce sync.Once
 +)
 +
++type LxcEndpointInfo struct {
++	key    *EndpointKey
++	info   *EndpointInfo
++	active bool
++}
++
++var globalIPCache *IPCache
++
++func SetGlobalIPCache(ipcache *IPCache) {
++	globalIPCache = ipcache
++}
++
++func (ipc *IPCache) isIPCacheHostLocal(epAddr string, nodeIPv4 net.IP) bool {
++	ipKeyPair := ipc.ipToHostIPCache[epAddr]
++	host := ipKeyPair.IP
++	if host == nil {
++		// cilium_health ep always have nil host - force default behavior
++		return true
++	}
++	return host.Equal(nodeIPv4)
++}
++
++func (ipc *IPCache) checkLxcMapRelation(ip string, hostIP, oldHostIP net.IP) {
++	if hostIP.Equal(oldHostIP) {
++		return
++	}
++
++	hostIP4 := hostIP.To4()
++	if hostIP4 == nil {
++		return
++	}
++
++	lxc, exist := ipc.ipToEndpointInfo[ip]
++	if !exist {
++		return
++	}
++
++	nodeIPv4 := node.GetIPv4()
++	isLocal := nodeIPv4.Equal(hostIP4)
++	if isLocal && !lxc.active {
++		LXCMap().Update(lxc.key, lxc.info)
++		lxc.active = true
++		log.WithFields(logrus.Fields{
++			logfields.IPAddr: ip,
++		}).Debug("restore record in in cilium_lxc map")
++	} else if !isLocal && lxc.active {
++		LXCMap().Delete(lxc.key)
++		lxc.active = false
++		log.WithFields(logrus.Fields{
++			logfields.IPAddr: ip,
++		}).Debug("hiding record in in cilium_lxc map")
++	}
++}
++
++func getEndpointAddress(v *EndpointKey) string {
++	ip := v.ToIP()
++	if ip == nil {
++		return ""
++	}
++
++	ip4 := ip.To4()
++	if ip4 == nil {
++		return ""
++	}
++
++	return ip4.String()
++}
++
 +func LXCMap() *bpf.Map {
 +	lxcMapOnce.Do(func() {
 +		lxcMap = bpf.NewMap(MapName,
@@ -550,7 +697,7 @@ index 34e46fba68..4325fbc6b3 100644
 +	// namespace
 +	EndpointFlagAtHostNS = 2
  )
-
+ 
 +// EndpointFrontend is the interface to implement for an object to synchronize
 +// with the endpoint BPF map.
 +type EndpointFrontend interface {
@@ -680,9 +827,36 @@ index 34e46fba68..4325fbc6b3 100644
 +	}
 +
 +	// FIXME: Revert on failure
++	nodeIPv4 := node.GetIPv4()
++	// for prevent race conditions between ipcache upsert method used common mutex
++	globalIPCache.Lock()
++	defer globalIPCache.Unlock()
 +	for _, v := range GetBPFKeys(f) {
-+		if err := LXCMap().Update(v, info); err != nil {
-+			return err
++
++		epAddr := getEndpointAddress(v)
++		if epAddr == "" {
++			continue
++		}
++
++		if globalIPCache.isIPCacheHostLocal(epAddr, nodeIPv4) {
++			if err := LXCMap().Update(v, info); err != nil {
++				return err
++			}
++			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
++				key:    v,
++				info:   info,
++				active: true,
++			}
++		} else {
++			LXCMap().Delete(v)
++			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
++				key:    v,
++				info:   info,
++				active: false,
++			}
++			log.WithFields(logrus.Fields{
++				logfields.IPAddr: epAddr,
++			}).Debug("hiding pod address in cilium_lxc map")
 +		}
 +	}
 +
@@ -712,6 +886,9 @@ index 34e46fba68..4325fbc6b3 100644
 +
 +// DeleteEntry deletes a single map entry
 +func DeleteEntry(ip net.IP) error {
++	globalIPCache.Lock()
++	defer globalIPCache.Unlock()
++	delete(globalIPCache.ipToEndpointInfo, ip.To4().String())
 +	return LXCMap().Delete(NewEndpointKey(ip))
 +}
 +
@@ -720,6 +897,10 @@ index 34e46fba68..4325fbc6b3 100644
 +func DeleteElement(f EndpointFrontend) []error {
 +	var errors []error
 +	for _, k := range GetBPFKeys(f) {
++		ip := getEndpointAddress(k)
++		globalIPCache.Lock()
++		delete(globalIPCache.ipToEndpointInfo, ip)
++		globalIPCache.Unlock()
 +		if err := LXCMap().Delete(k); err != nil {
 +			errors = append(errors, fmt.Errorf("Unable to delete key %v from %s: %w", k, bpf.MapPath(MapName), err))
 +		}
@@ -751,6 +932,127 @@ index 34e46fba68..4325fbc6b3 100644
  // Identity is the identity representation of an IP<->Identity cache.
  type Identity struct {
  	// Note: The ordering of these fields is optimized to reduce padding
+@@ -121,6 +467,7 @@ type IPCache struct {
+ 	identityToIPCache map[identity.NumericIdentity]map[string]struct{}
+ 	ipToHostIPCache   map[string]IPKeyPair
+ 	ipToK8sMetadata   map[string]K8sMetadata
++	ipToEndpointInfo  map[string]*LxcEndpointInfo
+ 
+ 	listeners []IPIdentityMappingListener
+ 
+@@ -165,6 +512,7 @@ func NewIPCache(c *Configuration) *IPCache {
+ 		identityToIPCache: map[identity.NumericIdentity]map[string]struct{}{},
+ 		ipToHostIPCache:   map[string]IPKeyPair{},
+ 		ipToK8sMetadata:   map[string]K8sMetadata{},
++		ipToEndpointInfo:  map[string]*LxcEndpointInfo{},
+ 		controllers:       controller.NewManager(),
+ 		namedPorts:        types.NewNamedPortMultiMap(),
+ 		metadata:          newMetadata(),
+@@ -444,6 +792,7 @@ func (ipc *IPCache) upsertLocked(
+ 
+ 	scopedLog.Debug("Upserting IP into ipcache layer")
+ 
++	ipc.checkLxcMapRelation(ip, hostIP, oldHostIP)
+ 	// Update both maps.
+ 	ipc.ipToIdentityCache[ip] = newIdentity
+ 	// Delete the old identity, if any.
+@@ -489,6 +838,13 @@ func (ipc *IPCache) upsertLocked(
+ 	return namedPortsChanged, nil
+ }
+ 
++func (ipc *IPCache) IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool) {
++	ipc.mutex.Lock()
++	defer ipc.mutex.Unlock()
++	k8sMeta := ipc.getK8sMetadata(IP)
++	return k8sMeta != nil && k8sMeta.Namespace == namespace && k8sMeta.PodName == name
++}
++
+ // DumpToListener dumps the entire contents of the IPCache by triggering
+ // the listener's "OnIPIdentityCacheChange" method for each entry in the cache.
+ func (ipc *IPCache) DumpToListener(listener IPIdentityMappingListener) {
+diff --git a/pkg/k8s/watchers/cilium_endpoint.go b/pkg/k8s/watchers/cilium_endpoint.go
+index 79a64a2543..126ee2d547 100644
+--- a/pkg/k8s/watchers/cilium_endpoint.go
++++ b/pkg/k8s/watchers/cilium_endpoint.go
+@@ -287,3 +287,18 @@ func (k *K8sCiliumEndpointsWatcher) endpointDeleted(endpoint *types.CiliumEndpoi
+ 	}
+ 	hubblemetrics.ProcessCiliumEndpointDeletion(endpoint)
+ }
++
++func (k *K8sCiliumEndpointsWatcher) endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool {
++	isOwner := true
++	if c.Networking != nil {
++		for _, pair := range c.Networking.Addressing {
++			if pair.IPV4 != "" {
++				isOwner = k.ipcache.IsIPcacheOwner(pair.IPV4, source.CustomResource, c.Namespace, c.Name)
++				if !isOwner {
++					break
++				}
++			}
++		}
++	}
++	return isOwner
++}
+diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+index 8467720fb4..b2c02a7112 100644
+--- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
++++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+@@ -19,6 +19,7 @@ import (
+ type endpointWatcher interface {
+ 	endpointUpdated(oldC, newC *types.CiliumEndpoint)
+ 	endpointDeleted(c *types.CiliumEndpoint)
++	endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool
+ }
+ 
+ type localEndpointCache interface {
+@@ -154,13 +155,19 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
+ 			"CEPName": CEPName,
+ 		}).Debug("CEP deleted, calling endpointDeleted")
+ 		cs.epWatcher.endpointDeleted(c)
+-	} else {
++	} else if cs.epWatcher.endpointIsIPcacheOwner(c) {
+ 		log.WithFields(logrus.Fields{
+ 			"CESName": CESName,
+ 			"CEPName": CEPName,
+ 		}).Debug("CEP deleted, other CEP exists, calling endpointUpdated")
+ 		cs.epWatcher.endpointUpdated(c, cep)
++	} else {
++		log.WithFields(logrus.Fields{
++			"CESName": CESName,
++			"CEPName": CEPName,
++		}).Debug("not last CEP deleted and CEP don't own ipcache, skip ipcache changes")
+ 	}
++
+ }
+ 
+ // addCEPwithCES insert CEP with CES to the map and triggers endpointUpdated.
+diff --git a/pkg/k8s/watchers/watcher.go b/pkg/k8s/watchers/watcher.go
+index 0f4947864e..1f306ba4aa 100644
+--- a/pkg/k8s/watchers/watcher.go
++++ b/pkg/k8s/watchers/watcher.go
+@@ -115,6 +115,7 @@ type ipcacheManager interface {
+ 	UpsertLabels(prefix netip.Prefix, lbls labels.Labels, src source.Source, resource ipcacheTypes.ResourceID)
+ 	RemoveLabelsExcluded(lbls labels.Labels, toExclude map[netip.Prefix]struct{}, resource ipcacheTypes.ResourceID)
+ 	DeleteOnMetadataMatch(IP string, source source.Source, namespace, name string) (namedPortsChanged bool)
++	IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool)
+ }
+ 
+ type K8sWatcher struct {
+diff --git a/pkg/labels/labels.go b/pkg/labels/labels.go
+index 92e91dd31a..172aa62aa1 100644
+--- a/pkg/labels/labels.go
++++ b/pkg/labels/labels.go
+@@ -81,6 +81,10 @@ const (
+ 	// IDNameUnknown is the label used to to identify an endpoint with an
+ 	// unknown identity.
+ 	IDNameUnknown = "unknown"
++
++	// IDNamePriority is the label used to set pod priority on shared ip4-address
++	// network access
++	IDNamePriority = "network.deckhouse.io/pod-common-ip-priority"
+ )
+ 
+ var (
 diff --git a/pkg/maps/bwmap/bwmap.go b/pkg/maps/bwmap/bwmap.go
 index 301d7c2c35..5d4049abe7 100644
 --- a/pkg/maps/bwmap/bwmap.go
@@ -763,7 +1065,7 @@ index 301d7c2c35..5d4049abe7 100644
 +	lxcmap "github.com/cilium/cilium/pkg/ipcache"
  	"github.com/cilium/cilium/pkg/time"
  )
-
+ 
 diff --git a/pkg/maps/lxcmap/doc.go b/pkg/maps/lxcmap/doc.go
 deleted file mode 100644
 index 01af96c4ad..0000000000
@@ -1037,407 +1339,6 @@ index deb81c9af0..0000000000
 -
 -	return m, nil
 -}
---
-2.34.1
-
-
-From e83477d0398e2970c39e96fbd9cbcd524560e4c1 Mon Sep 17 00:00:00 2001
-From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date: Mon, 28 Apr 2025 19:11:08 +0300
-Subject: [PATCH 3/4] patch lxcmap|ipcache logic for shared ip4 between pods
-
-Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
----
- daemon/cmd/daemon.go                          |  13 +-
- pkg/ipcache/ipcache.go                        | 117 +++++++++++++++++-
- pkg/k8s/watchers/cilium_endpoint.go           |  15 +++
- .../cilium_endpoint_slice_subscriber.go       |   9 +-
- pkg/k8s/watchers/watcher.go                   |   1 +
- 5 files changed, 146 insertions(+), 9 deletions(-)
-
-diff --git a/daemon/cmd/daemon.go b/daemon/cmd/daemon.go
-index 8161060573..7c672f9dea 100644
---- a/daemon/cmd/daemon.go
-+++ b/daemon/cmd/daemon.go
-@@ -13,12 +13,6 @@ import (
- 	"runtime"
- 	"sync"
-
--	"github.com/cilium/hive/job"
--	"github.com/cilium/statedb"
--	"github.com/sirupsen/logrus"
--	"github.com/vishvananda/netlink"
--	"golang.org/x/sync/semaphore"
--
- 	"github.com/cilium/cilium/api/v1/models"
- 	health "github.com/cilium/cilium/cilium-health/launch"
- 	"github.com/cilium/cilium/daemon/cmd/cni"
-@@ -80,6 +74,11 @@ import (
- 	"github.com/cilium/cilium/pkg/status"
- 	"github.com/cilium/cilium/pkg/time"
- 	wireguard "github.com/cilium/cilium/pkg/wireguard/agent"
-+	"github.com/cilium/hive/job"
-+	"github.com/cilium/statedb"
-+	"github.com/sirupsen/logrus"
-+	"github.com/vishvananda/netlink"
-+	"golang.org/x/sync/semaphore"
- )
-
- const (
-@@ -411,6 +410,8 @@ func newDaemon(ctx context.Context, cleaner *daemonCleanup, params *daemonParams
- 		maglevConfig:      params.MaglevConfig,
- 	}
-
-+	ipcache.SetGlobalIPCache(d.ipcache)
-+
- 	// initialize endpointRestoreComplete channel as soon as possible so that subsystems
- 	// can wait on it to get closed and not block forever if they happen so start
- 	// waiting when it is not yet initialized (which causes them to block forever).
-diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
-index 4325fbc6b3..4a29583038 100644
---- a/pkg/ipcache/ipcache.go
-+++ b/pkg/ipcache/ipcache.go
-@@ -27,6 +27,7 @@ import (
- 	"github.com/cilium/cilium/pkg/logging/logfields"
- 	"github.com/cilium/cilium/pkg/mac"
- 	"github.com/cilium/cilium/pkg/metrics"
-+	"github.com/cilium/cilium/pkg/node"
- 	"github.com/cilium/cilium/pkg/option"
- 	"github.com/cilium/cilium/pkg/source"
- 	"github.com/cilium/cilium/pkg/types"
-@@ -51,6 +52,74 @@ var (
- 	lxcMapOnce sync.Once
- )
-
-+type LxcEndpointInfo struct {
-+	key    *EndpointKey
-+	info   *EndpointInfo
-+	active bool
-+}
-+
-+var globalIPCache *IPCache
-+
-+func SetGlobalIPCache(ipcache *IPCache) {
-+	globalIPCache = ipcache
-+}
-+
-+func (ipc *IPCache) isIPCacheHostLocal(epAddr string, nodeIPv4 net.IP) bool {
-+	ipKeyPair := ipc.ipToHostIPCache[epAddr]
-+	host := ipKeyPair.IP
-+	if host == nil {
-+		// cilium_health ep always have nil host - force default behavior
-+		return true
-+	}
-+	return host.Equal(nodeIPv4)
-+}
-+
-+func (ipc *IPCache) checkLxcMapRelation(ip string, hostIP, oldHostIP net.IP) {
-+	if hostIP.Equal(oldHostIP) {
-+		return
-+	}
-+
-+	hostIP4 := hostIP.To4()
-+	if hostIP4 == nil {
-+		return
-+	}
-+
-+	lxc, exist := ipc.ipToEndpointInfo[ip]
-+	if !exist {
-+		return
-+	}
-+
-+	nodeIPv4 := node.GetIPv4()
-+	isLocal := nodeIPv4.Equal(hostIP4)
-+	if isLocal && !lxc.active {
-+		LXCMap().Update(lxc.key, lxc.info)
-+		lxc.active = true
-+		log.WithFields(logrus.Fields{
-+			logfields.IPAddr: ip,
-+		}).Debug("restore record in in cilium_lxc map")
-+	} else if !isLocal && lxc.active {
-+		LXCMap().Delete(lxc.key)
-+		lxc.active = false
-+		log.WithFields(logrus.Fields{
-+			logfields.IPAddr: ip,
-+		}).Debug("hiding record in in cilium_lxc map")
-+	}
-+}
-+
-+func getEndpointAddress(v *EndpointKey) string {
-+	ip := v.ToIP()
-+	if ip == nil {
-+		return ""
-+	}
-+
-+	ip4 := ip.To4()
-+	if ip4 == nil {
-+		return ""
-+	}
-+
-+	return ip4.String()
-+}
-+
- func LXCMap() *bpf.Map {
- 	lxcMapOnce.Do(func() {
- 		lxcMap = bpf.NewMap(MapName,
-@@ -203,9 +272,36 @@ func WriteEndpoint(f EndpointFrontend) error {
- 	}
-
- 	// FIXME: Revert on failure
-+	nodeIPv4 := node.GetIPv4()
-+	// for prevent race conditions between ipcache upsert method used common mutex
-+	globalIPCache.Lock()
-+	defer globalIPCache.Unlock()
- 	for _, v := range GetBPFKeys(f) {
--		if err := LXCMap().Update(v, info); err != nil {
--			return err
-+
-+		epAddr := getEndpointAddress(v)
-+		if epAddr == "" {
-+			continue
-+		}
-+
-+		if globalIPCache.isIPCacheHostLocal(epAddr, nodeIPv4) {
-+			if err := LXCMap().Update(v, info); err != nil {
-+				return err
-+			}
-+			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
-+				key:    v,
-+				info:   info,
-+				active: true,
-+			}
-+		} else {
-+			LXCMap().Delete(v)
-+			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
-+				key:    v,
-+				info:   info,
-+				active: false,
-+			}
-+			log.WithFields(logrus.Fields{
-+				logfields.IPAddr: epAddr,
-+			}).Debug("hiding pod address in cilium_lxc map")
- 		}
- 	}
-
-@@ -235,6 +331,9 @@ func SyncHostEntry(ip net.IP) (bool, error) {
-
- // DeleteEntry deletes a single map entry
- func DeleteEntry(ip net.IP) error {
-+	globalIPCache.Lock()
-+	defer globalIPCache.Unlock()
-+	delete(globalIPCache.ipToEndpointInfo, ip.To4().String())
- 	return LXCMap().Delete(NewEndpointKey(ip))
- }
-
-@@ -243,6 +342,10 @@ func DeleteEntry(ip net.IP) error {
- func DeleteElement(f EndpointFrontend) []error {
- 	var errors []error
- 	for _, k := range GetBPFKeys(f) {
-+		ip := getEndpointAddress(k)
-+		globalIPCache.Lock()
-+		delete(globalIPCache.ipToEndpointInfo, ip)
-+		globalIPCache.Unlock()
- 		if err := LXCMap().Delete(k); err != nil {
- 			errors = append(errors, fmt.Errorf("Unable to delete key %v from %s: %w", k, bpf.MapPath(MapName), err))
- 		}
-@@ -364,6 +467,7 @@ type IPCache struct {
- 	identityToIPCache map[identity.NumericIdentity]map[string]struct{}
- 	ipToHostIPCache   map[string]IPKeyPair
- 	ipToK8sMetadata   map[string]K8sMetadata
-+	ipToEndpointInfo  map[string]*LxcEndpointInfo
-
- 	listeners []IPIdentityMappingListener
-
-@@ -408,6 +512,7 @@ func NewIPCache(c *Configuration) *IPCache {
- 		identityToIPCache: map[identity.NumericIdentity]map[string]struct{}{},
- 		ipToHostIPCache:   map[string]IPKeyPair{},
- 		ipToK8sMetadata:   map[string]K8sMetadata{},
-+		ipToEndpointInfo:  map[string]*LxcEndpointInfo{},
- 		controllers:       controller.NewManager(),
- 		namedPorts:        types.NewNamedPortMultiMap(),
- 		metadata:          newMetadata(),
-@@ -687,6 +792,7 @@ func (ipc *IPCache) upsertLocked(
-
- 	scopedLog.Debug("Upserting IP into ipcache layer")
-
-+	ipc.checkLxcMapRelation(ip, hostIP, oldHostIP)
- 	// Update both maps.
- 	ipc.ipToIdentityCache[ip] = newIdentity
- 	// Delete the old identity, if any.
-@@ -732,6 +838,13 @@ func (ipc *IPCache) upsertLocked(
- 	return namedPortsChanged, nil
- }
-
-+func (ipc *IPCache) IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool) {
-+	ipc.mutex.Lock()
-+	defer ipc.mutex.Unlock()
-+	k8sMeta := ipc.getK8sMetadata(IP)
-+	return k8sMeta != nil && k8sMeta.Namespace == namespace && k8sMeta.PodName == name
-+}
-+
- // DumpToListener dumps the entire contents of the IPCache by triggering
- // the listener's "OnIPIdentityCacheChange" method for each entry in the cache.
- func (ipc *IPCache) DumpToListener(listener IPIdentityMappingListener) {
-diff --git a/pkg/k8s/watchers/cilium_endpoint.go b/pkg/k8s/watchers/cilium_endpoint.go
-index 79a64a2543..126ee2d547 100644
---- a/pkg/k8s/watchers/cilium_endpoint.go
-+++ b/pkg/k8s/watchers/cilium_endpoint.go
-@@ -287,3 +287,18 @@ func (k *K8sCiliumEndpointsWatcher) endpointDeleted(endpoint *types.CiliumEndpoi
- 	}
- 	hubblemetrics.ProcessCiliumEndpointDeletion(endpoint)
- }
-+
-+func (k *K8sCiliumEndpointsWatcher) endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool {
-+	isOwner := true
-+	if c.Networking != nil {
-+		for _, pair := range c.Networking.Addressing {
-+			if pair.IPV4 != "" {
-+				isOwner = k.ipcache.IsIPcacheOwner(pair.IPV4, source.CustomResource, c.Namespace, c.Name)
-+				if !isOwner {
-+					break
-+				}
-+			}
-+		}
-+	}
-+	return isOwner
-+}
-diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-index 8467720fb4..b2c02a7112 100644
---- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-+++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-@@ -19,6 +19,7 @@ import (
- type endpointWatcher interface {
- 	endpointUpdated(oldC, newC *types.CiliumEndpoint)
- 	endpointDeleted(c *types.CiliumEndpoint)
-+	endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool
- }
-
- type localEndpointCache interface {
-@@ -154,13 +155,19 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
- 			"CEPName": CEPName,
- 		}).Debug("CEP deleted, calling endpointDeleted")
- 		cs.epWatcher.endpointDeleted(c)
--	} else {
-+	} else if cs.epWatcher.endpointIsIPcacheOwner(c) {
- 		log.WithFields(logrus.Fields{
- 			"CESName": CESName,
- 			"CEPName": CEPName,
- 		}).Debug("CEP deleted, other CEP exists, calling endpointUpdated")
- 		cs.epWatcher.endpointUpdated(c, cep)
-+	} else {
-+		log.WithFields(logrus.Fields{
-+			"CESName": CESName,
-+			"CEPName": CEPName,
-+		}).Debug("not last CEP deleted and CEP don't own ipcache, skip ipcache changes")
- 	}
-+
- }
-
- // addCEPwithCES insert CEP with CES to the map and triggers endpointUpdated.
-diff --git a/pkg/k8s/watchers/watcher.go b/pkg/k8s/watchers/watcher.go
-index 0f4947864e..1f306ba4aa 100644
---- a/pkg/k8s/watchers/watcher.go
-+++ b/pkg/k8s/watchers/watcher.go
-@@ -115,6 +115,7 @@ type ipcacheManager interface {
- 	UpsertLabels(prefix netip.Prefix, lbls labels.Labels, src source.Source, resource ipcacheTypes.ResourceID)
- 	RemoveLabelsExcluded(lbls labels.Labels, toExclude map[netip.Prefix]struct{}, resource ipcacheTypes.ResourceID)
- 	DeleteOnMetadataMatch(IP string, source source.Source, namespace, name string) (namedPortsChanged bool)
-+	IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool)
- }
-
- type K8sWatcher struct {
---
-2.34.1
-
-
-From 43e08b3d64aeacd3fa104337668e06412ae70d97 Mon Sep 17 00:00:00 2001
-From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date: Mon, 5 May 2025 14:20:37 +0300
-Subject: [PATCH 4/4] force slice update when new VM ready
-
-Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
----
- .../pkg/ciliumendpointslice/endpointslice.go  | 25 +++++++++----------
- 1 file changed, 12 insertions(+), 13 deletions(-)
-
-diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 66159bcaa5..8e11d9d7ff 100644
---- a/operator/pkg/ciliumendpointslice/endpointslice.go
-+++ b/operator/pkg/ciliumendpointslice/endpointslice.go
-@@ -277,15 +277,14 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
- 		return
- 	}
-
--	// TODO use delay
--	oldOwner, _, newOwner := filter.filterAddressByPriority(cep)
-+	oldOwner, delay, newOwner := filter.filterAddressByPriority(cep)
- 	if oldOwner != nil {
- 		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(oldOwner), oldOwner.Namespace)
--		c.enqueueCESReconciliation(touchedCESs)
-+		c.enqueueCESReconciliation(touchedCESs, delay)
- 	}
-
- 	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(newOwner), newOwner.Namespace)
--	c.enqueueCESReconciliation(touchedCESs)
-+	c.enqueueCESReconciliation(touchedCESs, delay)
- }
-
- func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
-@@ -293,29 +292,29 @@ func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
-
- 	if hiddenCep != nil {
- 		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace)
--		c.enqueueCESReconciliation(touchedCESs)
-+		c.enqueueCESReconciliation(touchedCESs, DefaultCESSyncTime)
- 	}
-
- 	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
--	c.enqueueCESReconciliation([]CESKey{touchedCES})
-+	c.enqueueCESReconciliation([]CESKey{touchedCES}, DefaultCESSyncTime)
- }
-
- func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
--	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
-+	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
- }
-
- func (c *Controller) onSliceDelete(ces *capi_v2a1.CiliumEndpointSlice) {
--	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
-+	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
- }
-
--func (c *Controller) addToQueue(ces CESKey) {
-+func (c *Controller) addToQueue(ces CESKey, delay time.Duration) {
- 	c.priorityNamespacesLock.RLock()
- 	_, exists := c.priorityNamespaces[ces.Namespace]
- 	c.priorityNamespacesLock.RUnlock()
--	time.AfterFunc(c.syncDelay, func() {
-+	time.AfterFunc(delay, func() {
- 		c.cond.L.Lock()
- 		defer c.cond.L.Unlock()
--		if exists {
-+		if exists || delay == ForceCESSyncTime {
- 			c.fastQueue.Add(ces)
- 		} else {
- 			c.standardQueue.Add(ces)
-@@ -326,7 +325,7 @@ func (c *Controller) addToQueue(ces CESKey) {
-
- }
-
--func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
-+func (c *Controller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
- 	for _, ces := range cess {
- 		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
- 		if ces.Name != "" {
-@@ -335,7 +334,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
- 				c.enqueuedAt[ces] = time.Now()
- 			}
- 			c.enqueuedAtLock.Unlock()
--			c.addToQueue(ces)
-+			c.addToQueue(ces, delay)
- 		}
- 	}
- }
---
+-- 
 2.34.1
 
