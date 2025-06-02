@@ -321,7 +321,7 @@ apiVersions:
         legacyMode:
           type: boolean
           description: |
-            If set to `true`, an API version below `37.2` will be used.
+            If set to `true`, an API version below `37.2` will be used. The option only takes effect during cluster setup and is implicitly set if not specified by the user. On a running cluster, the API version is automatically determined.
           x-doc-default: false
       allOf:
       - oneOf:
