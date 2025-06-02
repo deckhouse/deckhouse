@@ -475,7 +475,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if(trimLine.length === 0 || /^<\/span\s*>$/.test(trimLine)) {
         return;
       }
-      newHTML += `<span data-copy="ignore" class="line-number">${index + 1 + '. '}</span>${line}\n`;
+      newHTML += `<span data-copy="ignore" class="line-number">${index + 1}</span>${line}\n`;
     });
 
     code.innerHTML = newHTML;

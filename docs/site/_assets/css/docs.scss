@@ -1140,7 +1140,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .code__transfer {
       position: relative;
       padding-right: 70px;
-      padding-left: 30px;
+      padding-left: 48px;
     }
 }
 
@@ -1159,6 +1159,18 @@ a.comparison-table__module-proprietaryOkmeter::after {
     line-height: 1.428571429;
     word-break: break-all;
     word-wrap: break-word;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 36px;
+        background-color: #F6F7F8;
+        border-right: 1px solid #C4CAD4;
+        color: #A7B0BE;
+    }
 
     .icon--copy {
         cursor: pointer;
