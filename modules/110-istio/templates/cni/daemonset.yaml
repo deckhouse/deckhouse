@@ -197,7 +197,11 @@ spec:
           resources:
             requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+      {{- if ($.Values.istio.internal.enableAmbientMode) }}
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- else }}
       dnsPolicy: ClusterFirst
+      {{- end }}
       restartPolicy: Always
       serviceAccountName: cni
       terminationGracePeriodSeconds: 5
