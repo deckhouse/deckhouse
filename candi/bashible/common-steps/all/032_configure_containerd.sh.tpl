@@ -134,24 +134,40 @@ oom_score = 0
       max_conf_num = 1
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
-{{- if true }}
+{{- $enableMirrorsConfig := true }}
+{{- if $enableMirrorsConfig }}
     config_path = "/etc/containerd/registry.d"
 {{- else }}
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
           endpoint = ["https://registry-1.docker.io"]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
-          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth | default "" }}"
-  {{- if .registry.ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- range $host_name, $host_values := .registry.hosts }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $host_name }}"]
+          endpoint = [{{- range $i, $mirror := $host_values.mirrors }}{{ if $i }}, {{ end }}{{ printf "%s://%s" $mirror.scheme $mirror.host| quote }}{{- end }}]
   {{- end }}
-  {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+  {{- range $host_name, $host_values := .registry.hosts }}
+    {{- range $mirror := $host_values.mirrors }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".auth]
+          {{- with $mirror.auth }}
+            {{- if .username }}
+          username = {{ .username | quote }}
+          password = {{ .password | default "" | quote }}
+            {{- else }}
+          auth = {{ .auth | default "" | quote }}
+            {{- end }}
+          {{- else }}
+          auth = ""
+          {{- end }}
+      {{- if $mirror.ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt"
+      {{- end }}
+      {{- if eq $mirror.scheme "http" }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
           insecure_skip_verify = true
+      {{- end }}
+    {{- end }}
   {{- end }}
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
