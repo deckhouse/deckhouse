@@ -25,7 +25,7 @@ rules:
     - delete
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses", "ingressclasses", "ingresses/status"]
-    verbs: ["*"]
+    verbs: ["get", "watch", "list", "update", "patch", "create"]
   - apiGroups:
     - ""
     resources:
@@ -48,9 +48,18 @@ rules:
     - leases
     verbs:
     - patch
-  - apiGroups: ["config.istio.io", "security.istio.io", "networking.istio.io", "authentication.istio.io", "rbac.istio.io", "telemetry.istio.io", "extensions.istio.io"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["gateways", "virtualservices", "destinationrules", "serviceentries", "sidecars", "envoyfilters"]
     verbs: ["get", "watch", "list"]
-    resources: ["*"]
+  - apiGroups: ["security.istio.io"]
+    resources: ["authorizationpolicies", "peerauthentications", "requestauthentications"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["telemetry.istio.io"]
+    resources: ["telemetries"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["extensions.istio.io"]
+    resources: ["wasmplugins"]
+    verbs: ["get", "watch", "list"]
   - apiGroups: ["networking.istio.io"]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
     resources: [ "workloadentries" ]
@@ -79,7 +88,7 @@ rules:
     resources: ["subjectaccessreviews"]
     verbs: ["create"]
   - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["*"]
+    resources: [ "get", "watch", "list", "update", "patch", "create" ]
     verbs: ["get", "watch", "list"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources:
