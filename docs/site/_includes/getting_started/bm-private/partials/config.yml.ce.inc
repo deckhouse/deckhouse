@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -15,8 +15,8 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
-# [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the comma-separated IP addresses of cluster nodes, container registry, or proxy server.
-# [<ru>] Настройки proxy-сервера. В списке исключений (параметр noProxy) также укажите IP-адреса узлов кластера, container registry или прокси-сервера, разделённые запятой.
+# [<en>] Proxy server settings.
+# [<ru>] Настройки proxy-сервера.
 proxy:
   httpProxy: <HTTP_PROXY_ADDRESS>
   httpsProxy: <HTTPS_PROXY_ADDRESS>
@@ -67,7 +67,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 2
+  version: 1
   settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
