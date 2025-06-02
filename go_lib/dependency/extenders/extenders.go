@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ limitations under the License.
 package extenders
 
 import (
+	"slices"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
@@ -118,4 +120,13 @@ func (b *ExtendersBundle) CheckModuleReleaseRequirements(moduleName, moduleRelea
 	}
 
 	return nil
+}
+
+func IsExtendersField(field string) bool {
+	return slices.Contains([]string{
+		v1alpha1.KubernetesRequirementFieldName,
+		v1alpha1.DeckhouseRequirementFieldName,
+		v1alpha1.BootstrappedRequirementFieldName,
+		v1alpha1.ModuleDependencyRequirementFieldName,
+	}, field)
 }
