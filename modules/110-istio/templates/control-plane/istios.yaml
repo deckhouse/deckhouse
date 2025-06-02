@@ -184,7 +184,7 @@ spec:
         enabled: false
       # We're deploying the istio-cni DS with module templates.
       cni:
-        enabled: false
+        enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
       enabled: true
       env:
         PILOT_SKIP_VALIDATE_TRUST_DOMAIN: "true"
