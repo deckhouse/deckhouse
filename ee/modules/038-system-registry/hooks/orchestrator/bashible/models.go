@@ -259,7 +259,6 @@ func (cfg *Config) mergeHosts(hosts bashibleHosts) {
 	}
 	for name, h := range hosts {
 		old := cfg.Hosts[name]
-		old.CA = deduplicateAndSortCA(append(old.CA, h.CA...))
 		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
 		cfg.Hosts[name] = old
 	}
@@ -367,9 +366,9 @@ func processUnmanaged(params UnmanagedModeParams) bashibleHosts {
 	host, _ := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
 	return bashibleHosts{
 		host: {
-			CA: singleCA(params.CA),
 			Mirrors: []bashible.MirrorHost{{
 				Host:   host,
+				CA:     params.CA,
 				Scheme: strings.ToLower(params.Scheme),
 				Auth: bashible.Auth{
 					Username: params.Username,
@@ -384,9 +383,9 @@ func processDirect(params DirectModeParams) bashibleHosts {
 	host, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
 	return bashibleHosts{
 		registry_const.Host: {
-			CA: singleCA(params.CA),
 			Mirrors: []bashible.MirrorHost{{
 				Host:   host,
+				CA:     params.CA,
 				Scheme: strings.ToLower(params.Scheme),
 				Auth: bashible.Auth{
 					Username: params.Username,
@@ -404,9 +403,9 @@ func processDirect(params DirectModeParams) bashibleHosts {
 func processProxyLocal(params ProxyLocalModeParams) bashibleHosts {
 	return bashibleHosts{
 		registry_const.Host: {
-			CA: singleCA(params.CA),
 			Mirrors: []bashible.MirrorHost{{
 				Host:   registry_const.ProxyHost,
+				CA:     params.CA,
 				Scheme: registry_const.Scheme,
 				Auth: bashible.Auth{
 					Username: params.Username,
@@ -500,13 +499,6 @@ func deduplicateMirrors(values []bashible.MirrorHost) []bashible.MirrorHost {
 		}
 	}
 	return ret
-}
-
-func singleCA(value string) []string {
-	if value == "" {
-		return nil
-	}
-	return []string{value}
 }
 
 func trimWithEllipsis(value string) string {

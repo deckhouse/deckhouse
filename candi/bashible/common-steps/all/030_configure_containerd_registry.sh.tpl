@@ -48,27 +48,31 @@ discovered_node_ip="$(bb-d8-node-ip)"
   {{- end }}
 
 mkdir -p "/etc/containerd/registry.d/{{ $hostName }}"
-  {{- $ca_files_path := list }}
-  {{- range $index, $CA := $hostValues.ca }}
-  {{- $ca_file_path := printf "/etc/containerd/registry.d/%s/ca_%d.crt" $hostName $index }}
-  {{- $ca_files_path = append $ca_files_path $ca_file_path }}
-bb-sync-file {{ $ca_file_path | quote }} - << EOF
-{{ $CA }}
+
+# Create CA cert files for mirrors
+{{- range $mirror := $hostValues.mirrors }}
+  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $hostName $mirror.scheme $mirror.host }}
+  {{- if $mirror.ca }}
+bb-sync-file {{ $mirror_ca_file_path | quote }} - << EOF
+{{ $mirror.ca }}
 EOF
   {{- end }}
+{{- end }}
 
+# Create hosts.toml files for registries
 bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
 [host]
 {{- range $mirror := $hostValues.mirrors }}
   {{- $mirrorHostWithScheme := (printf "%s://%s" $mirror.scheme $mirror.host) }}
+  {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $hostName $mirror.scheme $mirror.host }}
 
   [host.{{ $mirrorHostWithScheme | quote }}]
   capabilities = ["pull", "resolve"]
   {{- if eq $mirror.scheme "http" }}
   skip_verify = true
   {{- end }}
-  {{- if and (eq $mirror.scheme "https") (gt (len $ca_files_path) 0) }}
-  ca = [{{- range $i, $path := $ca_files_path }}{{ if $i }}, {{ end }}{{ $path | quote }}{{- end }}]
+  {{- if and (eq $mirror.scheme "https") $mirror.ca }}
+  ca = [{{ $mirror_ca_file_path | quote }}]
   {{- end }}
 
     {{- with $mirror.auth }}
@@ -107,7 +111,6 @@ EOF
 bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
 server = {{ $hostName | quote }}
 ca = ["/etc/containerd/registry.d/{{ $hostName }}/ca.crt"]
-
 [host]
 EOF
     {{- end }}
@@ -132,7 +135,7 @@ echo "$old_hosts" | /opt/deckhouse/bin/jq -r --argjson new_hosts "$new_hosts" '
   fi
 done
 
-# Updated state
+# Update state
 echo "$new_hosts" > "$hosts_state_file"
 
 {{- end }}

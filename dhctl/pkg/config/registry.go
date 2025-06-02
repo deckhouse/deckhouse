@@ -256,43 +256,29 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		return nil, err
 	}
 
-	CA := []string{}
-	if r.Data.CA != "" {
-		CA = append(CA, r.Data.CA)
+	// prepare mirrror and proxy endpoints
+	mirror := registry_bashible.MirrorHost{
+		Host:   r.Data.Address,
+		CA:     r.Data.CA,
+		Scheme: r.Data.Scheme,
+		Auth: registry_bashible.Auth{
+			Auth: auth,
+		},
 	}
-
-	// prepare mirrrors and proxy endpoints
-	mirrors := []registry_bashible.MirrorHost{}
 	proxyEndpoints := []string{}
 	if registry_const.ShouldRunStaticPodRegistry(r.Mode()) {
 		// If static pod registry
-		for _, host := range []string{registry_const.ProxyHost} {
-			mirrors = append(mirrors, registry_bashible.MirrorHost{
-				Host:   host,
-				Scheme: r.Data.Scheme,
-				Auth: registry_bashible.Auth{
-					Username: "",
-					Password: "",
-					Auth:     auth,
-				},
-			})
+		mirror = registry_bashible.MirrorHost{
+			Host:   registry_const.ProxyHost,
+			CA:     r.Data.CA,
+			Scheme: r.Data.Scheme,
+			Auth: registry_bashible.Auth{
+				Auth: auth,
+			},
 		}
 		// ${discovered_node_ip} - bashible will use this as a placeholder on envsubst call
 		// address will be discovered in one of bashible steps
 		proxyEndpoints = registry_const.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
-	} else {
-		// if not static pod registry
-		for _, host := range []string{r.Data.Address} {
-			mirrors = append(mirrors, registry_bashible.MirrorHost{
-				Host:   host,
-				Scheme: r.Data.Scheme,
-				Auth: registry_bashible.Auth{
-					Username: "",
-					Password: "",
-					Auth:     auth,
-				},
-			})
-		}
 	}
 
 	cfg := registry_bashible.Config{
@@ -300,7 +286,9 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		Version:        registry_const.UnknownVersion,
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: proxyEndpoints,
-		Hosts:          map[string]registry_bashible.Hosts{r.Data.Address: {CA: CA, Mirrors: mirrors}},
+		Hosts: map[string]registry_bashible.Hosts{
+			r.Data.Address: {Mirrors: []registry_bashible.MirrorHost{mirror}},
+		},
 	}
 
 	mapData, err := registry_bashible.ToMap(cfg)

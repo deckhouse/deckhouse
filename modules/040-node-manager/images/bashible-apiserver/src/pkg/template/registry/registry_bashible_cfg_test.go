@@ -117,17 +117,6 @@ func TestBashibleConfigSecretValidate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Empty CA is invalid",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				host := validSecretHost()
-				host.CA = []string{""}
-				cfg.Hosts["host2"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
 			name: "Mirror with empty Host is invalid",
 			input: func() *bashibleConfigSecret {
 				cfg := validBashibleConfigSecret()
@@ -188,11 +177,11 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
 				Hosts: map[string]bashibleConfigHosts{
 					"host1.example.com": {
-						CA: []string{"ca1"},
 						Mirrors: []bashibleConfigMirrorHost{
 							{
 								Host:   "mirror1.example.com",
 								Scheme: "https",
+								CA:     "ca1",
 								Auth: bashibleConfigAuth{
 									Username: "username",
 									Password: "password",
@@ -215,11 +204,11 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
 				Hosts: map[string]registryHosts{
 					"host1.example.com": {
-						CA: []string{"ca1"},
 						Mirrors: []registryMirrorHost{
 							{
 								Host:   "mirror1.example.com",
 								Scheme: "https",
+								CA:     "ca1",
 								Auth: registryAuth{
 									Username: "username",
 									Password: "password",

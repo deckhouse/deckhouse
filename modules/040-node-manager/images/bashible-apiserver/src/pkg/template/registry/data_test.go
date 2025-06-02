@@ -117,17 +117,6 @@ func TestRegistryDataValidate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Empty CA is invalid",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				host := validRegistryHost()
-				host.CA = []string{""}
-				cfg.Hosts["host2"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
 			name: "Mirror with empty Host is invalid",
 			input: func() *RegistryData {
 				cfg := validRegistryData()

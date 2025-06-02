@@ -107,25 +107,20 @@ func (d deckhouseRegistrySecret) toRegistryData() (*RegistryData, error) {
 		return nil, err
 	}
 
-	host := registryHosts{
-		Mirrors: []registryMirrorHost{{
-			Host:   d.Address,
-			Scheme: d.Scheme,
-			Auth: registryAuth{
-				Auth: auth,
-			},
-		}},
-	}
-
-	if d.CA != "" {
-		host.CA = []string{d.CA}
-	}
-
 	ret := &RegistryData{
 		Mode:       "unmanaged",
 		Version:    "unknown",
 		ImagesBase: imagesBase,
-		Hosts:      map[string]registryHosts{d.Address: host},
+		Hosts: map[string]registryHosts{d.Address: {
+			Mirrors: []registryMirrorHost{{
+				Host:   d.Address,
+				Scheme: d.Scheme,
+				CA:     d.CA,
+				Auth: registryAuth{
+					Auth: auth,
+				},
+			}},
+		}},
 	}
 	return ret, nil
 }

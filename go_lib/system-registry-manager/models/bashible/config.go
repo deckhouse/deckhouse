@@ -35,13 +35,13 @@ type Config struct {
 }
 
 type Hosts struct {
-	CA      []string     `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Mirrors []MirrorHost `json:"mirrors" yaml:"mirrors"`
 }
 
 type MirrorHost struct {
 	Host     string    `json:"host" yaml:"host"`
 	Scheme   string    `json:"scheme" yaml:"scheme"`
+	CA       string    `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Auth     Auth      `json:"auth,omitempty" yaml:"auth,omitempty"`
 	Rewrites []Rewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
 }
@@ -81,7 +81,6 @@ func (c *Config) Validate() error {
 
 func (h *Hosts) Validate() error {
 	if err := validation.ValidateStruct(h,
-		validation.Field(&h.CA, validation.Each(validation.Required)),
 		validation.Field(&h.Mirrors, validation.Required),
 	); err != nil {
 		return err
@@ -103,7 +102,7 @@ func (m *MirrorHost) Validate() error {
 }
 
 func (m *MirrorHost) IsEqual(other MirrorHost) bool {
-	if m.Host != other.Host || m.Scheme != other.Scheme {
+	if m.Host != other.Host || m.Scheme != other.Scheme || m.CA != other.CA {
 		return false
 	}
 	if !m.Auth.IsEqual(other.Auth) {

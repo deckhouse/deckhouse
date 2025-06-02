@@ -18,11 +18,11 @@ package registry
 
 import (
 	"fmt"
+	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 const (
@@ -38,13 +38,13 @@ type bashibleConfigSecret struct {
 }
 
 type bashibleConfigHosts struct {
-	CA      []string                   `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Mirrors []bashibleConfigMirrorHost `json:"mirrors" yaml:"mirrors"`
 }
 
 type bashibleConfigMirrorHost struct {
 	Host     string                  `json:"host" yaml:"host"`
 	Scheme   string                  `json:"scheme" yaml:"scheme"`
+	CA       string                  `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Auth     bashibleConfigAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
 	Rewrites []bashibleConfigRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
 }
@@ -91,7 +91,6 @@ func (c *bashibleConfigSecret) Validate() error {
 
 func (h *bashibleConfigHosts) Validate() error {
 	if err := validation.ValidateStruct(h,
-		validation.Field(&h.CA, validation.Each(validation.Required)),
 		validation.Field(&h.Mirrors, validation.Required),
 	); err != nil {
 		return err
@@ -129,7 +128,6 @@ func (c bashibleConfigSecret) toRegistryData() *RegistryData {
 
 func (h bashibleConfigHosts) toRegistryHosts() registryHosts {
 	ret := registryHosts{
-		CA:      append([]string(nil), h.CA...),
 		Mirrors: make([]registryMirrorHost, 0, len(h.Mirrors)),
 	}
 	for _, m := range h.Mirrors {
@@ -142,6 +140,7 @@ func (m bashibleConfigMirrorHost) toRegistryMirrorHost() registryMirrorHost {
 	ret := registryMirrorHost{
 		Host:   m.Host,
 		Scheme: m.Scheme,
+		CA:     m.CA,
 		Auth: registryAuth{
 			Username: m.Auth.Username,
 			Password: m.Auth.Password,
@@ -150,10 +149,7 @@ func (m bashibleConfigMirrorHost) toRegistryMirrorHost() registryMirrorHost {
 	}
 
 	for _, rw := range m.Rewrites {
-		ret.Rewrites = append(ret.Rewrites, registryRewrite{
-			From: rw.From,
-			To:   rw.To,
-		})
+		ret.Rewrites = append(ret.Rewrites, registryRewrite(rw))
 	}
 	return ret
 }

@@ -34,13 +34,13 @@ type RegistryData struct {
 }
 
 type registryHosts struct {
-	CA      []string             `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Mirrors []registryMirrorHost `json:"mirrors" yaml:"mirrors"`
 }
 
 type registryMirrorHost struct {
 	Host     string            `json:"host" yaml:"host"`
 	Scheme   string            `json:"scheme" yaml:"scheme"`
+	CA       string            `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Auth     registryAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
 	Rewrites []registryRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
 }
@@ -104,7 +104,6 @@ func (rd *RegistryData) Validate() error {
 
 func (h *registryHosts) Validate() error {
 	if err := validation.ValidateStruct(h,
-		validation.Field(&h.CA, validation.Each(validation.Required)),
 		validation.Field(&h.Mirrors, validation.Required),
 	); err != nil {
 		return err
