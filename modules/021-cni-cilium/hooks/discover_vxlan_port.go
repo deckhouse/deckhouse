@@ -82,7 +82,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 					// someone configured the port for setup without virtualization 8472 manually, will set the right one
 					{source: 8472, target: defaultVXLANPort},
 
-					// virtualization module was enabled on regular setup with the right port, will set the 4298 port
+					// virtualization module was enabled on regular setup with the right port, will set the defaultVXLANPort port
 					{source: 4299, target: defaultVXLANPort},
 
 					// regular setup with enabled virtualization module and right port, will leave it as is
@@ -99,7 +99,7 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 					// our previous standard setup with explicitly configured 8472 port, will leave the 8472
 					{source: 8472, target: 8472},
 
-					// virtualizaiton module was disabled on regular setup with standard 4298 port, will set the 4299 port
+					// virtualizaiton module was disabled on regular setup with standard defaultVXLANPort port, will set the port in accordance with the nesting level
 					{source: defaultVXLANPort, target: defaultVXLANPort - virtNestingLevel},
 
 					// regular setup with standard 4299 port, will leave it as is
