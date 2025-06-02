@@ -1,25 +1,50 @@
 diff --git a/go.mod b/go.mod
-index 0dfc65bda8..a76e56e54e 100644
+index 0dfc65bda8..a6c3711c39 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -45,9 +45,9 @@ require (
+@@ -1,10 +1,10 @@
+ module github.com/grafana/mimir
+
+-go 1.22.0
++go 1.23.0
+
+ // Please note that this directive is ignored when building with the Mimir build image,
+ // that will always use its bundled toolchain.
+-toolchain go1.22.5
++toolchain go1.24.3
+
+ require (
+ 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.0
+@@ -41,13 +41,13 @@ require (
+ 	github.com/segmentio/fasthash v1.0.3
+ 	github.com/sirupsen/logrus v1.9.3
+ 	github.com/spf13/afero v1.11.0
+-	github.com/stretchr/testify v1.9.0
++	github.com/stretchr/testify v1.10.0
  	github.com/uber/jaeger-client-go v2.30.0+incompatible
  	go.uber.org/atomic v1.11.0
  	go.uber.org/goleak v1.3.0
 -	golang.org/x/crypto v0.27.0
 -	golang.org/x/net v0.29.0
 -	golang.org/x/sync v0.8.0
-+	golang.org/x/crypto v0.31.0
-+	golang.org/x/net v0.33.0
-+	golang.org/x/sync v0.10.0
++	golang.org/x/crypto v0.36.0
++	golang.org/x/net v0.38.0
++	golang.org/x/sync v0.12.0
  	golang.org/x/time v0.6.0
  	google.golang.org/grpc v1.66.0
  	gopkg.in/yaml.v2 v2.4.0
-@@ -111,7 +111,7 @@ require (
+@@ -106,12 +106,12 @@ require (
+ 	github.com/bboreham/go-loser v0.0.0-20230920113527-fcc2c21820a3 // indirect
+ 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
+ 	github.com/go-ini/ini v1.67.0 // indirect
+-	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
++	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
+ 	github.com/go-ole/go-ole v1.2.6 // indirect
  	github.com/go-test/deep v1.1.0 // indirect
  	github.com/goccy/go-json v0.10.3 // indirect
- 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 -	github.com/golang/glog v1.2.1 // indirect
++	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 +	github.com/golang/glog v1.2.4 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
  	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
@@ -30,16 +55,35 @@ index 0dfc65bda8..a76e56e54e 100644
  	golang.org/x/oauth2 v0.22.0 // indirect
 -	golang.org/x/sys v0.25.0 // indirect
 -	golang.org/x/text v0.18.0 // indirect
-+	golang.org/x/sys v0.28.0 // indirect
-+	golang.org/x/text v0.21.0 // indirect
++	golang.org/x/sys v0.31.0 // indirect
++	golang.org/x/text v0.23.0 // indirect
  	golang.org/x/tools v0.25.0 // indirect
  	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 diff --git a/go.sum b/go.sum
-index 23e70b8eaa..67c0b4356d 100644
+index 23e70b8eaa..79fcb6d672 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -1108,8 +1108,9 @@ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGw
+@@ -1023,8 +1023,8 @@ github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2
+ github.com/go-ini/ini v1.67.0 h1:z6ZrTEZqSWOTyH2FlglNbNgARyHG8oLW9gMELqKr06A=
+ github.com/go-ini/ini v1.67.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
+ github.com/go-jose/go-jose/v3 v3.0.0/go.mod h1:RNkWWRld676jZEYoV3+XK8L2ZnNSvIsxFMht0mSX+u8=
+-github.com/go-jose/go-jose/v4 v4.0.1 h1:QVEPDE3OluqXBQZDcnNvQrInro2h0e4eqNbnZSWqS6U=
+-github.com/go-jose/go-jose/v4 v4.0.1/go.mod h1:WVf9LFMHh/QVrmqrOfqun0C45tMe3RoiKJMPvgWwLfY=
++github.com/go-jose/go-jose/v4 v4.0.5 h1:M6T8+mKZl/+fNNuFHvGIzDz7BTLQPIounk/b9dw3AaE=
++github.com/go-jose/go-jose/v4 v4.0.5/go.mod h1:s3P1lRrkT8igV8D9OjyL4WRyHvjB6a4JSllnOrmmBOA=
+ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+ github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
+ github.com/go-kit/log v0.2.1 h1:MRVx0/zhvdseW+Gza6N9rVzU/IVzaeE1SFI4raAhmBU=
+@@ -1102,14 +1102,15 @@ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
+ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+ github.com/gogo/status v1.1.1 h1:DuHXlSFHNKqTQ+/ACf5Vs6r4X/dH2EgIzR9Vr+H65kg=
+ github.com/gogo/status v1.1.1/go.mod h1:jpG3dM5QPcqu19Hg8lkUhBFBa3TcLs1DG7+2Jqci7oU=
+-github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
+-github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
++github.com/golang-jwt/jwt/v5 v5.2.2 h1:Rl4B7itRWVtYIHFrSNd7vhTiz9UpLdi6gZhZ3wEeDy8=
++github.com/golang-jwt/jwt/v5 v5.2.2/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
+ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
  github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
  github.com/golang/glog v1.0.0/go.mod h1:EWib/APOK0SL3dFbYqvxE3UYd8E6s1ouQ7iEp/0LWV4=
  github.com/golang/glog v1.1.0/go.mod h1:pfYeQZ3JWZoXTV5sFc986z3HTpwQs9At6P4ImfuP3NQ=
@@ -50,69 +94,80 @@ index 23e70b8eaa..67c0b4356d 100644
  github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
  github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
  github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
-@@ -1801,8 +1802,8 @@ golang.org/x/crypto v0.18.0/go.mod h1:R0j02AL6hcrfOiy9T4ZYp/rcWeMxM3L6QYxlOuEG1m
+@@ -1678,8 +1679,9 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
+ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+ github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+-github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+ github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
++github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
++github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+ github.com/subosito/gotenv v1.4.1/go.mod h1:ayKnFf/c6rvx/2iiLrJUk1e6plDbT3edrFNGqEflhK0=
+ github.com/tencentyun/cos-go-sdk-v5 v0.7.40 h1:W6vDGKCHe4wBACI1d2UgE6+50sJFhRWU4O8IB2ozzxM=
+ github.com/tencentyun/cos-go-sdk-v5 v0.7.40/go.mod h1:4dCEtLHGh8QPxHEkgq+nFaky7yZxQuYwgSJM87icDaw=
+@@ -1801,8 +1803,8 @@ golang.org/x/crypto v0.18.0/go.mod h1:R0j02AL6hcrfOiy9T4ZYp/rcWeMxM3L6QYxlOuEG1m
  golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
  golang.org/x/crypto v0.21.0/go.mod h1:0BP7YvVV9gBbVKyeTG0Gyn+gZm94bibOW5BjDEYAOMs=
  golang.org/x/crypto v0.23.0/go.mod h1:CKFgDieR+mRhux2Lsu27y0fO304Db0wZe70UKqHu0v8=
 -golang.org/x/crypto v0.27.0 h1:GXm2NjJrPaiv/h1tb2UH8QfgC/hOf/+z0p6PT8o1w7A=
 -golang.org/x/crypto v0.27.0/go.mod h1:1Xngt8kV6Dvbssa53Ziq6Eqn0HqbZi5Z6R0ZpwQzt70=
-+golang.org/x/crypto v0.31.0 h1:ihbySMvVjLAeSH1IbfcRTkD/iNscyz8rGzjF/E5hV6U=
-+golang.org/x/crypto v0.31.0/go.mod h1:kDsLvtWBEx7MV9tJOj9bnXsPbxwJQ6csT/x4KIN4Ssk=
++golang.org/x/crypto v0.36.0 h1:AnAEvhDddvBdpY+uR+MyHmuZzzNqXSe/GvuDeob5L34=
++golang.org/x/crypto v0.36.0/go.mod h1:Y4J0ReaxCR1IMaabaSMugxJES1EpwhBHhv2bDHklZvc=
  golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
-@@ -1937,8 +1938,8 @@ golang.org/x/net v0.20.0/go.mod h1:z8BVo6PvndSri0LbOE3hAn0apkU+1YvI6E70E9jsnvY=
+@@ -1937,8 +1939,8 @@ golang.org/x/net v0.20.0/go.mod h1:z8BVo6PvndSri0LbOE3hAn0apkU+1YvI6E70E9jsnvY=
  golang.org/x/net v0.21.0/go.mod h1:bIjVDfnllIU7BJ2DNgfnXvpSvtn8VRwhlsaeUTyUS44=
  golang.org/x/net v0.22.0/go.mod h1:JKghWKKOSdJwpW2GEx0Ja7fmaKnMsbu+MWVZTokSYmg=
  golang.org/x/net v0.25.0/go.mod h1:JkAGAh7GEvH74S6FOH42FLoXpXbE/aqXSrIQjXgsiwM=
 -golang.org/x/net v0.29.0 h1:5ORfpBpCs4HzDYoodCDBbwHzdR5UrLBZ3sOnUJmFoHo=
 -golang.org/x/net v0.29.0/go.mod h1:gLkgy8jTGERgjzMic6DS9+SP0ajcu6Xu3Orq/SpETg0=
-+golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
-+golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
++golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
++golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
  golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
  golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
  golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
-@@ -1991,8 +1992,8 @@ golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -1991,8 +1993,8 @@ golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.2.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.3.0/go.mod h1:FU7BRWz2tNW+3quACPkgCx/L+uEAv1htQ0V83Z9Rj+Y=
  golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 -golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=
 -golang.org/x/sync v0.8.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
-+golang.org/x/sync v0.10.0 h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=
-+golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
++golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
++golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
  golang.org/x/sys v0.0.0-20180823144017-11551d06cbcc/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
-@@ -2097,8 +2098,8 @@ golang.org/x/sys v0.16.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+@@ -2097,8 +2099,8 @@ golang.org/x/sys v0.16.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
  golang.org/x/sys v0.17.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
  golang.org/x/sys v0.18.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
  golang.org/x/sys v0.20.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 -golang.org/x/sys v0.25.0 h1:r+8e+loiHxRqhXVl6ML1nO3l1+oFoWbnlu2Ehimmi34=
 -golang.org/x/sys v0.25.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
-+golang.org/x/sys v0.28.0 h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=
-+golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
++golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
++golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
  golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
  golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
  golang.org/x/term v0.1.0/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
-@@ -2115,8 +2116,8 @@ golang.org/x/term v0.16.0/go.mod h1:yn7UURbUtPyrVJPGPq404EukNFxcm/foM+bV/bfcDsY=
+@@ -2115,8 +2117,8 @@ golang.org/x/term v0.16.0/go.mod h1:yn7UURbUtPyrVJPGPq404EukNFxcm/foM+bV/bfcDsY=
  golang.org/x/term v0.17.0/go.mod h1:lLRBjIVuehSbZlaOtGMbcMncT+aqLLLmKrsjNrUguwk=
  golang.org/x/term v0.18.0/go.mod h1:ILwASektA3OnRv7amZ1xhE/KTR+u50pbXfZ03+6Nx58=
  golang.org/x/term v0.20.0/go.mod h1:8UkIAJTvZgivsXaD6/pH6U9ecQzZ45awqEOzuCvwpFY=
 -golang.org/x/term v0.24.0 h1:Mh5cbb+Zk2hqqXNO7S1iTjEphVL+jb8ZWaqh/g+JWkM=
 -golang.org/x/term v0.24.0/go.mod h1:lOBK/LVxemqiMij05LGJ0tzNr8xlmwBRJ81PX6wVLH8=
-+golang.org/x/term v0.27.0 h1:WP60Sv1nlK1T6SupCHbXzSaN0b9wUmsPoRS9b61A23Q=
-+golang.org/x/term v0.27.0/go.mod h1:iMsnZpn0cago0GOrHO2+Y7u7JPn5AylBrcoWkElMTSM=
++golang.org/x/term v0.30.0 h1:PQ39fJZ+mfadBm0y5WlL4vlM7Sx1Hgf13sMIY2+QS9Y=
++golang.org/x/term v0.30.0/go.mod h1:NYYFdzHoI5wRh/h5tDMdMqCqPJZEuNqVR5xJLd/n67g=
  golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
-@@ -2136,8 +2137,8 @@ golang.org/x/text v0.10.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
+@@ -2136,8 +2138,8 @@ golang.org/x/text v0.10.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
  golang.org/x/text v0.13.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
  golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
  golang.org/x/text v0.15.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
 -golang.org/x/text v0.18.0 h1:XvMDiNzPAl0jr17s6W9lcaIhGUfUORdGCNsuLmPG224=
 -golang.org/x/text v0.18.0/go.mod h1:BuEKDfySbSR4drPmRPG/7iBdf8hvFMuRexcpahXilzY=
-+golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
-+golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
++golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
++golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
  golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20191024005414-555d28b269f0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
@@ -144,7 +199,7 @@ index a1551dbc87..b54bd40525 100644
 @@ -68,9 +67,8 @@ func init() {
  		host = shortHostname(h)
  	}
- 
+
 -	current, err := user.Current()
 -	if err == nil {
 -		userName = current.Username
@@ -193,7 +248,7 @@ index a1551dbc87..b54bd40525 100644
  	}
  	return nil, "", fmt.Errorf("log: cannot create log: %v", lastErr)
  }
- 
+
 +func createInDir(dir, tag string, t time.Time) (f *os.File, name string, err error) {
 +	name, link := logName(tag, t)
 +	fname := filepath.Join(dir, name)
@@ -229,7 +284,7 @@ index a1551dbc87..b54bd40525 100644
 +		logsink.TextSinks = append(logsink.TextSinks, &sinks.stderr)
 +	}
 +	logsink.TextSinks = append(logsink.TextSinks, &sinks.file)
- 
+
  	sinks.file.flushChan = make(chan logsink.Severity, 1)
  	go sinks.file.flushDaemon()
 @@ -247,6 +269,7 @@ type syncBuffer struct {
@@ -238,11 +293,11 @@ index a1551dbc87..b54bd40525 100644
  	nbytes uint64 // The number of bytes written to this file
 +	madeAt time.Time
  }
- 
+
  func (sb *syncBuffer) Sync() error {
 @@ -254,9 +277,14 @@ func (sb *syncBuffer) Sync() error {
  }
- 
+
  func (sb *syncBuffer) Write(p []byte) (n int, err error) {
 +	// Rotate the file if it is too large, but ensure we only do so,
 +	// if rotate doesn't create a conflicting filename.
@@ -264,7 +319,7 @@ index a1551dbc87..b54bd40525 100644
 -	file, name, err := create(sb.sev.String(), now)
 +	file, name, err := create(sb.sev.String(), now, "")
 +	sb.madeAt = now
- 
+
  	if sb.file != nil {
  		// The current log file becomes the previous log at the end of
 diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_noasm.go b/vendor/golang.org/x/crypto/chacha20/chacha_noasm.go
@@ -274,12 +329,12 @@ index db42e6676a..c709b72847 100644
 @@ -2,7 +2,7 @@
  // Use of this source code is governed by a BSD-style
  // license that can be found in the LICENSE file.
- 
+
 -//go:build (!arm64 && !s390x && !ppc64le) || !gc || purego
 +//go:build (!arm64 && !s390x && !ppc64 && !ppc64le) || !gc || purego
- 
+
  package chacha20
- 
+
 diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go
 deleted file mode 100644
 index 3a4287f990..0000000000
@@ -758,12 +813,12 @@ index 333da285b3..bd896bdc76 100644
 @@ -2,7 +2,7 @@
  // Use of this source code is governed by a BSD-style
  // license that can be found in the LICENSE file.
- 
+
 -//go:build (!amd64 && !ppc64le && !s390x) || !gc || purego
 +//go:build (!amd64 && !ppc64le && !ppc64 && !s390x) || !gc || purego
- 
+
  package poly1305
- 
+
 diff --git a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go
 deleted file mode 100644
 index 4aec4874b5..0000000000
@@ -1007,7 +1062,7 @@ index 780968d6c1..e81b73e6a7 100644
 --- a/vendor/golang.org/x/net/http2/client_conn_pool.go
 +++ b/vendor/golang.org/x/net/http2/client_conn_pool.go
 @@ -8,8 +8,8 @@ package http2
- 
+
  import (
  	"context"
 -	"crypto/tls"
@@ -1028,12 +1083,12 @@ index 780968d6c1..e81b73e6a7 100644
 @@ -194,8 +194,8 @@ type addConnCall struct {
  	err  error
  }
- 
+
 -func (c *addConnCall) run(t *Transport, key string, tc *tls.Conn) {
 -	cc, err := t.NewClientConn(tc)
 +func (c *addConnCall) run(t *Transport, key string, nc net.Conn) {
 +	cc, err := t.NewClientConn(nc)
- 
+
  	p := c.p
  	p.mu.Lock()
 diff --git a/vendor/golang.org/x/net/http2/frame.go b/vendor/golang.org/x/net/http2/frame.go
@@ -1075,7 +1130,7 @@ index 003e649f30..c7601c909f 100644
  	"sort"
 @@ -33,10 +34,11 @@ import (
  )
- 
+
  var (
 -	VerboseLogs    bool
 -	logFrameWrites bool
@@ -1087,7 +1142,7 @@ index 003e649f30..c7601c909f 100644
 +	inTests                        bool
 +	disableExtendedConnectProtocol bool
  )
- 
+
  func init() {
 @@ -49,6 +51,9 @@ func init() {
  		logFrameWrites = true
@@ -1097,7 +1152,7 @@ index 003e649f30..c7601c909f 100644
 +		disableExtendedConnectProtocol = true
 +	}
  }
- 
+
  const (
 @@ -140,6 +145,10 @@ func (s Setting) Valid() error {
  		if s.Val < 16384 || s.Val > 1<<24-1 {
@@ -1112,7 +1167,7 @@ index 003e649f30..c7601c909f 100644
  }
 @@ -149,21 +158,23 @@ func (s Setting) Valid() error {
  type SettingID uint16
- 
+
  const (
 -	SettingHeaderTableSize      SettingID = 0x1
 -	SettingEnablePush           SettingID = 0x2
@@ -1128,7 +1183,7 @@ index 003e649f30..c7601c909f 100644
 +	SettingMaxHeaderListSize     SettingID = 0x6
 +	SettingEnableConnectProtocol SettingID = 0x8
  )
- 
+
  var settingName = map[SettingID]string{
 -	SettingHeaderTableSize:      "HEADER_TABLE_SIZE",
 -	SettingEnablePush:           "ENABLE_PUSH",
@@ -1144,7 +1199,7 @@ index 003e649f30..c7601c909f 100644
 +	SettingMaxHeaderListSize:     "MAX_HEADER_LIST_SIZE",
 +	SettingEnableConnectProtocol: "ENABLE_CONNECT_PROTOCOL",
  }
- 
+
  func (s SettingID) String() string {
 @@ -237,13 +248,19 @@ func (cw closeWaiter) Wait() {
  // Its buffered writer is lazily allocated as needed, to minimize
@@ -1159,7 +1214,7 @@ index 003e649f30..c7601c909f 100644
 +	bw          *bufio.Writer          // non-nil when data is buffered
 +	byteTimeout time.Duration          // immutable, WriteByteTimeout
  }
- 
+
 -func newBufferedWriter(w io.Writer) *bufferedWriter {
 -	return &bufferedWriter{w: w}
 +func newBufferedWriter(group synctestGroupInterface, conn net.Conn, timeout time.Duration) *bufferedWriter {
@@ -1169,7 +1224,7 @@ index 003e649f30..c7601c909f 100644
 +		byteTimeout: timeout,
 +	}
  }
- 
+
  // bufWriterPoolBufferSize is the size of bufio.Writer's
 @@ -270,7 +287,7 @@ func (w *bufferedWriter) Available() int {
  func (w *bufferedWriter) Write(p []byte) (n int, err error) {
@@ -1183,7 +1238,7 @@ index 003e649f30..c7601c909f 100644
 @@ -288,6 +305,38 @@ func (w *bufferedWriter) Flush() error {
  	return err
  }
- 
+
 +type bufferedWriterTimeoutWriter bufferedWriter
 +
 +func (w *bufferedWriterTimeoutWriter) Write(p []byte) (n int, err error) {
@@ -1233,7 +1288,7 @@ index 6c349f3ec6..b55547aec6 100644
  	"fmt"
 @@ -52,10 +53,14 @@ import (
  )
- 
+
  const (
 -	prefaceTimeout         = 10 * time.Second
 -	firstSettingsTimeout   = 2 * time.Second // should be in-flight with preface anyway
@@ -1249,11 +1304,11 @@ index 6c349f3ec6..b55547aec6 100644
 +	// the connection is closed to prevent memory exhaustion attacks.
  	maxQueuedControlFrames = 10000
  )
- 
+
 @@ -127,6 +132,22 @@ type Server struct {
  	// If zero or negative, there is no timeout.
  	IdleTimeout time.Duration
- 
+
 +	// ReadIdleTimeout is the timeout after which a health check using a ping
 +	// frame will be carried out if no frame is received on the connection.
 +	// If zero, no health check is performed.
@@ -1276,7 +1331,7 @@ index 6c349f3ec6..b55547aec6 100644
 @@ -189,57 +210,6 @@ func (s *Server) afterFunc(d time.Duration, f func()) timer {
  	return timeTimer{time.AfterFunc(d, f)}
  }
- 
+
 -func (s *Server) initialConnRecvWindowSize() int32 {
 -	if s.MaxUploadBufferPerConnection >= initialWindowSize {
 -		return s.MaxUploadBufferPerConnection
@@ -1375,11 +1430,11 @@ index 6c349f3ec6..b55547aec6 100644
 +	}
  	return nil
  }
- 
+
 @@ -440,13 +429,15 @@ func (s *Server) serveConn(c net.Conn, opts *ServeConnOpts, newf func(*serverCon
  	baseCtx, cancel := serverConnBaseContext(c, opts)
  	defer cancel()
- 
+
 +	http1srv := opts.baseConfig()
 +	conf := configFromServer(http1srv, s)
  	sc := &serverConn{
@@ -1414,7 +1469,7 @@ index 6c349f3ec6..b55547aec6 100644
  	sc.hpackEncoder = hpack.NewEncoder(&sc.headerWriteBuf)
 -	sc.hpackEncoder.SetMaxDynamicTableSizeLimit(s.maxEncoderHeaderTableSize())
 +	sc.hpackEncoder.SetMaxDynamicTableSizeLimit(conf.MaxEncoderHeaderTableSize)
- 
+
  	fr := NewFramer(sc.bw, c)
 -	if s.CountError != nil {
 -		fr.countError = s.CountError
@@ -1427,12 +1482,12 @@ index 6c349f3ec6..b55547aec6 100644
 -	fr.SetMaxReadFrameSize(s.maxReadFrameSize())
 +	fr.SetMaxReadFrameSize(conf.MaxReadFrameSize)
  	sc.framer = fr
- 
+
  	if tc, ok := c.(connectionStater); ok {
 @@ -532,7 +526,7 @@ func (s *Server) serveConn(c net.Conn, opts *ServeConnOpts, newf func(*serverCon
  			// So for now, do nothing here again.
  		}
- 
+
 -		if !s.PermitProhibitedCipherSuites && isBadCipher(sc.tlsState.CipherSuite) {
 +		if !conf.PermitProhibitedCipherSuites && isBadCipher(sc.tlsState.CipherSuite) {
  			// "Endpoints MAY choose to generate a connection error
@@ -1441,18 +1496,18 @@ index 6c349f3ec6..b55547aec6 100644
 @@ -569,7 +563,7 @@ func (s *Server) serveConn(c net.Conn, opts *ServeConnOpts, newf func(*serverCon
  		opts.UpgradeRequest = nil
  	}
- 
+
 -	sc.serve()
 +	sc.serve(conf)
  }
- 
+
  func serverConnBaseContext(c net.Conn, opts *ServeConnOpts) (ctx context.Context, cancel func()) {
 @@ -609,6 +603,7 @@ type serverConn struct {
  	tlsState         *tls.ConnectionState   // shared by all handlers, like net/http
  	remoteAddrStr    string
  	writeSched       WriteScheduler
 +	countErrorFunc   func(errType string)
- 
+
  	// Everything following is owned by the serve loop; use serveG.check():
  	serveG                      goroutineLock // used to verify funcs are on serve()
 @@ -628,6 +623,7 @@ type serverConn struct {
@@ -1475,7 +1530,7 @@ index 6c349f3ec6..b55547aec6 100644
 +	readIdleTimeout             time.Duration
 +	pingTimeout                 time.Duration
 +	readIdleTimer               timer // nil if unused
- 
+
  	// Owned by the writeFrameAsync goroutine:
  	headerWriteBuf bytes.Buffer
 @@ -655,11 +656,7 @@ func (sc *serverConn) maxHeaderListSize() uint32 {
@@ -1489,12 +1544,12 @@ index 6c349f3ec6..b55547aec6 100644
 -	return uint32(n + typicalHeaders*perFieldOverhead)
 +	return uint32(adjustHTTP1MaxHeaderSize(int64(n)))
  }
- 
+
  func (sc *serverConn) curOpenStreams() uint32 {
 @@ -923,7 +920,7 @@ func (sc *serverConn) notePanic() {
  	}
  }
- 
+
 -func (sc *serverConn) serve() {
 +func (sc *serverConn) serve(conf http2Config) {
  	sc.serveG.check()
@@ -1503,7 +1558,7 @@ index 6c349f3ec6..b55547aec6 100644
 @@ -935,20 +932,24 @@ func (sc *serverConn) serve() {
  		sc.vlogf("http2: server connection from %v on %p", sc.conn.RemoteAddr(), sc.hs)
  	}
- 
+
 +	settings := writeSettings{
 +		{SettingMaxFrameSize, conf.MaxReadFrameSize},
 +		{SettingMaxConcurrentStreams, sc.advMaxStreams},
@@ -1525,18 +1580,18 @@ index 6c349f3ec6..b55547aec6 100644
 +		write: settings,
  	})
  	sc.unackedSettings++
- 
+
  	// Each connection starts with initialWindowSize inflow tokens.
  	// If a higher value is configured, we add more tokens.
 -	if diff := sc.srv.initialConnRecvWindowSize() - initialWindowSize; diff > 0 {
 +	if diff := conf.MaxUploadBufferPerConnection - initialWindowSize; diff > 0 {
  		sc.sendWindowUpdate(nil, int(diff))
  	}
- 
+
 @@ -968,11 +969,18 @@ func (sc *serverConn) serve() {
  		defer sc.idleTimer.Stop()
  	}
- 
+
 +	if conf.SendPingTimeout > 0 {
 +		sc.readIdleTimeout = conf.SendPingTimeout
 +		sc.readIdleTimer = sc.srv.afterFunc(conf.SendPingTimeout, sc.onReadIdleTimer)
@@ -1544,10 +1599,10 @@ index 6c349f3ec6..b55547aec6 100644
 +	}
 +
  	go sc.readFrames() // closed by defer sc.conn.Close above
- 
+
  	settingsTimer := sc.srv.afterFunc(firstSettingsTimeout, sc.onSettingsTimer)
  	defer settingsTimer.Stop()
- 
+
 +	lastFrameTime := sc.srv.now()
  	loopNum := 0
  	for {
@@ -1581,7 +1636,7 @@ index 6c349f3ec6..b55547aec6 100644
 @@ -1055,12 +1066,39 @@ func (sc *serverConn) serve() {
  	}
  }
- 
+
 +func (sc *serverConn) handlePingTimer(lastFrameReadTime time.Time) {
 +	if sc.pingSent {
 +		sc.vlogf("timeout waiting for PING response")
@@ -1609,7 +1664,7 @@ index 6c349f3ec6..b55547aec6 100644
 +}
 +
  type serverMessage int
- 
+
  // Message values sent to serveMsgCh.
  var (
  	settingsTimerMsg    = new(serverMessage)
@@ -1619,23 +1674,23 @@ index 6c349f3ec6..b55547aec6 100644
  	gracefulShutdownMsg = new(serverMessage)
  	handlerDoneMsg      = new(serverMessage)
 @@ -1068,6 +1106,7 @@ var (
- 
+
  func (sc *serverConn) onSettingsTimer() { sc.sendServeMsg(settingsTimerMsg) }
  func (sc *serverConn) onIdleTimer()     { sc.sendServeMsg(idleTimerMsg) }
 +func (sc *serverConn) onReadIdleTimer() { sc.sendServeMsg(readIdleTimerMsg) }
  func (sc *serverConn) onShutdownTimer() { sc.sendServeMsg(shutdownTimerMsg) }
- 
+
  func (sc *serverConn) sendServeMsg(msg interface{}) {
 @@ -1320,6 +1359,10 @@ func (sc *serverConn) wroteFrame(res frameWriteResult) {
  	sc.writingFrame = false
  	sc.writingFrameAsync = false
- 
+
 +	if res.err != nil {
 +		sc.conn.Close()
 +	}
 +
  	wr := res.wr
- 
+
  	if writeEndsStream(wr.write) {
 @@ -1594,6 +1637,11 @@ func (sc *serverConn) processFrame(f Frame) error {
  func (sc *serverConn) processPing(f *PingFrame) error {
@@ -1679,7 +1734,7 @@ index 6c349f3ec6..b55547aec6 100644
 +	if disableExtendedConnectProtocol && rp.protocol != "" {
 +		return nil, nil, sc.countError("bad_connect", streamError(f.StreamID, ErrCodeProtocol))
  	}
- 
+
  	isConnect := rp.method == "CONNECT"
  	if isConnect {
 -		if rp.path != "" || rp.scheme != "" || rp.authority == "" {
@@ -1694,7 +1749,7 @@ index 6c349f3ec6..b55547aec6 100644
 +	if rp.protocol != "" {
 +		rp.header.Set(":protocol", rp.protocol)
 +	}
- 
+
  	rw, req, err := sc.newWriterAndRequestNoBody(st, rp)
  	if err != nil {
 @@ -2241,6 +2301,7 @@ func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*res
@@ -1704,9 +1759,9 @@ index 6c349f3ec6..b55547aec6 100644
 +	protocol                string
  	header                  http.Header
  }
- 
+
 @@ -2282,7 +2343,7 @@ func (sc *serverConn) newWriterAndRequestNoBody(st *stream, rp requestParam) (*r
- 
+
  	var url_ *url.URL
  	var requestURI string
 -	if rp.method == "CONNECT" {
@@ -1717,7 +1772,7 @@ index 6c349f3ec6..b55547aec6 100644
 @@ -2855,6 +2916,11 @@ func (w *responseWriter) SetWriteDeadline(deadline time.Time) error {
  	return nil
  }
- 
+
 +func (w *responseWriter) EnableFullDuplex() error {
 +	// We always support full duplex responses, so this is a no-op.
 +	return nil
@@ -1750,7 +1805,7 @@ index 61f511f97a..090d0e1bdb 100644
 @@ -203,6 +202,20 @@ func (t *Transport) markNewGoroutine() {
  	}
  }
- 
+
 +func (t *Transport) now() time.Time {
 +	if t != nil && t.transportTestHooks != nil {
 +		return t.transportTestHooks.group.Now()
@@ -1770,7 +1825,7 @@ index 61f511f97a..090d0e1bdb 100644
  	if t.transportTestHooks != nil {
 @@ -227,40 +240,26 @@ func (t *Transport) contextWithTimeout(ctx context.Context, d time.Duration) (co
  }
- 
+
  func (t *Transport) maxHeaderListSize() uint32 {
 -	if t.MaxHeaderListSize == 0 {
 +	n := int64(t.MaxHeaderListSize)
@@ -1803,11 +1858,11 @@ index 61f511f97a..090d0e1bdb 100644
 -	return t.MaxReadFrameSize
 +	return uint32(n)
  }
- 
+
  func (t *Transport) disableCompression() bool {
  	return t.DisableCompression || (t.t1 != nil && t.t1.DisableCompression)
  }
- 
+
 -func (t *Transport) pingTimeout() time.Duration {
 -	if t.PingTimeout == 0 {
 -		return 15 * time.Second
@@ -1861,7 +1916,7 @@ index 61f511f97a..090d0e1bdb 100644
  	}
  	return t2, nil
  }
- 
+
 +// unencryptedTransport is a Transport with a RoundTrip method that
 +// always permits http:// URLs.
 +type unencryptedTransport Transport
@@ -1881,11 +1936,11 @@ index 61f511f97a..090d0e1bdb 100644
 +	atomicReused  uint32               // whether conn is being reused; atomic
  	singleUse     bool                 // whether being used for a single http.Request
  	getConnCalled bool                 // used by clientConnPool
- 
+
 @@ -350,31 +368,54 @@ type ClientConn struct {
  	idleTimeout time.Duration // or 0 for never
  	idleTimer   timer
- 
+
 -	mu              sync.Mutex // guards following
 -	cond            *sync.Cond // hold mu; broadcast on flow/closed changes
 -	flow            outflow    // our conn-level flow control quota (cs.outflow is per stream)
@@ -1958,12 +2013,12 @@ index 61f511f97a..090d0e1bdb 100644
 +	// a PING response. This limits the number of requests we'll try to send to a
 +	// completely unresponsive connection.
 +	pendingResets int
- 
+
  	// reqHeaderMu is a 1-element semaphore channel controlling access to sending new requests.
  	// Write to reqHeaderMu to lock it, read from it to unlock.
 @@ -432,12 +473,12 @@ type clientStream struct {
  	sentHeaders   bool
- 
+
  	// owned by clientConnReadLoop:
 -	firstByte    bool  // got the first response byte
 -	pastHeaders  bool  // got first MetaHeadersFrame (actual headers)
@@ -1977,12 +2032,12 @@ index 61f511f97a..090d0e1bdb 100644
 +	readClosed      bool  // peer sent an END_STREAM flag
 +	readAborted     bool  // read loop reset the stream
 +	totalHeaderSize int64 // total size of 1xx headers seen
- 
+
  	trailer    http.Header  // accumulated trailers
  	resTrailer *http.Header // client's Response.Trailer
 @@ -499,6 +540,7 @@ func (cs *clientStream) closeReqBodyLocked() {
  }
- 
+
  type stickyErrWriter struct {
 +	group   synctestGroupInterface
  	conn    net.Conn
@@ -2012,7 +2067,7 @@ index 61f511f97a..090d0e1bdb 100644
 +	*sew.err = err
 +	return n, err
  }
- 
+
  // noCachedConnError is the concrete type of ErrNoCachedConn, which
 @@ -554,6 +583,8 @@ type RoundTripOpt struct {
  	// no cached connection is available, RoundTripOpt
@@ -2021,10 +2076,10 @@ index 61f511f97a..090d0e1bdb 100644
 +
 +	allowHTTP bool // allow http:// URLs
  }
- 
+
  func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 @@ -586,7 +617,14 @@ func authorityAddr(scheme string, authority string) (addr string) {
- 
+
  // RoundTripOpt is like RoundTrip, but takes options.
  func (t *Transport) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Response, error) {
 -	if !(req.URL.Scheme == "https" || (req.URL.Scheme == "http" && t.AllowHTTP)) {
@@ -2038,7 +2093,7 @@ index 61f511f97a..090d0e1bdb 100644
 +	default:
  		return nil, errors.New("http2: unsupported scheme")
  	}
- 
+
 @@ -597,7 +635,7 @@ func (t *Transport) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Res
  			t.vlogf("http2: Transport failed to get client conn for %s: %v", addr, err)
  			return nil, err
@@ -2073,7 +2128,7 @@ index 61f511f97a..090d0e1bdb 100644
  			return nil, err
 @@ -640,9 +694,10 @@ func (t *Transport) CloseIdleConnections() {
  }
- 
+
  var (
 -	errClientConnClosed    = errors.New("http2: client conn is closed")
 -	errClientConnUnusable  = errors.New("http2: client conn not usable")
@@ -2083,12 +2138,12 @@ index 61f511f97a..090d0e1bdb 100644
 +	errClientConnNotEstablished = errors.New("http2: client conn could not be established")
 +	errClientConnGotGoAway      = errors.New("http2: Transport received Server's graceful shutdown GOAWAY")
  )
- 
+
  // shouldRetryRequest is called by RoundTrip when a request fails to get
 @@ -758,44 +813,38 @@ func (t *Transport) expectContinueTimeout() time.Duration {
  	return t.t1.ExpectContinueTimeout
  }
- 
+
 -func (t *Transport) maxDecoderHeaderTableSize() uint32 {
 -	if v := t.MaxDecoderHeaderTableSize; v > 0 {
 -		return v
@@ -2106,7 +2161,7 @@ index 61f511f97a..090d0e1bdb 100644
  func (t *Transport) NewClientConn(c net.Conn) (*ClientConn, error) {
  	return t.newClientConn(c, t.disableKeepAlives())
  }
- 
+
  func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, error) {
 +	conf := configFromTransport(t)
  	cc := &ClientConn{
@@ -2175,15 +2230,15 @@ index 61f511f97a..090d0e1bdb 100644
 +	maxHeaderTableSize := conf.MaxDecoderHeaderTableSize
  	cc.fr.ReadMetaHeaders = hpack.NewDecoder(maxHeaderTableSize, nil)
  	cc.fr.MaxHeaderListSize = t.maxHeaderListSize()
- 
+
  	cc.henc = hpack.NewEncoder(&cc.hbuf)
 -	cc.henc.SetMaxDynamicTableSizeLimit(t.maxEncoderHeaderTableSize())
 +	cc.henc.SetMaxDynamicTableSizeLimit(conf.MaxEncoderHeaderTableSize)
  	cc.peerMaxHeaderTableSize = initialHeaderTableSize
- 
+
  	if cs, ok := c.(connectionStater); ok {
 @@ -834,11 +882,9 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
- 
+
  	initialSettings := []Setting{
  		{ID: SettingEnablePush, Val: 0},
 -		{ID: SettingInitialWindowSize, Val: transportDefaultStreamFlow},
@@ -2197,7 +2252,7 @@ index 61f511f97a..090d0e1bdb 100644
  		initialSettings = append(initialSettings, Setting{ID: SettingMaxHeaderListSize, Val: max})
  	}
 @@ -848,8 +894,8 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
- 
+
  	cc.bw.Write(clientPreface)
  	cc.fr.WriteSettings(initialSettings...)
 -	cc.fr.WriteWindowUpdate(0, transportDefaultConnFlow)
@@ -2209,7 +2264,7 @@ index 61f511f97a..090d0e1bdb 100644
  		cc.Close()
 @@ -867,7 +913,7 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
  }
- 
+
  func (cc *ClientConn) healthCheck() {
 -	pingTimeout := cc.t.pingTimeout()
 +	pingTimeout := cc.pingTimeout
@@ -2238,7 +2293,7 @@ index 61f511f97a..090d0e1bdb 100644
 +		// is less than the concurrency limit.
 +		maxConcurrentOkay = cc.currentRequestCountLocked() < int(cc.maxConcurrentStreams)
  	}
- 
+
  	st.canTakeNewRequest = cc.goAway == nil && !cc.closed && !cc.closing && maxConcurrentOkay &&
  		!cc.doNotReuse &&
  		int64(cc.nextStreamID)+2*int64(cc.pendingRequests) < math.MaxInt32 &&
@@ -2255,7 +2310,7 @@ index 61f511f97a..090d0e1bdb 100644
 +
  	return
  }
- 
+
 +// currentRequestCountLocked reports the number of concurrency slots currently in use,
 +// including active streams, reserved slots, and reset streams waiting for acknowledgement.
 +func (cc *ClientConn) currentRequestCountLocked() int {
@@ -2272,12 +2327,12 @@ index 61f511f97a..090d0e1bdb 100644
 -	return cc.idleTimeout != 0 && !cc.lastIdle.IsZero() && time.Since(cc.lastIdle.Round(0)) > cc.idleTimeout
 +	return cc.idleTimeout != 0 && !cc.lastIdle.IsZero() && cc.t.timeSince(cc.lastIdle.Round(0)) > cc.idleTimeout
  }
- 
+
  // onIdleTimeout is called from a time.AfterFunc goroutine. It will
 @@ -1411,6 +1479,8 @@ func (cs *clientStream) doRequest(req *http.Request, streamf func(*clientStream)
  	cs.cleanupWriteRequest(err)
  }
- 
+
 +var errExtendedConnectNotSupported = errors.New("net/http: extended connect not supported by peer")
 +
  // writeRequest sends a request.
@@ -2286,7 +2341,7 @@ index 61f511f97a..090d0e1bdb 100644
 @@ -1426,12 +1496,31 @@ func (cs *clientStream) writeRequest(req *http.Request, streamf func(*clientStre
  		return err
  	}
- 
+
 +	// wait for setting frames to be received, a server can change this value later,
 +	// but we just wait for the first settings frame
 +	var isExtendedConnect bool
@@ -2392,7 +2447,7 @@ index 61f511f97a..090d0e1bdb 100644
  		}
  		cc.pendingRequests++
 @@ -1945,7 +2068,7 @@ func (cs *clientStream) awaitFlowControl(maxBytes int) (taken int32, err error)
- 
+
  func validateHeaders(hdrs http.Header) string {
  	for k, vv := range hdrs {
 -		if !httpguts.ValidHeaderFieldName(k) {
@@ -2401,9 +2456,9 @@ index 61f511f97a..090d0e1bdb 100644
  		}
  		for _, v := range vv {
 @@ -1961,6 +2084,10 @@ func validateHeaders(hdrs http.Header) string {
- 
+
  var errNilRequestURL = errors.New("http2: Request.URI is nil")
- 
+
 +func isNormalConnect(req *http.Request) bool {
 +	return req.Method == "CONNECT" && req.Header.Get(":protocol") == ""
 +}
@@ -2413,7 +2468,7 @@ index 61f511f97a..090d0e1bdb 100644
  	cc.hbuf.Reset()
 @@ -1981,7 +2108,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
  	}
- 
+
  	var path string
 -	if req.Method != "CONNECT" {
 +	if !isNormalConnect(req) {
@@ -2452,17 +2507,17 @@ index 61f511f97a..090d0e1bdb 100644
  	// Wake up writeRequestBody via clientStream.awaitFlowControl and
  	// wake up RoundTrip if there is a pending request.
 @@ -2278,7 +2405,6 @@ func isEOFOrNetReadError(err error) bool {
- 
+
  func (rl *clientConnReadLoop) cleanup() {
  	cc := rl.cc
 -	cc.t.connPool().MarkDead(cc)
  	defer cc.closeConn()
  	defer close(cc.readerDone)
- 
+
 @@ -2302,6 +2428,24 @@ func (rl *clientConnReadLoop) cleanup() {
  	}
  	cc.closed = true
- 
+
 +	// If the connection has never been used, and has been open for only a short time,
 +	// leave it in the connection pool for a little while.
 +	//
@@ -2513,7 +2568,7 @@ index 61f511f97a..090d0e1bdb 100644
  		}
  	}
  }
- 
+
  func (rl *clientConnReadLoop) processHeaders(f *MetaHeadersFrame) error {
 -	cs := rl.streamByID(f.StreamID)
 +	cs := rl.streamByID(f.StreamID, headerOrDataFrame)
@@ -2561,7 +2616,7 @@ index 61f511f97a..090d0e1bdb 100644
  		if statusCode == 100 {
  			traceGot100Continue(cs.trace)
 @@ -2721,7 +2887,7 @@ func (b transportResponseBody) Close() error {
- 
+
  func (rl *clientConnReadLoop) processData(f *DataFrame) error {
  	cc := rl.cc
 -	cs := rl.streamByID(f.StreamID)
@@ -2572,7 +2627,7 @@ index 61f511f97a..090d0e1bdb 100644
 @@ -2856,9 +3022,22 @@ func (rl *clientConnReadLoop) endStreamError(cs *clientStream, err error) {
  	cs.abortStream(err)
  }
- 
+
 -func (rl *clientConnReadLoop) streamByID(id uint32) *clientStream {
 +// Constants passed to streamByID for documentation purposes.
 +const (
@@ -2622,9 +2677,9 @@ index 61f511f97a..090d0e1bdb 100644
 +		close(cc.seenSettingsChan)
  		cc.seenSettings = true
  	}
- 
+
 @@ -2977,7 +3172,7 @@ func (rl *clientConnReadLoop) processSettingsNoWrite(f *SettingsFrame) error {
- 
+
  func (rl *clientConnReadLoop) processWindowUpdate(f *WindowUpdateFrame) error {
  	cc := rl.cc
 -	cs := rl.streamByID(f.StreamID)
@@ -2634,7 +2689,7 @@ index 61f511f97a..090d0e1bdb 100644
  	}
 @@ -3006,7 +3201,7 @@ func (rl *clientConnReadLoop) processWindowUpdate(f *WindowUpdateFrame) error {
  }
- 
+
  func (rl *clientConnReadLoop) processResetStream(f *RSTStreamFrame) error {
 -	cs := rl.streamByID(f.StreamID)
 +	cs := rl.streamByID(f.StreamID, notHeaderOrDataFrame)
@@ -2657,7 +2712,7 @@ index 61f511f97a..090d0e1bdb 100644
 @@ -3103,13 +3304,20 @@ func (rl *clientConnReadLoop) processPushPromise(f *PushPromiseFrame) error {
  	return ConnectionError(ErrCodeProtocol)
  }
- 
+
 -func (cc *ClientConn) writeStreamReset(streamID uint32, code ErrCode, err error) {
 +// writeStreamReset sends a RST_STREAM frame.
 +// When ping is true, it also sends a PING frame with a random payload.
@@ -2684,15 +2739,15 @@ index 61f511f97a..090d0e1bdb 100644
 +		ci.IdleTime = cc.t.timeSince(cc.lastActive)
  	}
  	cc.mu.Unlock()
- 
+
 diff --git a/vendor/golang.org/x/net/http2/write.go b/vendor/golang.org/x/net/http2/write.go
 index 33f61398a1..6ff6bee7e9 100644
 --- a/vendor/golang.org/x/net/http2/write.go
 +++ b/vendor/golang.org/x/net/http2/write.go
 @@ -131,6 +131,16 @@ func (se StreamError) writeFrame(ctx writeContext) error {
- 
+
  func (se StreamError) staysWithinBuffer(max int) bool { return frameHeaderLen+4 <= max }
- 
+
 +type writePing struct {
 +	data [8]byte
 +}
@@ -2704,7 +2759,7 @@ index 33f61398a1..6ff6bee7e9 100644
 +func (w writePing) staysWithinBuffer(max int) bool { return frameHeaderLen+len(w.data) <= max }
 +
  type writePingAck struct{ pf *PingFrame }
- 
+
  func (w writePingAck) writeFrame(ctx writeContext) error {
 diff --git a/vendor/golang.org/x/net/internal/socket/zsys_openbsd_ppc64.go b/vendor/golang.org/x/net/internal/socket/zsys_openbsd_ppc64.go
 index cebde7634f..3c9576e2d8 100644
@@ -2712,14 +2767,14 @@ index cebde7634f..3c9576e2d8 100644
 +++ b/vendor/golang.org/x/net/internal/socket/zsys_openbsd_ppc64.go
 @@ -4,27 +4,27 @@
  package socket
- 
+
  type iovec struct {
 -	Base	*byte
 -	Len	uint64
 +	Base *byte
 +	Len  uint64
  }
- 
+
  type msghdr struct {
 -	Name		*byte
 -	Namelen		uint32
@@ -2736,7 +2791,7 @@ index cebde7634f..3c9576e2d8 100644
 +	Controllen uint32
 +	Flags      int32
  }
- 
+
  type cmsghdr struct {
 -	Len	uint32
 -	Level	int32
@@ -2745,7 +2800,7 @@ index cebde7634f..3c9576e2d8 100644
 +	Level int32
 +	Type  int32
  }
- 
+
  const (
 -	sizeofIovec	= 0x10
 -	sizeofMsghdr	= 0x30
@@ -2758,14 +2813,14 @@ index cebde7634f..3c9576e2d8 100644
 +++ b/vendor/golang.org/x/net/internal/socket/zsys_openbsd_riscv64.go
 @@ -4,27 +4,27 @@
  package socket
- 
+
  type iovec struct {
 -	Base	*byte
 -	Len	uint64
 +	Base *byte
 +	Len  uint64
  }
- 
+
  type msghdr struct {
 -	Name		*byte
 -	Namelen		uint32
@@ -2782,7 +2837,7 @@ index cebde7634f..3c9576e2d8 100644
 +	Controllen uint32
 +	Flags      int32
  }
- 
+
  type cmsghdr struct {
 -	Len	uint32
 -	Level	int32
@@ -2791,7 +2846,7 @@ index cebde7634f..3c9576e2d8 100644
 +	Level int32
 +	Type  int32
  }
- 
+
  const (
 -	sizeofIovec	= 0x10
 -	sizeofMsghdr	= 0x30
@@ -2809,21 +2864,21 @@ index 923a5780ec..ac76165ceb 100644
 -//	https://pkg.go.dev/nhooyr.io/websocket
 +//	https://pkg.go.dev/github.com/coder/websocket
  package websocket // import "golang.org/x/net/websocket"
- 
+
  import (
 diff --git a/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go b/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go
 index 910728fb16..32a44514e2 100644
 --- a/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go
 +++ b/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go
 @@ -6,10 +6,10 @@
- 
+
  package cpu
- 
+
 -// cpuid is implemented in cpu_x86.s for gc compiler
 +// cpuid is implemented in cpu_gc_x86.s for gc compiler
  // and in cpu_gccgo.c for gccgo.
  func cpuid(eaxArg, ecxArg uint32) (eax, ebx, ecx, edx uint32)
- 
+
 -// xgetbv with ecx = 0 is implemented in cpu_x86.s for gc compiler
 +// xgetbv with ecx = 0 is implemented in cpu_gc_x86.s for gc compiler
  // and in cpu_gccgo.c for gccgo.
@@ -2849,7 +2904,7 @@ index 08f35ea177..f1caf0f78e 100644
 @@ -110,7 +110,6 @@ func doinit() {
  	ARM64.HasASIMDFHM = isSet(hwCap, hwcap_ASIMDFHM)
  	ARM64.HasDIT = isSet(hwCap, hwcap_DIT)
- 
+
 -
  	// HWCAP2 feature bits
  	ARM64.HasSVE2 = isSet(hwCap2, hwcap2_SVE2)
@@ -2860,7 +2915,7 @@ index c29f5e4c5a..600a680786 100644
 +++ b/vendor/golang.org/x/sys/cpu/cpu_x86.go
 @@ -92,10 +92,8 @@ func archInit() {
  		osSupportsAVX = isSet(1, eax) && isSet(2, eax)
- 
+
  		if runtime.GOOS == "darwin" {
 -			// Darwin doesn't save/restore AVX-512 mask registers correctly across signal handlers.
 -			// Since users can't rely on mask register contents, let's not advertise AVX-512 support.
@@ -2909,13 +2964,13 @@ index 7d3c060e12..6e08a76a71 100644
 +++ b/vendor/golang.org/x/sys/unix/README.md
 @@ -156,7 +156,7 @@ from the generated architecture-specific files listed below, and merge these
  into a common file for each OS.
- 
+
  The merge is performed in the following steps:
 -1. Construct the set of common code that is idential in all architecture-specific files.
 +1. Construct the set of common code that is identical in all architecture-specific files.
  2. Write this common code to the merged file.
  3. Remove the common code from all architecture-specific files.
- 
+
 diff --git a/vendor/golang.org/x/sys/unix/ioctl_linux.go b/vendor/golang.org/x/sys/unix/ioctl_linux.go
 index dbe680eab8..7ca4fa12aa 100644
 --- a/vendor/golang.org/x/sys/unix/ioctl_linux.go
@@ -2923,7 +2978,7 @@ index dbe680eab8..7ca4fa12aa 100644
 @@ -58,6 +58,102 @@ func IoctlGetEthtoolDrvinfo(fd int, ifname string) (*EthtoolDrvinfo, error) {
  	return &value, err
  }
- 
+
 +// IoctlGetEthtoolTsInfo fetches ethtool timestamping and PHC
 +// association for the network device specified by ifname.
 +func IoctlGetEthtoolTsInfo(fd int, ifname string) (*EthtoolTsInfo, error) {
@@ -3030,7 +3085,7 @@ index e14b766a32..6ab02b6c31 100644
 @@ -158,6 +158,16 @@ includes_Linux='
  #endif
  #define _GNU_SOURCE
- 
+
 +// See the description in unix/linux/types.go
 +#if defined(__ARM_EABI__) || \
 +	(defined(__mips__) && (_MIPS_SIM == _ABIO32)) || \
@@ -3068,7 +3123,7 @@ index e14b766a32..6ab02b6c31 100644
 +	grep -E -v '(SIGSTKSIZE|SIGSTKSZ|SIGRT|SIGMAX64)' |
  	sort
  )
- 
+
 @@ -666,7 +678,7 @@ echo '#include <errno.h>' | $CC -x c - -E -dM $ccflags |
  	sort >_error.grep
  echo '#include <signal.h>' | $CC -x c - -E -dM $ccflags |
@@ -3076,7 +3131,7 @@ index e14b766a32..6ab02b6c31 100644
 -	grep -v 'SIGSTKSIZE\|SIGSTKSZ\|SIGRT\|SIGMAX64' |
 +	grep -E -v '(SIGSTKSIZE|SIGSTKSZ|SIGRT|SIGMAX64)' |
  	sort >_signal.grep
- 
+
  echo '// mkerrors.sh' "$@"
 diff --git a/vendor/golang.org/x/sys/unix/syscall_aix.go b/vendor/golang.org/x/sys/unix/syscall_aix.go
 index 67ce6cef2d..6f15ba1eaf 100644
@@ -3098,7 +3153,7 @@ index 3f1d3d4cb2..230a94549a 100644
 @@ -1295,6 +1295,48 @@ func GetsockoptTCPInfo(fd, level, opt int) (*TCPInfo, error) {
  	return &value, err
  }
- 
+
 +// GetsockoptTCPCCVegasInfo returns algorithm specific congestion control information for a socket using the "vegas"
 +// algorithm.
 +//
@@ -3217,7 +3272,7 @@ index 312ae6ac1d..7bf5c04bb0 100644
 @@ -768,6 +768,15 @@ func Munmap(b []byte) (err error) {
  	return mapper.Munmap(b)
  }
- 
+
 +func MmapPtr(fd int, offset int64, addr unsafe.Pointer, length uintptr, prot int, flags int) (ret unsafe.Pointer, err error) {
 +	xaddr, err := mapper.mmap(uintptr(addr), length, prot, flags, fd, offset)
 +	return unsafe.Pointer(xaddr), err
@@ -3242,7 +3297,7 @@ index 312ae6ac1d..7bf5c04bb0 100644
 +		{'S', 'Y', 'S', 'N', 'A', 'M', 'E', '/'},
 +		{'S', 'Y', 'S', 'S', 'Y', 'M', 'R', '/'},
 +		{'S', 'Y', 'S', 'S', 'Y', 'M', 'A', '/'}}
- 
+
  	var i, j int
  	for i = 0; i < len(special); i++ {
 @@ -3115,3 +3124,90 @@ func legacy_Mkfifoat(dirfd int, path string, mode uint32) (err error) {
@@ -4510,9 +4565,9 @@ index 1bc1a5adb2..5cc1e8eb2f 100644
 --- a/vendor/golang.org/x/sys/unix/zsyscall_linux.go
 +++ b/vendor/golang.org/x/sys/unix/zsyscall_linux.go
 @@ -592,6 +592,16 @@ func ClockGettime(clockid int32, time *Timespec) (err error) {
- 
+
  // THIS FILE IS GENERATED BY THE COMMAND AT THE TOP; DO NOT EDIT
- 
+
 +func ClockSettime(clockid int32, time *Timespec) (err error) {
 +	_, _, e1 := Syscall(SYS_CLOCK_SETTIME, uintptr(clockid), uintptr(unsafe.Pointer(time)), 0)
 +	if e1 != 0 {
@@ -4527,9 +4582,9 @@ index 1bc1a5adb2..5cc1e8eb2f 100644
  	_, _, e1 := Syscall6(SYS_CLOCK_NANOSLEEP, uintptr(clockid), uintptr(flags), uintptr(unsafe.Pointer(request)), uintptr(unsafe.Pointer(remain)), 0, 0)
  	if e1 != 0 {
 @@ -971,23 +981,6 @@ func Getpriority(which int, who int) (prio int, err error) {
- 
+
  // THIS FILE IS GENERATED BY THE COMMAND AT THE TOP; DO NOT EDIT
- 
+
 -func Getrandom(buf []byte, flags int) (n int, err error) {
 -	var _p0 unsafe.Pointer
 -	if len(buf) > 0 {
@@ -4606,7 +4661,7 @@ index d003c3d437..17c53bd9b3 100644
 --- a/vendor/golang.org/x/sys/unix/ztypes_darwin_amd64.go
 +++ b/vendor/golang.org/x/sys/unix/ztypes_darwin_amd64.go
 @@ -462,11 +462,14 @@ type FdSet struct {
- 
+
  const (
  	SizeofIfMsghdr    = 0x70
 +	SizeofIfMsghdr2   = 0xa0
@@ -4619,11 +4674,11 @@ index d003c3d437..17c53bd9b3 100644
 +	SizeofRtMsghdr2   = 0x5c
  	SizeofRtMetrics   = 0x38
  )
- 
+
 @@ -480,6 +483,20 @@ type IfMsghdr struct {
  	Data    IfData
  }
- 
+
 +type IfMsghdr2 struct {
 +	Msglen     uint16
 +	Version    uint8
@@ -4644,7 +4699,7 @@ index d003c3d437..17c53bd9b3 100644
 @@ -512,6 +529,34 @@ type IfData struct {
  	Reserved2  uint32
  }
- 
+
 +type IfData64 struct {
 +	Type       uint8
 +	Typelen    uint8
@@ -4679,7 +4734,7 @@ index d003c3d437..17c53bd9b3 100644
 @@ -557,6 +602,21 @@ type RtMsghdr struct {
  	Rmx     RtMetrics
  }
- 
+
 +type RtMsghdr2 struct {
 +	Msglen      uint16
 +	Version     uint8
@@ -4703,7 +4758,7 @@ index 0d45a941aa..2392226a74 100644
 --- a/vendor/golang.org/x/sys/unix/ztypes_darwin_arm64.go
 +++ b/vendor/golang.org/x/sys/unix/ztypes_darwin_arm64.go
 @@ -462,11 +462,14 @@ type FdSet struct {
- 
+
  const (
  	SizeofIfMsghdr    = 0x70
 +	SizeofIfMsghdr2   = 0xa0
@@ -4716,11 +4771,11 @@ index 0d45a941aa..2392226a74 100644
 +	SizeofRtMsghdr2   = 0x5c
  	SizeofRtMetrics   = 0x38
  )
- 
+
 @@ -480,6 +483,20 @@ type IfMsghdr struct {
  	Data    IfData
  }
- 
+
 +type IfMsghdr2 struct {
 +	Msglen     uint16
 +	Version    uint8
@@ -4741,7 +4796,7 @@ index 0d45a941aa..2392226a74 100644
 @@ -512,6 +529,34 @@ type IfData struct {
  	Reserved2  uint32
  }
- 
+
 +type IfData64 struct {
 +	Type       uint8
 +	Typelen    uint8
@@ -4776,7 +4831,7 @@ index 0d45a941aa..2392226a74 100644
 @@ -557,6 +602,21 @@ type RtMsghdr struct {
  	Rmx     RtMetrics
  }
- 
+
 +type RtMsghdr2 struct {
 +	Msglen      uint16
 +	Version     uint8
@@ -4801,7 +4856,7 @@ index 9f2550dc31..5537148dcb 100644
 +++ b/vendor/golang.org/x/sys/unix/ztypes_linux.go
 @@ -87,31 +87,35 @@ type StatxTimestamp struct {
  }
- 
+
  type Statx_t struct {
 -	Mask             uint32
 -	Blksize          uint32
@@ -4858,12 +4913,12 @@ index 9f2550dc31..5537148dcb 100644
 +	_                         [1]uint32
 +	_                         [9]uint64
  }
- 
+
  type Fsid struct {
 @@ -516,6 +520,29 @@ type TCPInfo struct {
  	Total_rto_time       uint32
  }
- 
+
 +type TCPVegasInfo struct {
 +	Enabled uint32
 +	Rttcnt  uint32
@@ -4947,7 +5002,7 @@ index 9f2550dc31..5537148dcb 100644
 @@ -1949,6 +1976,15 @@ const (
  	IFLA_DSA_MASTER                            = 0x1
  )
- 
+
 +const (
 +	NETKIT_NEXT     = -0x1
 +	NETKIT_PASS     = 0x0
@@ -4963,12 +5018,12 @@ index 9f2550dc31..5537148dcb 100644
 @@ -2558,8 +2594,8 @@ const (
  	SOF_TIMESTAMPING_BIND_PHC     = 0x8000
  	SOF_TIMESTAMPING_OPT_ID_TCP   = 0x10000
- 
+
 -	SOF_TIMESTAMPING_LAST = 0x10000
 -	SOF_TIMESTAMPING_MASK = 0x1ffff
 +	SOF_TIMESTAMPING_LAST = 0x20000
 +	SOF_TIMESTAMPING_MASK = 0x3ffff
- 
+
  	SCM_TSTAMP_SND   = 0x0
  	SCM_TSTAMP_SCHED = 0x1
 @@ -3505,7 +3541,7 @@ type Nhmsg struct {
@@ -4979,7 +5034,7 @@ index 9f2550dc31..5537148dcb 100644
 +	High   uint8
  	Resvd2 uint16
  }
- 
+
 @@ -3766,7 +3802,7 @@ const (
  	ETHTOOL_MSG_PSE_GET                       = 0x24
  	ETHTOOL_MSG_PSE_SET                       = 0x25
@@ -5033,7 +5088,7 @@ index 9f2550dc31..5537148dcb 100644
 @@ -4082,6 +4118,107 @@ type EthtoolDrvinfo struct {
  	Regdump_len  uint32
  }
- 
+
 +type EthtoolTsInfo struct {
 +	Cmd             uint32
 +	So_timestamping uint32
@@ -5144,7 +5199,7 @@ index 9f2550dc31..5537148dcb 100644
  	Access_net uint64
 +	Scoped     uint64
  }
- 
+
  type LandlockPathBeneathAttr struct {
 @@ -4609,7 +4747,7 @@ const (
  	NL80211_ATTR_MAC_HINT                                   = 0xc8
@@ -5171,7 +5226,7 @@ index d9a13af468..2e5d5a4435 100644
 @@ -377,6 +377,12 @@ type Flock_t struct {
  	Pid    int32
  }
- 
+
 +type F_cnvrt struct {
 +	Cvtcmd int32
 +	Pccsid int16
@@ -5188,7 +5243,7 @@ index 115341fba6..4e613cf633 100644
 @@ -65,7 +65,7 @@ func LoadDLL(name string) (dll *DLL, err error) {
  	return d, nil
  }
- 
+
 -// MustLoadDLL is like LoadDLL but panics if load operation failes.
 +// MustLoadDLL is like LoadDLL but panics if load operation fails.
  func MustLoadDLL(name string) *DLL {
@@ -5209,7 +5264,7 @@ index 5cee9a3143..4a32543868 100644
  //sys	SetNamedPipeHandleState(pipe Handle, state *uint32, maxCollectionCount *uint32, collectDataTimeout *uint32) (err error) = SetNamedPipeHandleState
 @@ -725,20 +727,12 @@ func DurationSinceBoot() time.Duration {
  }
- 
+
  func Ftruncate(fd Handle, length int64) (err error) {
 -	curoffset, e := Seek(fd, 0, 1)
 -	if e != nil {
@@ -5231,7 +5286,7 @@ index 5cee9a3143..4a32543868 100644
 +	info.EndOfFile = length
 +	return SetFileInformationByHandle(fd, FileEndOfFileInfo, (*byte)(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info)))
  }
- 
+
  func Gettimeofday(tv *Timeval) (err error) {
 @@ -894,6 +888,11 @@ const socket_error = uintptr(^uint32(0))
  //sys	GetACP() (acp uint32) = kernel32.GetACP
@@ -5242,7 +5297,7 @@ index 5cee9a3143..4a32543868 100644
 +//sys   NotifyIpInterfaceChange(family uint16, callback uintptr, callerContext unsafe.Pointer, initialNotification bool, notificationHandle *Handle) (errcode error) = iphlpapi.NotifyIpInterfaceChange
 +//sys   NotifyUnicastIpAddressChange(family uint16, callback uintptr, callerContext unsafe.Pointer, initialNotification bool, notificationHandle *Handle) (errcode error) = iphlpapi.NotifyUnicastIpAddressChange
 +//sys   CancelMibChangeNotify2(notificationHandle Handle) (errcode error) = iphlpapi.CancelMibChangeNotify2
- 
+
  // For testing: clients can set this flag to force
  // creation of IPv6 sockets to return EAFNOSUPPORT.
 @@ -1685,13 +1684,16 @@ func (s NTStatus) Error() string {
@@ -5264,7 +5319,7 @@ index 5cee9a3143..4a32543868 100644
 +		Buffer:        &s16[0],
 +	}, nil
  }
- 
+
  // Slice returns a uint16 slice that aliases the data in the NTUnicodeString.
 diff --git a/vendor/golang.org/x/sys/windows/types_windows.go b/vendor/golang.org/x/sys/windows/types_windows.go
 index 7b97a154c9..9d138de5fe 100644
@@ -5272,7 +5327,7 @@ index 7b97a154c9..9d138de5fe 100644
 +++ b/vendor/golang.org/x/sys/windows/types_windows.go
 @@ -176,6 +176,7 @@ const (
  	WAIT_FAILED    = 0xFFFFFFFF
- 
+
  	// Access rights for process.
 +	PROCESS_ALL_ACCESS                = 0xFFFF
  	PROCESS_CREATE_PROCESS            = 0x0080
@@ -5281,7 +5336,7 @@ index 7b97a154c9..9d138de5fe 100644
 @@ -2203,6 +2204,132 @@ const (
  	IfOperStatusLowerLayerDown = 7
  )
- 
+
 +const (
 +	IF_MAX_PHYS_ADDRESS_LENGTH = 32
 +	IF_MAX_STRING_SIZE         = 256
@@ -5410,7 +5465,7 @@ index 7b97a154c9..9d138de5fe 100644
 +
  // Console related constants used for the mode parameter to SetConsoleMode. See
  // https://docs.microsoft.com/en-us/windows/console/setconsolemode for details.
- 
+
 diff --git a/vendor/golang.org/x/sys/windows/zsyscall_windows.go b/vendor/golang.org/x/sys/windows/zsyscall_windows.go
 index 4c2e1bdc01..01c0716c2c 100644
 --- a/vendor/golang.org/x/sys/windows/zsyscall_windows.go
@@ -5445,7 +5500,7 @@ index 4c2e1bdc01..01c0716c2c 100644
 @@ -1606,6 +1613,14 @@ func DwmSetWindowAttribute(hwnd HWND, attribute uint32, value unsafe.Pointer, si
  	return
  }
- 
+
 +func CancelMibChangeNotify2(notificationHandle Handle) (errcode error) {
 +	r0, _, _ := syscall.Syscall(procCancelMibChangeNotify2.Addr(), 1, uintptr(notificationHandle), 0, 0)
 +	if r0 != 0 {
@@ -5460,7 +5515,7 @@ index 4c2e1bdc01..01c0716c2c 100644
 @@ -1638,6 +1653,46 @@ func GetIfEntry(pIfRow *MibIfRow) (errcode error) {
  	return
  }
- 
+
 +func GetIfEntry2Ex(level uint32, row *MibIfRow2) (errcode error) {
 +	r0, _, _ := syscall.Syscall(procGetIfEntry2Ex.Addr(), 2, uintptr(level), uintptr(unsafe.Pointer(row)), 0)
 +	if r0 != 0 {
@@ -5507,7 +5562,7 @@ index 4c2e1bdc01..01c0716c2c 100644
 @@ -2393,6 +2448,14 @@ func GetModuleHandleEx(flags uint32, moduleName *uint16, module *Handle) (err er
  	return
  }
- 
+
 +func GetNamedPipeClientProcessId(pipe Handle, clientProcessID *uint32) (err error) {
 +	r1, _, e1 := syscall.Syscall(procGetNamedPipeClientProcessId.Addr(), 2, uintptr(pipe), uintptr(unsafe.Pointer(clientProcessID)), 0)
 +	if r1 == 0 {
@@ -5522,7 +5577,7 @@ index 4c2e1bdc01..01c0716c2c 100644
 @@ -2409,6 +2472,14 @@ func GetNamedPipeInfo(pipe Handle, flags *uint32, outSize *uint32, inSize *uint3
  	return
  }
- 
+
 +func GetNamedPipeServerProcessId(pipe Handle, serverProcessID *uint32) (err error) {
 +	r1, _, e1 := syscall.Syscall(procGetNamedPipeServerProcessId.Addr(), 2, uintptr(pipe), uintptr(unsafe.Pointer(serverProcessID)), 0)
 +	if r1 == 0 {
