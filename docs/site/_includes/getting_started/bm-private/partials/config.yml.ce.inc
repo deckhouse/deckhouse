@@ -67,7 +67,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
