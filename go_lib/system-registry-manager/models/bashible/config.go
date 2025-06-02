@@ -32,7 +32,6 @@ type Config struct {
 	ImagesBase     string                  `json:"imagesBase" yaml:"imagesBase"`
 	ProxyEndpoints []string                `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
 	Hosts          map[string]Hosts        `json:"hosts" yaml:"hosts"`
-	PrepullHosts   map[string]Hosts        `json:"prepullHosts" yaml:"prepullHosts"`
 }
 
 type Hosts struct {
@@ -65,7 +64,6 @@ func (c *Config) Validate() error {
 		validation.Field(&c.ImagesBase, validation.Required),
 		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
 		validation.Field(&c.Hosts, validation.Required),
-		validation.Field(&c.PrepullHosts, validation.Required),
 	); err != nil {
 		return err
 	}
@@ -76,15 +74,6 @@ func (c *Config) Validate() error {
 		}
 		if err := host.Validate(); err != nil {
 			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-
-	for name, host := range c.PrepullHosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("prepullHosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("prepullHosts[%q] validation failed: %w", name, err)
 		}
 	}
 	return nil

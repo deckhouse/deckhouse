@@ -192,19 +192,18 @@ func (state *State) process(params Params, inputs Inputs, isTransitionStage bool
 		Version:        "",                          // by processHash
 		ProxyEndpoints: []string{},                  // by processEndpoints
 		Hosts:          map[string]bashible.Hosts{}, // by processHosts
-		PrepullHosts:   map[string]bashible.Hosts{}, // by processHosts
 	}
 	if isTransitionStage {
 		// Current
-		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
+		config.processHosts(*state.ActualParams)
 		// New
-		config.processHosts(inputs.MasterNodesIPs, params.ModeParams)
+		config.processHosts(params.ModeParams)
 		// Endpoints
 		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams, params.ModeParams)
 	} else {
 		// Replace Current by new and process only new hosts
 		state.ActualParams = &params.ModeParams
-		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
+		config.processHosts(*state.ActualParams)
 		// Endpoints
 		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams)
 	}
@@ -237,43 +236,32 @@ func (cfg *Config) processHash() error {
 	return nil
 }
 
-func (cfg *Config) processHosts(masterNodesIPs []string, modeParams ModeParams) {
+func (cfg *Config) processHosts(modeParams ModeParams) {
 	switch {
 	case modeParams.Proxy != nil:
-		hosts, prepull := processProxyLocal(*modeParams.Proxy, masterNodesIPs)
-		cfg.mergeHosts(hosts, prepull)
+		h := processProxyLocal(*modeParams.Proxy)
+		cfg.mergeHosts(h)
 	case modeParams.Local != nil:
-		hosts, prepull := processProxyLocal(*modeParams.Local, masterNodesIPs)
-		cfg.mergeHosts(hosts, prepull)
+		h := processProxyLocal(*modeParams.Local)
+		cfg.mergeHosts(h)
 	case modeParams.Direct != nil:
 		h := processDirect(*modeParams.Direct)
-		cfg.mergeHosts(h, h)
+		cfg.mergeHosts(h)
 	case modeParams.Unmanaged != nil:
 		h := processUnmanaged(*modeParams.Unmanaged)
-		cfg.mergeHosts(h, h)
+		cfg.mergeHosts(h)
 	}
 }
 
-func (cfg *Config) mergeHosts(hosts, prepull bashibleHosts) {
+func (cfg *Config) mergeHosts(hosts bashibleHosts) {
 	if cfg.Hosts == nil {
 		cfg.Hosts = make(bashibleHosts)
 	}
-	if cfg.PrepullHosts == nil {
-		cfg.PrepullHosts = make(bashibleHosts)
-	}
-
 	for name, h := range hosts {
 		old := cfg.Hosts[name]
 		old.CA = deduplicateAndSortCA(append(old.CA, h.CA...))
 		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
 		cfg.Hosts[name] = old
-	}
-
-	for name, h := range prepull {
-		old := cfg.PrepullHosts[name]
-		old.CA = deduplicateAndSortCA(append(old.CA, h.CA...))
-		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
-		cfg.PrepullHosts[name] = old
 	}
 }
 
@@ -380,16 +368,14 @@ func processUnmanaged(params UnmanagedModeParams) bashibleHosts {
 	return bashibleHosts{
 		host: {
 			CA: singleCA(params.CA),
-			Mirrors: []bashible.MirrorHost{
-				{
-					Host:   host,
-					Scheme: strings.ToLower(params.Scheme),
-					Auth: bashible.Auth{
-						Username: params.Username,
-						Password: params.Password,
-					},
+			Mirrors: []bashible.MirrorHost{{
+				Host:   host,
+				Scheme: strings.ToLower(params.Scheme),
+				Auth: bashible.Auth{
+					Username: params.Username,
+					Password: params.Password,
 				},
-			},
+			}},
 		},
 	}
 }
@@ -399,55 +385,36 @@ func processDirect(params DirectModeParams) bashibleHosts {
 	return bashibleHosts{
 		registry_const.Host: {
 			CA: singleCA(params.CA),
-			Mirrors: []bashible.MirrorHost{
-				{
-					Host:   host,
-					Scheme: strings.ToLower(params.Scheme),
-					Auth: bashible.Auth{
-						Username: params.Username,
-						Password: params.Password,
-					},
-					Rewrites: []bashible.Rewrite{{
-						From: registry_const.PathRegexp,
-						To:   strings.TrimLeft(path, "/"),
-					}},
+			Mirrors: []bashible.MirrorHost{{
+				Host:   host,
+				Scheme: strings.ToLower(params.Scheme),
+				Auth: bashible.Auth{
+					Username: params.Username,
+					Password: params.Password,
 				},
-			},
+				Rewrites: []bashible.Rewrite{{
+					From: registry_const.PathRegexp,
+					To:   strings.TrimLeft(path, "/"),
+				}},
+			}},
 		},
 	}
 }
 
-func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (bashibleHosts, bashibleHosts) {
-	makeMirrors := func(hosts []string) []bashible.MirrorHost {
-		mirrors := make([]bashible.MirrorHost, 0, len(hosts))
-		for _, h := range hosts {
-			mirrors = append(mirrors, bashible.MirrorHost{
-				Host:   h,
+func processProxyLocal(params ProxyLocalModeParams) bashibleHosts {
+	return bashibleHosts{
+		registry_const.Host: {
+			CA: singleCA(params.CA),
+			Mirrors: []bashible.MirrorHost{{
+				Host:   registry_const.ProxyHost,
 				Scheme: registry_const.Scheme,
 				Auth: bashible.Auth{
 					Username: params.Username,
 					Password: params.Password,
 				},
-			})
-		}
-		return mirrors
-	}
-
-	ca := singleCA(params.CA)
-	hosts := bashibleHosts{
-		registry_const.Host: {
-			CA:      ca,
-			Mirrors: makeMirrors([]string{registry_const.ProxyHost}),
+			}},
 		},
 	}
-	prepullHosts := bashibleHosts{
-		registry_const.Host: {
-			CA: ca,
-			Mirrors: makeMirrors(append([]string{registry_const.ProxyHost},
-				registry_const.GenerateProxyEndpoints(masterNodesIPs)...)),
-		},
-	}
-	return hosts, prepullHosts
 }
 
 func buildResult(inputs Inputs, isStop bool, version string) Result {

@@ -31,9 +31,6 @@ func validRegistryData() *RegistryData {
 		Hosts: map[string]registryHosts{
 			"host1": validRegistryHost(),
 		},
-		PrepullHosts: map[string]registryHosts{
-			"host1": validRegistryHost(),
-		},
 	}
 }
 
@@ -201,11 +198,6 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 						Mirrors: []registryMirrorHost{{Host: "registry-1.com", Scheme: "https"}},
 					},
 				},
-				PrepullHosts: map[string]registryHosts{
-					"registry-1.com": {
-						Mirrors: []registryMirrorHost{{Host: "registry-1.com", Scheme: "https"}},
-					},
-				},
 			},
 			wantErr: false,
 		},
@@ -226,11 +218,6 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 						Mirrors: []bashibleConfigMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
 					},
 				},
-				PrepullHosts: map[string]bashibleConfigHosts{
-					"registry-2.com": {
-						Mirrors: []bashibleConfigMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
-					},
-				},
 			},
 			wantRegistryData: &RegistryData{
 				Mode:           "proxy",
@@ -238,11 +225,6 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 				Version:        "1",
 				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
 				Hosts: map[string]registryHosts{
-					"registry-2.com": {
-						Mirrors: []registryMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
-					},
-				},
-				PrepullHosts: map[string]registryHosts{
 					"registry-2.com": {
 						Mirrors: []registryMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
 					},

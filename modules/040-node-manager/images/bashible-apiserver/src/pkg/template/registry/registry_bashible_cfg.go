@@ -35,7 +35,6 @@ type bashibleConfigSecret struct {
 	ImagesBase     string                         `json:"imagesBase" yaml:"imagesBase"`
 	ProxyEndpoints []string                       `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
 	Hosts          map[string]bashibleConfigHosts `json:"hosts" yaml:"hosts"`
-	PrepullHosts   map[string]bashibleConfigHosts `json:"prepullHosts" yaml:"prepullHosts"`
 }
 
 type bashibleConfigHosts struct {
@@ -75,7 +74,6 @@ func (c *bashibleConfigSecret) Validate() error {
 		validation.Field(&c.ImagesBase, validation.Required),
 		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
 		validation.Field(&c.Hosts, validation.Required),
-		validation.Field(&c.PrepullHosts, validation.Required),
 	); err != nil {
 		return err
 	}
@@ -86,15 +84,6 @@ func (c *bashibleConfigSecret) Validate() error {
 		}
 		if err := host.Validate(); err != nil {
 			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-
-	for name, host := range c.PrepullHosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("prepullHosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("prepullHosts[%q] validation failed: %w", name, err)
 		}
 	}
 	return nil
@@ -130,15 +119,10 @@ func (c bashibleConfigSecret) toRegistryData() *RegistryData {
 		ImagesBase:     c.ImagesBase,
 		ProxyEndpoints: append([]string(nil), c.ProxyEndpoints...),
 		Hosts:          make(map[string]registryHosts, len(c.Hosts)),
-		PrepullHosts:   make(map[string]registryHosts, len(c.PrepullHosts)),
 	}
 
 	for key, hosts := range c.Hosts {
 		ret.Hosts[key] = hosts.toRegistryHosts()
-	}
-
-	for key, hosts := range c.PrepullHosts {
-		ret.PrepullHosts[key] = hosts.toRegistryHosts()
 	}
 	return ret
 }

@@ -31,7 +31,6 @@ type RegistryData struct {
 	ImagesBase     string                   `json:"imagesBase" yaml:"imagesBase"`
 	ProxyEndpoints []string                 `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
 	Hosts          map[string]registryHosts `json:"hosts" yaml:"hosts"`
-	PrepullHosts   map[string]registryHosts `json:"prepullHosts" yaml:"prepullHosts"`
 }
 
 type registryHosts struct {
@@ -88,7 +87,6 @@ func (rd *RegistryData) Validate() error {
 		validation.Field(&rd.ImagesBase, validation.Required),
 		validation.Field(&rd.ProxyEndpoints, validation.Each(validation.Required)),
 		validation.Field(&rd.Hosts, validation.Required),
-		validation.Field(&rd.PrepullHosts, validation.Required),
 	); err != nil {
 		return err
 	}
@@ -99,15 +97,6 @@ func (rd *RegistryData) Validate() error {
 		}
 		if err := host.Validate(); err != nil {
 			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-
-	for name, host := range rd.PrepullHosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("prepullHosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("prepullHosts[%q] validation failed: %w", name, err)
 		}
 	}
 	return nil

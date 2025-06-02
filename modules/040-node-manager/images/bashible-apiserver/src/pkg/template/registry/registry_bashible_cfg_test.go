@@ -31,9 +31,6 @@ func validBashibleConfigSecret() *bashibleConfigSecret {
 		Hosts: map[string]bashibleConfigHosts{
 			"host1": validSecretHost(),
 		},
-		PrepullHosts: map[string]bashibleConfigHosts{
-			"host1": validSecretHost(),
-		},
 	}
 }
 
@@ -209,22 +206,6 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 						},
 					},
 				},
-				PrepullHosts: map[string]bashibleConfigHosts{
-					"host2.example.com": {
-						CA: []string{"ca1"},
-						Mirrors: []bashibleConfigMirrorHost{
-							{
-								Host:   "mirror1.example.com",
-								Scheme: "https",
-								Auth: bashibleConfigAuth{
-									Username: "username",
-									Password: "password",
-									Auth:     "auth",
-								},
-							},
-						},
-					},
-				},
 			},
 
 			wantRegistryData: RegistryData{
@@ -248,22 +229,6 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 									From: "from",
 									To:   "to",
 								}},
-							},
-						},
-					},
-				},
-				PrepullHosts: map[string]registryHosts{
-					"host2.example.com": {
-						CA: []string{"ca1"},
-						Mirrors: []registryMirrorHost{
-							{
-								Host:   "mirror1.example.com",
-								Scheme: "https",
-								Auth: registryAuth{
-									Username: "username",
-									Password: "password",
-									Auth:     "auth",
-								},
 							},
 						},
 					},

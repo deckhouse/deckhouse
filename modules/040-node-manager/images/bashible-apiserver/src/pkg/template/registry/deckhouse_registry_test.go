@@ -53,17 +53,6 @@ func TestDeckhouseRegistrySecretToRegistryData(t *testing.T) {
 						},
 					},
 				},
-				PrepullHosts: map[string]registryHosts{
-					"example.com": {
-						Mirrors: []registryMirrorHost{
-							{
-								Host:   "example.com",
-								Auth:   registryAuth{Auth: "dXNlcjpwYXNz"},
-								Scheme: "https",
-							},
-						},
-					},
-				},
 			},
 		},
 	}
