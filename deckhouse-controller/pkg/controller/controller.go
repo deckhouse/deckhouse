@@ -211,7 +211,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return module.GetVersion(), nil
 	})
 
-	exts := extenders.NewExtendersBundle(version, logger.Named("extenders"))
+	exts := extenders.NewExtendersStack(version, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {

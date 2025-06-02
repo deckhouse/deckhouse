@@ -83,14 +83,14 @@ type Loader struct {
 	globalDir string
 
 	dependencyContainer dependency.Container
-	exts                *extenders.ExtendersBundle
+	exts                *extenders.ExtendersStack
 
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersBundle, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,

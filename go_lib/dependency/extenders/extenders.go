@@ -30,15 +30,15 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-type ExtendersBundle struct {
+type ExtendersStack struct {
 	DeckhouseVersion  *deckhouseversion.Extender
 	KubernetesVersion *kubernetesversion.Extender
 	Bootstrapped      *bootstrapped.Extender
 	ModuleDependency  *moduledependency.Extender
 }
 
-func NewExtendersBundle(deckhouseVersion string, logger *log.Logger) *ExtendersBundle {
-	return &ExtendersBundle{
+func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersStack {
+	return &ExtendersStack{
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		Bootstrapped:      bootstrapped.Instance(),
@@ -46,7 +46,7 @@ func NewExtendersBundle(deckhouseVersion string, logger *log.Logger) *ExtendersB
 	}
 }
 
-func (b *ExtendersBundle) GetExtenders() []extenders.Extender {
+func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 	return []extenders.Extender{
 		b.DeckhouseVersion,
 		b.KubernetesVersion,
@@ -55,7 +55,7 @@ func (b *ExtendersBundle) GetExtenders() []extenders.Extender {
 	}
 }
 
-func (b *ExtendersBundle) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
+func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -88,14 +88,14 @@ func (b *ExtendersBundle) AddConstraints(module string, requirements *v1alpha1.M
 	return nil
 }
 
-func (b *ExtendersBundle) DeleteConstraints(module string) {
+func (b *ExtendersStack) DeleteConstraints(module string) {
 	b.DeckhouseVersion.DeleteConstraint(module)
 	b.KubernetesVersion.DeleteConstraint(module)
 	b.Bootstrapped.DeleteConstraint(module)
 	b.ModuleDependency.DeleteConstraint(module)
 }
 
-func (b *ExtendersBundle) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
+func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -122,7 +122,7 @@ func (b *ExtendersBundle) CheckModuleReleaseRequirements(moduleName, moduleRelea
 	return nil
 }
 
-func (b *ExtendersBundle) IsExtendersField(field string) bool {
+func (b *ExtendersStack) IsExtendersField(field string) bool {
 	return slices.Contains([]string{
 		v1alpha1.KubernetesRequirementFieldName,
 		v1alpha1.DeckhouseRequirementFieldName,

@@ -82,7 +82,7 @@ func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
 	dc dependency.Container,
-	exts *extenders.ExtendersBundle,
+	exts *extenders.ExtendersStack,
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	ms metric.Storage,
@@ -138,7 +138,7 @@ type reconciler struct {
 	client              client.Client
 	log                 *log.Logger
 	dependencyContainer dependency.Container
-	exts                *extenders.ExtendersBundle
+	exts                *extenders.ExtendersStack
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager

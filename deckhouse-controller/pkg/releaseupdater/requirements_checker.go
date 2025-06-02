@@ -90,7 +90,7 @@ func (c *Checker[T]) MetRequirements(ctx context.Context, v *T) []NotMetReason {
 // 3) deckhouse kubernetes version check
 //
 // for more checks information - look at extenders
-func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersBundle, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err
@@ -108,12 +108,12 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 
 type deckhouseVersionCheck struct {
 	name string
-	exts *extenders.ExtendersBundle
+	exts *extenders.ExtendersStack
 
 	enabledModules set.Set
 }
 
-func newDeckhouseVersionCheck(enabledModules []string, exts *extenders.ExtendersBundle) *deckhouseVersionCheck {
+func newDeckhouseVersionCheck(enabledModules []string, exts *extenders.ExtendersStack) *deckhouseVersionCheck {
 	return &deckhouseVersionCheck{
 		name:           "deckhouse version check",
 		enabledModules: set.New(enabledModules...),
@@ -219,12 +219,12 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 
 type deckhouseRequirementsCheck struct {
 	name string
-	exts *extenders.ExtendersBundle
+	exts *extenders.ExtendersStack
 
 	enabledModules set.Set
 }
 
-func newDeckhouseRequirementsCheck(enabledModules []string, exts *extenders.ExtendersBundle) *deckhouseRequirementsCheck {
+func newDeckhouseRequirementsCheck(enabledModules []string, exts *extenders.ExtendersStack) *deckhouseRequirementsCheck {
 	return &deckhouseRequirementsCheck{
 		name:           "deckhouse requirements check",
 		exts:           exts,
@@ -305,7 +305,7 @@ func (c *disruptionCheck) Verify(_ context.Context, pointer *v1alpha1.Release) e
 // 1) module release requirements check
 //
 // for more checks information - look at extenders
-func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersBundle, logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
+func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
 	return &Checker[v1alpha1.ModuleRelease]{
 		fns: []Check[v1alpha1.ModuleRelease]{
 			newModuleRequirementsCheck(exts),
@@ -316,10 +316,10 @@ func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersBundle, logger
 
 type moduleRequirementsCheck struct {
 	name string
-	exts *extenders.ExtendersBundle
+	exts *extenders.ExtendersStack
 }
 
-func newModuleRequirementsCheck(exts *extenders.ExtendersBundle) *moduleRequirementsCheck {
+func newModuleRequirementsCheck(exts *extenders.ExtendersStack) *moduleRequirementsCheck {
 	return &moduleRequirementsCheck{
 		name: "deckhouse requirements check",
 		exts: exts,

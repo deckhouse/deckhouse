@@ -589,7 +589,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersBundle("", log.NewNop()),
+		exts:           extenders.NewExtendersStack("", log.NewNop()),
 	}
 
 	for _, option := range options {

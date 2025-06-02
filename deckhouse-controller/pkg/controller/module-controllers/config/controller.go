@@ -63,7 +63,7 @@ func RegisterController(
 	mm moduleManager,
 	handler *confighandler.Handler,
 	ms metric.Storage,
-	exts *extenders.ExtendersBundle,
+	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -120,7 +120,7 @@ type reconciler struct {
 	moduleManager   moduleManager
 	metricStorage   metric.Storage
 	configValidator *configtools.Validator
-	exts            *extenders.ExtendersBundle
+	exts            *extenders.ExtendersStack
 	log             *log.Logger
 }
 
