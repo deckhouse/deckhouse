@@ -29,10 +29,10 @@ index 88a8ed07..8bb781a2 100644
  // Reconcile is part of the main kubernetes reconciliation loop which aims to
  // move the current state of the cluster closer to the desired state.
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..d1d1f375 100644
+index 5e97cde4..b495e444 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
-@@ -79,17 +79,16 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+@@ -79,17 +79,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
  // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
  // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
  // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
@@ -55,6 +55,16 @@ index 5e97cde4..d1d1f375 100644
  // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 -// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
 +// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
++
++// +kubebuilder:rbac:groups=authentication.istio.io,resources=peerauthentications;requestauthentications,verbs=get;list;watch
++// +kubebuilder:rbac:groups=config.istio.io,resources=adapters;attributemanifests;handlers;instances;rules;templates,verbs=get;list;watch
++// +kubebuilder:rbac:groups=extensions.istio.io,resources=wasmplugins,verbs=get;list;watch
++// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways;httproutes,verbs=get;list;watch
++// +kubebuilder:rbac:groups=networking.istio.io,resources=destinationrules;envoyfilters;gateways;serviceentries;sidecars;virtualservices;workloadentries;workloadgroups,verbs=get;list;watch
++// +kubebuilder:rbac:groups=rbac.istio.io,resources=rbacconfigs;servicerolebindings;serviceroles,verbs=get;list;watch
++// +kubebuilder:rbac:groups=security.istio.io,resources=authorizationpolicies,verbs=get;list;watch
++// +kubebuilder:rbac:groups=telemetry.istio.io,resources=telemetries,verbs=get;list;watch
++// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;ingresses/status,verbs=get;list;watch;update
  
  // Reconcile is part of the main kubernetes reconciliation loop which aims to
  // move the current state of the cluster closer to the desired state.
