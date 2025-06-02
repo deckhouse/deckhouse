@@ -131,7 +131,7 @@ jobs:
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   analyze_deckhouse:
-    if: ${{ (github.event_name == 'schedule') && always() }}
+    if: ${{ github.event_name == 'schedule' }}
     name: Deckhouse static analysis
     runs-on: [self-hosted, regular]
     needs:
