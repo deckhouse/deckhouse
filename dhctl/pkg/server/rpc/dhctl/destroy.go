@@ -138,7 +138,8 @@ connectionProcessor:
 func (s *Service) destroySafe(ctx context.Context, request *pb.DestroyStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.DestroyResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.DestroyResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -255,11 +256,11 @@ func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchP
 	}
 
 	destroyErr := destroyer.DestroyCluster(ctx, true)
-	state := destroyer.PhasedExecutionContext.GetLastState()
-	data, marshalErr := json.Marshal(state)
-	err = errors.Join(destroyErr, marshalErr)
+	state, stateErr := extractLastState()
 
-	return &pb.DestroyResult{State: string(data), Err: util.ErrToString(err)}
+	err = errors.Join(destroyErr, stateErr)
+
+	return &pb.DestroyResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) destroyServerTransitions() []fsm.Transition {

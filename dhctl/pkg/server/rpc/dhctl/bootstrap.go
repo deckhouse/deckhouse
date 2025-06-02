@@ -137,7 +137,8 @@ connectionProcessor:
 func (s *Service) bootstrapSafe(ctx context.Context, request *pb.BootstrapStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.BootstrapResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -275,11 +276,10 @@ func (s *Service) bootstrap(ctx context.Context, request *pb.BootstrapStart, swi
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(bootstrapErr, marshalErr)
+	state, stateErr := extractLastState()
+	err = errors.Join(bootstrapErr, stateErr)
 
-	return &pb.BootstrapResult{State: string(stateData), Err: util.ErrToString(err)}
+	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {

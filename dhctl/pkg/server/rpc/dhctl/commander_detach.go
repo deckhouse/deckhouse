@@ -115,7 +115,8 @@ func (s *Service) commanderDetachSafe(
 ) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.CommanderDetachResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.CommanderDetachResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -244,23 +245,12 @@ func (s *Service) commanderDetach(
 		OnCheckResult: onCheckResult,
 	})
 
-	var resErrs []error
+	detachErr := detacher.Detach(ctx)
+	state, stateErr := extractLastState()
 
-	resErrs = append(resErrs, detacher.Detach(ctx))
+	err = errors.Join(detachErr, stateErr)
 
-	var resState string
-	state, err := phases.ExtractDhctlState(stateCache)
-	if err != nil {
-		resErrs = append(resErrs, fmt.Errorf("unable to extract dhctl state: %w", err))
-	} else {
-		data, err := json.Marshal(state)
-		if err != nil {
-			resErrs = append(resErrs, fmt.Errorf("unable to unmarshal dhctl state: %w", err))
-		}
-		resState = string(data)
-	}
-
-	return &pb.CommanderDetachResult{State: resState, Err: util.ErrToString(errors.Join(resErrs...))}
+	return &pb.CommanderDetachResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) commanderDetachServerTransitions() []fsm.Transition {

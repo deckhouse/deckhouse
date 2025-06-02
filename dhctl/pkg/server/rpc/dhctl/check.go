@@ -118,7 +118,8 @@ connectionProcessor:
 func (s *Service) checkSafe(ctx context.Context, request *pb.CheckStart, options logger.Options) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -228,10 +229,9 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 
 	result, checkErr := checker.Check(ctx)
 	resultData, marshalErr := json.Marshal(result)
-	state, extractStateErr := phases.ExtractDhctlState(cache.Global())
-	stateData, marshalStateErr := json.Marshal(state)
+	state, stateErr := extractLastState()
 
-	err = errors.Join(checkErr, marshalErr, extractStateErr, marshalStateErr)
+	err = errors.Join(checkErr, marshalErr, stateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
@@ -241,7 +241,7 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 	return &pb.CheckResult{
 		Result: string(resultData),
 		Err:    util.ErrToString(err),
-		State:  string(stateData),
+		State:  string(state),
 	}
 }
 
