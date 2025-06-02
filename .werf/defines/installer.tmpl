@@ -156,7 +156,7 @@
 shell:
   beforeInstall:
   - |
-    apt-get update && apt-get install -y locale && apt-get clean
+    apt-get update && apt-get install -y locale strace && apt-get clean
     find /var/lib/apt/ /var/cache/apt/ -type f -delete
   setup:
   - |
