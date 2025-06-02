@@ -71,8 +71,18 @@ func NewExtender(deckhouseVersion string, logger *log.Logger) *Extender {
 
 	parsed, err := semver.NewVersion(deckhouseVersion)
 	if err == nil {
-		extender.logger.Debug("setting deckhouse version from file", slog.String("version", parsed.String()))
-		extender.versionMatcher.ChangeBaseVersion(parsed)
+		// TODO: change workflow with semver
+		// mistermind has a problem to compare pre-released versions
+		// we must to trim them to compare release version
+		sanitizedVersion, err := removePrereleaseAndMetadata(parsed)
+		if err != nil {
+			extender.logger.Warn("cannot remove pre-release tag or metadata, default version will be used", slog.String("version", extender.versionMatcher.GetBaseVersion().Original()))
+
+			return extender
+		}
+
+		extender.logger.Debug("setting deckhouse version from file", slog.String("version", sanitizedVersion.String()))
+		extender.versionMatcher.ChangeBaseVersion(sanitizedVersion)
 
 		return extender
 	}
@@ -166,4 +176,27 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	e.logger.Debug("requirements of module release are satisfied", slog.String("name", releaseName))
 
 	return nil
+}
+
+// removePrereleaseAndMetadata returns a version without prerelease and metadata parts
+func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, error) {
+	if len(version.Prerelease()) > 0 {
+		woPrerelease, err := version.SetPrerelease("")
+		if err != nil {
+			return nil, err
+		}
+
+		version = &woPrerelease
+	}
+
+	if len(version.Metadata()) > 0 {
+		woMetadata, err := version.SetMetadata("")
+		if err != nil {
+			return nil, err
+		}
+
+		version = &woMetadata
+	}
+
+	return version, nil
 }
