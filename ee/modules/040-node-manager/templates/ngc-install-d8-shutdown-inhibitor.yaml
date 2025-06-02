@@ -1,0 +1,88 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: d8-shutdown-inhibitor-install.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 98
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  content: |
+    # Copyright 2025 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
+    {{- $inhibitorIndex := "d8ShutdownInhibitor" }}
+    {{- $moduleIndex := "nodeManager" }}
+    {{- $moduleImagesDigests :=  index .Values.global.modulesImages.digests $moduleIndex }}
+    {{- $inhibitorDigest :=  index $moduleImagesDigests $inhibitorIndex | toString }}
+
+    inhibitorServiceName="{{ $inhibitorPkgName }}.service"
+
+    old_inhibitor_digest=""
+    if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest" ]; then
+      old_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest")
+    fi
+
+    bb-package-install "{{ $inhibitorIndex }}:{{ $inhibitorDigest }}"
+
+    new_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest")
+
+    if [[ "${old_inhibitor_digest}" != "${new_inhibitor_digest}" ]]; then
+      bb-flag-set inhibitor-need-restart
+    fi
+
+    _restart_inhibitor_if_needed() {
+      if bb-flag? inhibitor-need-restart; then
+        bb-log-warning "'inhibitor-need-restart' flag was set, restarting {{ $inhibitorPkgName }}."
+        systemctl restart "${inhibitorServiceName}"
+        bb-flag-unset inhibitor-need-restart
+      fi
+    }
+
+    bb-event-on 'restart-inhibitor-if-needed' '_restart_inhibitor_if_needed'
+
+    # Step 1/2: enable systemd unit.
+    if ! systemctl is-enabled "d8-shutdown-inhibitor.service"; then
+      bb-log-info "Deckhouse shutdown inhibitor service is disabled. Enable it..."
+      if systemctl enable "${inhibitorServiceName}" ; then
+        bb-log-info "Deckhouse shutdown inhibitor was enabled."
+      else
+        systemctl status "${inhibitorServiceName}"
+        bb-log-error "Deckhouse shutdown inhibitor has not been enabled."
+      fi
+    fi
+
+    # Inhibitor will start after reboot, no need to start it right now.
+    if bb-flag? reboot; then
+      exit 0
+    fi
+
+    # Step 2/2: start systemd unit if needed.
+    if systemctl is-active --quiet "${inhibitorServiceName}" ; then
+      bb-log-warning "Deckhouse shutdown inhibitor service is already running."
+      bb-event-fire "restart-inhibitor-if-needed"
+      exit 0
+    fi
+
+    bb-log-warning "Deckhouse shutdown inhibitor service is not running. Starting it..."
+    if systemctl start "${inhibitorServiceName}" ; then
+      bb-log-info "Deckhouse shutdown inhibitor has been started."
+    else
+      systemctl status "${inhibitorServiceName}"
+      bb-log-error "Deckhouse shutdown inhibitor has not been started. Exit"
+      exit 1
+    fi
