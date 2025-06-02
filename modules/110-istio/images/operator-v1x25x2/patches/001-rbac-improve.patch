@@ -1,0 +1,89 @@
+diff --git a/controllers/istiocni/istiocni_controller.go b/controllers/istiocni/istiocni_controller.go
+index 88a8ed07..8bb781a2 100644
+--- a/controllers/istiocni/istiocni_controller.go
++++ b/controllers/istiocni/istiocni_controller.go
+@@ -77,17 +77,16 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/status,verbs=get;update;patch
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/finalizers,verbs=update
+-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
+-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
+-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
+-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
+-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
+-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
+-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
++// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
+-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
++// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
+-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
++// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
+ 
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+ // move the current state of the cluster closer to the desired state.
+diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
+index 5e97cde4..d1d1f375 100644
+--- a/controllers/istiorevision/istiorevision_controller.go
++++ b/controllers/istiorevision/istiorevision_controller.go
+@@ -79,17 +79,16 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
+-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
+-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
+-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
+-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
+-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
+-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
+-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
++// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
+-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
++// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
+-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
++// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
+ 
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+ // move the current state of the cluster closer to the desired state.
+diff --git a/controllers/istiorevisiontag/istiorevisiontag_controller.go b/controllers/istiorevisiontag/istiorevisiontag_controller.go
+index 8b357bdf..dd7f074c 100644
+--- a/controllers/istiorevisiontag/istiorevisiontag_controller.go
++++ b/controllers/istiorevisiontag/istiorevisiontag_controller.go
+@@ -75,7 +75,7 @@ func NewReconciler(reconcilerCfg config.ReconcilerConfig, client client.Client,
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisiontags,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisiontags/status,verbs=get;update;patch
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisiontags/finalizers,verbs=update
+-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=mutatingwebhookconfigurations,verbs="*"
++// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+ // move the current state of the cluster closer to the desired state.
+ //
+diff --git a/controllers/ztunnel/ztunnel_controller.go b/controllers/ztunnel/ztunnel_controller.go
+index 0d11591f..beb167e3 100644
+--- a/controllers/ztunnel/ztunnel_controller.go
++++ b/controllers/ztunnel/ztunnel_controller.go
+@@ -77,9 +77,8 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels/status,verbs=get;update;patch
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=ztunnels/finalizers,verbs=update
+-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
+-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
+-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
++// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs=get;list;watch;create;update;patch
+ // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
+ // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
+ 

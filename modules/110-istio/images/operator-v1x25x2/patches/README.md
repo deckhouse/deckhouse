@@ -1,5 +1,5 @@
 # Patches
 
-## 001-controller-initialization.patch
+## 001-rbac-improve.patch
 
-Fix Sail Operator initialization for force update owners in helm charts
+Fix Sail Operator initialization when RBAC problem in deployment
