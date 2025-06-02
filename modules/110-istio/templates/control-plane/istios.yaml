@@ -176,9 +176,6 @@ spec:
       {{- end }}
   {{- end }}
 
-    istio_cni:
-      enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
-
     pilot:
       istiodRemote:
         enabled: false
