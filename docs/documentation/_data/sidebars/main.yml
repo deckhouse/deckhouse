@@ -665,7 +665,7 @@ entries:
                       url: /admin/configuration/network/other/ntp.html
             - title:
                 en: Storage
-                ru: Хранение
+                ru: Хранилища
               folders:
                 - title:
                     en: Overview
@@ -680,13 +680,33 @@ entries:
                     ru: Настройка создания снимков томов
                   url: /admin/configuration/storage/snapshot-controller.html
                 - title:
-                    en: SDS
-                    ru: Программно-определяемые хранилища
+                    en: Software-defined storage (SDS)
+                    ru: Программно-определяемые хранилища (SDS)
                   folders:
                     - title:
                         en: Local path provisioner storage
                         ru: Локальное хранилище Local Path Provisioner
                       url: /admin/configuration/storage/sds/local-path-provisioner.html
+                    - title:
+                        en: Node configuration for software-defined storage (SDS)
+                        ru: Настройка узлов для программно-определяемых хранилищ
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/configuration/storage/sds/node-configurator/about.html
+                        - title:
+                            en: Usage scenarios
+                            ru: Примеры использования
+                          url: /admin/configuration/storage/sds/node-configurator/usage.html
+                        - title:
+                            en: Configuration scenarios
+                            ru: Сценарии конфигурации
+                          url: /admin/configuration/storage/sds/node-configurator/layouts.html
+                        - title:
+                            en: FAQ
+                            ru: FAQ
+                          url: /admin/configuration/storage/sds/node-configurator/faq.html
                     - title:
                         en: Local storage based on LVM
                         ru: Локальное хранилище на основе LVM

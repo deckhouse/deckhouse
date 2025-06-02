@@ -118,19 +118,25 @@ d8 k get node %node-name% --show-labels
 
 Для проверки зависимых ресурсов выполните следующие шаги:
 
-1. Отобразить имеющиеся [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсы:
+1. Отобразите имеющиеся [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсы:
 
    ```shell
    d8 k get lsc
    ```
 
-1. Проверить список используемых [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов для конкретного [LocalStorageClass](../../../reference/cr/localstorageclass/):
+1. Проверьте у каждого из них список используемых [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов, выполнив команду:
+
+   Вы можете сразу отобразить содержимое всех [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсов, выполнив команду:
 
    ```shell
-   d8 k get lsc <LSC-NAME> -oyaml
+   d8 k get lsc -oyaml
    ```
 
-   Пример вывода:
+   ```shell
+   d8 k get lsc %lsc-name% -oyaml
+   ```
+
+   Примерный вид [LocalStorageClass](../../../reference/cr/localstorageclass/):
 
    ```yaml
    apiVersion: v1
@@ -153,17 +159,17 @@ d8 k get node %node-name% --show-labels
    kind: List
    ```
 
-   > Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно здесь указаны используемые ресурсы.
+   Обратите внимание на поле `spec.lvm.lvmVolumeGroups` - именно в нем указаны используемые [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсы.
 
-1. Отобразите список существующих [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов:
+1. Отобразите список существующих [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов
 
    ```shell
    d8 k get lvg
    ```
 
-   Пример вывода:
+   Примерный вывод [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов:
 
-   ```console
+   ```text
    NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
    lvg-on-worker-0   Operational   node-worker-0   40956Mi    0                test-vg   15d
    lvg-on-worker-1   Operational   node-worker-1   61436Mi    0                test-vg   15d
@@ -173,7 +179,7 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Убедитесь, что на узле, который планируется вывести из-под управления модуля, отсутствует любой [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурс, используемый в [LocalStorageClass](../../../reference/cr/localstorageclass/)  ресурсах. Если такие ресурсы присутствуют, их необходимо удалить вручную, чтобы избежать потери контроля над томами.
+1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурс, используемый в [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсах. Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами пользователю необходимо вручную удалить зависимые ресурсы, совершив необходимые операции над томом.
 
 ## Оставшийся под sds-local-volume-csi-node после удаления меток
 
@@ -302,3 +308,47 @@ echo "Data migration completed"
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 ```
+
+## Создание снимков томов
+
+Подробную информацию о снимках можно найти [здесь](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
+
+1. Включите модуль `snapshot-controller`:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Теперь вы можете создавать снимки томов. Для этого выполните следующую команду с необходимыми параметрами:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <name of the namespace where the PVC is located>
+   spec:
+     volumeSnapshotClassName: sds-local-volume-snapshot-class
+     source:
+       persistentVolumeClaimName: <name of the PVC to snapshot>
+   EOF
+   ```
+
+   Обратите внимание, что `sds-local-volume-snapshot-class` создается автоматически, и его `deletionPolicy` установлена в `Delete`, что означает, что [VolumeSnapshotContent](../../../reference/cr/volumesnapshotcontent/) будет удален при удалении связанного [VolumeSnapshot](../../../reference/cr/volumesnapshot/).
+
+1. Чтобы проверить статус созданного снимка, выполните команду:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+   Данная команда выведет список всех снимков и их текущий статус.

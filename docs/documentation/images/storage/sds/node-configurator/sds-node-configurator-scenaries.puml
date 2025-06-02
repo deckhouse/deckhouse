@@ -1,0 +1,51 @@
+@startuml
+
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam PartitionFontColor grey
+skinparam backgroundColor transparent
+
+start
+
+:Selecting a scenario;
+
+if (Is the "Full mirror" scenario selected (recommended)?) then (Yes)
+
+group "Full mirror"
+  :Creating a mirror
+  of entire disks;
+  :Creating a VG on the mirror;
+  :Creating an LV in the VG;
+  :Installing the operating system on the LV;
+  :Assigning the storage.deckhouse.io/enabled=true tag
+  to the VG;
+end group
+
+else (No)
+
+group "Partial mirror"
+  :Creating two partitions
+  on each disk;
+  :Creating a mirror
+  of the first partitions;
+  :Creating a VG on the mirror;
+  :Creating an LV in the VG on the mirror;
+  :Installing the operating system on the LV in the VG on the mirror;
+  :Assigning the storage.deckhouse.io/enabled=true tag
+  to the VG on the mirror;
+  :Creating a VG of the second partitions on each disk;
+  :Assigning the storage.deckhouse.io/enabled=true tag
+  to the VG of the second partitions;
+end group
+
+endif
+
+:Adding a node to the Deckhouse cluster;
+:Configuring the SDS modules;
+
+stop
+
+@enduml

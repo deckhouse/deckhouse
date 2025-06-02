@@ -23,22 +23,24 @@ Deckhouse поддерживает управление хранилищами, 
 - Нельзя изменить размер LUN.
 - Снимки (snapshots) не поддерживаются.
 
-## Системные требования
+## Системные требования и рекомендации
 
-- Настроенная и доступная СХД с подключением через iSCSI/FC.
-- Уникальные IQN на каждом узле Kubernetes в файле `/etc/iscsi/initiatorname.iscsi`.
+### Требования
 
-## Настройка и конфигурация
+- Наличие развернутой и настроенной СХД с подключением через SCSI.
+- Уникальные iqn в /etc/iscsi/initiatorname.iscsi на каждой из Kubernetes Nodes
 
-Все команды выполняются на машине с административным доступом к API Kubernetes.
+## Быстрый старт
+
+Все команды следует выполнять на машине, имеющей доступ к API Kubernetes с правами администратора.
 
 ### Включение модуля
 
-Для работы с хранилищами, подключёнными через SCSI, включите модуль `csi-scsi-generic`. Это приведет к:
-- Регистрации CSI-драйвера.
-- Запуску сервисных подов `csi-scsi-generic`.
+Включите модуль `csi-scsi-generic`. Это приведет к тому, что на всех узлах кластера будет:
+- Зарегистрирован CSI драйвер;
+- Запущены служебные поды компонентов `csi-scsi-generic`.
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -50,7 +52,7 @@ spec:
 EOF
 ```
 
-Дождитесь, пока модуль перейдет в состояние `Ready`. Проверьте состояние модуля командой:
+Дождитесь, когда модуль перейдет в состояние `Ready`:
 
 ```shell
 d8 k get module csi-scsi-generic -w
@@ -58,7 +60,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Для работы с SCSI-устройствами создайте ресурсы [SCSITarget](../../../reference/cr/scsitarget/).
+Для создания SCSITarget необходимо использовать ресурс [SCSITarget](../../../reference/cr/scsitarget). Пример команд для создания такого ресурса:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -100,30 +102,9 @@ EOF
 
 ```
 
-Пример команд для FC ресурса:
+Обратите внимание, что в примере выше используются два SCSITarget. Таким образом можно создать несколько SCSITarget как для одного, так и для разных СХД. Это позволяет использовать multipath для повышения отказоустойчивости и производительности.
 
-```yaml
-d8 k apply -f -<<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: SCSITarget
-metadata:
-  name: scsi-target-2
-spec:
-  fibreChannel:
-    WWNs:
-      - 00:00:00:00:00:00:00:00
-      - 00:00:00:00:00:00:00:01
-  deviceTemplate:
-    metadata:
-      labels:
-        some-label-key: some-label-value1
-EOF
-
-```
-
-Обратите внимание, что в примере выше используются два [SCSITarget](../../../reference/cr/scsitarget/). Таким образом можно создать несколько [SCSITarget](../../../reference/cr/scsitarget/) как для одного, так и для разных СХД. Это позволяет использовать `multipath` для повышения отказоустойчивости и производительности.
-
-Проверьте создание объекта следующей командой (`Phase` должен быть `Created`):
+Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
@@ -131,7 +112,7 @@ d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](../../../reference/cr/scsistorageclass/). Пример команд для создания такого ресурса:
+Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](../../../reference/cr/scsistorageclass). Пример команд для создания такого ресурса:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -147,9 +128,9 @@ spec:
 EOF
 ```
 
-Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать [SCSITarget](../../../reference/cr/scsitarget/) для создания PersistentVolume по меткам. В примере выше выбираются все [SCSITarget](../../../reference/cr/scsitarget/) с меткой `my-key: some-label-value`. Эта метка будет выставлена на все устройства, которые будут обнаружены в указанных [SCSITarget](../../../reference/cr/scsitarget/).
+Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать SCSITarget для создания PV по меткам. В примере выше выбираются все SCSITarget с меткой `my-key: some-label-value`. Эта метка будет выставлена на все девайсы, которые будут обнаружены в указанных SCSITarget.
 
-Проверьте создание объекта следующей командой (`Phase` должен быть `Created`):
+- Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>

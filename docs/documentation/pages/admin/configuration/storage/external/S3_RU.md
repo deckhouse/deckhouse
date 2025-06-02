@@ -14,7 +14,7 @@ Deckhouse поддерживает работу с объектным храни
 - Настроенное S3-хранилище с доступными ключами.
 - Достаточный объем памяти на узлах. `GeeseFS` использует кэш для работы с файлами, загружаемыми из S3. Размер кэша задается параметром `maxCacheSize` в [S3StorageClass](../../../reference/cr/s3storageclass/). Результаты стресс-теста: 7 узлов, 600 подов и PVC, `maxCacheSize` = 500 МБ, каждый под записывает 300 МБ, читает их и завершает работу.
 
-![testresults](../../../images/storage/s3/load-test-mem.jpg)
+![Test results](../../../images/storage/s3/load-test-mem.jpg)
 
 ## Настройка и конфигурация
 
@@ -53,7 +53,7 @@ d8 k get module csi-s3 -w
 Модуль настраивается с помощью манифеста [S3StorageClass](../../../reference/cr/s3storageclass/). Пример конфигурации:
 
 ```yaml
-apiVersion: csi.s3.storage.k8s.io/v1
+apiVersion: storage.deckhouse.io/v1alpha1
 kind: S3StorageClass
 metadata:
   name: example-s3
@@ -64,6 +64,7 @@ spec:
   accessKey: <your-access-key>
   secretKey: <your-secret-key>
   maxCacheSize: 500
+  insecure: false
 ```
 
 Если `bucketName` не указан, для каждого PersistentVolume будет создан отдельный bucket. Если `bucketName` задан, в нем будут создаваться папки под каждый PersistentVolume. Если такого bucket нет, он создастся автоматически.
@@ -143,9 +144,9 @@ spec:
    - name: webroot
      persistentVolumeClaim:
        claimName: csi-s3-pvc # PVC name
-       readOnly: false   - name: webroot
+       readOnly: false
    - name: homedir
-       persistentVolumeClaim:
+     persistentVolumeClaim:
        claimName: csi-s3-pvc2 # PVC-2 name
        readOnly: false
 EOF

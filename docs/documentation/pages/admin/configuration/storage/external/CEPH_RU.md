@@ -8,6 +8,19 @@ Ceph — это масштабируемая распределённая сис
 
 На этой странице представлены инструкции по подключению Ceph в Deckhouse, настройке аутентификации, созданию объектов StorageClass, а также проверке работоспособности хранилища.
 
+{% alert level="warning" %}
+При переключении на данный модуль с модуля `ceph-csi` производится автоматическая миграция, но ее запуск требует подготовки:
+
+1. Необходимо сделать scale всех операторов (redis, clickhouse, kafka и т.д) в ноль реплик, в момент миграции операторы в кластере работать не должны. Единственное исключение — оператор `prometheus` в составе Deckhouse, в процессе миграции его отключит автоматически.
+1. Выключить модуль `ceph-csi` и включить модуль `csi-ceph`.
+1. В логах Deckhouse дождаться окончания процесса миграции (Finished migration from Ceph CSI module).
+1. Создать тестовые pod/pvc для проверки работоспособности CSI.
+1. Вернуть операторы в работоспособное состояние.
+   При наличии в ресурсах CephCSIDriver поля `spec.cephfs.storageClasses.pool` отличного от `cephfs_data` миграция будет завершаться с ошибкой.
+   При наличии Ceph StorageClass, созданного не с помощью ресурса CephCSIDriver потребуется ручная миграция.
+   В этих случаях необходимо связаться с технической поддержкой.
+{% endalert %}
+
 ## Включение модуля
 
 Для подключения Ceph-кластера в Deckhouse необходимо включить модуль `csi-ceph`. Для этого примените ресурс ModuleConfig:
@@ -40,6 +53,12 @@ spec:
   # Список IP-адресов ceph-mon’ов в формате 10.0.0.10:6789.
   monitors:
     - 10.0.0.10:6789
+  # Имя пользователя без `client.`.
+  # Получить имя пользователя можно с помощью команды `ceph auth list`.
+  userID: admin
+  # Ключ авторизации, соответствующий userID.
+  # Получить ключ авторизации можно с помощью команды `ceph auth get-key client.admin`.
+  userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 EOF
 ```
 
@@ -47,24 +66,6 @@ EOF
 
 ```shell
 d8 k get cephclusterconnection ceph-cluster-1
-```
-
-## Аутентификация
-
-Чтобы пройти аутентификацию в Ceph-кластере, необходимо определить параметры аутентификации в ресурсе [CephClusterAuthentication](../../../reference/cr/cephclusterauthentication/):
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: CephClusterAuthentication
-metadata:
-  name: ceph-auth-1
-spec:
-  # Имя пользователя без `client.`.
-  userID: admin
-  # Ключ авторизации, соответствующий userID.
-  userKey: AQDbc7phl+eeGRAAaWL9y71mnUiRHKRFOWMPCQ==
-EOF
 ```
 
 ## Создание StorageClass
@@ -79,7 +80,6 @@ metadata:
   name: ceph-rbd-sc
 spec:
   clusterConnectionName: ceph-cluster-1
-  clusterAuthenticationName: ceph-auth-1
   reclaimPolicy: Delete
   type: RBD
   rbd:
@@ -98,7 +98,6 @@ metadata:
   name: ceph-fs-sc
 spec:
   clusterConnectionName: ceph-cluster-1
-  clusterAuthenticationName: ceph-auth-1
   reclaimPolicy: Delete
   type: CephFS
   cephFS:
@@ -143,4 +142,79 @@ ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 ```shell
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
+
+```
+
+## Поддерживаемые версии Ceph
+
+- Официальная поддержка — Ceph версии 16.2.0 и выше.
+- Совместимость — решение работает с кластерами Ceph версии 14.2.0 и выше, однако рекомендуется обновить Ceph до версии 16.2.0 или новее для обеспечения максимальной стабильности и доступа к последним исправлениям.
+
+## Поддерживаемые режимы доступа к томам
+
+- RBD — ReadWriteOnce (RWO) — доступ к блочному тому возможен только с одного узла.
+- CephFS — ReadWriteOnce (RWO) и ReadWriteMany (RWX) — одновременный доступ к файловой системе с нескольких узлов.
+
+## Примеры
+
+Пример описания [CephClusterConnection](../../../reference/cr/cephclusterconnection/):
+
+```yaml
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephClusterConnection
+metadata:
+  name: ceph-cluster-1
+spec:
+  clusterID: 0324bfe8-c36a-4829-bacd-9e28b6480de9
+  monitors:
+  - 172.20.1.28:6789
+  - 172.20.1.34:6789
+  - 172.20.1.37:6789
+  userID: admin
+  userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
+```
+
+- Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
+
+```shell
+d8 k get cephclusterconnection <имя cephclusterconnection>
+```
+
+Пример описания [CephStorageClass](../../../reference/cr/cephstorageclass/):
+
+- Для RBD
+
+  ```yaml
+  apiVersion: storage.deckhouse.io/v1alpha1
+  kind: CephStorageClass
+  metadata:
+    name: ceph-rbd-sc
+  spec:
+    clusterConnectionName: ceph-cluster-1
+    reclaimPolicy: Delete
+    type: RBD
+    rbd:
+      defaultFSType: ext4
+      pool: ceph-rbd-pool  
+  ```
+
+- Для CephFS:
+
+  ```yaml
+  apiVersion: storage.deckhouse.io/v1alpha1
+  kind: CephStorageClass
+  metadata:
+    name: ceph-fs-sc
+  spec:
+    clusterConnectionName: ceph-cluster-1
+    reclaimPolicy: Delete
+    type: CephFS
+    cephFS:
+      fsName: cephfs
+  ```
+
+Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
+
+```shell
+d8 k get cephstorageclass <имя storage class>
 ```

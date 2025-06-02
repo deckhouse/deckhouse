@@ -60,13 +60,13 @@ spec:
 EOF
 ```
 
-Check that the created [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource has transitioned to the `Created` phase by running the following command:
+Check that the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-In the output, you should see information about the created [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource:
+In the output, you should see information about the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource:
 
 ```console
 NAME                PHASE     AGE
@@ -153,7 +153,12 @@ In Deckhouse, snapshots are created by archiving the volume’s folder. The arch
 
 This command will display a list of all snapshots and their current statuses.
 
-## Why PVs Are Not Deleted When RPC-with-TLS Is Enabled
+## Requirements for a Linux distribution to deploy an NFS server with RPC-with-TLS support
+
+- The kernel must be built with the `CONFIG_TLS` and `CONFIG_NET_HANDSHAKE` options enabled;
+- The nfs-utils package (or nfs-common in Debian-based distributions) must be version >= 2.6.3.
+
+## Deleting PVs with RPC-with-TLS Enabled
 
 If the [NFSStorageClass](../../../reference/cr/nfsstorageclass/) is configured with RPC-with-TLS support, it may be impossible to delete PVs. This can happen if the secret storing mount parameters is deleted (for example, after deleting the [NFSStorageClass](../../../reference/cr/nfsstorageclass/)). As a result, the controller is unable to mount the NFS path to delete the `<PV name>` directory.
 
