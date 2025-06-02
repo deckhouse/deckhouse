@@ -25,21 +25,21 @@ spec:
     # limitations under the License.
 
     {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
-    {{- $inhibitorIndex := "d8ShutdownInhibitor" }}
-    {{- $moduleIndex := "nodeManager" }}
-    {{- $moduleImagesDigests :=  index .Values.global.modulesImages.digests $moduleIndex }}
-    {{- $inhibitorDigest :=  index $moduleImagesDigests $inhibitorIndex | toString }}
+    {{- $inhibitorImageKey := "d8ShutdownInhibitor" }}
+    {{- $moduleKey := "nodeManager" }}
+    {{- $moduleImagesDigests :=  pluck .Values.global.modulesImages.digests $moduleKey | first }}
+    {{- $inhibitorDigest := pluck $moduleImagesDigests $inhibitorImageKey | first }}
 
     inhibitorServiceName="{{ $inhibitorPkgName }}.service"
 
     old_inhibitor_digest=""
-    if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest" ]; then
-      old_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest")
+    if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorImageKey }}/digest" ]; then
+      old_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorImageKey }}/digest")
     fi
 
-    bb-package-install "{{ $inhibitorIndex }}:{{ $inhibitorDigest }}"
+    bb-package-install "{{ $inhibitorImageKey }}:{{ $inhibitorDigest }}"
 
-    new_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorIndex }}/digest")
+    new_inhibitor_digest=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorImageKey }}/digest")
 
     if [[ "${old_inhibitor_digest}" != "${new_inhibitor_digest}" ]]; then
       bb-flag-set inhibitor-need-restart
