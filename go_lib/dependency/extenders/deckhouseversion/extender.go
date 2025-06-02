@@ -72,7 +72,7 @@ func NewExtender(deckhouseVersion string, logger *log.Logger) *Extender {
 	parsed, err := semver.NewVersion(deckhouseVersion)
 	if err == nil {
 		// TODO: change workflow with semver
-		// mistermind has a problem to compare pre-released versions
+		// mastermind lib has a problem to compare pre-released versions
 		// we must to trim them to compare release version
 		sanitizedVersion, err := removePrereleaseAndMetadata(parsed)
 		if err != nil {
