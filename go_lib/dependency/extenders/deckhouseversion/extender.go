@@ -43,6 +43,8 @@ type Extender struct {
 	err            error
 }
 
+const TestExtenderDeckhouseVersionEnv = "TEST_EXTENDER_DECKHOUSE_VERSION"
+
 func NewExtender(deckhouseVersion string, logger *log.Logger) *Extender {
 	extender := &Extender{
 		logger:         logger,
@@ -51,7 +53,7 @@ func NewExtender(deckhouseVersion string, logger *log.Logger) *Extender {
 
 	deckhouseVersion = strings.TrimSpace(deckhouseVersion)
 
-	if val := os.Getenv("TEST_EXTENDER_DECKHOUSE_VERSION"); val != "" {
+	if val := os.Getenv(TestExtenderDeckhouseVersionEnv); val != "" {
 		parsed, err := semver.NewVersion(val)
 		if err == nil {
 			extender.logger.Debug("setting deckhouse version from env", slog.String("version", parsed.String()))
@@ -60,7 +62,7 @@ func NewExtender(deckhouseVersion string, logger *log.Logger) *Extender {
 			return extender
 		}
 
-		extender.logger.Warn("cannot parse TEST_EXTENDER_DECKHOUSE_VERSION env variable value", slog.String("value", val), log.Err(err))
+		extender.logger.Warn("cannot parse version variable value, env: "+TestExtenderDeckhouseVersionEnv, slog.String("value", val), log.Err(err))
 	}
 
 	if deckhouseVersion == "dev" {
