@@ -66,10 +66,8 @@
 
 {!{ define "defectdojo_dev_tests_rotator" }!}
 # <template: defectdojo_dev_tests_rotator>
-- name: Set up Python
-  uses: actions/setup-python@v4
-  with:
-    python-version: ${{ env.PYTHON_VERSION }}
+
+{!{ tmpl.Exec "python_setup_step" . }!}
 - name: Install dependencies
   run: pip install requests
 - name: DefectDojo rotate dev tests

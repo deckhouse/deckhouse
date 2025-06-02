@@ -255,7 +255,6 @@
 # </template: login_git_step>
 {!{- end -}!}
 
-
 {!{ define "send_fail_report" }!}
 # <template: send_fail_report>
 - name: Send fail report
@@ -268,4 +267,13 @@
   run: |
     bash ./.github/scripts/send-report.sh
 # </template: send_fail_report>
+{!{- end -}!}
+
+{!{ define "python_setup_step" }!}
+# <template: python_setup_step>
+- name: Setup Python
+  uses: {!{ index (ds "actions") "actions/setup-python" }!}
+  with:
+    python-version: '3.12.8'
+# </template: python_setup_step>
 {!{- end -}!}
