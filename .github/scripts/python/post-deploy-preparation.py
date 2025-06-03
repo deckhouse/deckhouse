@@ -21,6 +21,8 @@ import base64
 import inspect
 import certifi
 
+SSL_CERT_FILE = os.getenv('SSL_CERT_FILE','/etc/ssl/certs/ca-certificates.crt')
+
 GITHUB_TOKEN=os.getenv('GITHUB_TOKEN')
 if (GITHUB_TOKEN == None):
     print("GITHUB_TOKEN env variable was not found. Terminated.")
@@ -143,7 +145,7 @@ def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
 
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
 
-    cfg.ssl_ca_cert = certifi.where()
+    cfg.ssl_ca_cert = SSL_CERT_FILE
     api_client = client.ApiClient(configuration=cfg)
     v1 = client.CoreV1Api(api_client)
 
