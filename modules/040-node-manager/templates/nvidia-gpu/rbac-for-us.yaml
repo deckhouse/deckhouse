@@ -37,7 +37,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: nvidia-gpu-feature-discovery
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -52,12 +52,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: nvidia-gpu-feature-discovery
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: nvidia-gpu-feature-discovery
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
 subjects:
 - kind: ServiceAccount
   name: nvidia-gpu-feature-discovery
@@ -66,7 +66,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: nvidia-device-plugin
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -81,7 +81,7 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: nvidia-device-plugin
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
@@ -89,13 +89,13 @@ subjects:
   namespace: d8-nvidia-gpu
 roleRef:
   kind: ClusterRole
-  name: nvidia-device-plugin
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: node-feature-discovery
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -152,7 +152,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: node-feature-discovery-gc
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -186,12 +186,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: node-feature-discovery
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: node-feature-discovery
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
 subjects:
 - kind: ServiceAccount
   name: node-feature-discovery-master
@@ -200,12 +200,12 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: node-feature-discovery-gc
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: node-feature-discovery-gc
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
 subjects:
 - kind: ServiceAccount
   name: node-feature-discovery-gc
@@ -214,7 +214,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: node-feature-discovery-worker
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
   namespace: d8-nvidia-gpu
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
@@ -237,13 +237,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: node-feature-discovery-worker
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
   namespace: d8-nvidia-gpu
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: node-feature-discovery-worker
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
 subjects:
 - kind: ServiceAccount
   name: node-feature-discovery-worker

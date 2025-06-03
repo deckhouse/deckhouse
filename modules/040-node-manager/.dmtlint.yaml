@@ -112,6 +112,20 @@ linters-settings:
           name: d8:node-manager:caps-controller-manager-leader-election-role
         - kind: RoleBinding
           name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: ServiceAccount
+          name: nvidia-device-plugin
+        - kind: ServiceAccount
+          name: node-feature-discovery-worker
+        - kind: ServiceAccount
+          name: node-feature-discovery-gc
+        - kind: ServiceAccount
+          name: nvidia-gpu-feature-discovery
+        - kind: ServiceAccount
+          name: node-feature-discovery-master
+        - kind: Role
+          name: node-manager:nvidia-gpu:node-feature-discovery-worker
+        - kind: RoleBinding
+          name: node-manager:nvidia-gpu:node-feature-discovery-worker
   module:
     conversions:
       disable: true
