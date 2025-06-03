@@ -7,11 +7,12 @@ description: "Deckhouse Kubernetes Platform global settings."
 The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)).
 
 {% alert %}
-The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter defines the DNS names template some Deckhouse modules use to create Ingress resources.
+The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a DNS name template used by some Deckhouse modules to create Ingress resources.
 
-You can use the [sslip.io](https://sslip.io/) service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
 
-Domain used in the template must not match the domain specified in the [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+The domain specified in the template must not match the domain set in the [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain) parameter, nor the domain of the internal service network zone.  
+For example, if `clusterDomain` is set to `cluster.local` and the internal zone is `central1.internal`, then publicDomainTemplate must not be `%s.cluster.local`.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:
