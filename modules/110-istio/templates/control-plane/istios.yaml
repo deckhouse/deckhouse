@@ -77,6 +77,9 @@ spec:
 
   values:
     global:
+      istiodRemote:
+        enabled: false
+      createRBAC: false
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
       operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
       istioNamespace: d8-{{ $.Chart.Name }}
@@ -177,8 +180,6 @@ spec:
   {{- end }}
 
     pilot:
-      istiodRemote:
-        enabled: false
       # We're deploying the istio-cni DS with module templates.
       cni:
         enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
