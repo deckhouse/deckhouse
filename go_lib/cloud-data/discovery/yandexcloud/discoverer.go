@@ -90,8 +90,11 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 func (d *Discoverer) DiscoveryData(ctx context.Context, _ meta.DiscoveryDataOptions) ([]byte, error) {
 	var (
-		discoveryData = v1.DiscoveryData{}
-		err           error
+		discoveryData = v1.DiscoveryData{
+			APIVersion: "deckhouse.io/v1",
+			Kind:       "YandexCloudProviderDiscoveryData",
+		}
+		err error
 	)
 
 	discoveryData.Zones, err = d.getZones(ctx)
