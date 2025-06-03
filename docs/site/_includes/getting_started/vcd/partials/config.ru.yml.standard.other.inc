@@ -107,6 +107,7 @@ metadata:
 spec:
   enabled: true
 ---
+---
 # [<en>] metallb module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
 # [<ru>] Настройки модуля metallb.
@@ -116,35 +117,18 @@ kind: ModuleConfig
 metadata:
   name: metallb
 spec:
-  enabled: true
-  settings:
-    speaker:
-      nodeSelector:
-        node-role.deckhouse.io/frontend: ""
   version: 2
   enabled: true
   settings:
-      # [<ru>] Настройки metallb-пула для входящего трафика.
-      # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
-      # [<en>] Metallb pool settings for incoming traffic.
-      # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
+    # [<ru>] Настройки metallb-пула для входящего трафика.
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
+    # [<en>] Metallb pool settings for incoming traffic.
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
     addressPools:
     - addresses:
-      - *!CHANGE_SUBNET_METALLB_POOL*.10/32
+        - *!CHANGE_SUBNET_METALLB_POOL*.10/32
       name: frontend-pool
       protocol: layer2
-    # [<ru>] Размещение спикера на frontend-узлах.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
-    # [<en>] Speaker placement on frontend hosts.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
-    speaker:
-      nodeSelector:
-        node-role.deckhouse.io/frontend: ""
-      tolerations:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
-        operator: Equal
-        value: frontend
 ---
 # [<en>] Load balancer class for Ingress resources.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
