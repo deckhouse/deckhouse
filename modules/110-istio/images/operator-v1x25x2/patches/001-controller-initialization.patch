@@ -1,383 +1,72 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..cb65d74a 100644
+index 5e97cde4..409f41f8 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
-@@ -18,10 +18,6 @@ import (
- 	"context"
- 	"errors"
- 	"fmt"
--	"path"
--	"reflect"
--	"regexp"
--
- 	"github.com/go-logr/logr"
- 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
- 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-@@ -42,8 +38,13 @@ import (
- 	rbacv1 "k8s.io/api/rbac/v1"
- 	apierrors "k8s.io/apimachinery/pkg/api/errors"
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
- 	"k8s.io/apimachinery/pkg/runtime"
-+	"k8s.io/apimachinery/pkg/runtime/schema"
- 	"k8s.io/apimachinery/pkg/types"
-+	"path"
-+	"reflect"
-+	"regexp"
- 	ctrl "sigs.k8s.io/controller-runtime"
- 	"sigs.k8s.io/controller-runtime/pkg/builder"
- 	"sigs.k8s.io/controller-runtime/pkg/client"
-@@ -53,6 +54,8 @@ import (
- 	logf "sigs.k8s.io/controller-runtime/pkg/log"
- 	"sigs.k8s.io/controller-runtime/pkg/predicate"
- 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-+	"strconv"
+@@ -21,6 +21,7 @@ import (
+ 	"path"
+ 	"reflect"
+ 	"regexp"
 +	"strings"
  
- 	"istio.io/istio/pkg/ptr"
- )
-@@ -99,18 +102,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
- func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
+ 	"github.com/go-logr/logr"
+ 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+@@ -79,17 +80,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
+ // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
+-// +kubebuilder:rbac:groups="",resources="*",verbs="*"
+-// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
+-// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
+-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
+-// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
+-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
+-// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
++// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs=get;list;watch;create;update;patch
++// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
++// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
+-// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
++// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
+ // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
+-// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
++// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
++
++// +kubebuilder:rbac:groups=authentication.istio.io,resources=peerauthentications;requestauthentications,verbs=get;list;watch
++// +kubebuilder:rbac:groups=config.istio.io,resources=adapters;attributemanifests;handlers;instances;rules;templates,verbs=get;list;watch
++// +kubebuilder:rbac:groups=extensions.istio.io,resources=wasmplugins,verbs=get;list;watch
++// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways;httproutes,verbs=get;list;watch
++// +kubebuilder:rbac:groups=networking.istio.io,resources=destinationrules;envoyfilters;gateways;serviceentries;sidecars;virtualservices;workloadentries;workloadgroups,verbs=get;list;watch
++// +kubebuilder:rbac:groups=rbac.istio.io,resources=rbacconfigs;servicerolebindings;serviceroles,verbs=get;list;watch
++// +kubebuilder:rbac:groups=security.istio.io,resources=authorizationpolicies,verbs=get;list;watch
++// +kubebuilder:rbac:groups=telemetry.istio.io,resources=telemetries,verbs=get;list;watch
++// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;ingresses/status,verbs=get;list;watch;update
+ 
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+ // move the current state of the cluster closer to the desired state.
+@@ -100,6 +110,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
  	log := logf.FromContext(ctx)
  
--	reconcileErr := r.doReconcile(ctx, rev)
-+	result, reconcileErr := r.doReconcile(ctx, rev)
+ 	reconcileErr := r.doReconcile(ctx, rev)
++	if isRBACError(reconcileErr) {
++		// Log warning without returning error
++		fmt.Println("RBAC error detected: insufficient permissions. Please ensure the appropriate RBAC rules are applied.")
++		// Clear the reconciliation error as we're treating it as a warning
++		reconcileErr = nil
++	}
  
  	log.Info("Reconciliation done. Updating status.")
  	statusErr := r.updateStatus(ctx, rev, reconcileErr)
- 
--	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
-+	if reconcileErr != nil {
-+		// If we got a requeue result, preserve it
-+		if result.Requeue || result.RequeueAfter > 0 {
-+			return result, statusErr
-+		}
-+		return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
-+	}
-+	return result, statusErr
+@@ -674,3 +690,10 @@ func clearIgnoredFields(obj client.Object) {
+ func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+ 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionKind, logger, handler)
  }
- 
--func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) error {
-+// Updated doReconcile to return both result and error
-+func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
- 	log := logf.FromContext(ctx)
- 	if err := r.validate(ctx, rev); err != nil {
--		return err
-+		return ctrl.Result{}, err
- 	}
- 
- 	log.Info("Installing Helm chart")
-@@ -153,9 +164,25 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
- 
- 	return nil
- }
-+func createValuesWithForce(values *v1.Values) map[string]interface{} {
-+	forcedValues := make(map[string]interface{})
- 
--func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
--	ownerReference := metav1.OwnerReference{
-+	// Convert Values struct to map[string]interface{} first
-+	baseValues := helm.FromValues(values)
 +
-+	// Copy all values
-+	for k, v := range baseValues {
-+		forcedValues[k] = v
-+	}
-+
-+	// Add force flag
-+	forcedValues["force"] = true
-+	return forcedValues
-+}
-+
-+// Helper function to create owner reference
-+func getOwnerReference(rev *v1.IstioRevision) metav1.OwnerReference {
-+	return metav1.OwnerReference{
- 		APIVersion:         v1.GroupVersion.String(),
- 		Kind:               v1.IstioRevisionKind,
- 		Name:               rev.Name,
-@@ -163,12 +190,283 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
- 		Controller:         ptr.Of(true),
- 		BlockOwnerDeletion: ptr.Of(true),
- 	}
-+}
-+
-+// Helper function to check if resource belongs to release
-+func belongsToRelease(obj unstructured.Unstructured, releaseName string) bool {
-+	annotations := obj.GetAnnotations()
-+	if annotations == nil {
++func isRBACError(err error) bool {
++	if err == nil {
 +		return false
 +	}
-+	return annotations["meta.helm.sh/release-name"] == releaseName
++	return strings.Contains(err.Error(), "forbidden") || strings.Contains(err.Error(), "unable to access")
 +}
-+
-+// Main installation function
-+func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
-+	log := logf.FromContext(ctx)
-+	releaseName := getReleaseName(rev)
-+	namespace := rev.Spec.Namespace
-+
-+	// Check for force reinstall annotation
-+	if rev.Annotations["sail.istio.io/force-reinstall"] == "true" {
-+		if err := r.forceCleanup(ctx, rev); err != nil {
-+			return ctrl.Result{}, fmt.Errorf("force cleanup failed: %w", err)
-+		}
-+		// Remove annotation
-+		patch := client.MergeFrom(rev.DeepCopy())
-+		delete(rev.Annotations, "sail.istio.io/force-reinstall")
-+		if err := r.Client.Patch(ctx, rev, patch); err != nil {
-+			log.Error(err, "Failed to remove force-reinstall annotation")
-+		}
-+	}
-+
-+	// Attempt installation
-+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-+		helm.FromValues(rev.Spec.Values), namespace, releaseName, getOwnerReference(rev))
-+
-+	if err == nil {
-+		return ctrl.Result{}, nil
-+	}
-+
-+	// Handle specific error cases
-+	if strings.Contains(err.Error(), "unexpected helm release status uninstalling") {
-+		return r.handleStuckRelease(ctx, rev, err)
-+	}
-+
-+	if strings.Contains(err.Error(), "is forbidden") {
-+		return ctrl.Result{}, fmt.Errorf("RBAC permissions missing: %w", err)
-+	}
-+
-+	return ctrl.Result{}, fmt.Errorf("installation failed: %w", err)
-+}
-+
-+func (r *Reconciler) handleStuckRelease(ctx context.Context, rev *v1.IstioRevision, installErr error) (ctrl.Result, error) {
-+	log := logf.FromContext(ctx)
-+	releaseName := getReleaseName(rev)
-+	namespace := rev.Spec.Namespace
-+
-+	// Log detailed error
-+	log.Error(installErr, "Release stuck in uninstalling state")
-+
-+	// Find and log stuck resources
-+	if stuckResources, err := r.findStuckResources(ctx, releaseName, namespace); err == nil {
-+		for _, res := range stuckResources {
-+			log.Info("Stuck resource",
-+				"kind", res.GetKind(),
-+				"name", res.GetName(),
-+				"namespace", res.GetNamespace())
-+		}
-+	}
-+
-+	// Provide clear recovery instructions
-+	log.Info("Manual recovery required",
-+		"action1", fmt.Sprintf("kubectl delete secret -n %s -l owner=helm,name=%s", namespace, releaseName),
-+		"action2", fmt.Sprintf("kubectl delete deploy,svc,sa -n %s -l release=%s", namespace, releaseName),
-+		"action3", "kubectl annotate istiorevision "+rev.Name+" sail.istio.io/force-reinstall=true --overwrite")
-+
-+	return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state - manual cleanup required", releaseName)
-+}
-+
-+// Force cleanup implementation
-+func (r *Reconciler) forceCleanup(ctx context.Context, rev *v1.IstioRevision) error {
-+	log := logf.FromContext(ctx)
-+	releaseName := getReleaseName(rev)
-+	namespace := rev.Spec.Namespace
-+
-+	// 1. Delete the helm secret
-+	if err := r.deleteHelmSecret(ctx, releaseName, namespace); err != nil {
-+		log.Error(err, "Failed to delete helm secret")
-+	}
- 
-+	// 2. Clean up remaining resources
-+	resourceTypes := []schema.GroupVersionKind{
-+		{Group: "apps", Version: "v1", Kind: "Deployment"},
-+		{Group: "", Version: "v1", Kind: "Service"},
-+		{Group: "", Version: "v1", Kind: "ServiceAccount"},
-+	}
-+
-+	for _, gvk := range resourceTypes {
-+		if err := r.deleteResourcesByType(ctx, gvk, namespace, releaseName); err != nil {
-+			log.Error(err, "Failed to cleanup resources", "kind", gvk.Kind)
-+		}
-+	}
-+
-+	return nil
-+}
-+
-+// Delete helm secrets
-+func (r *Reconciler) deleteHelmSecret(ctx context.Context, releaseName, namespace string) error {
-+	secretList := &corev1.SecretList{}
-+	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace)); err != nil {
-+		return err
-+	}
-+
-+	for _, secret := range secretList.Items {
-+		if secret.Type == "helm.sh/release.v1" && strings.HasPrefix(secret.Name, "sh.helm.release.v1."+releaseName) {
-+			if err := r.Client.Delete(ctx, &secret); err != nil {
-+				return err
-+			}
-+		}
-+	}
-+	return nil
-+}
-+
-+// Delete resources by type
-+func (r *Reconciler) deleteResourcesByType(ctx context.Context, gvk schema.GroupVersionKind, namespace, releaseName string) error {
-+	list := &unstructured.UnstructuredList{}
-+	list.SetGroupVersionKind(gvk)
-+
-+	if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
-+		return err
-+	}
-+
-+	for _, item := range list.Items {
-+		if belongsToRelease(item, releaseName) {
-+			if err := r.Client.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
-+				return err
-+			}
-+		}
-+	}
-+	return nil
-+}
-+
-+// Find stuck resources
-+func (r *Reconciler) findStuckResources(ctx context.Context, releaseName, namespace string) ([]unstructured.Unstructured, error) {
-+	var stuckResources []unstructured.Unstructured
-+	resourceTypes := []schema.GroupVersionKind{
-+		{Group: "apps", Version: "v1", Kind: "Deployment"},
-+		{Group: "", Version: "v1", Kind: "Service"},
-+		{Group: "", Version: "v1", Kind: "ServiceAccount"},
-+	}
-+
-+	for _, gvk := range resourceTypes {
-+		list := &unstructured.UnstructuredList{}
-+		list.SetGroupVersionKind(gvk)
-+
-+		if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
-+			return nil, err
-+		}
-+
-+		for _, item := range list.Items {
-+			if belongsToRelease(item, releaseName) {
-+				stuckResources = append(stuckResources, item)
-+			}
-+		}
-+	}
-+	return stuckResources, nil
-+}
-+
-+func (r *Reconciler) setRetryCount(ctx context.Context, rev *v1.IstioRevision, count int) error {
-+	patch := client.MergeFrom(rev.DeepCopy())
-+	if rev.Annotations == nil {
-+		rev.Annotations = make(map[string]string)
-+	}
-+	rev.Annotations["retry-count"] = strconv.Itoa(count)
-+	return r.Client.Patch(ctx, rev, patch)
-+}
-+
-+func (r *Reconciler) clearRetryCount(ctx context.Context, rev *v1.IstioRevision) error {
-+	if rev.Annotations == nil || rev.Annotations["retry-count"] == "" {
-+		return nil
-+	}
-+	patch := client.MergeFrom(rev.DeepCopy())
-+	delete(rev.Annotations, "retry-count")
-+	return r.Client.Patch(ctx, rev, patch)
-+}
-+
-+func (r *Reconciler) tryInstall(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
- 	values := helm.FromValues(rev.Spec.Values)
-+	ownerReference := metav1.OwnerReference{
-+		APIVersion:         v1.GroupVersion.String(),
-+		Kind:               v1.IstioRevisionKind,
-+		Name:               rev.Name,
-+		UID:                rev.UID,
-+		Controller:         ptr.Of(true),
-+		BlockOwnerDeletion: ptr.Of(true),
-+	}
-+
-+	// First try normal install
- 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
- 		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
--	if err != nil {
--		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
-+	if err == nil {
-+		return ctrl.Result{}, nil
-+	}
-+
-+	// Handle ownership conflicts
-+	if strings.Contains(err.Error(), "invalid ownership metadata") {
-+		forcedValues := make(map[string]interface{})
-+		for k, v := range values {
-+			forcedValues[k] = v
-+		}
-+		forcedValues["force"] = true
-+
-+		_, forceErr := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-+			forcedValues, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
-+		if forceErr != nil {
-+			return ctrl.Result{}, fmt.Errorf("force install failed: %w", forceErr)
-+		}
-+		return ctrl.Result{}, nil
-+	}
-+
-+	return ctrl.Result{}, err
-+}
-+
-+func (r *Reconciler) cleanupOrphanedResources(ctx context.Context, rev *v1.IstioRevision) error {
-+	log := logf.FromContext(ctx)
-+	releaseName := getReleaseName(rev)
-+	namespace := rev.Spec.Namespace
-+
-+	// List of resource types with their GVK
-+	resourceTypes := []struct {
-+		gvk schema.GroupVersionKind
-+		obj client.Object
-+	}{
-+		{
-+			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
-+			obj: &appsv1.Deployment{},
-+		},
-+		{
-+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
-+			obj: &corev1.Service{},
-+		},
-+		{
-+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"},
-+			obj: &corev1.ServiceAccount{},
-+		},
-+		{
-+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-+			obj: &corev1.Secret{},
-+		},
-+	}
-+
-+	for _, resource := range resourceTypes {
-+		list := &unstructured.UnstructuredList{}
-+		list.SetGroupVersionKind(resource.gvk)
-+
-+		if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
-+			log.Error(err, "Failed to list resources", "kind", resource.gvk.Kind)
-+			continue
-+		}
-+
-+		for _, item := range list.Items {
-+			if belongsToRelease(item, releaseName) {
-+				log.Info("Cleaning up orphaned resource",
-+					"kind", item.GetKind(),
-+					"name", item.GetName(),
-+					"namespace", item.GetNamespace())
-+
-+				// Convert back to typed object for proper deletion
-+				obj := resource.obj.DeepCopyObject().(client.Object)
-+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, obj); err != nil {
-+					log.Error(err, "Failed to convert unstructured object")
-+					continue
-+				}
-+
-+				if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-+					log.Error(err, "Failed to delete orphaned resource")
-+				}
-+			}
-+		}
- 	}
- 	return nil
- }
