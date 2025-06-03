@@ -422,7 +422,7 @@ Parameters that can be used in `module.yaml`:
   - `confirmation` — *Boolean.* Requires confirmation when disabling the module.
   - `message` — *String.* Message explaining what will happen when the module is disabled.
 
-  If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the label `modules.deckhouse.io/allow-disabling=true`. If this label is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
+  If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the annotation `modules.deckhouse.io/allow-disabling=true`. If this annotation is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
 - `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
 - `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
