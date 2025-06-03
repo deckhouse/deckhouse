@@ -372,8 +372,28 @@ document.addEventListener('DOMContentLoaded', function () {
         el.querySelector('.icon--copy').addEventListener('click', () => {
           const code = el.querySelector('code');
           if (!code) return;
+          let textToCopy = '';
 
-          navigator.clipboard.writeText(code.textContent).then(r => {
+          function codeChild(node) {
+
+            if(node.nodeType === Node.TEXT_NODE) {
+              textToCopy += node.textContent;
+            } else if(node.nodeType === Node.ELEMENT_NODE) {
+              if(node.hasAttribute('data-copy') || node.getAttribute('data-copy') === 'ignore') {
+                return;
+              }
+            }
+
+            for(let i = 0; i < node.childNodes.length; i++){
+              codeChild(node.childNodes[i]);
+            }
+          }
+
+          for(let i = 0; i < code.childNodes.length; i++) {
+            codeChild(code.childNodes[i]);
+          }
+
+          navigator.clipboard.writeText(textToCopy).then(r => {
             copyBtnTippy.setContent(texts.copied);
 
             setTimeout(() => {
@@ -409,3 +429,124 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   };
 });
+
+document.addEventListener("DOMContentLoaded", function() {
+  const preElement = document.querySelectorAll('pre');
+
+  let lang = document.documentElement.lang;
+
+  if (lang.length === 0) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+      lang = "ru"
+    } else {
+      lang = "en"
+    }
+  }
+
+  if (!($.cookie("lang") === lang)) {
+    $.cookie('lang', lang, {path: '/', expires: 365});
+  }
+
+  const textTooltip = {
+    en: {
+      wrap: 'Wrap',
+      unwrap: 'Unwrap',
+    },
+    ru: {
+      wrap: 'Свернуть',
+      unwrap: 'Развернуть',
+    }
+  };
+  const texts = textTooltip[lang];
+
+  preElement.forEach(pre => {
+
+    pre.classList.add('code__transfer');
+    const code = pre.querySelector('code');
+
+    const codeText = code.innerHTML;
+    const lines = codeText.split('\n');
+
+    let newHTML = '';
+
+    lines.forEach((line, index) => {
+      const trimLine = line.trim();
+
+      if(trimLine.length === 0 || /^<\/span\s*>$/.test(trimLine)) {
+        return;
+      }
+      newHTML += `<span data-copy="ignore" class="line-number">${index + 1}</span>${line}\n`;
+    });
+
+    code.innerHTML = newHTML;
+
+    const button = document.createElement('button');
+    button.classList.add('wrap__button');
+
+    const wrapIcon = document.createElement('img');
+    wrapIcon.src = '/images/wrap-button.svg';
+    wrapIcon.alt = 'Wrap';
+    wrapIcon.classList.add('wrap__icon');
+    wrapIcon.style.display = 'none';
+
+    const unwrapIcon = document.createElement('img');
+    unwrapIcon.src = '/images/unwrap-button.svg';
+    unwrapIcon.alt = 'Unwrap';
+    unwrapIcon.classList.add('wrap__icon');
+
+    button.appendChild(wrapIcon);
+    button.appendChild(unwrapIcon);
+
+    code.classList.add('wrap');
+    pre.appendChild(button);
+
+    let isWrapper = false;
+
+    button.classList.remove('show');
+
+    button.addEventListener('click', function() {
+      isWrapper = !isWrapper;
+      code.classList.toggle('wrap');
+
+      if(isWrapper) {
+        wrapIcon.style.display = 'inline';
+        unwrapIcon.style.display = 'none';
+      } else {
+        wrapIcon.style.display = 'none';
+        unwrapIcon.style.display = 'inline';
+      }
+    });
+
+    tippy(wrapIcon, {
+      placement: 'left',
+      arrow: false,
+      animation: 'scale',
+      theme: 'light',
+      content: texts.unwrap,
+      hideOnClick: false,
+      delay: [300, 50],
+      offset: [0, 10],
+      duration: [300],
+    });
+
+    tippy(unwrapIcon, {
+      placement: 'left',
+      arrow: false,
+      animation: 'scale',
+      theme: 'light',
+      content: texts.wrap,
+      hideOnClick: false,
+      delay: [300, 50],
+      offset: [0, 10],
+      duration: [300],
+    });
+
+    pre.addEventListener('mouseenter', () => {
+      button.classList.add('show');
+    });
+
+    pre.addEventListener('mouseleave', () => {
+      button.classList.remove('show');
+    });
+  })
+})
