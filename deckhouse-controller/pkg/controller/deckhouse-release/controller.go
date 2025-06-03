@@ -693,7 +693,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 	if err != nil {
 		return fmt.Errorf("update with retry: %w", err)
 	}
-	if dr.Status.Message != "" {
+	if dr.Status.Message != "" || dr.Status.Phase != v1alpha1.DeckhouseReleasePhaseDeployed {
 		err = r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
 			Message: "",
