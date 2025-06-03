@@ -182,6 +182,10 @@ spec:
       - groups
 ```
 
+{% alert level="warning" %}
+При использовании Keycloak, как Identity Provider необходимо [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалить маппинг `Email verified` («Client Scopes» → «Email» → «Mappers») для корректной поддержки поля [`insecureSkipEmailVerified: true`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
+{% endalert %}
+
 #### Okta
 
 В примере представлены настройки провайдера для интеграции с Okta:
