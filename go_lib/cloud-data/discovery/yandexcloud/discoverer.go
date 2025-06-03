@@ -294,19 +294,21 @@ func (d *Discoverer) getImages(ctx context.Context) ([]v1.DiscoveryDataImage, er
 		}
 
 		images = append(images, v1.DiscoveryDataImage{
-			ImageID:   image.GetId(),
-			Name:      image.GetName(),
-			Family:    image.GetFamily(),
-			CreatedAt: image.GetCreatedAt().AsTime(),
+			ImageID:     image.GetId(),
+			Name:        image.GetName(),
+			Family:      image.GetFamily(),
+			Description: image.GetDescription(),
+			CreatedAt:   image.GetCreatedAt().AsTime(),
 		})
 	}
 
 	for _, image := range folderImages {
 		images = append(images, v1.DiscoveryDataImage{
-			ImageID:   image.GetId(),
-			Name:      image.GetName(),
-			Family:    image.GetFamily(),
-			CreatedAt: image.GetCreatedAt().AsTime(),
+			ImageID:     image.GetId(),
+			Name:        image.GetName(),
+			Family:      image.GetFamily(),
+			Description: image.GetDescription(),
+			CreatedAt:   image.GetCreatedAt().AsTime(),
 		})
 	}
 

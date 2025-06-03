@@ -33,10 +33,11 @@ type DiscoveryData struct {
 	ExternalAddresses []DiscoveryDataExternalAddress `json:"externalAddresses,omitempty"`
 }
 type DiscoveryDataImage struct {
-	ImageID   string    `json:"imageId,omitempty"   yaml:"imageId,omitempty"`
-	Name      string    `json:"name,omitempty"      yaml:"name,omitempty"`
-	Family    string    `json:"family,omitempty"    yaml:"family,omitempty"`
-	CreatedAt time.Time `json:"createdAt,omitempty" yaml:"createdAt,omitempty"`
+	ImageID     string    `json:"imageId,omitempty"   yaml:"imageId,omitempty"`
+	Name        string    `json:"name,omitempty"      yaml:"name,omitempty"`
+	Family      string    `json:"family,omitempty"    yaml:"family,omitempty"`
+	Description string    `json:"description,omitempty" yaml:"description,omitempty"`
+	CreatedAt   time.Time `json:"createdAt,omitempty" yaml:"createdAt,omitempty"`
 }
 
 // TODO: omit empty?
