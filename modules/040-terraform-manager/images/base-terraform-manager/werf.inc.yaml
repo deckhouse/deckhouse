@@ -4,19 +4,28 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    env: { "PATH": "/root:/" }
+    workingDir: "/terraform"
     entrypoint: ["/dhctl"]
+    env: { "PATH": "/terraform:/", "HOME": "/terraform/"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
+  owner: 64535
+  group: 64535
   before: setup
 - image: terraform
-  add: /terraform/terraform
-  to: /root/terraform
+  add: /terraform
+  to:  /terraform
+  includePaths:
+    - terraform
+  owner: 64535
+  group: 64535
   before: setup
 git:
 - add: /{{ .ModulePath }}
+  owner: 64535
+  group: 64535
   to: /deckhouse
   includePaths:
     - "candi/openapi"
@@ -27,20 +36,29 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    env: { "PATH": "/root:/" }
+    workingDir: "/opentofu"
     entrypoint: ["/dhctl"]
+    env: { "PATH": "/opentofu:/", "HOME": "/opentofu/"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
-- image: opentofu
-  add: /opentofu/opentofu
-  to: /root/opentofu
+- image: terraform
+  add: /opentofu
+  to:  /opentofu
+  includePaths:
+    - opentofu
+  owner: 64535
+  group: 64535
   before: setup
-- image: opentofu
-  add: /opentofu/opentofu
-  to: /root/terraform
+- image: terraform
+  add: /opentofu
+  to:  /opentofu
+  includePaths:
+    - terraform
+  owner: 64535
+  group: 64535
   before: setup
 git:
 - add: /{{ .ModulePath }}
@@ -102,7 +120,8 @@ shell:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
-  - chmod 755 /terraform/terraform
+  - chown -R 64535:64535 /terraform
+  - chmod -R 755 /terraform
 ---
 # use artifact for one place import for base and install images
 image: opentofu
@@ -127,4 +146,5 @@ shell:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X github.com/opentofu/opentofu/version.dev=no" -o /opentofu/opentofu ./cmd/tofu
-  - chmod 755 /opentofu/opentofu
+  - chown -R 64535:64535 /opentofu
+  - chmod -R 755 /opentofu
