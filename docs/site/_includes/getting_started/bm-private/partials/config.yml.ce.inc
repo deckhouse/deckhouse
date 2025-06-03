@@ -40,10 +40,7 @@ deckhouse:
   registryScheme: HTTPS
   # [<en>] Root CA certificate to validate the registry’s HTTPS certificate (if self-signed certificates are used).
   # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
-  registryCA: |
-    -----BEGIN CERTIFICATE-----
-    MIIF8jCCA9gAwIBAgIU...
-    -----END CERTIFICATE-----
+  registryCA: <REGISTRY_CA>
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
