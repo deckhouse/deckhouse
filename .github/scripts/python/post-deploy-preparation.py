@@ -19,7 +19,6 @@ from kubernetes import client, config
 import yaml
 import base64
 import inspect
-import certifi
 
 SSL_CERT_FILE = os.getenv('SSL_CERT_FILE','/etc/ssl/certs/ca-certificates.crt')
 
