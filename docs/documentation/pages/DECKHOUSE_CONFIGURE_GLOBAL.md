@@ -2,6 +2,7 @@
 title: "Global configuration"
 permalink: en/deckhouse-configure-global.html
 description: "Deckhouse Kubernetes Platform global settings."
+module-kebab-name: "global"
 ---
 
 The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)).
@@ -36,6 +37,8 @@ spec:
         - dedicated.example.com
       storageClass: 'default-fast'
 ```
+
+{% include module-conversion.liquid %}
 
 ## Parameters
 
