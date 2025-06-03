@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -105,8 +107,8 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
 	controllers := input.Snapshots["controller"]
-	serviceNames := stringsToMap(input.Snapshots["services"])
-	daemonSetNames := stringsToMap(input.Snapshots["daemonsetscruise"])
+	serviceNames := set.NewFromSnapshot(input.Snapshots["services"])
+	daemonSetNames := set.NewFromSnapshot(input.Snapshots["daemonsetscruise"])
 
 	for _, c := range controllers {
 		controllerName := c.(INController).Name
@@ -120,12 +122,13 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 		expectedDaemonSets := []string{
 			"controller-" + controllerName,
 			fmt.Sprintf("proxy-%s-failover", controllerName),
+			fmt.Sprintf("controller-%s-failover", controllerName),
 		}
 
 		found := false
 
 		for _, svc := range expectedServices {
-			if serviceNames[svc] {
+			if _, s := serviceNames[svc]; s {
 				found = true
 				break
 			}
@@ -133,7 +136,7 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 
 		if !found {
 			for _, ds := range expectedDaemonSets {
-				if daemonSetNames[ds] {
+				if _, d := daemonSetNames[ds]; d {
 					found = true
 					break
 				}
@@ -143,7 +146,7 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 		// Set finalizer
 		if found {
 			finalizers := c.(INController).Finalizers
-			if !StringExistInSlice(finalizers, finalizer) {
+			if !slices.Contains(finalizers, finalizer) {
 				finalizers = append(finalizers, finalizer)
 				patch := map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -158,26 +161,6 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 	}
 
 	return nil
-}
-
-func stringsToMap(names []go_hook.FilterResult) map[string]bool {
-	set := make(map[string]bool, len(names))
-	for _, r := range names {
-		name := r.(string)
-		set[name] = true
-	}
-
-	return set
-}
-
-func StringExistInSlice(s []string, r string) bool {
-	for _, item := range s {
-		if item == r {
-			return true
-		}
-	}
-
-	return false
 }
 
 func DeleteFinalizer(input *go_hook.HookInput, crName, crNamespace, crAPIVersion, crKind, finalizerToRemove string) {
