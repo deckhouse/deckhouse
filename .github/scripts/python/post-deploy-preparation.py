@@ -19,6 +19,7 @@ from kubernetes import client, config
 import yaml
 import base64
 import inspect
+import certifi
 
 GITHUB_TOKEN=os.getenv('GITHUB_TOKEN')
 if (GITHUB_TOKEN == None):
@@ -74,7 +75,7 @@ def collect_released_versions():
         if (editions['FE'] and (list(editions.values())[:-1] == list(editions.values())[1:])):
             return editions
         else:
-            return None 
+            return None
 
     # collect all deployed versions for each channel
     for channel in channels.keys():
@@ -96,7 +97,7 @@ def collect_released_versions():
                     deploy_status = job['conclusion']
             if (deploy_status != 'success'):
                 continue
-            
+
             # collect deployed versions for channel in one run
             for job in jobs:
                 if ('Enable' in job['name']) and (job['conclusion'] == 'success'):
@@ -129,6 +130,8 @@ def collect_released_versions():
 def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     output_prefix = 'DEPLOY_'
 
+    cfg = client.Configuration()
+
     try:
         kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
         config.load_kube_config_from_dict(kubeconf)
@@ -137,10 +140,13 @@ def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
         write_output(output_prefix+kubeconf_name,'false')
         print(f'Error: {e}')
         return
-      
+
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
 
-    v1 = client.CoreV1Api()
+    cfg.ssl_ca_cert = certifi.where()
+    api_client = client.ApiClient(configuration=cfg)
+    v1 = client.CoreV1Api(api_client)
+
     try:
         cm = v1.read_namespaced_config_map(CM_NAME,namespace)
     except Exception as e:
@@ -171,5 +177,5 @@ if __name__ == "__main__":
             kubecfgs |= {key:value}
     for item,value in kubecfgs.items():
       determine_clusters_need_deploy(item,value)
-      
+
     determine_release_id()
