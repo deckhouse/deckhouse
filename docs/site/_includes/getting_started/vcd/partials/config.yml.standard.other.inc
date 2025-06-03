@@ -116,6 +116,11 @@ kind: ModuleConfig
 metadata:
   name: metallb
 spec:
+  enabled: true
+  settings:
+    speaker:
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
   version: 2
   enabled: true
   settings:
@@ -140,6 +145,28 @@ spec:
         key: dedicated.deckhouse.io
         operator: Equal
         value: frontend
+---
+# [<en>] Load balancer class for Ingress resources.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
+# [<ru>] Класс балансировщика нагрузки для ресурсов Ingress.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: ingress
+spec:
+  # [<en>] IP range from the address pool.
+  # [<ru>] Диапазон IP-адресов из пула.
+  addressPool:
+    - 192.168.207.100-192.168.207.101  # <- замените на свои свободные IP в сети frontend-нод
+  # [<en>] Set false to apply this class only when explicitly requested.
+  # [<ru>] False — класс используется только при явном указании.
+  isDefault: false
+  # [<en>] Limit allocation to nodes with the frontend role.
+  # [<ru>] Ограничить выдачу IP-адресов только нодам с ролью frontend.
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  type: L2
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
@@ -260,15 +287,15 @@ spec:
   ingressClass: nginx
   # [<en>] The way traffic goes to cluster from the outer network.
   # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-    realIPHeader: X-Forwarded-For
+  inlet: LoadBalancer
+  loadBalancer:
+    loadBalancerClass: ingress
   nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.deckhouse.io/frontend: ""
   tolerations:
-  - operator: Exists
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: frontend
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
