@@ -453,6 +453,35 @@ function run-test() {
   fi
 }
 
+# Parse DEV_BRANCH and convert to semver format
+parse_version_from_branch() {
+    local branch="$1"
+    local version=""
+    
+    # Extract version pattern like "1.69" from various formats
+    if [[ "$branch" =~ release-([0-9]+\.[0-9]+) ]]; then
+        version="v${BASH_REMATCH[1]}.0"
+    elif [[ "$branch" =~ v?([0-9]+\.[0-9]+)(\.[0-9]+)? ]]; then
+        # Handle cases like "v1.69" or "1.69.1"
+        if [[ -n "${BASH_REMATCH[2]}" ]]; then
+            version="v${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        else
+            version="v${BASH_REMATCH[1]}.0"
+        fi
+    else
+        # Fallback: try to extract any version-like pattern
+        if [[ "$branch" =~ ([0-9]+\.[0-9]+) ]]; then
+            version="v${BASH_REMATCH[1]}.0"
+        else
+            # If no version pattern found, return original or default
+            version="v0.0.0"
+        fi
+    fi
+    
+    echo "$version"
+}
+SEMVER_VERSION=$(parse_version_from_branch "${DEV_BRANCH}")
+
 function test_requirements() {
   >&2 echo "Start check requirements ..."
   if [ ! -f /deckhouse/release.yaml ]; then
@@ -513,9 +542,9 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     dryrun: \"true\"
-  name: ${DEV_BRANCH}
+  name: ${SEMVER_VERSION}
 spec:
-  version: ${DEV_BRANCH}
+  version: ${SEMVER_VERSION}
   requirements: {}
 " | \$python_binary -c "
 import yaml, sys
