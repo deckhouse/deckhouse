@@ -107,7 +107,6 @@ metadata:
 spec:
   enabled: true
 ---
----
 # [<en>] metallb module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
 # [<ru>] Настройки модуля metallb.
