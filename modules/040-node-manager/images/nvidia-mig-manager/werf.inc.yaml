@@ -3,7 +3,7 @@
 image: {{ .ModuleName }}/nvidia-mig-manager
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /nvidia-mig-manager
   to: /nvidia-mig-manager
   before: setup
@@ -20,13 +20,12 @@ shell:
   - cd /src
   - rm -rf .git hack test
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
+from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
-  to: /src
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -35,13 +34,15 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash git
+  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
+  - wget https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox && chmod a+x /busybox
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOPATH=/go
+  - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+  - export GIT_COMMIT=$(cat /src/.GIT_HASH)
   - cd /src
-  - export GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o nvidia-mig-manager ./cmd/nvidia-mig-manager/
-  - mv /src/nvidia-mig-manager /nvidia-mig-manager
-  - chown 64535:64535 /nvidia-mig-manager
-  - chmod 0700 /nvidia-mig-manager
+  - export CLI_VERSION_PACKAGE=github.com/NVIDIA/mig-parted/internal/info
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - make PREFIX=/ cmds
+  - chmod 0700 /nvidia-mig-parted /nvidia-mig-manager
