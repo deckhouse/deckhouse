@@ -693,14 +693,13 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 	if err != nil {
 		return fmt.Errorf("update with retry: %w", err)
 	}
-	if dr.Status.Message != "" || dr.Status.Phase != v1alpha1.DeckhouseReleasePhaseDeployed {
-		err = r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-			Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
-			Message: "",
-		})
-		if err != nil {
-			return fmt.Errorf("update status with retry: %w", err)
-		}
+
+	err = r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+		Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
+		Message: "",
+	})
+	if err != nil {
+		return fmt.Errorf("update status with retry: %w", err)
 	}
 
 	return nil
@@ -999,6 +998,16 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 	var res ctrl.Result
 
+	if dr.Status.Message != "" {
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
+			Message: "",
+		})
+		if err != nil {
+			return res, err
+		}
+	}
+
 	if r.isDeckhousePodReady(ctx) {
 		err := ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
 			if len(dr.Annotations) == 0 {
@@ -1015,6 +1024,15 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 			return res, err
 		}
 
+		if dr.Status.Message != "" {
+			err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+				dr.Status.Message = ""
+				return nil
+			})
+			if err != nil {
+				return res, err
+			}
+		}
 		return res, nil
 	}
 
