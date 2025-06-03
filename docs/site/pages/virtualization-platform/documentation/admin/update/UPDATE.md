@@ -33,7 +33,7 @@ spec:
 
 The platform supports three update modes:
 
-- **Automatic + no update windows set.** The cluster updates immediately after a new version is available on the corresponding [update channel](/products/virtualization-platform/documentation/admin/release-channels.html).
+- **Automatic + no update windows set.** The cluster updates immediately after a new version is available on the corresponding [update channel](/products/virtualization-platform/documentation/about/release-channels.html).
 - **Automatic + update windows set.** The cluster updates during the next available update window after a new version is available on the update channel.
 - **Manual mode.** Updates require [manual actions](./manual-update-mode.html).
 
@@ -66,7 +66,7 @@ update:
 
 ## Release channels
 
-The platform uses [five release channels](/products/virtualization-platform/documentation/admin/release-channels.html) designed for various environments. Platform components can be updated either automatically or with manual confirmation as updates are released in the respective channels.
+The platform uses [five release channels](/products/virtualization-platform/documentation/about/release-channels.html) designed for various environments. Platform components can be updated either automatically or with manual confirmation as updates are released in the respective channels.
 
 {% alert level="warning" %}
 When considering updates, the platform components can be divided into two categories:

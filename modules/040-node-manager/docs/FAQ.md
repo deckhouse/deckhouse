@@ -478,7 +478,7 @@ cloudInstances:
     overprovisioningRate: 30%
 ```
 
-## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?
+## How do I disable machine-controller-manager/CAPI in the case of potentially cluster-damaging changes?
 
 {% alert level="danger" %}
 Use this switch only if you know what you are doing and clearly understand the consequences.
@@ -488,6 +488,12 @@ Set the `mcmEmergencyBrake` parameter to true:
 
 ```yaml
 mcmEmergencyBrake: true
+```
+
+For disabling CAPI, set the `capiEmergencyBrake` parameter to true:
+
+```yaml
+capiEmergencyBrake: true
 ```
 
 ## How do I restore the master node if kubelet cannot load the control plane components?

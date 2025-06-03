@@ -53,6 +53,7 @@ import (
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -75,8 +76,10 @@ type MetricsUpdater interface {
 }
 
 type deckhouseReleaseReconciler struct {
-	client        client.Client
-	dc            dependency.Container
+	client client.Client
+	dc     dependency.Container
+	exts   *extenders.ExtendersStack
+
 	logger        *log.Logger
 	moduleManager moduleManager
 
@@ -93,7 +96,7 @@ type deckhouseReleaseReconciler struct {
 	deckhouseVersion string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
@@ -105,6 +108,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
+		exts:               exts,
 		logger:             logger,
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
@@ -341,7 +345,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.registrySecret = registrySecret
 	}
 
-	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
+	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger, r.updateSettings.Get().ReleaseChannel)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
 	if err != nil {
@@ -409,7 +413,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.exts, r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,

@@ -11,7 +11,7 @@ Next, we'll cover the process of adding two worker nodes. For more detailed info
 
 1. Make sure that Intel-VT (VMX) or AMD-V (SVM) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
 
-1. Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
+1. Install one of the [supported operating systems](../../../about/requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
 
 1. Check access to the container image registry:
    - Ensure that each node has access to a container image registry. By default, the installer uses the public registry `registry.deckhouse.io`. Configure network connectivity and the necessary security policies to access this repository.

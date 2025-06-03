@@ -6,6 +6,14 @@
   {{- end }}
 {{- end }}
 
+{{- define "capi_controller_manager_enabled" }}
+  {{- if not .Values.nodeManager.capiEmergencyBrake }}
+    {{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "cluster_autoscaler_enabled" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "CloudEphemeral" }}

@@ -1,8 +1,8 @@
-{{- $ciliumVersion := "1.14.14" }}
+{{- $ciliumVersion := "1.17.4" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -20,7 +20,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
-  - git apply --verbose /patches/*.patch
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
   - rm -rf Documentation
   - rm -rf /src/cilium/.git
 ---
@@ -64,13 +64,24 @@ shell:
   # Because of this, the code is built with errors. We haven't figured out why this is happening yet.
   # As a workaround, we explicitly specified PATH.
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
+  #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cilium
   - go mod vendor && go mod verify
+  #
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
+  #
+  - cd hubble
+  - make
+  - strip hubble
+  - mkdir -p /tmp/install/usr/bin && mv hubble /tmp/install/usr/bin/hubble
+  - /tmp/install/usr/bin/hubble completion bash > /tmp/install/etc/bash_completion.d/hubble
+  #
+  - cd /src/cilium
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  #
   - rm -rf /src/cilium/vendor
 ---

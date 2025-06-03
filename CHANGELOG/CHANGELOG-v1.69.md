@@ -113,6 +113,7 @@
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
  - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
+ - **[deckhouse-controller]** Added validation according to `RFC 1123` for module names added to `ModuleSource`. [#13644](https://github.com/deckhouse/deckhouse/pull/13644)
  - **[deckhouse-controller]** Fix runtime handling for the global config. [#12985](https://github.com/deckhouse/deckhouse/pull/12985)
  - **[deckhouse-tools]** Removed unnecessary secrets and fixed the Deckhouse CLI build. [#12290](https://github.com/deckhouse/deckhouse/pull/12290)
  - **[dhctl]** <Disable caching metaconfig during converge and disable converge deckhouse manifests. [#13230](https://github.com/deckhouse/deckhouse/pull/13230)

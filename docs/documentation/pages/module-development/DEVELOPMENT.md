@@ -29,6 +29,31 @@ To force scan you can change the interval or set the `renew=""` annotation on Mo
 
 The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the `ModulePullOverride`.
 
+Deckhouse provides the ability to temporarily change a module's behavior using the `ModulePullOverride` object. This object is created separately from `module.yaml` and can override certain aspects of module management:
+
+- `unmanaged` — *boolean*. Disables Deckhouse's control over the module (no updates or deletions will occur).
+- `disable` — *boolean*. Temporarily disables the module and removes all of its resources.
+- `terminating` — *boolean*. Transitions the module to a deletion state, causing all module resources and the `Module` object itself to be removed.
+- `rollback` — *boolean*. If set to `true`, when the `ModulePullOverride` object is deleted, Deckhouse will:
+  - remove the module's artifacts;
+  - restart itself;
+  - revert to the previous stable version of the module.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePullOverride
+metadata:
+  name: example
+spec:
+  version: v1.2.3
+  unmanaged: false
+  disable: false
+  terminating: false
+  rollback: true
+```
+
 You can get the result of applying ModulePullOverride in the message (column `MESSAGE`) when retrieving ModulePullOverride information. The value `Ready` indicates the successful application of ModulePullOverride parameters. Any other value indicates conflict.
 
 Example of absence of conflicts when using ModulePullOverride:
