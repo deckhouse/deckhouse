@@ -93,6 +93,7 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		}
 
 		for _, subject := range parsed.Subjects {
+			subject.Namespace = "default"
 			subjects[stringBySubject(subject)] = subject
 		}
 	}
