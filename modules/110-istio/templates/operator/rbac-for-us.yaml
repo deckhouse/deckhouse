@@ -48,8 +48,17 @@ rules:
     - leases
     verbs:
     - patch
+  - apiGroups: ["rbac.istio.io"]
+    resources: ["rbacconfigs", "serviceroles", "servicerolebindings"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["authentication.istio.io"]
+    resources: ["policies", "meshpolicies"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["config.istio.io"]
+    resources: ["rules", "adapters", "templates", "handlers", "instances"]
+    verbs: ["get", "watch", "list"]
   - apiGroups: ["networking.istio.io"]
-    resources: ["gateways", "virtualservices", "destinationrules", "serviceentries", "sidecars", "envoyfilters"]
+    resources: ["gateways", "virtualservices", "destinationrules", "serviceentries", "sidecars", "envoyfilters", "workloadentries", "workloadgroups"]
     verbs: ["get", "watch", "list"]
   - apiGroups: ["security.istio.io"]
     resources: ["authorizationpolicies", "peerauthentications", "requestauthentications"]
@@ -88,7 +97,7 @@ rules:
     resources: ["subjectaccessreviews"]
     verbs: ["create"]
   - apiGroups: ["gateway.networking.k8s.io"]
-    resources: [ "get", "watch", "list", "update", "patch", "create" ]
+    resources: [ "gateways", "httproutes", "referencegrants" ]
     verbs: ["get", "watch", "list"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources:
@@ -401,6 +410,7 @@ rules:
     verbs:
       - create
       - update
+      - patch
       - get
       - list
       - watch
