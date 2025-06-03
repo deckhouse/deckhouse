@@ -126,33 +126,29 @@ shell:
   - make clean
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src/plugins
-    to: /src
-    before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/plugins
+  to: /src
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/build
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh make bash
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
+  - export CGO_ENABLED=1
   - mkdir -p /out/usr/share/falco/plugins
   - cd /src/plugins/json
   - make
   - cp libjson.so /out/usr/share/falco/plugins
+  - make clean
   - cd /src/plugins/k8saudit
   - make
   - cp libk8saudit.so /out/usr/share/falco/plugins
+  - make clean
   - cd /src/plugins/k8smeta
   {{- if $.DistroPackagesProxy }}
   - # build in the closed env
@@ -160,3 +156,16 @@ shell:
   {{- end }}
   - make
   - cp libk8smeta.so /out/usr/share/falco/plugins
+  - make clean
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+fromImage: builder/alt
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
