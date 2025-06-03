@@ -512,7 +512,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
-    dryrun: "true"
+    dryrun: \"true\"
   name: ${DEV_BRANCH}
 spec:
   version: ${DEV_BRANCH}
