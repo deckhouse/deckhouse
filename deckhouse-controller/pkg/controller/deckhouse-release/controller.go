@@ -695,8 +695,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 	}
 
 	err = r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-		Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
-		Message: "",
+		Phase: v1alpha1.DeckhouseReleasePhaseDeployed,
 	})
 	if err != nil {
 		return fmt.Errorf("update status with retry: %w", err)
@@ -997,16 +996,6 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 	defer span.End()
 
 	var res ctrl.Result
-
-	if dr.Status.Message != "" {
-		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-			Phase:   v1alpha1.DeckhouseReleasePhaseDeployed,
-			Message: "",
-		})
-		if err != nil {
-			return res, err
-		}
-	}
 
 	if r.isDeckhousePodReady(ctx) {
 		err := ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
