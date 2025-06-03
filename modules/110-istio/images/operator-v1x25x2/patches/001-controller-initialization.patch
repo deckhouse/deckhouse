@@ -1,72 +1,55 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..409f41f8 100644
+index 5e97cde4..95441f36 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
-@@ -21,6 +21,7 @@ import (
- 	"path"
- 	"reflect"
- 	"regexp"
-+	"strings"
- 
+@@ -18,10 +18,6 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
+-	"path"
+-	"reflect"
+-	"regexp"
+-
  	"github.com/go-logr/logr"
  	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-@@ -79,17 +80,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
- // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
- // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/status,verbs=get;update;patch
- // +kubebuilder:rbac:groups=sailoperator.io,resources=istiorevisions/finalizers,verbs=update
--// +kubebuilder:rbac:groups="",resources="*",verbs="*"
--// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
--// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
--// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs="*"
--// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
--// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
--// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
-+// +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs=get;list;watch;create;update;patch;delete
-+// +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs=get;list;watch;create;update;patch;delete
-+// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch
-+// +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs=get;list;watch;create;update;patch
-+// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
-+// +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
- // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
--// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
-+// +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
- // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
--// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs="*"
-+// +kubebuilder:rbac:groups="networking.istio.io",resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
-+
-+// +kubebuilder:rbac:groups=authentication.istio.io,resources=peerauthentications;requestauthentications,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=config.istio.io,resources=adapters;attributemanifests;handlers;instances;rules;templates,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=extensions.istio.io,resources=wasmplugins,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways;httproutes,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=networking.istio.io,resources=destinationrules;envoyfilters;gateways;serviceentries;sidecars;virtualservices;workloadentries;workloadgroups,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=rbac.istio.io,resources=rbacconfigs;servicerolebindings;serviceroles,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=security.istio.io,resources=authorizationpolicies,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=telemetry.istio.io,resources=telemetries,verbs=get;list;watch
-+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;ingresses/status,verbs=get;list;watch;update
- 
- // Reconcile is part of the main kubernetes reconciliation loop which aims to
- // move the current state of the cluster closer to the desired state.
-@@ -100,6 +110,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
- 	log := logf.FromContext(ctx)
- 
- 	reconcileErr := r.doReconcile(ctx, rev)
-+	if isRBACError(reconcileErr) {
-+		// Log warning without returning error
-+		fmt.Println("RBAC error detected: insufficient permissions. Please ensure the appropriate RBAC rules are applied.")
-+		// Clear the reconciliation error as we're treating it as a warning
-+		reconcileErr = nil
-+	}
- 
- 	log.Info("Reconciliation done. Updating status.")
- 	statusErr := r.updateStatus(ctx, rev, reconcileErr)
-@@ -674,3 +690,10 @@ func clearIgnoredFields(obj client.Object) {
- func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
- 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionKind, logger, handler)
+ 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+@@ -44,6 +40,9 @@ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/types"
++	"path"
++	"reflect"
++	"regexp"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/builder"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+@@ -155,6 +154,9 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
  }
+ 
+ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
++	log := logf.FromContext(ctx)
++	log.Info("Starting Helm chart installation", "chartName", constants.IstiodChartName, "namespace", rev.Spec.Namespace)
 +
-+func isRBACError(err error) bool {
-+	if err == nil {
-+		return false
-+	}
-+	return strings.Contains(err.Error(), "forbidden") || strings.Contains(err.Error(), "unable to access")
-+}
+ 	ownerReference := metav1.OwnerReference{
+ 		APIVersion:         v1.GroupVersion.String(),
+ 		Kind:               v1.IstioRevisionKind,
+@@ -165,11 +167,17 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+ 	}
+ 
+ 	values := helm.FromValues(rev.Spec.Values)
+-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
+-		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
++	releaseName := getReleaseName(rev)
++	chartDir := r.getChartDir(rev)
++	log.Info("Installing or upgrading Helm chart", "releaseName", releaseName, "chartDir", chartDir)
++
++	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, chartDir, values, rev.Spec.Namespace, releaseName, ownerReference)
+ 	if err != nil {
++		log.Error(err, "Failed to upgrade or install Helm chart", "releaseName", releaseName)
+ 		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
+ 	}
++
++	log.Info("Successfully installed or upgraded Helm chart", "releaseName", releaseName)
+ 	return nil
+ }
+ 
