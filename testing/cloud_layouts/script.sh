@@ -480,7 +480,6 @@ parse_version_from_branch() {
     
     echo "$version"
 }
-SEMVER_VERSION=$(parse_version_from_branch "${DEV_BRANCH}")
 
 function test_requirements() {
   >&2 echo "Start check requirements ..."
@@ -495,6 +494,12 @@ function test_requirements() {
 
 
   >&2 echo "Run script ... "
+
+  SEMVER_VERSION=$(parse_version_from_branch "${DEV_BRANCH}")
+  if [ -z "${SEMVER_VERSION:-}" ]; then
+    >&2 echo "Failed to parse version from branch '${DEV_BRANCH}'"
+    return 1
+  fi
 
   testScript=$(cat <<ENDSC
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
