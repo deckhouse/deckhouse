@@ -70,6 +70,8 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 	versions := make([]internal.VersionData, 0, len(modules))
 
 	for _, module := range modules {
+		s.logger.Info("processing module", slog.String("module", module))
+
 		tags, err := registry.ListTags(ctx, module)
 		if err != nil {
 			s.logger.Error("failed to list tags",
@@ -93,6 +95,7 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 	wg := &sync.WaitGroup{}
 
 	for _, releaseChannel := range releaseChannels {
+		s.logger.Info("processing channel", slog.String("module", module), slog.String("channel", releaseChannel))
 		err := s.processReleaseChannel(ctx, VersionDataCh, wg, registry, module, releaseChannel)
 		if err != nil {
 			s.logger.Error("failed to process release channel",
