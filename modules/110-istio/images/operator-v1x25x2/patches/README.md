@@ -4,6 +4,6 @@
 
 Fix loggings about errors
 
-## 001-rbac-improve.patch
+<!-- ## 001-rbac-improve.patch
 
-Fix Sail Operator initialization when RBAC problem in deployment
+Fix Sail Operator initialization when RBAC problem in deployment -->
