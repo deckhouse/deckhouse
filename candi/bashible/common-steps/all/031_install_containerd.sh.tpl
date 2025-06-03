@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or ( eq .cri "Containerd") ( eq .crt "ContainerdV2") }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
 bb-event-on 'bb-package-installed' 'post-install'
 
