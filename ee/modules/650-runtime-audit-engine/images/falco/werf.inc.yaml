@@ -9,13 +9,16 @@ import:
   add: /out
   to: /
   includePaths:
-  - usr/bin/
-  - usr/share/
-  - etc/
+  - usr/bin/falco
+  - etc/falco
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
   add: /src/falcoctl
   to: /usr/bin/falcoctl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+  add: /out/usr/share/falco/plugins
+  to: /usr/share/falco/plugins
   before: install
 imageSpec:
   config:
@@ -41,7 +44,7 @@ shell:
   - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
-fromImage: builder/golang-alpine-1.24
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -66,7 +69,7 @@ shell:
   - chmod 0755 falcoctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine-1.24
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -116,9 +119,44 @@ shell:
       sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" $f
     done
   {{- end }}
-  - make package -j ${BUILD_THREADS}
-  - mkdir -p /out
-  - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /out
+  - make falco -j ${BUILD_THREADS}
+  - make install DESTDIR=/out
   - "sed -i 's|time_format_iso_8601: false|time_format_iso_8601: true|' /out/etc/falco/falco.yaml"
   # cleanup to reduce artifact size
   - make clean
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src/plugins
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /src/build
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - mkdir -p /out/usr/share/falco/plugins
+  - cd /src/plugins/json
+  - make
+  - cp libjson.so /out/usr/share/falco/plugins
+  - cd /src/plugins/k8saudit
+  - make
+  - cp libk8saudit.so /out/usr/share/falco/plugins
+  - cd /src/plugins/k8smeta
+  {{- if $.DistroPackagesProxy }}
+  - # build in the closed env
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
+  {{- end }}
+  - make
+  - cp libk8smeta.so /out/usr/share/falco/plugins
