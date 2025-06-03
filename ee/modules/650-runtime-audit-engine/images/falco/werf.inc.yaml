@@ -143,7 +143,7 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh
+  - apk add --no-cache openssh make bash
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir -p /out/usr/share/falco/plugins
