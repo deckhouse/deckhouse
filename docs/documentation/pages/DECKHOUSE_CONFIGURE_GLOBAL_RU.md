@@ -8,11 +8,12 @@ lang: ru
 Глобальные настройки Deckhouse хранятся в ресурсе `ModuleConfig/global` (см. [конфигурация Deckhouse](./#конфигурация-deckhouse)).
 
 {% alert %}
-В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон DNS-имен, с учетом которого некоторые модули Deckhouse создают Ingress-ресурсы.
+В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон DNS-имен, с учётом которого некоторые модули Deckhouse создают Ingress-ресурсы.
 
 Если у вас нет возможности заводить wildcard-записи DNS, для тестирования можно воспользоваться сервисом [sslip.io](https://sslip.io) или его аналогами.
 
-Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain). Например, если `clusterDomain` установлен в `cluster.local` (значение по умолчанию), то `publicDomainTemplate` не может быть `%s.cluster.local`.
+Домен, указанный в шаблоне, не должен совпадать с доменом, заданным в параметре [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain), а также с доменом внутренней сервисной зоны сети.  
+Например, если `clusterDomain` установлен в `cluster.local`, а внутренняя зона — `ru-central1.internal`, то publicDomainTemplate не может быть ни `%s.cluster.local`, ни `%s.ru-central1.internal`.
 {% endalert %}
 
 Пример ресурса `ModuleConfig/global`:
