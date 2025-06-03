@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -28,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
