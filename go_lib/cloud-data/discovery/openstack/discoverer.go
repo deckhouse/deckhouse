@@ -3,13 +3,10 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package main
+package openstack
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +20,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -30,38 +28,41 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
 )
 
 type Discoverer struct {
-	logger       *log.Logger
-	authOpts     gophercloud.AuthOptions
+	logger *log.Logger
+
+	authOpts gophercloud.AuthOptions
+
 	region       string
 	moduleConfig []byte
 	clusterUUID  string
+
+	transport  *http.Transport
+	caCertPath string
 }
 
-func NewDiscoverer(logger *log.Logger) *Discoverer {
-	authOpts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+type Option func(d *Discoverer) error
+
+func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
+	discoverer := &Discoverer{
+		logger: logger,
 	}
 
-	region := os.Getenv("OS_REGION")
-	if region == "" {
-		logger.Fatalf("Cannot get OS_REGION env")
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	discoverer.transport = transport
+
+	for _, o := range options {
+		err := o(discoverer)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	clusterUUID := os.Getenv("CLUSTER_UUID")
-
-	moduleConfig := os.Getenv("MODULE_CONFIG")
-
-	return &Discoverer{
-		logger:       logger,
-		region:       region,
-		authOpts:     authOpts,
-		moduleConfig: []byte(moduleConfig),
-		clusterUUID:  clusterUUID,
-	}
+	return discoverer, nil
 }
 
 func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
@@ -69,7 +70,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 }
 
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
 	}
@@ -96,34 +97,44 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	return res, nil
 }
 
-func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
+func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryDataOptions) ([]byte, error) {
 	var discoveryData OpenstackCloudDiscoveryData
 
-	if len(cloudProviderDiscoveryData) == 0 {
+	cloudProviderDiscoveryData := options.CloudProviderDiscoveryData
+
+	if len(options.CloudProviderDiscoveryData) == 0 {
 		cloudProviderDiscoveryData = d.moduleConfig
 	}
 
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %w", err)
 		}
 	}
 
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
+		return nil, fmt.Errorf("failed to create OpenStack provider: %w", err)
 	}
 
 	flavors, err := d.getFlavors(ctx, provider)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get flavors: %v", err)
+		return nil, fmt.Errorf("failed to get flavors: %w", err)
 	}
 
 	flavorNames := make([]string, 0, len(flavors))
+	flavorsDetails := make([]v1alpha1.OpenstackFlavorDetails, 0, len(flavors))
 
 	for _, flavor := range flavors {
 		flavorNames = append(flavorNames, flavor.Name)
+		flavorsDetails = append(flavorsDetails, v1alpha1.OpenstackFlavorDetails{
+			Name:  flavor.Name,
+			VCPUs: flavor.VCPUs,
+			RAM:   flavor.RAM,
+			Disk:  flavor.Disk,
+		},
+		)
 	}
 
 	additionalSecurityGroups, err := d.getAdditionalSecurityGroups(ctx, provider)
@@ -146,16 +157,27 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("failed to get volume types: %v", err)
 	}
 
+	var zones []string
+	if discoveryData.Zones != nil {
+		zones = discoveryData.Zones
+	} else {
+		zones, err = d.getZones(ctx, provider)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get availability zones: %w", err)
+		}
+	}
+
 	discoveryDataJson, err := json.Marshal(v1alpha1.OpenStackCloudProviderDiscoveryData{
 		APIVersion:               "deckhouse.io/v1alpha1",
 		Kind:                     "OpenStackCloudProviderDiscoveryData",
 		Flavors:                  flavorNames,
+		FlavorsDetails:           flavorsDetails,
 		AdditionalNetworks:       additionalNetworks,
 		AdditionalSecurityGroups: additionalSecurityGroups,
 		DefaultImageName:         discoveryData.Instances.ImageName,
 		Images:                   images,
 		MainNetwork:              discoveryData.Instances.MainNetwork,
-		Zones:                    discoveryData.Zones,
+		Zones:                    zones,
 		VolumeTypes:              volumeTypes,
 	})
 	if err != nil {
@@ -166,7 +188,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
 	}
@@ -185,35 +207,30 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	return disksMeta, nil
 }
 
-func newProvider(authOpts gophercloud.AuthOptions, logger *log.Logger) (*gophercloud.ProviderClient, error) {
-	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
+func (d *Discoverer) newProvider() (*gophercloud.ProviderClient, error) {
+	provider, err := openstack.NewClient(d.authOpts.IdentityEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
 	}
 
-	// Check if a custom CA cert was provided.
-	if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
-		caCert, err := os.ReadFile(caCertPath)
+	if d.caCertPath != "" {
+		pemData, err := os.ReadFile(d.caCertPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading CA Cert: %s", err)
+			return nil, fmt.Errorf("error reading CA Cert: %w", err)
 		}
-		config := &tls.Config{}
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(bytes.TrimSpace(caCert)); !ok {
-			return nil, fmt.Errorf("error parsing CA Cert from %s", caCertPath)
+		if ok := d.loadCaCert(pemData, true); !ok {
+			return nil, fmt.Errorf("error parsing CA Cert from %s", d.caCertPath)
 		}
-		config.RootCAs = caCertPool
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSClientConfig = config
-		provider.HTTPClient = http.Client{Transport: transport}
 	}
-	err = openstack.Authenticate(provider, authOpts)
+
+	provider.HTTPClient = http.Client{Transport: d.transport}
+	err = openstack.Authenticate(provider, d.authOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate OpenStack client: %v", err)
 	}
 	provider.MaxBackoffRetries = 3
-	provider.RetryFunc = RetryFunc(logger)
-	provider.RetryBackoffFunc = RetryBackoffFunc(logger)
+	provider.RetryFunc = RetryFunc(d.logger)
+	provider.RetryBackoffFunc = RetryBackoffFunc(d.logger)
 
 	return provider, nil
 }
@@ -241,6 +258,36 @@ func (d *Discoverer) getFlavors(ctx context.Context, provider *gophercloud.Provi
 	return flavors, nil
 }
 
+func (d *Discoverer) getZones(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
+	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ComputeV2 client: %v", err)
+	}
+
+	client.Context = ctx
+
+	allPages, err := availabilityzones.List(client).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list availability zones: %v", err)
+	}
+
+	osZones, err := availabilityzones.ExtractAvailabilityZones(allPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract availability zones: %v", err)
+	}
+
+	zones := make([]string, 0, len(osZones))
+	for _, zone := range osZones {
+		if zone.ZoneState.Available {
+			zones = append(zones, zone.ZoneName)
+		}
+	}
+
+	return zones, nil
+}
+
 func (d *Discoverer) getVolumes(ctx context.Context, provider *gophercloud.ProviderClient) ([]volumes.Volume, error) {
 	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{
 		Region: d.region,
@@ -251,11 +298,15 @@ func (d *Discoverer) getVolumes(ctx context.Context, provider *gophercloud.Provi
 
 	client.Context = ctx
 
-	allPages, err := volumes.List(client, volumes.ListOpts{
-		Metadata: map[string]string{
+	listOpts := volumes.ListOpts{}
+
+	if d.clusterUUID != "" {
+		listOpts.Metadata = map[string]string{
 			"cinder.csi.openstack.org/cluster": d.clusterUUID,
-		},
-	}).AllPages()
+		}
+	}
+
+	allPages, err := volumes.List(client, listOpts).AllPages()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list volumes: %v", err)
 	}
