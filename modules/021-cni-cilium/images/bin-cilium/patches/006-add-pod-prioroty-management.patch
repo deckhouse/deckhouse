@@ -1,4 +1,4 @@
-From c91c123a894c302611f07057ffe373d29fea0dbf Mon Sep 17 00:00:00 2001
+From 7363329ab8293ed327754fc6ec739e31338d1be1 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 2 Jun 2025 14:44:31 +0300
 Subject: [PATCH] add: priority patch
@@ -170,7 +170,7 @@ index b678668ac0..d42dae075b 100644
  	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
  	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 3b3ffc13ef..a198b423b8 100644
+index 3b3ffc13ef..c664a5806b 100644
 --- a/operator/pkg/ciliumendpointslice/endpointslice.go
 +++ b/operator/pkg/ciliumendpointslice/endpointslice.go
 @@ -6,6 +6,9 @@ package ciliumendpointslice
@@ -290,9 +290,9 @@ index 3b3ffc13ef..a198b423b8 100644
 +		// new cep will have higher priority than old ceps with same priority
 +		highest := &info
 +		if len(cepList) > 1 {
-+			fmt.Printf("DEBUG len(cepList) > 1: %v\n", cepList)
++			fmt.Printf("DEBUG len(cepList) > 1: %v\n", len(cepList))
 +			for i := range cepList {
-+				fmt.Printf("DEBUG ELEMS index, cep: %v %v\n", i, cepList[i].cep)
++				fmt.Printf("DEBUG ELEMS index, cep: %v %v %v\n", i, cepList[i].cep.Name, cepList[i].priority)
 +			}
 +		}
 +
@@ -471,7 +471,7 @@ index 3b3ffc13ef..a198b423b8 100644
  }
  
 -func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
-+func (c *Controller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
++func (c *Contwroller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
  	for _, ces := range cess {
  		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
  		if ces.Name != "" {
