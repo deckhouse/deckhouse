@@ -468,21 +468,6 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 	return Result{Ready: false, Message: msg.String()}
 }
 
-func deduplicateAndSortCA(values []string) []string {
-	seen := make(map[string]struct{}, len(values))
-	ret := []string{}
-
-	for _, ca := range values {
-		if _, exists := seen[ca]; exists {
-			continue
-		}
-		seen[ca] = struct{}{}
-		ret = append(ret, ca)
-	}
-	slices.Sort(ret)
-	return ret
-}
-
 func deduplicateMirrors(values []bashible.MirrorHost) []bashible.MirrorHost {
 	ret := []bashible.MirrorHost{}
 
