@@ -1012,6 +1012,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		if err != nil {
 			return res, err
 		}
+
 		return res, nil
 	}
 
