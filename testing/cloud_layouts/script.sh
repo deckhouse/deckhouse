@@ -557,7 +557,10 @@ import yaml, sys
 data = yaml.safe_load(sys.stdin)
 with open('/tmp/releaseFile.yaml') as f:
   d1 = yaml.safe_load(f)
-data['spec']['requirements'] = d1.get('requirements', {})
+r = d1.get('requirements', {})
+r.pop('k8s', None)  # remove the 'k8s' key
+r.pop('autoK8sVersion', None)  # remove the 'autoK8sVersion' key
+data['spec']['requirements'] = r
 print(yaml.dump(data))
 " | kubectl apply -f -
 
