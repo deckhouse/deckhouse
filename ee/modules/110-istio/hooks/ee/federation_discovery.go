@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 var (
@@ -42,7 +43,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	PrivateMetadataEndpoint  string
 }
 
-func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
+func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
 	labels := map[string]string{
 		"federation_name": i.Name,
 		"endpoint":        endpoint,

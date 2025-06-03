@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (
@@ -117,7 +118,7 @@ func handleMachineDeploymentStatus(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(capsMachineDeploymentMetricsGroup)
 
-	options := []metrics.Option{
+	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(capsMachineDeploymentMetricsGroup),
 	}
 

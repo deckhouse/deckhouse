@@ -25,9 +25,11 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
-func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
+func getFirstDefined(values sdkpkg.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
 	var (
 		v  gjson.Result
 		ok bool

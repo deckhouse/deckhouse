@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (
@@ -92,7 +93,7 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryChecks []v1alpha1.ControlCheckSummary) {
+func generateSummaryMetrics(metricsCollector sdkpkg.MetricsCollector, summaryChecks []v1alpha1.ControlCheckSummary) {
 	for _, controlCheck := range summaryChecks {
 		var (
 			totalFails float64
@@ -106,7 +107,7 @@ func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryCh
 	}
 }
 
-func generateDetailedMetrics(metricsCollector go_hook.MetricsCollector, detailedChecks []*v1alpha1.ControlCheckResult) {
+func generateDetailedMetrics(metricsCollector sdkpkg.MetricsCollector, detailedChecks []*v1alpha1.ControlCheckResult) {
 	for _, controlCheck := range detailedChecks {
 		if controlCheck == nil {
 			continue
@@ -126,7 +127,7 @@ func countTotalFailsFromDetailedChecks(checks []v1alpha1.ComplianceCheck) float6
 	return totalFails
 }
 
-func generateCisBenchmarkMetric(metricsCollector go_hook.MetricsCollector, totalFails float64, id, name, severity string) {
+func generateCisBenchmarkMetric(metricsCollector sdkpkg.MetricsCollector, totalFails float64, id, name, severity string) {
 	metricsCollector.Set(
 		metricName,
 		totalFails,

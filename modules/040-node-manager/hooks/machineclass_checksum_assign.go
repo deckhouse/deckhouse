@@ -27,6 +27,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 /*
@@ -145,7 +147,7 @@ func renderMachineClassChecksum(templateContent []byte, ng *nodeGroupValue) (str
 	return checksum, nil
 }
 
-func getChecksumTemplate(values go_hook.PatchableValuesCollector) ([]byte, error) {
+func getChecksumTemplate(values sdkpkg.PatchableValuesCollector) ([]byte, error) {
 	cloudType := values.Get("nodeManager.internal.cloudProvider.type").String()
 	if cloudType == "" {
 		// Can be empty for the first run even in cloud.

@@ -66,7 +66,9 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
+
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 )
 
 var (
@@ -873,10 +875,10 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableValues, err := go_hook.NewPatchableValues(values)
+	patchableValues, err := sdkpatchablevalues.NewPatchableValues(values)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableConfigValues, err := go_hook.NewPatchableValues(convigValues)
+	patchableConfigValues, err := sdkpatchablevalues.NewPatchableValues(convigValues)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
