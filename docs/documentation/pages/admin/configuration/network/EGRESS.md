@@ -21,14 +21,14 @@ The feature is available only in the Enterprise Edition
 
 Pre-configured IP addresses are used on egress nodes.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_base_en.pdf"></div>
+<div data-presentation="../../../presentations/cni-cilium/egressgateway_base_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
 
 ### Virtual IP mode
 
 The ability to dynamically assign additional IP addresses to nodes is implemented.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<div data-presentation="../../../presentations/cni-cilium/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->
 
 <!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/cni-cilium/examples.html#egress-gateway -->

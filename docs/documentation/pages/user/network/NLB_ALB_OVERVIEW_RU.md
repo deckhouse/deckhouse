@@ -1,6 +1,6 @@
 ---
 title: "Общая информация про NLB и ALB"
-permalink: ru/user/network/nlb-alb/
+permalink: ru/user/network/alb-nlb.html
 lang: ru
 ---
 

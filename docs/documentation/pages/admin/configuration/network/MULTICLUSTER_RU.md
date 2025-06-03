@@ -25,7 +25,7 @@ lang: ru
 
 ### Общие принципы
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_ru.pdf"></div>
+<div data-presentation="../../../presentations/istio/multicluster_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/ --->
 
 * Мультикластер требует установления взаимного доверия между кластерами. Соответственно, для построения мультикластера нужно в кластере A сделать кластер Б доверенным и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
@@ -46,7 +46,7 @@ lang: ru
 
 ### Управление мультикластером
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_ru.pdf"></div>
+<div data-presentation="../../../presentations/istio/multicluster_istio_multicluster_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/ --->
 
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.
@@ -81,6 +81,6 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
-## Мультикластер средствами Cilium
+<!-- ## Мультикластер средствами Cilium
 
-Нужен контент
+Нужен контент -->

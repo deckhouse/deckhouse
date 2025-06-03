@@ -698,10 +698,6 @@ entries:
                         ru: Управление DNS в кластере Kubernetes
                       url: /admin/configuration/network/dns-management-in-cluster.html
                     - title:
-                        en: Building a network gateway from Kubernetes nodes
-                        ru: Постройка сетевого шлюза из Kubernetes-узлов
-                      url: /admin/configuration/network/building-network-gateway-from-nodes.html
-                    - title:
                         en: Operation modes of bpfLB for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
                       url: /admin/configuration/network/bpflb-external-traffic.html
@@ -932,7 +928,7 @@ entries:
                 - title:
                     en: General information about NLB and ALB
                     ru: Общая информация про NLB и ALB
-                  url: /user/network/alb-nlb/
+                  url: /user/network/alb-nlb.html
                 - title:
                     en: NLB
                     ru: NLB

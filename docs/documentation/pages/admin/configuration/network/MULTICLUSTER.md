@@ -81,6 +81,6 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
-## Multicluster of Cilium funds
+<!-- ## Multicluster of Cilium funds
 
-Need content
+Need content -->
