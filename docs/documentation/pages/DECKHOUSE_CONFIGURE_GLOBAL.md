@@ -12,7 +12,7 @@ The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter s
 If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
 
 The domain specified in the template must not match the domain set in the [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain) parameter, nor the domain of the internal service network zone.  
-For example, if `clusterDomain` is set to `cluster.local` and the internal zone is `ru-central1.internal`, then publicDomainTemplate must not be `%s.cluster.local` or `%s.ru-central1.internal`.
+For example, if `clusterDomain` is set to `cluster.local` and the internal zone is `ru-central1.internal`, then publicDomainTemplate must not be `%s.cluster.local`.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:
