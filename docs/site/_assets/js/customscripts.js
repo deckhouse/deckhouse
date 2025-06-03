@@ -469,13 +469,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let newHTML = '';
 
-    lines.forEach((line, index) => {
+    let lineIndex = 1;
+    lines.forEach(line => {
       const trimLine = line.trim();
 
       if(trimLine.length === 0 || /^<\/span\s*>$/.test(trimLine)) {
         return;
       }
-      newHTML += `<span data-copy="ignore" class="line-number">${index + 1}</span>${line}\n`;
+      newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
+      lineIndex++;
     });
 
     code.innerHTML = newHTML;
