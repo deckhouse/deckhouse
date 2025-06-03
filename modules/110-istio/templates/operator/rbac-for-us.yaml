@@ -400,6 +400,7 @@ rules:
       - rolebindings
     verbs:
       - create
+      - update
       - get
       - list
       - watch
