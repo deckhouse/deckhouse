@@ -38,15 +38,15 @@ groups:
 - name: "v1"
   channels:
     - name: alpha
-      version: {alpha}
+      version: v{alpha}
     - name: beta
-      version: {beta}
+      version: v{beta}
     - name: ea
-      version: {early-access}
+      version: v{early-access}
     - name: stable
-      version: {stable}
+      version: v{stable}
     - name: rock-solid
-      version: {rock-solid}
+      version: v{rock-solid}
 '''
 result_channels = {}
 stable_version = None
