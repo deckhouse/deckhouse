@@ -38,7 +38,7 @@ post-install() {
 }
 
 {{- $containerd := "containerd1727"}}
-{{- if (((.nodeGroup).cri).ContainerdV2) }}
+{{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerd211" }}
 {{- end }}
 

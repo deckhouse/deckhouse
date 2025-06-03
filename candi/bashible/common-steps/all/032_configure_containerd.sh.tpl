@@ -230,7 +230,7 @@ EOF
 
 {{- end }}
 
-{{- if (((.nodeGroup).cri).Containerd) }}
+{{- if eq .cri "Containerd" }}
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 2
