@@ -1,7 +1,15 @@
 diff --git a/go.mod b/go.mod
-index 548aeed3..d799296c 100644
+index 548aeed3..ccafebfc 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/grafana/grafana
+
+-go 1.24.3
++go 1.24.2
+
+ // Override docker/docker to avoid:
+ // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires
 @@ -323,7 +323,6 @@ require (
  	github.com/hashicorp/hcl v1.0.0 // indirect
  	github.com/hashicorp/memberlist v0.5.0 // indirect
@@ -14,7 +22,7 @@ index 548aeed3..d799296c 100644
 
  require github.com/fullstorydev/grpchan v1.1.1 // @grafana/backend-platform
 
-+require github.com/grafana/authlib/types v0.0.0-20250515162837-2f4a8263eabb
++require github.com/grafana/authlib/types v0.0.0-20250603144453-545505224265
 +
  require (
  	cloud.google.com/go/auth v0.7.2 // indirect
@@ -37,7 +45,7 @@ index 548aeed3..d799296c 100644
  	github.com/ory/x v0.0.665 // indirect
  	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 diff --git a/go.sum b/go.sum
-index 77527512..01e7608e 100644
+index 77527512..0c662509 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1503,10 +1503,10 @@ github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl
@@ -70,8 +78,8 @@ index 77527512..01e7608e 100644
  github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
  github.com/grafana/alerting v0.0.0-20250228212120-8dc9701ba5f4 h1:G7zjdfJeZ93adt+fjU+us7m67pIp2+xpSDupD11goug=
  github.com/grafana/alerting v0.0.0-20250228212120-8dc9701ba5f4/go.mod h1:brTFeACal/cSZAR8XO/4LPKs7rzNfS86okl6QjSP1eY=
-+github.com/grafana/authlib/types v0.0.0-20250515162837-2f4a8263eabb h1:LJStoTm/QTFiUGc24O653uU/W2CFahrbbVI0OoALkww=
-+github.com/grafana/authlib/types v0.0.0-20250515162837-2f4a8263eabb/go.mod h1:qeWYbnWzaYGl88JlL9+DsP1GT2Cudm58rLtx13fKZdw=
++github.com/grafana/authlib/types v0.0.0-20250603144453-545505224265 h1:NuGNunfcl/4EoiQjIbaQ71rMA8xbgTg7ntta3YNzTC4=
++github.com/grafana/authlib/types v0.0.0-20250603144453-545505224265/go.mod h1:qeWYbnWzaYGl88JlL9+DsP1GT2Cudm58rLtx13fKZdw=
  github.com/grafana/codejen v0.0.3 h1:tAWxoTUuhgmEqxJPOLtJoxlPBbMULFwKFOcRsPRPXDw=
  github.com/grafana/codejen v0.0.3/go.mod h1:zmwwM/DRyQB7pfuBjTWII3CWtxcXh8LTwAYGfDfpR6s=
  github.com/grafana/cue v0.0.0-20230926092038-971951014e3f h1:TmYAMnqg3d5KYEAaT6PtTguL2GjLfvr6wnAX8Azw6tQ=
