@@ -213,7 +213,7 @@ groups:
       en: chrony-exporter metrics port
       ru: Метрики chrony-exporter
   - ports: "4287"
-    protocol: TCP
+    protocol: UDP
     description:
       en: WireGuard's port for traffic encryption in the CNI Cilium.
       ru: Порт WireGuard для шифрования трафика в CNI Cilium
