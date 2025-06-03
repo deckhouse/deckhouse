@@ -60,6 +60,11 @@ spec:
                     operator: Gt
                     values:
                     - "0"
+              - matchExpressions:
+                  - key: node.deckhouse.io/group
+                    operator: In
+                    values:
+                    - {{ $ng.name | quote }}
       priorityClassName: system-node-critical
       imagePullSecrets:
         - name: deckhouse-registry
