@@ -83,13 +83,14 @@ type Loader struct {
 	globalDir string
 
 	dependencyContainer dependency.Container
+	exts                *extenders.ExtendersStack
 
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
@@ -101,6 +102,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		embeddedPolicy:       embeddedPolicy,
 		version:              version,
 		dependencyContainer:  dc,
+		exts:                 exts,
 	}
 }
 
@@ -205,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
