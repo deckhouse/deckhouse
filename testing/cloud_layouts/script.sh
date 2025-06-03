@@ -507,17 +507,17 @@ spec:
 
 >&2 echo "Apply deckhousereleases ..."
 
-echo 'apiVersion: deckhouse.io/v1alpha1
+echo "apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
     dryrun: "true"
-  name: v1.96.3
+  name: ${DEV_BRANCH}
 spec:
-  version: v1.96.3
+  version: ${DEV_BRANCH}
   requirements: {}
-' | \$python_binary -c "
+" | \$python_binary -c "
 import yaml, sys
 
 data = yaml.safe_load(sys.stdin)
