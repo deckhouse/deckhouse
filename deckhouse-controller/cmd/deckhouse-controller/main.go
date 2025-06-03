@@ -66,7 +66,6 @@ func main() {
 	logger := log.NewLogger(log.Options{})
 	log.SetDefault(logger)
 
-	// override usage template to reveal additional commands with information about start command
 	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
 	// print version
