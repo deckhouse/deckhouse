@@ -321,7 +321,11 @@ apiVersions:
         legacyMode:
           type: boolean
           description: |
-            If set to `true`, an API version below `37.2` will be used. The option only takes effect during cluster setup and is implicitly set if not specified by the user. On a running cluster, the API version is automatically determined.
+            Support for outdated versions of the VCD API.
+
+            If set to `true`, the API version below` 37.2` will be used.
+
+            The parameter has an effect only when installing a cluster. In the working cluster, the need to enable the support for outdated versions of the VCD API is determined automatically.
           x-doc-default: false
       allOf:
       - oneOf:
