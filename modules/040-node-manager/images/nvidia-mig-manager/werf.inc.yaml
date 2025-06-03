@@ -1,0 +1,47 @@
+{{- $version := "0.12.1" }}
+---
+image: {{ .ModuleName }}/nvidia-mig-manager
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /nvidia-mig-manager
+  to: /nvidia-mig-manager
+  before: setup
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src
+  - cd /src
+  - rm -rf .git hack test
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash git
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - export GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o nvidia-mig-manager ./cmd/nvidia-mig-manager/
+  - mv /src/nvidia-mig-manager /nvidia-mig-manager
+  - chown 64535:64535 /nvidia-mig-manager
+  - chmod 0700 /nvidia-mig-manager
