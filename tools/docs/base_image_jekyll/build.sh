@@ -20,7 +20,7 @@ TOOL_NAME="jekyll"
 TOOL_VERSION="4.3.4"
 
 REGISTRY_PATH="registry.deckhouse.io/base_images/"
-WRITE_REGISTRY="registry-write.deckhouse.io/base_images/"
+WRITE_REGISTRY="localhost:4999/base_images/"
 BASE_IMAGE="ruby:3.4.1-alpine3.21@sha256:487a7b4623ca0b0f635608000ca9bf2d461819fed1cae9b7d5d59b47ef648aac"
 IMAGE_NAME_WITH_TAG="${TOOL_NAME}:${TOOL_VERSION}-alpine"
 
