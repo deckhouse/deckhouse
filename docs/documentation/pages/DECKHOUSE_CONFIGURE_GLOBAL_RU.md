@@ -2,6 +2,7 @@
 title: "Глобальные настройки"
 permalink: ru/deckhouse-configure-global.html
 description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
+module-kebab-name: "global"
 lang: ru
 ---
 
@@ -38,6 +39,8 @@ spec:
         - dedicated.example.com
       storageClass: 'default-fast'
 ```
+
+{% include module-conversion.liquid %}
 
 ## Параметры
 
