@@ -28,6 +28,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -55,6 +56,7 @@ import (
 const (
 	metricUpdatingFailedGroup = "d8_updating_is_failed"
 	serviceName               = "check-release"
+	ltsChannelName            = "lts"
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
@@ -438,8 +440,19 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		notificationShiftTime *metav1.Time
 	)
 
+	// if no releases in cluster - create from channel
 	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+		}
+
+		return releaseMetadata, nil
+	}
+
+	// if release channel is LTS - create release from channel
+	if strings.EqualFold(f.releaseChannel, ltsChannelName) {
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}

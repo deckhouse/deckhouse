@@ -46,7 +46,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.28.10"
+  kubernetesVersion: "1.29.14"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -256,5 +256,4 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(servicePort).To(Equal("6443"))
 		})
 	})
-
 })

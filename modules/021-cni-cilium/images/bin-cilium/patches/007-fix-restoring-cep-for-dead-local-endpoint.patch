@@ -1,25 +1,28 @@
 diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-index 418b23cbc2..60693c117a 100644
+index 8467720fb4..18d1e95923 100644
 --- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
 +++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-@@ -4,11 +4,13 @@
+@@ -4,6 +4,8 @@
  package watchers
- 
+
  import (
 +	"net"
- 	"time"
- 
++
  	"github.com/sirupsen/logrus"
- 
+
  	"github.com/cilium/cilium/pkg/endpoint"
+@@ -13,6 +15,7 @@ import (
+ 	k8sUtils "github.com/cilium/cilium/pkg/k8s/utils"
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/metrics"
 +	"github.com/cilium/cilium/pkg/node"
- 
- 	"github.com/cilium/cilium/pkg/k8s"
- 	cilium_v2a1 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2alpha1"
-@@ -148,6 +150,17 @@ func (cs *cesSubscriber) OnDelete(ces *cilium_v2a1.CiliumEndpointSlice) {
- 	}
+ 	"github.com/cilium/cilium/pkg/time"
+ )
+
+@@ -136,6 +139,17 @@ func (cs *cesSubscriber) onDelete(ces *cilium_v2a1.CiliumEndpointSlice, cep *typ
+ 	cs.deleteCEPfromCES(CEPName, ces.GetName(), cep)
  }
- 
+
 +func (cs *cesSubscriber) isDeadLocalEndpoint(c *types.CiliumEndpoint) bool {
 +	nodeIPv4 := node.GetIPv4()
 +	cepNodeIPv4 := net.ParseIP(c.Networking.NodeIP)
@@ -27,14 +30,14 @@ index 418b23cbc2..60693c117a 100644
 +		return false
 +	}
 +
-+	p := cs.epCache.LookupPodName(k8sUtils.GetObjNamespaceName(c))
++	p := cs.epCache.LookupCEPName(k8sUtils.GetObjNamespaceName(c))
 +	return p == nil
 +}
 +
  // deleteCEP deletes the CEP and CES from the map.
  // If this was last CES for the CEP it triggers endpointDeleted.
  // If this was used CES for the CEP it picks other CES and triggers endpointUpdated.
-@@ -159,7 +172,25 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
+@@ -147,7 +161,25 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
  	if !needUpdate {
  		return
  	}
@@ -61,6 +64,3 @@ index 418b23cbc2..60693c117a 100644
  	if !exists {
  		log.WithFields(logrus.Fields{
  			"CESName": CESName,
--- 
-2.34.1
-

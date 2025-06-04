@@ -22,6 +22,8 @@ import (
 const (
 	CloudClusterType  = "Cloud"
 	StaticClusterType = "Static"
+	ProviderVCD       = "VCD"
+	ProviderYandex    = "Yandex"
 )
 
 type SchemaIndex struct {
@@ -120,4 +122,13 @@ type RegistryProxyModeProperties struct {
 
 type RegistryDetachedModeProperties struct {
 	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
+}
+
+type VCDProviderConfig struct {
+	Server   string `json:"server"`
+	Insecure bool   `json:"insecure,omitempty"`
+}
+
+type VCDProviderInfo struct {
+	ApiVersion string
 }

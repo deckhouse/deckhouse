@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
+{{- if include "capi_controller_manager_enabled" . }}
   {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1

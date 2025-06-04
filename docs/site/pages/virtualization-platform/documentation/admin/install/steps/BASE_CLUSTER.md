@@ -119,9 +119,9 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 Where:
 
-- `<REVISION>` — the [edition](../../editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
+- `<REVISION>` — the [edition](../../../about/editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
 
-- `<RELEASE_CHANNEL>` — the [update channel](../../release-channels.html) of the platform in kebab-case:
+- `<RELEASE_CHANNEL>` — the [update channel](../../../about/release-channels.html) of the platform in kebab-case:
   - `alpha` — for the *Alpha* update channel;
   - `beta` — for the *Beta* update channel;
   - `early-access` — for the *EarlyAccess* update channel;

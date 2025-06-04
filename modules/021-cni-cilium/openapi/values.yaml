@@ -6,6 +6,11 @@ properties:
     type: object
     default: {}
     properties:
+      minimalRequiredKernelVersionConstraint:
+        type: string
+        description: |
+          The minimal Linux kernel version constraint required for normal operation of the module.
+        default: ">= 5.8"
       mode:
         type: string
         enum: ["Direct", "DirectWithNodeRoutes", "VXLAN"]
@@ -176,4 +181,3 @@ properties:
               type: array
               items:
                 type: string
-

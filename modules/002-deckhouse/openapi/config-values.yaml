@@ -65,14 +65,12 @@ properties:
 
           - `AutoPatch` — automatic update mode for patch releases.
 
-            To change a minor version (for example, from `v1.65.*` to `v1.66.*`), confirmation is required.
+            To change a minor version (for example, from `v1.69.*` to `v1.70.*`), confirmation is required.
 
-            A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](#parameters-update-windows), if they are set.
+            A patch version update (for example, from `v1.70.1` to `v1.70.2`) is applied taking into account the [update windows](#parameters-update-windows), if they are set.
           - `Auto` — automatic update mode for all versions.
 
-            A minor version update (for example, from `v1.65.*` to `v1.66.*`) is applied according to the [update windows](#parameters-update-windows), if they are set.
-
-            A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied regardless of the [update windows](#parameters-update-windows) (immediately).
+            A minor version updates (for example, from `v1.69.*` to `v1.70.*`) and patch version updates (for example, from `v1.70.1` to `v1.70.2`) are applied taking into account the [update windows](#parameters-update-windows), if they are set.
           - `Manual` — manual update mode for all versions.
 
             Confirmation is required for updating both minor and patch versions.
