@@ -6,14 +6,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false
 fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -24,7 +16,6 @@ shell:
   - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana.git .
   - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /grafana-public
   - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /grafana-plugins
-  - find /patches -name '*.patch' -exec git apply {} \;
   - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
