@@ -2,7 +2,7 @@
 title: "The operator-prometheus module"
 ---
 
-This module installs the [prometheus operator](https://github.com/coreos/prometheus-operator) for creating [Prometheus](https://prometheus.io/) installations and managing them in an automated manner.
+This module *TEST* installs the [prometheus operator](https://github.com/coreos/prometheus-operator) for creating [Prometheus](https://prometheus.io/) installations and managing them in an automated manner.
 
 <!-- Pictures source: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
