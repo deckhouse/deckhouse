@@ -90,7 +90,7 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "The system part of the platform in UI is available in read-only mode",
+        "en": "The system part of the platform in UI&nbsp;is available in read-only mode",
         "ru": "Системная часть платформы в UI&nbsp;доступна только на чтение"
       }
     },
