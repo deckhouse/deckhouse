@@ -45,17 +45,24 @@ shell:
   - |
     CI_COMMIT_TAG="{{- env "CI_COMMIT_TAG" "" }}"
     if [ -z "$CI_COMMIT_TAG" ]; then
-        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
-        IFS='.' read -r -a version_parts <<< "$latest_tag"
-
-        major=${version_parts[0]}
-        minor=${version_parts[1]}
-        new_minor=$((minor + 1))
-        new_patch=0
-        prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
-
-        new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
-        export CI_COMMIT_TAG=${new_version}
+      if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-([0-9]+\.[0-9]+)$ ]]; then
+          # CI_COMMIT_REF_SLUG for release branch `release-X.Y`. Need for e2e testing
+          version="${BASH_REMATCH[1]}"
+          # `release-1.69` branch will become `v1.69.0`
+          CI_COMMIT_TAG="v${version}.0"
+      else
+          # for dev branches - create release as next prerelease version. Get the latest branch and increment the minor version
+          latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --sort='version:refname' --refs --heads https://github.com/deckhouse/deckhouse.git 'refs/heads/release-[0-9]\.[0-9]?' | tail --lines=1 | cut --delimiter='/' --fields=3 | sed 's/release-/v/').0
+          IFS='.' read -r -a version_parts <<< "$latest_tag"
+          major=${version_parts[0]}
+          minor=${version_parts[1]}
+          new_minor=$((minor + 1))
+          new_patch=0
+          prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
+          new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
+          CI_COMMIT_TAG=${new_version}
+      fi
+      export CI_COMMIT_TAG
     fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
