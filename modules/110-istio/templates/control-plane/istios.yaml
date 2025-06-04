@@ -79,7 +79,6 @@ spec:
     global:
       istiodRemote:
         enabled: false
-      createRBAC: false
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
       operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
       istioNamespace: d8-{{ $.Chart.Name }}
