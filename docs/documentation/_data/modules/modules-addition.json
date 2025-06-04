@@ -88,6 +88,12 @@
       "ce",
       "be"
     ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of the platform in UI is available in read-only mode",
+        "ru": "Системная часть платформы в UI&nbsp;доступна только на чтение"
+      }
+    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
   },
