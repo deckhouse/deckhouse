@@ -471,11 +471,7 @@ entries:
                 - title:
                     en: Hibrid integration
                     ru: Гибридная интеграция
-                  folders:
-                    - title:
-                        en: Обзор
-                        ru: Overview
-                      url: /admin/integrations/hibrid/overview.html
+                  url: /admin/integrations/hybrid/overview.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
