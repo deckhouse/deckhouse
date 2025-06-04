@@ -6,12 +6,13 @@
      <title>Document</title>
 </head>
 <body>
+The list template<hr/>
 <h1>Kind - {{.Kind}}</h1>
      {{.Content}}
      {{- range .Pages }}
           <div style="border: 1px solid black; margin:10px; padding:10px; ">
                <div style="font-size:20px;">
-                    <a href=".URL">{{.Title}}</a>
+                    <a href="{{ .RelPermalink }}">{{.Title}}</a>
                </div>
                <div style="color:grey; font-size:16px;">{{ dateFormat "Monday, Jan 2, 2006" .Date }}</div>
                <div style="color:grey; font-size:16px;">{{ if .Params.tags }}<strong>Tags:</strong> {{range .Params.tags}}<a href="{{ "/tags/" | relLangURL }}{{ . | urlize }}">{{ . }}</a> {{end}}{{end}}</div>
