@@ -113,7 +113,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
+		if err := validateHTTPRegistryScheme(m.Registry.Scheme, m.Registry.CA); err != nil {
+			return nil, err
+		}
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -297,6 +299,13 @@ func validateRegistryDockerCfg(cfg string, repo string) error {
 		}
 	}
 	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
+}
+
+func validateHTTPRegistryScheme(scheme string, CA string) error {
+	if strings.ToLower(scheme) == "http" && len(CA) > 0 {
+		return fmt.Errorf("registry CA is not allowed for HTTP scheme")
+	}
+	return nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
