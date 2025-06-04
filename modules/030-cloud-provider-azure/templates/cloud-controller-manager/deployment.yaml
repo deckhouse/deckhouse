@@ -82,7 +82,7 @@ spec:
           - /usr/local/bin/azure-cloud-controller-manager
           - --v=2
           - --cloud-provider=azure
-          - --allocate-node-cidrs=true
+          - --allocate-node-cidrs=false
           - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
           - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
           - --leader-elect=true
