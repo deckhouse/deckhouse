@@ -69,6 +69,8 @@ apiServer:
   extraArgs:
     - name: anonymous-auth
       value: "false"
+    - name: service-account-extend-token-expiration
+      value: "false"
     - name: api-audiences
       value: {{ $audiences | join "," }}
     - name: service-account-issuer

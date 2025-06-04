@@ -81,6 +81,7 @@ apiServer:
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
+    service-account-extend-token-expiration: "false"
     feature-gates: {{ $featureGates | quote }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
 {{- if hasKey . "arguments" }}
