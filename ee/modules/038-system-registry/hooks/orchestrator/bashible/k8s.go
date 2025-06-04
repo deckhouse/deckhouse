@@ -27,12 +27,17 @@ const (
 
 	nodesSnapName  = "nodes"
 	secretSnapName = "secret"
+
+	containerdCfgLabel       = "node.deckhouse.io/containerd-config-registry"
+	containerdCfgModeCustom  = "custom"
+	containerdCfgModeDefault = "default"
 )
 
 type hookNodeInfo struct {
-	IsMaster   bool
-	Version    string
-	InternalIP string
+	IsMaster          bool
+	Version           string
+	InternalIP        string
+	ContainerdCfgMode string
 }
 
 type hookIsSecretExist = bool
@@ -54,7 +59,8 @@ func KubernetesConfig(name string) []go_hook.KubernetesConfig {
 				}
 
 				info := hookNodeInfo{
-					Version: node.Annotations[versionAnnotation],
+					Version:           node.Annotations[versionAnnotation],
+					ContainerdCfgMode: node.Labels[containerdCfgLabel],
 				}
 
 				if info.Version == "" {
@@ -106,14 +112,17 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 
 	inputs := Inputs{
 		IsSecretExist: isSecretExist,
-		NodeStatus:    make(map[string]InputsNodeVersion),
+		NodeStatus:    make(map[string]InputsNodeStatus),
 	}
 
 	for nodeName, nodeInfo := range nodesInfo {
 		if nodeInfo.IsMaster && nodeInfo.InternalIP != "" {
 			inputs.MasterNodesIPs = append(inputs.MasterNodesIPs, nodeInfo.InternalIP)
 		}
-		inputs.NodeStatus[nodeName] = nodeInfo.Version
+		inputs.NodeStatus[nodeName] = InputsNodeStatus{
+			Version:           nodeInfo.Version,
+			ContainerdCfgMode: nodeInfo.ContainerdCfgMode,
+		}
 	}
 
 	sort.Strings(inputs.MasterNodesIPs)

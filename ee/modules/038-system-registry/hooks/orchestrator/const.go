@@ -13,6 +13,7 @@ import (
 
 const (
 	ConditionTypeReady                   = "Ready"
+	ConditionTypePreflightChecks         = "PreflightChecks"
 	ConditionTypeNodeServices            = "NodeServicesReady"
 	ConditionTypeNodeServicesCleanup     = "CleanupNodeServices"
 	ConditionTypeInClusterProxy          = "InClusterProxyReady"
@@ -27,6 +28,7 @@ const (
 
 var supportedConditions = map[string]struct{}{
 	ConditionTypeReady:                   {},
+	ConditionTypePreflightChecks:         {},
 	ConditionTypeNodeServices:            {},
 	ConditionTypeNodeServicesCleanup:     {},
 	ConditionTypeInClusterProxy:          {},

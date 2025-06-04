@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	transitionMessage = "Applying configuration to nodes"
+	transitionMessage     = "Applying configuration to nodes"
+	preflightCheckMessage = "Check containerd configuration"
 )
 
 var (
@@ -35,10 +36,13 @@ var (
 type Inputs struct {
 	IsSecretExist  bool
 	MasterNodesIPs []string
-	NodeStatus     map[string]InputsNodeVersion
+	NodeStatus     map[string]InputsNodeStatus
 }
 
-type InputsNodeVersion = string
+type InputsNodeStatus struct {
+	Version           string
+	ContainerdCfgMode string
+}
 
 type Params struct {
 	ModeParams     ModeParams
@@ -88,6 +92,51 @@ type Result struct {
 }
 
 type bashibleHosts map[string]bashible.Hosts
+
+func PreflightCheck(input Inputs) Result {
+	var msg strings.Builder
+	fmt.Fprintln(&msg, preflightCheckMessage)
+
+	if input.IsSecretExist {
+		fmt.Fprintln(&msg, "Bashible secret already exists.")
+		return Result{Ready: true, Message: msg.String()}
+	}
+
+	var pending []string
+	for nodeName, status := range input.NodeStatus {
+		if status.ContainerdCfgMode != containerdCfgModeDefault {
+			pending = append(pending, nodeName)
+		}
+	}
+
+	total := len(input.NodeStatus)
+	ready := total - len(pending)
+
+	if len(pending) == 0 {
+		fmt.Fprintf(&msg, "All %d node(s) have default containerd configuration.\n", total)
+		return Result{Ready: true, Message: msg.String()}
+	}
+
+	fmt.Fprintf(&msg, "%d/%d node(s) ready. Waiting:\n", ready, total)
+
+	slices.Sort(pending)
+	const maxShown = 10
+	for i, name := range pending {
+		if i == maxShown {
+			remaining := len(pending) - maxShown
+			fmt.Fprintf(&msg, "\t...and %d more\n", remaining)
+			break
+		}
+
+		switch input.NodeStatus[name].ContainerdCfgMode {
+		case containerdCfgModeCustom:
+			fmt.Fprintf(&msg, "- %s: has custom containerd configuration\n", name)
+		default:
+			fmt.Fprintf(&msg, "- %s: unknown containerd configuration\n", name)
+		}
+	}
+	return Result{Ready: false, Message: msg.String()}
+}
 
 // ProcessTransition applies the new configuration alongside the existing one.
 // Should be used when registry mode or its parameters change (transition phase).
@@ -430,8 +479,8 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 	}
 
 	var pending []string
-	for name, v := range inputs.NodeStatus {
-		if v != version {
+	for name, status := range inputs.NodeStatus {
+		if status.Version != version {
 			pending = append(pending, name)
 		}
 	}
@@ -457,7 +506,7 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 			fmt.Fprintf(&msg, "\t...and %d more\n", len(pending)-maxShown)
 			break
 		}
-		currentVersion := inputs.NodeStatus[name]
+		currentVersion := inputs.NodeStatus[name].Version
 		if isStop {
 			fmt.Fprintf(&msg, "- %s: %q → Unmanaged\n", name, trimWithEllipsis(currentVersion))
 		} else {
