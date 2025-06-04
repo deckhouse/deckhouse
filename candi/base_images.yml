@@ -15,7 +15,7 @@ builder/golang-alpine-1.24: "sha256:f6f526535fdfcdf869a9e09831beeb3ed0d0eac3076a
 builder/golang-bookworm: "sha256:a372dbc4eb70c2ee886f4a06bb7e314a7ef46e10c147c97aaef40f2b560e126e" # from: golang:1.24.2-bookworm
 builder/golang-bookworm-1.23: "sha256:917bf6629b807b2cd7bfca6af0ba1d55a6ee776f69ed345a0b8c1673b50f3504" # from: golang:1.23.8-bookworm
 builder/golang-bookworm-1.24: "sha256:a372dbc4eb70c2ee886f4a06bb7e314a7ef46e10c147c97aaef40f2b560e126e" # from: golang:1.24.2-bookworm
-builder/golang-bullseye: "sha256:56b70215b98ad0ffd33c01a12b1712dac7334cfbef584cae3415398dc18d9ee5" # from: golang:1.24.2-bullseye
+builder/golang-bullseye: "sha256:737a858312525d525f3d04e6c4282d1eedc0b9767cbc5a7918d8b53c3ddad22d" # from: golang:1.24.3-bullseye
 builder/golang-bullseye-1.23: "sha256:96b1530ab99f43fa44cf1ac4043b1aa28224ee14922f7ed7b1812371be369a02" # from: golang:1.23.8-bullseye
 builder/golang-bullseye-1.24: "sha256:56b70215b98ad0ffd33c01a12b1712dac7334cfbef584cae3415398dc18d9ee5" # from: golang:1.24.2-bullseye
 builder/node-alpine: "sha256:765e781edaee01b5470b9ccf233a9db46a0496d2d1ff58aff8f7869ffc99807c" # from: node:23.10.0-alpine3.20
