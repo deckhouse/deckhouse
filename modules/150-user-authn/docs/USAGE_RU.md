@@ -174,6 +174,7 @@ spec:
     issuer: https://keycloak.my-company.com/realms/myrealm # Используйте имя вашего realm
     clientID: plainstring
     clientSecret: plainstring
+    insecureSkipEmailVerified: true
     getUserInfo: true
     scopes:
       - openid
