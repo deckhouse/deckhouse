@@ -26,7 +26,7 @@ import (
 )
 
 const attemptMessage = `Attempt #%d of %d |
-	%s check attempt, retry in %v "
+	%s check attempt, retry in %v"
 `
 
 var InTestEnvironment = false
@@ -143,7 +143,7 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			l.logger.LogFailRetry(fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
-				errorMsg = "\tError: %v\n\n"
+				errorMsg = "\tStatus: %v\n\n"
 			}
 			l.logger.LogInfoF(l.prefix+errorMsg, err)
 
