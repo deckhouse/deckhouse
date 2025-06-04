@@ -17,7 +17,6 @@ limitations under the License.
 package bashible
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -123,15 +122,4 @@ func (a *Auth) IsEqual(b Auth) bool {
 	return a.Username == b.Username &&
 		a.Password == b.Password &&
 		a.Auth == b.Auth
-}
-
-func ToMap(s interface{}) (map[string]interface{}, error) {
-	jsonData, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	var result map[string]interface{}
-	err = json.Unmarshal(jsonData, &result)
-	return result, err
 }

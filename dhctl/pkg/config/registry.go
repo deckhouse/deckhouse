@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_bashible "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -67,12 +66,43 @@ type UpstreamRegistryData struct {
 type RegistryPKI struct {
 	CA     CertKey           `json:"-"`
 	UserRW registry_pki.User `json:"-"`
-	UserRO registry_pki.User `json:""`
+	UserRO registry_pki.User `json:"-"`
 }
 
 type CertKey struct {
 	Cert string
 	Key  string
+}
+
+type BashibleCtxRegistry struct {
+	Mode           registry_const.ModeType             `json:"mode" yaml:"mode"`
+	Version        string                              `json:"version" yaml:"version"`
+	ImagesBase     string                              `json:"imagesBase" yaml:"imagesBase"`
+	ProxyEndpoints []string                            `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
+	Hosts          map[string]BashibleCtxRegistryHosts `json:"hosts" yaml:"hosts"`
+}
+
+type BashibleCtxRegistryHosts struct {
+	Mirrors []BashibleCtxRegistryMirrorHost `json:"mirrors" yaml:"mirrors"`
+}
+
+type BashibleCtxRegistryMirrorHost struct {
+	Host     string                       `json:"host" yaml:"host"`
+	Scheme   string                       `json:"scheme" yaml:"scheme"`
+	CA       string                       `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Auth     BashibleCtxRegistryAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Rewrites []BashibleCtxRegistryRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
+}
+
+type BashibleCtxRegistryAuth struct {
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
+	Auth     string `json:"auth" yaml:"auth"`
+}
+
+type BashibleCtxRegistryRewrite struct {
+	From string `json:"from" yaml:"from"`
+	To   string `json:"to" yaml:"to"`
 }
 
 func NewRegistryCfg(registryClusterCfg RegistryClusterConfig) (registryCfg Registry, isDataDeviceEnable bool, err error) {
@@ -257,22 +287,22 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	}
 
 	// prepare mirrror and proxy endpoints
-	mirror := registry_bashible.MirrorHost{
+	mirror := BashibleCtxRegistryMirrorHost{
 		Host:   r.Data.Address,
 		CA:     r.Data.CA,
 		Scheme: r.Data.Scheme,
-		Auth: registry_bashible.Auth{
+		Auth: BashibleCtxRegistryAuth{
 			Auth: auth,
 		},
 	}
 	proxyEndpoints := []string{}
 	if registry_const.ShouldRunStaticPodRegistry(r.Mode()) {
 		// If static pod registry
-		mirror = registry_bashible.MirrorHost{
+		mirror = BashibleCtxRegistryMirrorHost{
 			Host:   registry_const.ProxyHost,
 			CA:     r.Data.CA,
 			Scheme: r.Data.Scheme,
-			Auth: registry_bashible.Auth{
+			Auth: BashibleCtxRegistryAuth{
 				Auth: auth,
 			},
 		}
@@ -281,17 +311,17 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		proxyEndpoints = registry_const.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
 	}
 
-	cfg := registry_bashible.Config{
+	cfg := BashibleCtxRegistry{
 		Mode:           r.Mode(),
 		Version:        registry_const.UnknownVersion,
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: proxyEndpoints,
-		Hosts: map[string]registry_bashible.Hosts{
-			r.Data.Address: {Mirrors: []registry_bashible.MirrorHost{mirror}},
+		Hosts: map[string]BashibleCtxRegistryHosts{
+			r.Data.Address: {Mirrors: []BashibleCtxRegistryMirrorHost{mirror}},
 		},
 	}
 
-	mapData, err := registry_bashible.ToMap(cfg)
+	mapData, err := ToMap(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -595,4 +625,15 @@ func validateRegistryDockerCfg(cfg string, repo string) error {
 		}
 	}
 	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
+}
+
+func ToMap(s interface{}) (map[string]interface{}, error) {
+	jsonData, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(jsonData, &result)
+	return result, err
 }
