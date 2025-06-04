@@ -238,6 +238,8 @@ document.addEventListener("DOMContentLoaded", function() {
             this.errorSubmit();
           }
         })
+      } else {
+        this.errorSubmit();
       }
     }
 
