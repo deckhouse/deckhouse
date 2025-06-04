@@ -35,8 +35,8 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.3.0"
-  - export VERSION_COMMON="v0.4.0"
+  - export VERSION="chore/cve-fix"
+  - export VERSION_COMMON="chore/cve-fix"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
   - cd /src
@@ -77,4 +77,3 @@ shell:
   - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
   install:
   - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-
