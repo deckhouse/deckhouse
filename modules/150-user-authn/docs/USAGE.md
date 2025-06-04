@@ -178,7 +178,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-When using Keycloak as an Identity Provider, it is necessary to remove the `Email verified` mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers") to properly support the field [`insecureSkipEmailVerified: true`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) and to grant permissions to unverified users.
+When using Keycloak as an Identity Provider, remove the `Email verified` mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for correct processing of `true` value of [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field  and to grant permissions to unverified users.
 {% endalert %}
 
 #### Okta
