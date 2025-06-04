@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -40,6 +39,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
+type attachParams struct {
+	request      *pb.CommanderAttachStart
+	switchPhase  phases.OnPhaseFunc[attach.PhaseData]
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
+}
+
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -55,11 +61,27 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.CommanderAttachResponse, attach.PhaseData]{
 		f: f, dataFunc: s.attachSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+	pt := progressTracker[*pb.CommanderAttachResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CommanderAttachResponse {
+			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Progress{Progress: convertProgress(progress)}}
+		},
+	}
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.CommanderAttachResponse {
 			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, sendCh, internalErrCh)
@@ -89,7 +111,12 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.commanderAttachSafe(ctx, attachParams{
+						request:      message.Start,
+						switchPhase:  phaseSwitcher.switchPhase(ctx),
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
+					})
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
@@ -123,42 +150,33 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderAttachSafe(
-	ctx context.Context,
-	request *pb.CommanderAttachStart,
-	switchPhase phases.OnPhaseFunc[attach.PhaseData],
-	logWriter io.Writer,
-) (result *pb.CommanderAttachResult) {
+func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.CommanderAttachResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.commanderAttach(ctx, request, switchPhase, logWriter)
+	return s.commanderAttach(ctx, p)
 }
 
-func (s *Service) commanderAttach(
-	ctx context.Context,
-	request *pb.CommanderAttachStart,
-	switchPhase phases.OnPhaseFunc[attach.PhaseData],
-	logWriter io.Writer,
-) *pb.CommanderAttachResult {
+func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.CommanderAttachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DefaultWriter,
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -166,11 +184,11 @@ func (s *Service) commanderAttach(
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
+			p.request.ConnectionConfig,
 			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
@@ -189,24 +207,25 @@ func (s *Service) commanderAttach(
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.CommanderAttachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
 	attacher := attach.NewAttacher(&attach.Params{
-		CommanderMode: request.Options.CommanderMode,
-		CommanderUUID: commanderUUID,
-		SSHClient:     sshClient,
-		OnCheckResult: onCheckResult,
-		OnPhaseFunc:   switchPhase,
+		CommanderMode:  p.request.Options.CommanderMode,
+		CommanderUUID:  commanderUUID,
+		SSHClient:      sshClient,
+		OnCheckResult:  onCheckResult,
+		OnPhaseFunc:    p.switchPhase,
+		OnProgressFunc: p.sendProgress,
 		AttachResources: attach.AttachResources{
-			Template: request.ResourcesTemplate,
-			Values:   request.ResourcesValues.AsMap(),
+			Template: p.request.ResourcesTemplate,
+			Values:   p.request.ResourcesValues.AsMap(),
 		},
-		ScanOnly: request.ScanOnly,
+		ScanOnly: p.request.ScanOnly,
 	})
 
 	result, attacherr := attacher.Attach(ctx)
@@ -238,14 +257,8 @@ func (s *Service) commanderAttachServerTransitions() []fsm.Transition {
 	}
 }
 
-func (s *Service) attachSwitchPhaseData(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	phaseData attach.PhaseData,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) (*pb.CommanderAttachResponse, error) {
-	phaseDataBytes, err := json.Marshal(phaseData)
+func (s *Service) attachSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[attach.PhaseData]) (*pb.CommanderAttachResponse, error) {
+	phaseDataBytes, err := json.Marshal(onPhaseData.CompletedPhaseData)
 	if err != nil {
 		return nil, err
 	}
@@ -253,11 +266,11 @@ func (s *Service) attachSwitchPhaseData(
 	return &pb.CommanderAttachResponse{
 		Message: &pb.CommanderAttachResponse_PhaseEnd{
 			PhaseEnd: &pb.CommanderAttachPhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
+				CompletedPhase:      string(onPhaseData.CompletedPhase),
+				CompletedPhaseState: onPhaseData.CompletedPhaseState,
 				CompletedPhaseData:  string(phaseDataBytes),
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
+				NextPhase:           string(onPhaseData.NextPhase),
+				NextPhaseCritical:   onPhaseData.NextPhaseCritical,
 			},
 		},
 	}, nil
