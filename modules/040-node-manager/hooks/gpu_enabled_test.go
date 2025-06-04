@@ -49,6 +49,17 @@ metadata:
 spec:
   providerID: static:///22d24f3645e885e88693cb5b235977af5acdc6c21efac9c075b56b618a1b5338
 `
+	gpuNode2Yaml = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-gpu-2
+  labels:
+    node.deckhouse.io/group: worker-gpu-1
+spec:
+  providerID: static:///22d24f3645e885e88693cb5b235977af5acdc6c21efac9c075b56b618a1b536
+`
 	workerNodeYaml = `
 ---
 apiVersion: v1
@@ -69,6 +80,17 @@ metadata:
 spec:
   gpu:
     sharing: time-slicing
+  nodeType: Static
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-gpu-1
+spec:
+  gpu:
+    sharing: mig
+    mig:
+      partedConfig: all-1g.5gb
   nodeType: Static
 ---
 apiVersion: deckhouse.io/v1
@@ -99,7 +121,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 
 	Context("Set GPU label on node", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(ngsYaml + gpuNode0Yaml + gpuNode1Yaml + workerNodeYaml)
+			f.KubeStateSet(ngsYaml + gpuNode0Yaml + gpuNode1Yaml + workerNodeYaml + gpuNode2Yaml)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 
 			// BindingContexts work with Dynamic client but setGPULabel works with CoreV1 from kubernetes.Interface client. Reused func from modules/040-node-manager/hooks/handle_draining_test.go
@@ -130,6 +152,17 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
             "name": "worker-gpu-1"
         }
       `
+			expectedWorkerGpu2Labels := `
+        {
+            "labels": {
+              "node.deckhouse.io/gpu": "",
+              "node.deckhouse.io/group": "worker-gpu-1",
+              "node.deckhouse.io/device-gpu.config": "mig",
+              "nvidia.com/mig.config": "all-1g.5gb" 
+            },
+            "name": "worker-gpu-2"
+        }
+      `
 			expectedWorkerLabels := `
         {
             "labels": {
@@ -140,10 +173,12 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
       `
 			workerGpu0 := f.KubernetesGlobalResource("Node", "worker-gpu-0")
 			workerGpu1 := f.KubernetesGlobalResource("Node", "worker-gpu-1")
+			workerGpu2 := f.KubernetesGlobalResource("Node", "worker-gpu-2")
 			worker := f.KubernetesGlobalResource("Node", "worker-0")
 
 			Expect(workerGpu0.Field("metadata")).To(MatchJSON(expectedWorkerGpu0Labels))
 			Expect(workerGpu1.Field("metadata")).To(MatchJSON(expectedWorkerGpu1Labels))
+			Expect(workerGpu2.Field("metadata")).To(MatchJSON(expectedWorkerGpu2Labels))
 			Expect(worker.Field("metadata")).To(MatchJSON(expectedWorkerLabels))
 
 		})

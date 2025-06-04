@@ -29,6 +29,7 @@ const (
 	gpuEnabledLabel   = "node.deckhouse.io/gpu"
 	devicePluginLabel = "node.deckhouse.io/device-gpu.config"
 	ngLabel           = "node.deckhouse.io/group"
+	nvidiaMigConfig   = "nvidia.com/mig.config"
 )
 
 // This hook discovers nodegroup GPU sharing type and labels nodes
@@ -56,6 +57,7 @@ var _ = sdk.RegisterFunc(
 type nodeGroupInfo struct {
 	Name       string
 	GpuSharing string
+	MIGConfig  *string
 }
 
 type NodeInfo struct {
@@ -70,10 +72,16 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return "", err
 	}
 
-	return nodeGroupInfo{
+	ngi := nodeGroupInfo{
 		Name:       nodeGroup.Name,
 		GpuSharing: nodeGroup.Spec.GPU.Sharing,
-	}, nil
+	}
+
+	if nodeGroup.Spec.GPU.Mig != nil && nodeGroup.Spec.GPU.Mig.PartedConfig != nil {
+		ngi.MIGConfig = nodeGroup.Spec.GPU.Mig.PartedConfig
+	}
+
+	return ngi, nil
 }
 
 func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -116,12 +124,18 @@ func setGPULabel(input *go_hook.HookInput) error {
 			}
 
 			input.Logger.Info("Labeling %s node with %s=%v label", node.(NodeInfo).Name, devicePluginLabel, gpuSharing)
+			labels := map[string]interface{}{
+				gpuEnabledLabel:   "",
+				devicePluginLabel: gpuSharing,
+			}
+
+			if ng.(nodeGroupInfo).MIGConfig != nil {
+				labels[nvidiaMigConfig] = ng.(nodeGroupInfo).MIGConfig
+			}
+
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"labels": map[string]interface{}{
-						gpuEnabledLabel:   "",
-						devicePluginLabel: gpuSharing,
-					},
+					"labels": labels,
 				},
 			}
 
