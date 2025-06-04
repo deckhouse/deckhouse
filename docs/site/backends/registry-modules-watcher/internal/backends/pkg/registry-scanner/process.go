@@ -26,6 +26,7 @@ import (
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"strings"
+	"sync"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -88,9 +89,11 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 
 func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(releaseChannels))
+	VersionDataCh := make(chan *internal.VersionData, len(releaseChannels))
+	wg := &sync.WaitGroup{}
 
 	for _, releaseChannel := range releaseChannels {
-		versionData, err := s.processReleaseChannel(ctx, registry, module, releaseChannel)
+		err := s.processReleaseChannel(ctx, VersionDataCh, wg, registry, module, releaseChannel)
 		if err != nil {
 			s.logger.Error("failed to process release channel",
 				slog.String("registry", registry),
@@ -99,24 +102,29 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 				log.Err(err))
 			continue
 		}
+	}
 
-		if versionData != nil {
-			versions = append(versions, *versionData)
-		}
+	go func() {
+		wg.Wait()
+		close(VersionDataCh)
+	}()
+
+	for version := range VersionDataCh {
+		versions = append(versions, *version)
 	}
 
 	return versions
 }
 
-func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
+func (s *registryscanner) processReleaseChannel(ctx context.Context, versionDataCh chan<- *internal.VersionData, wg *sync.WaitGroup, registry, module, releaseChannel string) error {
 	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
-		return nil, fmt.Errorf("get release image: %w", err)
+		return fmt.Errorf("get release image: %w", err)
 	}
 
 	releaseDigest, err := releaseImage.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("get digest: %w", err)
+		return fmt.Errorf("get digest: %w", err)
 	}
 
 	versionData := &internal.VersionData{
@@ -129,33 +137,51 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Image:          releaseImage,
 	}
 
-	// Check if we already have this release in cache
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-		if ok {
-			versionData.Version = version
-			versionData.TarFile = tarFile
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			return versionData, nil
+		// Check if we already have this release in cache
+		releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
+		if ok && releaseChecksum == versionData.Checksum {
+			version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
+			if ok {
+				versionData.Version = version
+				versionData.TarFile = tarFile
+
+				versionDataCh <- versionData
+				return
+			}
 		}
-	}
 
-	// Extract version from image
-	version, err := getVersionFromImage(versionData.Image)
-	if err != nil {
-		return nil, fmt.Errorf("extract version from image: %w", err)
-	}
-	versionData.Version = version
+		// Extract version from image
+		version, err := getVersionFromImage(versionData.Image)
+		if err != nil {
+			s.logger.Error("failed to process release channel",
+				slog.String("registry", registry),
+				slog.String("module", module),
+				slog.String("channel", releaseChannel),
+				log.Err(err))
+			return
+		}
+		versionData.Version = version
 
-	// Extract tar file
-	tarFile, err := s.extractTar(ctx, versionData)
-	if err != nil {
-		return nil, fmt.Errorf("extract tar: %w", err)
-	}
-	versionData.TarFile = tarFile
+		// Extract tar file
+		tarFile, err := s.extractTar(ctx, versionData)
+		if err != nil {
+			s.logger.Error("failed to process release channel",
+				slog.String("registry", registry),
+				slog.String("module", module),
+				slog.String("channel", releaseChannel),
+				log.Err(err))
+			return
+		}
 
-	return versionData, nil
+		versionData.TarFile = tarFile
+		versionDataCh <- versionData
+	}()
+
+	return nil
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
