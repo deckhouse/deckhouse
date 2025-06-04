@@ -185,9 +185,6 @@ spec:
                   global:
                     description: Global configuration for Istio components.
                     properties:
-                      createRBAC:
-                        description: "Apply default RBAC cluster roles or not"
-                        type: boolean
                       arch:
                         description: "Specifies pod scheduling arch(amd64, ppc64le,
                           s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
