@@ -11,6 +11,7 @@ import:
   includePaths:
   - usr/bin/falco
   - etc/falco
+  - usr/share/falco/plugins/libcontainer.so
   - lib64
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
