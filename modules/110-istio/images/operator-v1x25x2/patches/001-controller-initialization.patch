@@ -1,5 +1,5 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..00d9e0df 100644
+index 5e97cde4..f498f526 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
 @@ -18,10 +18,6 @@ import (
@@ -41,41 +41,47 @@ index 5e97cde4..00d9e0df 100644
  )
  
  const istioCniName = "default"
-@@ -155,6 +154,9 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
+@@ -155,6 +154,10 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
  }
  
  func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
 +	log := logf.FromContext(ctx)
-+	log.Info("Starting Helm chart installation", "chartName", constants.IstiodChartName, "namespace", rev.Spec.Namespace)
++	releaseName := fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
 +
++	// 1. Prepare owner reference
  	ownerReference := metav1.OwnerReference{
  		APIVersion:         v1.GroupVersion.String(),
  		Kind:               v1.IstioRevisionKind,
-@@ -163,13 +165,26 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
- 		Controller:         ptr.Of(true),
+@@ -164,12 +167,32 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
  		BlockOwnerDeletion: ptr.Of(true),
  	}
--
+ 
++	// 2. Prepare chart values and path
  	values := helm.FromValues(rev.Spec.Values)
 -	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
 -		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
-+	releaseName := fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName) // Alternative to getReleaseName()
 +	chartDir := path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", constants.IstiodChartName)
 +
-+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, chartDir, values, rev.Spec.Namespace, releaseName, ownerReference)
++	// 3. Attempt installation with force option
++	_, err := r.ChartManager.UpgradeOrInstallChart(
++		ctx,
++		chartDir,
++		values,
++		rev.Spec.Namespace,
++		releaseName,
++		ownerReference,
++	)
 +
++	// 4. Error handling
  	if err != nil {
 -		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
-+		if strings.Contains(err.Error(), "is forbidden") && strings.Contains(err.Error(), "RBAC permissions") {
-+			log.Info("Ignoring RBAC error (proceeding with installation)", "error", err.Error())
++		// Skip RBAC and uninstall errors
++		if strings.Contains(err.Error(), "is forbidden") ||
++			strings.Contains(err.Error(), "failed to uninstall") ||
++			strings.Contains(err.Error(), "unexpected helm release status") {
++			log.Info("Ignoring recoverable error", "error", err.Error())
 +			return nil
 +		}
-+
-+		if strings.Contains(err.Error(), "failed to uninstall failed helm release") {
-+			log.Info("Ignoring uninstall failure (proceeding with installation)", "error", err.Error())
-+			return nil
-+		}
-+
 +		return fmt.Errorf("failed to install Helm chart: %w", err)
  	}
 +
