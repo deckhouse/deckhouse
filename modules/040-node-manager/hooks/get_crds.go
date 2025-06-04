@@ -22,6 +22,7 @@ import (
 	"hash/fnv"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -32,6 +33,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
@@ -467,6 +469,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 
+		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
+		ngForValues["serializedTaints"] = serializeTaints(nodeGroup)
+
 		if ngForValues["cri"] == nil {
 			ngForValues["cri"] = ngv1.CRI{}
 		}
@@ -596,4 +601,25 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	absWindowStart := ((ts - drift - 1) / EpochWindowSize) * EpochWindowSize
 	epoch := absWindowStart + EpochWindowSize + drift
 	return strconv.FormatInt(epoch, 10)
+}
+
+func serializeLabels(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Labels) == 0 {
+		return ""
+	}
+
+	return labels.FormatLabels(info.Spec.NodeTemplate.Labels)
+}
+
+func serializeTaints(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Taints) == 0 {
+		return ""
+	}
+
+	res := make([]string, 0, len(info.Spec.NodeTemplate.Taints))
+	for _, taint := range info.Spec.NodeTemplate.Taints {
+		res = append(res, taint.ToString())
+	}
+
+	return strings.Join(res, ",")
 }
