@@ -3,11 +3,10 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
 - image: {{ $.ModuleName }}/falco-artifact
-  add: /falco-package
+  add: /out
   to: /
   includePaths:
-  - usr/bin/
-  - usr/share/
+  - usr/bin/falco
   - lib64/
   before: install
 - image: {{ $.ModuleName }}/falco-falcoctl-artifact
