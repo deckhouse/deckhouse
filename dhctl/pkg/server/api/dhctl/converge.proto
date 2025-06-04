@@ -34,6 +34,7 @@ message ConvergeResponse {
     ConvergeResult result = 1;
     ConvergePhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 

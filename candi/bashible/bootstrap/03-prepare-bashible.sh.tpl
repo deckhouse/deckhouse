@@ -118,7 +118,7 @@ get_bundle bashible "{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOO
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 
 # Bashible first run
-until /var/lib/bashible/bashible.sh; do
+until bash --noprofile --norc -c /var/lib/bashible/bashible.sh; do
   echo "Error running bashible script. Retry in 10 seconds."
   sleep 10
 done

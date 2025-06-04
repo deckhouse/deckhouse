@@ -78,9 +78,15 @@
   },
   "console": {
     "editions": [
+      "ce",
+      "be",
       "se",
       "se-plus",
       "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
@@ -189,6 +195,15 @@
       }
     },
     "path": "modules/metallb/"
+  },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
   },
   "observability-platform": {
     "editions": [

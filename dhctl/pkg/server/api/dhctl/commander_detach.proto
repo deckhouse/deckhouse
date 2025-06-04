@@ -33,6 +33,7 @@ message CommanderDetachResponse {
   oneof message {
     CommanderDetachResult result = 1;
     Logs logs = 2;
+    Progress progress = 4;
   }
 }
 
