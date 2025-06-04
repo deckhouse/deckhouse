@@ -14,14 +14,19 @@
 
 bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
 
-REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- if .registry.ca }}
-bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
-{{ .registry.ca }}
+{{- $enableMirrorsConfig := true }}
+{{- if not $enableMirrorsConfig }}
+  {{- range $_, $host_values := .registry.hosts }}
+    {{- range $mirror := $host_values.mirrors }}
+      {{- if $mirror.ca }}
+
+bb-log-info "Sync CA for {{ $mirror.host }}"
+bb-sync-file "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt" - << "EOF"
+{{ $mirror.ca }}
 EOF
-{{- else }}
-if [ -f $REGISTRY_CACERT_PATH ]; then
-  rm -f $REGISTRY_CACERT_PATH
-fi
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}

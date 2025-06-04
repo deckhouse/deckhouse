@@ -94,7 +94,7 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 }
 
 func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
-	buf, err := base64.StdEncoding.DecodeString(pc.installConfig.Registry.DockerCfg)
+	buf, err := base64.StdEncoding.DecodeString(pc.installConfig.Registry.Data.DockerCfg)
 	if err != nil {
 		return nil, fmt.Errorf("decode dockerCfg: %w", err)
 	}
@@ -113,7 +113,7 @@ func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
 	if decodedDockerCfg.Auths == nil {
 		return authn.Anonymous, nil
 	}
-	registryAuth, hasRegistryCreds := decodedDockerCfg.Auths[pc.installConfig.Registry.Address]
+	registryAuth, hasRegistryCreds := decodedDockerCfg.Auths[pc.installConfig.Registry.Data.Address]
 	if !hasRegistryCreds {
 		return authn.Anonymous, nil
 	}
