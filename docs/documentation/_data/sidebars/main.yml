@@ -528,7 +528,7 @@ entries:
                 - title:
                     en: Node management
                     ru: Управление узлами
-                  url: /admin/configuration/platform-scaling/node-management.html
+                  url: /admin/configuration/platform-scaling/node.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
@@ -576,19 +576,19 @@ entries:
                     - title:
                         en: Internal network configuration
                         ru: Настройка внутренней сети
-                      url: /admin/configuration/network/configuration.html
+                      url: /admin/configuration/network/internal/configuration.html
                     - title:
                         en: Encrypting traffic between pods
                         ru: Шифрование трафика между подами
-                      url: /admin/configuration/network/encrypting-traffic-pods.html
+                      url: /admin/configuration/network/internal/encrypting-pods.html
                     - title:
                         en: Configuring Cluster Network Stack Visualization
                         ru: Настройка визуализации сетевого стека кластера
-                      url: /admin/configuration/network/network-stack-visualization-cilium-hubble.html
+                      url: /admin/configuration/network/internal/visualization.html
                     - title:
                         en: Switching from CNI flannel to cilium
                         ru: Переключение с CNI flannel на cilium
-                      url: /admin/configuration/network/flannel-cilium-switching.html
+                      url: /admin/configuration/network/internal/flannel-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
@@ -596,7 +596,7 @@ entries:
                     - title:
                         en: Incoming traffic balancing
                         ru: Балансировка входящего трафика
-                      url: /admin/configuration/network/incoming-traffic-balancing-overview.html
+                      url: /admin/configuration/network/ingress/
                     - title:
                         en: NLB
                         ru: NLB
@@ -604,15 +604,15 @@ entries:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/configuration/network/nlb-balancing-overview.html
+                          url: /admin/configuration/network/ingress/nlb/
                         - title:
                             en: Balancing by MetalLB means
                             ru: Балансировка средствами MetalLB
-                          url: /admin/configuration/network/metallb-balancing.html
+                          url: /admin/configuration/network/ingress/nlb/metallb.html
                         - title:
                             en: External balancer
                             ru: Внешний балансировщик
-                          url: /admin/configuration/network/cloud-balancing.html
+                          url: /admin/configuration/network/ingress/nlb/cloud-balancing.html
                     - title:
                         en: ALB
                         ru: ALB
@@ -620,19 +620,19 @@ entries:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/configuration/network/alb-overview.html
+                          url: /admin/configuration/network/ingress/alb/
                         - title:
-                            en: ALB means NGINX Ingress controller
+                            en: ALB by NGINX Ingress controller
                             ru: ALB средствами NGINX Ingress controller
-                          url: /admin/configuration/network/alb-nginx.html
+                          url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
                             en: ALB means Istio
                             ru: ALB средствами Istio
-                          url: /admin/configuration/network/alb-istio.html
+                          url: /admin/configuration/network/ingress/alb/istio.html
                     - title:
                         en: Ensuring high availability and fault tolerance (keepalived)
                         ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
-                      url: /admin/configuration/network/keepalived.html
+                      url: /admin/configuration/network/ingress/keepalived.html
                 - title:
                     en: Outgoing traffic balancing
                     ru: Балансировка исходящего трафика
@@ -640,15 +640,15 @@ entries:
                     - title:
                         en: Overview
                         ru: Обзор
-                      url: /admin/configuration/network/outgoing-traffic-balancing.html
+                      url: /admin/configuration/network/egress/
                     - title:
-                        en: Egress
-                        ru: Egress
-                      url: /admin/configuration/network/egress.html
+                        en: Egress Gateway
+                        ru: Egress Gateway
+                      url: /admin/configuration/network/egress/gateway.html
                     - title:
                         en: Istio
                         ru: Istio
-                      url: /admin/configuration/network/istio-outgoing-balancing.html
+                      url: /admin/configuration/network/egress/istio.html
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
@@ -656,15 +656,15 @@ entries:
                     - title:
                         en: Overview
                         ru: Обзор
-                      url: /admin/configuration/network/inter-cluster-cooperation-overview.html
+                      url: /admin/configuration/network/alliance/
                     - title:
                         en: Multicluster
                         ru: Мультикластер
-                      url: /admin/configuration/network/multicluster.html
+                      url: /admin/configuration/network/alliance/multicluster.html
                     - title:
                         en: Federation
                         ru: Федерация
-                      url: /admin/configuration/network/cluster-federation.html
+                      url: /admin/configuration/network/alliance/federation.html
                 - title:
                     en: Network policies
                     ru: Сетевые политики
@@ -672,11 +672,11 @@ entries:
                     - title:
                         en: Overview
                         ru: Обзор
-                      url: /admin/configuration/network/network-policies-overview.html
+                      url: /admin/configuration/network/policy/
                     - title:
                         en: Network policy configuration
                         ru: Настройка сетевых политик
-                      url: /admin/configuration/network/network-policy-configuration.html
+                      url: /admin/configuration/network/policy/configuration.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -684,27 +684,23 @@ entries:
                     - title:
                         en: Overview
                         ru: Обзор
-                      url: /admin/configuration/network/other-network-configuration-options-overview.html
+                      url: /admin/configuration/network/other/
                     - title:
                         en: Management of static routes and ip rules on cluster nodes
                         ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
-                      url: /admin/configuration/network/management-of-static-routes.html
+                      url: /admin/configuration/network/other/static-routes.html
                     - title:
                         en: Managing DNS in a Kubernetes cluster
                         ru: Управление DNS в кластере Kubernetes
-                      url: /admin/configuration/network/dns-management-in-cluster.html
-                    - title:
-                        en: Building a network gateway from Kubernetes nodes
-                        ru: Постройка сетевого шлюза из Kubernetes-узлов
-                      url: /admin/configuration/network/building-network-gateway-from-nodes.html
+                      url: /admin/configuration/network/other/dns.html
                     - title:
                         en: Operation modes of bpfLB for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
-                      url: /admin/configuration/network/bpflb-external-traffic.html
+                      url: /admin/configuration/network/other/bpflb.html
                     - title:
                         en: Synchronizing time on nodes
                         ru: Синхронизация времени на узлах
-                      url: /admin/configuration/network/ntp.html
+                      url: /admin/configuration/network/other/ntp.html
             - title:
                 en: Storage
                 ru: Хранение
@@ -928,15 +924,15 @@ entries:
                 - title:
                     en: General information about NLB and ALB
                     ru: Общая информация про NLB и ALB
-                  url: /user/network/alb-nlb/
+                  url: /user/network/ingress/
                 - title:
                     en: NLB
                     ru: NLB
-                  url: /user/network/incoming-traffic-processing-nlb.html
+                  url: /user/network/ingress/nlb.html
                 - title:
                     en: ALB
                     ru: ALB
-                  url: /user/network/incoming-traffic-processing-alb.html
+                  url: /user/network/ingress/alb.html
             - title:
                 en: Intra-cluster interaction
                 ru: Внутрикластерное взаимодействие
