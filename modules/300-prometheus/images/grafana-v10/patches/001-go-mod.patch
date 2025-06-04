@@ -1,15 +1,7 @@
 diff --git a/go.mod b/go.mod
-index 548aeed3..ccafebfc 100644
+index 548aeed3..eb125dd6 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,6 @@
- module github.com/grafana/grafana
-
--go 1.24.3
-+go 1.24.2
-
- // Override docker/docker to avoid:
- // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires
 @@ -323,7 +323,6 @@ require (
  	github.com/hashicorp/hcl v1.0.0 // indirect
  	github.com/hashicorp/memberlist v0.5.0 // indirect
