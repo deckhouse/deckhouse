@@ -945,7 +945,7 @@ ENDSSH
         -v /tmp/sshkey:/tmp/sshkey \
         -v /tmp/configuration.yaml:/tmp/configuration.yaml \
         -v /tmp/resources.yaml:/tmp/resources.yaml \
-        ${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG} \
+        ${IMAGES_REPO}/install:${DEV_BRANCH} \
         dhctl --do-not-write-debug-log-file bootstrap \
             --resources-timeout="30m" --yes-i-want-to-drop-cache \
             --ssh-host "$master_ip" \
