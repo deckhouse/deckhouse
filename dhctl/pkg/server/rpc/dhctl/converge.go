@@ -158,7 +158,8 @@ connectionProcessor:
 func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.ConvergeResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.ConvergeResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -296,12 +297,12 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
-	state := converger.GetLastState()
-	stateData, marshalStateErr := json.Marshal(state)
-	resultString, marshalResultErr := json.Marshal(result)
-	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
+	resultData, marshalResultErr := json.Marshal(result)
+	state, stateErr := extractLastState()
 
-	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
+	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+
+	return &pb.ConvergeResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) convergeServerTransitions() []fsm.Transition {

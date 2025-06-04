@@ -154,7 +154,8 @@ connectionProcessor:
 func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.AbortResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -277,11 +278,10 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(abortErr, marshalErr)
+	state, stateErr := extractLastState()
+	err = errors.Join(abortErr, stateErr)
 
-	return &pb.AbortResult{State: string(stateData), Err: util.ErrToString(err)}
+	return &pb.AbortResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) abortServerTransitions() []fsm.Transition {

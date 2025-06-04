@@ -153,7 +153,8 @@ connectionProcessor:
 func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.CommanderAttachResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.CommanderAttachResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
@@ -228,13 +229,13 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		ScanOnly: p.request.ScanOnly,
 	})
 
-	result, attacherr := attacher.Attach(ctx)
-	state := attacher.PhasedExecutionContext.GetLastState()
-	stateData, marshalStateErr := json.Marshal(state)
-	resultString, marshalResultErr := json.Marshal(result)
-	err = errors.Join(attacherr, marshalStateErr, marshalResultErr)
+	result, attachErr := attacher.Attach(ctx)
+	resultData, marshalResultErr := json.Marshal(result)
+	state, stateErr := extractLastState()
 
-	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
+	err = errors.Join(attachErr, stateErr, marshalResultErr)
+
+	return &pb.CommanderAttachResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) commanderAttachServerTransitions() []fsm.Transition {

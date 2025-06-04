@@ -34,6 +34,7 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -198,14 +199,38 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	return nil
 }
 
-func panicMessage(ctx context.Context, p any) string {
+func extractLastState() ([]byte, error) {
+	state, err := phases.ExtractDhctlState(cache.Global())
+	if err != nil {
+		return nil, fmt.Errorf("extracting last state: %w", err)
+	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling last state: %w", err)
+	}
+
+	return data, nil
+}
+
+func panicResult(ctx context.Context, p any) ([]byte, error) {
 	stack := string(debug.Stack())
 
 	logger.L(ctx).Error("recovered from panic",
 		slog.Any("panic", p),
 		slog.String("stack", stack),
 	)
-	return fmt.Sprintf("panic: %v, %s", p, stack)
+
+	errs := []error{
+		fmt.Errorf("panic: %v, %s", p, stack),
+	}
+
+	lastState, err := extractLastState()
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	return lastState, errors.Join(errs...)
 }
 
 type progressTracker[T proto.Message] struct {
