@@ -11,6 +11,7 @@ import:
   includePaths:
   - usr/bin/falco
   - etc/falco
+  - lib64
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
   add: /src/falcoctl
@@ -114,6 +115,8 @@ shell:
   - "sed -i 's|time_format_iso_8601: false|time_format_iso_8601: true|' /out/etc/falco/falco.yaml"
   # cleanup to reduce artifact size
   - make clean
+  - cd /out
+  - /binary_replace.sh -i usr/bin/falco -o /out
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
@@ -149,9 +152,11 @@ shell:
   - make
   - cp libk8smeta.so /out/usr/share/falco/plugins
   - make clean
+  - cd /out
+  - /binary_replace.sh -i "usr/share/falco/plugins/libjson.so usr/share/falco/plugins/libk8saudit.so usr/share/falco/plugins/libk8smeta.so" -o /out
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-fromImage: builder/alt
+fromImage: common/relocate-artifact
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -161,5 +166,3 @@ shell:
   - apt-get install -y git libelf-devel libbpf-devel bpftool cmake clang18.1 build-essential golang gcc12 gcc12-c++ perl-IPC-Cmd
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
-
-
