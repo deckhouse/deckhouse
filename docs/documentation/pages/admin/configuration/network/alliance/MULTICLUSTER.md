@@ -25,7 +25,7 @@ permalink: en/admin/configuration/network/alliance/multicluster.html
 
 ### General principles
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_en.pdf"></div>
+<div data-presentation="../../../../presentations/istio/multicluster_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 * Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -46,7 +46,7 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 ### Managing the multicluster
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_en.pdf"></div>
+<div data-presentation="../../../../presentations/istio/multicluster_istio_multicluster_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.

@@ -22,14 +22,14 @@ Egress Gateway позволяет централизованно управля�
 
 Используются предварительно настроенные IP-адреса на egress-узлах.
 
-<div data-presentation="../../../presentations/cni-cilium/egressgateway_base_ru.pdf"></div>
+<div data-presentation="../../../../presentations/cni-cilium/egressgateway_base_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/12l4w9ZS3Hpax1B7eOptm2dQX55VVAFzRTtyihw4Ie0c/ --->
 
 ### Режим с Virtual IP
 
 Реализована возможность динамически назначать дополнительные IP-адреса узлам.
 
-<div data-presentation="../../../presentations/cni-cilium/egressgateway_virtualip_ru.pdf"></div>
+<div data-presentation="../../../../presentations/cni-cilium/egressgateway_virtualip_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1tmhbydjpCwhNVist9RT6jzO1CMpc-G1I7rczmdLzV8E/ --->
 
 <!-- Перенесено с небольшими доработками из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/examples.html#egress-gateway -->

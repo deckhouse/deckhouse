@@ -31,7 +31,7 @@ lang: ru
 * Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации нужно в кластере A сделать кластер Б доверенным и аналогично в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
 * Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который описывает публичный адрес ingress-gateway кластера Б.
 
-<div data-presentation="../../../presentations/istio/federation_common_principles_ru.pdf"></div>
+<div data-presentation="../../../../presentations/istio/federation_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/ --->
 
 ### Включение федерации
@@ -46,7 +46,7 @@ lang: ru
 
 ### Управление федерацией
 
-<div data-presentation="../../../presentations/istio/federation_istio_federation_ru.pdf"></div>
+<div data-presentation="../../../../presentations/istio/federation_istio_federation_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/ --->
 
 Для построения федерации необходимо сделать следующее:
