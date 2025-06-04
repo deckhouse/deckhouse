@@ -26,7 +26,7 @@ import (
 )
 
 const attemptMessage = `Attempt #%d of %d |
-	%s failed, next attempt will be in %v"
+	%s check attempt, retry in %v"
 `
 
 var InTestEnvironment = false
