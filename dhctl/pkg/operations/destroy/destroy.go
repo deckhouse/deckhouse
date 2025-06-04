@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -50,6 +51,7 @@ type Params struct {
 	NodeInterface          node.Interface
 	StateCache             dhctlstate.Cache
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
+	OnProgressFunc         phases.OnProgressFunc
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	SkipResources bool
@@ -82,11 +84,17 @@ type ClusterDestroyer struct {
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
 	var pec phases.DefaultPhasedExecutionContext
 	if params.PhasedExecutionContext != nil {
 		pec = params.PhasedExecutionContext
 	} else {
-		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
+		pec = phases.NewDefaultPhasedExecutionContext(
+			phases.OperationDestroy, params.OnPhaseFunc, params.OnProgressFunc,
+		)
 	}
 
 	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)

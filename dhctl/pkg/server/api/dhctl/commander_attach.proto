@@ -35,6 +35,7 @@ message CommanderAttachResponse {
     CommanderAttachResult result = 1;
     CommanderAttachPhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 
