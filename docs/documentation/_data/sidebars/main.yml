@@ -1163,21 +1163,21 @@ entries:
           url: /architecture/authentication/
           draft: true
         - title:
-            en: Disaster resistance
+            en: Disaster resilience
             ru: Катастрофоустойчивость
           folders:
             - title:
                 en: Overview
                 ru: Обзор
-              url: /architecture/disaster-resistance/
+              url: /architecture/disaster-resilience/
             - title:
                 en: Geo-distribution
                 ru: Геораспределённость
-              url: /architecture/disaster-resistance/geo-distribution.html
+              url: /architecture/disaster-resilience/geo-distribution.html
             - title:
                 en: Geo-reserving
                 ru: Георезервирование
-              url: /architecture/disaster-resistance/geo-reserving.html
+              url: /architecture/disaster-resilience/geo-reserving.html
         - title:
             en: Updating
             ru: Обновление
