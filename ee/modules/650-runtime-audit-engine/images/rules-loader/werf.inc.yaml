@@ -14,6 +14,10 @@ import:
   add: /src/falcoctl
   to: /usr/bin/falcoctl
   before: install
+- image: {{ $.ModuleName }}/falco-plugins-artifact
+  add: /out/usr/share/falco/plugins
+  to: /usr/share/falco/plugins
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
