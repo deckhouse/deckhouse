@@ -16,8 +16,7 @@ bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- $enableMirrorsConfig := true }}
-{{- if not $enableMirrorsConfig }}
+{{- if not .registry.registryModuleEnable }}
   {{- range $_, $host_values := .registry.hosts }}
     {{- range $mirror := $host_values.mirrors }}
       {{- if $mirror.ca }}

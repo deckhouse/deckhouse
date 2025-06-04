@@ -26,11 +26,12 @@ import (
 )
 
 type RegistryData struct {
-	Mode           string                   `json:"mode" yaml:"mode"`
-	Version        string                   `json:"version" yaml:"version"`
-	ImagesBase     string                   `json:"imagesBase" yaml:"imagesBase"`
-	ProxyEndpoints []string                 `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
-	Hosts          map[string]registryHosts `json:"hosts" yaml:"hosts"`
+	RegistryModuleEnable bool                     `json:"registryModuleEnable" yaml:"registryModuleEnable"`
+	Mode                 string                   `json:"mode" yaml:"mode"`
+	Version              string                   `json:"version" yaml:"version"`
+	ImagesBase           string                   `json:"imagesBase" yaml:"imagesBase"`
+	ProxyEndpoints       []string                 `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
+	Hosts                map[string]registryHosts `json:"hosts" yaml:"hosts"`
 }
 
 type registryHosts struct {

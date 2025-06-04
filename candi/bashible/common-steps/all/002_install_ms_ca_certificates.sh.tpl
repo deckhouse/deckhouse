@@ -14,8 +14,7 @@
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- $enableMirrorsConfig := true }}
-{{- if not $enableMirrorsConfig }}
+{{- if not .registry.registryModuleEnable }}
 	{{- if eq .runType "Normal" }}
 		{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
 			{{- if $ca }}

@@ -75,11 +75,12 @@ type CertKey struct {
 }
 
 type BashibleCtxRegistry struct {
-	Mode           registry_const.ModeType             `json:"mode" yaml:"mode"`
-	Version        string                              `json:"version" yaml:"version"`
-	ImagesBase     string                              `json:"imagesBase" yaml:"imagesBase"`
-	ProxyEndpoints []string                            `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
-	Hosts          map[string]BashibleCtxRegistryHosts `json:"hosts" yaml:"hosts"`
+	RegistryModuleEnable bool                                `json:"registryModuleEnable" yaml:"registryModuleEnable"`
+	Mode                 registry_const.ModeType             `json:"mode" yaml:"mode"`
+	Version              string                              `json:"version" yaml:"version"`
+	ImagesBase           string                              `json:"imagesBase" yaml:"imagesBase"`
+	ProxyEndpoints       []string                            `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
+	Hosts                map[string]BashibleCtxRegistryHosts `json:"hosts" yaml:"hosts"`
 }
 
 type BashibleCtxRegistryHosts struct {
@@ -296,6 +297,7 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		},
 	}
 	proxyEndpoints := []string{}
+	registryModuleEnable := false
 	if registry_const.ShouldRunStaticPodRegistry(r.Mode()) {
 		// If static pod registry
 		mirror = BashibleCtxRegistryMirrorHost{
@@ -309,13 +311,15 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		// ${discovered_node_ip} - bashible will use this as a placeholder on envsubst call
 		// address will be discovered in one of bashible steps
 		proxyEndpoints = registry_const.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
+		registryModuleEnable = true
 	}
 
 	cfg := BashibleCtxRegistry{
-		Mode:           r.Mode(),
-		Version:        registry_const.UnknownVersion,
-		ImagesBase:     imagesBase,
-		ProxyEndpoints: proxyEndpoints,
+		RegistryModuleEnable: registryModuleEnable,
+		Mode:                 r.Mode(),
+		Version:              registry_const.UnknownVersion,
+		ImagesBase:           imagesBase,
+		ProxyEndpoints:       proxyEndpoints,
 		Hosts: map[string]BashibleCtxRegistryHosts{
 			r.Data.Address: {Mirrors: []BashibleCtxRegistryMirrorHost{mirror}},
 		},

@@ -198,10 +198,11 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 			},
 
 			wantRegistryData: RegistryData{
-				Mode:           "managed",
-				ImagesBase:     "example.com/base",
-				Version:        "1.0",
-				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
+				RegistryModuleEnable: true,
+				Mode:                 "managed",
+				ImagesBase:           "example.com/base",
+				Version:              "1.0",
+				ProxyEndpoints:       []string{"endpoint-1", "endpoint-2"},
 				Hosts: map[string]registryHosts{
 					"host1.example.com": {
 						Mirrors: []registryMirrorHost{

@@ -113,11 +113,12 @@ func (m *bashibleConfigMirrorHost) Validate() error {
 
 func (c bashibleConfigSecret) toRegistryData() *RegistryData {
 	ret := &RegistryData{
-		Mode:           c.Mode,
-		Version:        c.Version,
-		ImagesBase:     c.ImagesBase,
-		ProxyEndpoints: append([]string(nil), c.ProxyEndpoints...),
-		Hosts:          make(map[string]registryHosts, len(c.Hosts)),
+		RegistryModuleEnable: true,
+		Mode:                 c.Mode,
+		Version:              c.Version,
+		ImagesBase:           c.ImagesBase,
+		ProxyEndpoints:       append([]string(nil), c.ProxyEndpoints...),
+		Hosts:                make(map[string]registryHosts, len(c.Hosts)),
 	}
 
 	for key, hosts := range c.Hosts {

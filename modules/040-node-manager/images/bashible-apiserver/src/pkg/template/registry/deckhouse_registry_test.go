@@ -39,9 +39,10 @@ func TestDeckhouseRegistrySecretToRegistryData(t *testing.T) {
 				DockerConfig: []byte(`{"auths":{"example.com":{"auth":"dXNlcjpwYXNz"}}}`),
 			},
 			wantRegistryData: RegistryData{
-				Mode:       "unmanaged",
-				ImagesBase: "example.com/base",
-				Version:    "unknown",
+				RegistryModuleEnable: false,
+				Mode:                 "unmanaged",
+				ImagesBase:           "example.com/base",
+				Version:              "unknown",
 				Hosts: map[string]registryHosts{
 					"example.com": {
 						Mirrors: []registryMirrorHost{

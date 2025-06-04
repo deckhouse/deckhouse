@@ -179,9 +179,10 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 			},
 			bashibleConfigSecret: nil,
 			wantRegistryData: &RegistryData{
-				Mode:       "unmanaged",
-				ImagesBase: "registry-1.com/test",
-				Version:    "unknown",
+				RegistryModuleEnable: false,
+				Mode:                 "unmanaged",
+				ImagesBase:           "registry-1.com/test",
+				Version:              "unknown",
 				Hosts: map[string]registryHosts{
 					"registry-1.com": {
 						Mirrors: []registryMirrorHost{{Host: "registry-1.com", Scheme: "https"}},
@@ -209,10 +210,11 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 				},
 			},
 			wantRegistryData: &RegistryData{
-				Mode:           "proxy",
-				ImagesBase:     "registry-2.com/test",
-				Version:        "1",
-				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
+				RegistryModuleEnable: true,
+				Mode:                 "proxy",
+				ImagesBase:           "registry-2.com/test",
+				Version:              "1",
+				ProxyEndpoints:       []string{"endpoint-1", "endpoint-2"},
 				Hosts: map[string]registryHosts{
 					"registry-2.com": {
 						Mirrors: []registryMirrorHost{{Host: "registry-2.com", Scheme: "https"}},

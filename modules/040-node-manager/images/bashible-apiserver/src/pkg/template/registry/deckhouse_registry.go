@@ -108,9 +108,10 @@ func (d deckhouseRegistrySecret) toRegistryData() (*RegistryData, error) {
 	}
 
 	ret := &RegistryData{
-		Mode:       "unmanaged",
-		Version:    "unknown",
-		ImagesBase: imagesBase,
+		RegistryModuleEnable: false,
+		Mode:                 "unmanaged",
+		Version:              "unknown",
+		ImagesBase:           imagesBase,
 		Hosts: map[string]registryHosts{d.Address: {
 			Mirrors: []registryMirrorHost{{
 				Host:   d.Address,

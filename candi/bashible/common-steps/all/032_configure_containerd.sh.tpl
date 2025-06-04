@@ -134,8 +134,7 @@ oom_score = 0
       max_conf_num = 1
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
-{{- $enableMirrorsConfig := true }}
-{{- if $enableMirrorsConfig }}
+{{- if .registry.registryModuleEnable }}
     config_path = "/etc/containerd/registry.d"
 {{- else }}
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
