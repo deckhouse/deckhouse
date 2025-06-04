@@ -1,5 +1,5 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..f498f526 100644
+index 5e97cde4..8786cd71 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
 @@ -18,10 +18,6 @@ import (
@@ -82,7 +82,7 @@ index 5e97cde4..f498f526 100644
 +			log.Info("Ignoring recoverable error", "error", err.Error())
 +			return nil
 +		}
-+		return fmt.Errorf("failed to install Helm chart: %w", err)
++		return nil
  	}
 +
  	return nil
