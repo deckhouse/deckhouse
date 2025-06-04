@@ -121,6 +121,7 @@ data:
     # @ Add here the names of the plugins that you want to be loaded by Falco. Please make sure that
     # plugins have been configured under the "plugins" section before adding them here.
     load_plugins:
+    - "container"
     - "k8saudit"
     - "json"
     - "k8smeta"
