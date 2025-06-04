@@ -54,7 +54,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025.06.04.5"
+fromCacheVersion: "2025.06.04.6"
 final: false
 # git:
 # - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
