@@ -76,6 +76,8 @@ spec:
   namespace: d8-{{ $.Chart.Name }}
 
   values:
+    istiodRemote:
+        enabled: false
     global:
       istiodRemote:
         enabled: false
