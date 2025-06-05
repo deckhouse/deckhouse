@@ -168,14 +168,14 @@ spec:
             port:
               name: http
       - path: /license_request_expired.html
-        pathType: Prefix
+        pathType: ImplementationSpecific
         backend:
           service:
             name: frontend
             port:
               name: http
       - path: /license_request_success.html
-        pathType: Prefix
+        pathType: ImplementationSpecific
         backend:
           service:
             name: frontend
