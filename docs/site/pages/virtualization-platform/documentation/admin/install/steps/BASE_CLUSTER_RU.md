@@ -122,9 +122,9 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 Где:
 
-- `<REVISION>` — [редакция](../../editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+- `<REVISION>` — [редакция](../../../about/editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 
-- `<RELEASE_CHANNEL>` — [канал обновлений](../../release-channels.html) платформы в kebab-case:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../../about/release-channels.html) платформы в kebab-case:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *EarlyAccess*;

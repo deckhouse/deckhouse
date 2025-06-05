@@ -447,7 +447,7 @@ function run-test() {
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
-    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    change_deckhouse_image "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
@@ -747,6 +747,38 @@ d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
+
+# Checking that it's FE-UPGRADE
+# Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
+dh_version="${DECKHOUSE_IMAGE_TAG#release-}"
+dh_major="\${dh_version%%.*}"
+
+# Handle both 'release-x.y' and 'release-x.y-test-z'
+dh_minor_version_part="\${dh_version#*.}"
+dh_minor_number="\${dh_minor_version_part%%-*}"
+dh_minor="\${dh_minor_number%.*}"
+
+# Extracting the major and minor versions from INITIAL_IMAGE_TAG
+initial_version="${INITIAL_IMAGE_TAG#release-}"
+initial_major="\${initial_version%%.*}"
+
+initial_minor_version_part="\${initial_version#*.}"
+initial_minor_number="\${initial_minor_version_part%%-*}"
+initial_minor="\${initial_minor_number%.*}"
+
+echo "Initial Minor Version: \$initial_minor"
+echo "Deckhouse Minor Version: \$dh_minor"
+
+# Check that the major versions match and the minor differs by +1
+if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor + 1))" ]; then
+    >&2 echo "Pull both versions of fe-upgrade"
+    # pull
+    d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+    --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
+    # push
+    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login mirror --registry-password ${LOCAL_REGISTRY_MIRROR_PASSWORD}
+fi
+
 set +x
 EOF
        chmod +x /tmp/install-d8-and-pull-push-images.sh
@@ -755,6 +787,7 @@ EOF
        # cleanup
        rm -f /tmp/install-d8-and-pull-push-images.sh
        rm -rf d8
+       rm -rf d8-upgrade
 
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
@@ -912,7 +945,7 @@ ENDSSH
         -v /tmp/sshkey:/tmp/sshkey \
         -v /tmp/configuration.yaml:/tmp/configuration.yaml \
         -v /tmp/resources.yaml:/tmp/resources.yaml \
-        ${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG} \
+        ${IMAGES_REPO}/install:${DEV_BRANCH} \
         dhctl --do-not-write-debug-log-file bootstrap \
             --resources-timeout="30m" --yes-i-want-to-drop-cache \
             --ssh-host "$master_ip" \
@@ -1106,15 +1139,15 @@ ENDSSH
 #  - master_ip
 #  - branch
 function change_deckhouse_image() {
-  new_image_tag="${1}"
-  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  new_image="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image}."
   if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+kubectl -n d8-system set image deployment/deckhouse deckhouse=${new_image}
 ENDSSH
-    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    >&2 echo "Cannot change deckhouse image to ${new_image}."
     return 1
   fi
 }
@@ -1256,21 +1289,6 @@ function wait_cluster_ready() {
   if [[ $test_failed == "true" ]] ; then
       return 1
   fi
-
-  testOpenvpnReady=$(cat "/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
-
-  test_failed="true"
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" \
-      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
-      test_failed=""
-    else
-      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
-      sleep 30
-    fi
-
-    if [[ $test_failed == "true" ]]; then
-      return 1
-    fi
 
   if [[ $CIS_ENABLED == "true" ]]; then
     testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")

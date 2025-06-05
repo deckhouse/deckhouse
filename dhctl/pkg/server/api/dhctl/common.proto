@@ -29,6 +29,21 @@ message Logs {
   repeated string logs = 1;
 }
 
+message Progress {
+  message PhaseWithSubPhases {
+    string phase = 1;
+    repeated string sub_phases = 2;
+  }
+
+  string operation = 1;
+  double progress = 2;
+  string completed_phase = 3;
+  string current_phase = 4;
+  string completed_sub_phase = 5;
+  string current_sub_phase = 6;
+  repeated PhaseWithSubPhases phases = 7;
+}
+
 message OperationOptions {
   repeated string skip_preflight_checks = 1;
 }

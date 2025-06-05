@@ -40,6 +40,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
+type abortParams struct {
+	request      *pb.AbortStart
+	switchPhase  phases.DefaultOnPhaseFunc
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
+}
+
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -54,6 +61,12 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	sendCh := make(chan *pb.AbortResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.AbortResponse, any]{
 		f: f, dataFunc: s.abortSwitchPhaseData, sendCh: sendCh, next: make(chan error),
+	}
+	pt := progressTracker[*pb.AbortResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.AbortResponse {
+			return &pb.AbortResponse{Message: &pb.AbortResponse_Progress{Progress: convertProgress(progress)}}
+		},
 	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
@@ -99,7 +112,12 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
+					result := s.abortSafe(ctx, abortParams{
+						request:      message.Start,
+						switchPhase:  phaseSwitcher.switchPhase(ctx),
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
+					})
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -133,34 +151,35 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) abortSafe(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.AbortResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
-	return s.abort(ctx, request, switchPhase, options)
+	return s.abort(ctx, p)
 }
 
-func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   options.DefaultWriter,
-		Width:       int(request.Options.LogWidth),
-		DebugStream: options.DebugWriter,
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DebugWriter,
 	})
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -172,11 +191,11 @@ func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
 		for _, cfg := range []string{
-			request.ClusterConfig,
-			request.InitConfig,
-			request.ProviderSpecificClusterConfig,
-			request.InitResources,
-			request.Resources,
+			p.request.ClusterConfig,
+			p.request.InitConfig,
+			p.request.ProviderSpecificClusterConfig,
+			p.request.InitResources,
+			p.request.Resources,
 		} {
 			if len(cfg) == 0 {
 				continue
@@ -199,8 +218,8 @@ func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase
 
 	var initialState phases.DhctlState
 	err = log.Process("default", "Preparing DHCTL state", func() error {
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -214,11 +233,11 @@ func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
+			p.request.ConnectionConfig,
 			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
@@ -236,34 +255,33 @@ func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.AbortResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:      configPaths,
-		InitialState:     initialState,
-		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:       ptr.To(true),
-		AutoApprove:      ptr.To(true),
-		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
-
+		ConfigPaths:       configPaths,
+		InitialState:      initialState,
+		NodeInterface:     ssh.NewNodeInterfaceWrapper(sshClient),
+		UseTfCache:        ptr.To(true),
+		AutoApprove:       ptr.To(true),
+		ResourcesTimeout:  p.request.Options.ResourcesTimeout.AsDuration(),
+		DeckhouseTimeout:  p.request.Options.DeckhouseTimeout.AsDuration(),
 		ResetInitialState: true,
-		OnPhaseFunc:       switchPhase,
-		CommanderMode:     request.Options.CommanderMode,
+		OnPhaseFunc:       p.switchPhase,
+		OnProgressFunc:    p.sendProgress,
+		CommanderMode:     p.request.Options.CommanderMode,
 		CommanderUUID:     commanderUUID,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(abortErr, marshalErr)
+	state, stateErr := extractLastState()
+	err = errors.Join(abortErr, stateErr)
 
-	return &pb.AbortResult{State: string(stateData), Err: util.ErrToString(err)}
+	return &pb.AbortResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) abortServerTransitions() []fsm.Transition {
@@ -286,20 +304,14 @@ func (s *Service) abortServerTransitions() []fsm.Transition {
 	}
 }
 
-func (s *Service) abortSwitchPhaseData(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	_ any,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) (*pb.AbortResponse, error) {
+func (s *Service) abortSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[any]) (*pb.AbortResponse, error) {
 	return &pb.AbortResponse{
 		Message: &pb.AbortResponse_PhaseEnd{
 			PhaseEnd: &pb.AbortPhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
+				CompletedPhase:      string(onPhaseData.CompletedPhase),
+				CompletedPhaseState: onPhaseData.CompletedPhaseState,
+				NextPhase:           string(onPhaseData.NextPhase),
+				NextPhaseCritical:   onPhaseData.NextPhaseCritical,
 			},
 		},
 	}, nil

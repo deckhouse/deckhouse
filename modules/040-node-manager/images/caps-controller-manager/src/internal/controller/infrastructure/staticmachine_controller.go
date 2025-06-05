@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
 	"caps-controller-manager/internal/controller"

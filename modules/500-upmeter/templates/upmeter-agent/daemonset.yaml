@@ -146,6 +146,12 @@ spec:
             value: "info"
           - name: LOG_TYPE
             value: "json"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_WINDOW_SIZE
+            value: "5"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_FREEZE_THRESHOLD
+            value: "5m"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_ALLOWED_TASKS_PER_INTERVAL
+            value: "10"
           - name: UPMETER_EXPORT_TIMEOUT
             value: "15s"
           # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables

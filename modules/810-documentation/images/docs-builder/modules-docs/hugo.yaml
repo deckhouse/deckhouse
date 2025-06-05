@@ -4,8 +4,6 @@ params:
 markup:
   defaultMarkdownHandler: goldmark
   goldmark:
-    # used to fix images
-    # we need to remove this, when we rename all pictures with unique names
     duplicateResourceFiles: true
 
 languages:

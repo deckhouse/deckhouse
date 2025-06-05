@@ -58,10 +58,6 @@ type FailChecker struct {
 	checker check.Checker
 }
 
-func failOnError(checker check.Checker) check.Checker {
-	return &FailChecker{checker}
-}
-
 func (c *FailChecker) Check() check.Error {
 	err := c.checker.Check()
 	if err != nil {

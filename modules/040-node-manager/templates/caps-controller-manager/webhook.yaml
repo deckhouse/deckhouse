@@ -12,10 +12,31 @@ webhooks:
       service:
         namespace: d8-cloud-instance-manager
         name: caps-controller-manager-webhook-service
+        path: /validate-deckhouse-io-v1alpha2-sshcredentials
+      caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
+    failurePolicy: Fail
+    name: vsshcredentialsv1alpha2.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha2
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - sshcredentials
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        namespace: d8-cloud-instance-manager
+        name: caps-controller-manager-webhook-service
         path: /validate-deckhouse-io-v1alpha1-sshcredentials
       caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
     failurePolicy: Fail
-    name: vsshcredentials.deckhouse.io
+    name: vsshcredentialsv1alpha1.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io
@@ -33,10 +54,31 @@ webhooks:
       service:
         namespace: d8-cloud-instance-manager
         name: caps-controller-manager-webhook-service
+        path: /validate-deckhouse-io-v1alpha2-staticinstance
+      caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
+    failurePolicy: Fail
+    name: vstaticinstancev1alpha2.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha2
+        operations:
+          - UPDATE
+          - DELETE
+        resources:
+          - staticinstances
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        namespace: d8-cloud-instance-manager
+        name: caps-controller-manager-webhook-service
         path: /validate-deckhouse-io-v1alpha1-staticinstance
       caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
     failurePolicy: Fail
-    name: vstaticinstance.deckhouse.io
+    name: vstaticinstancev1alpha1.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io

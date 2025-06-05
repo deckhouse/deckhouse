@@ -317,5 +317,4 @@ roleRef:
   kind: Role
   name: ratify-manager
   apiGroup: rbac.authorization.k8s.io
-  namespace: d8-{{ .Chart.Name }}
 {{- end }}

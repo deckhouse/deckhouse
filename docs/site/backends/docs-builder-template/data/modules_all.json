@@ -37,10 +37,16 @@
   },
   "console": {
     "editions": [
+      "ce",
+      "be",
       "se",
       "se-plus",
       "ee",
       "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
@@ -118,6 +124,15 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
   },
   "observability-platform": {
     "editions": [

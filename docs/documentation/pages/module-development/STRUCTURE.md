@@ -411,29 +411,31 @@ The `module.yaml` file in the root of the module folder contains the module's me
 The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
-- `namespace` — *String.* The namespace where the module components will be deployed..
+
+- `namespace` — *String.* The namespace where the module components will be deployed.
 - `subsystems` — *Array of strings.* List of subsystems the module belongs to.
 - `descriptions` — *Object.* Arbitrary text description of the module's purpose.
   - `en` — *String.* Description in English.
+  - `ru` — *String.* Description in Russian.
 - `disable` — *Object.* Parameters related to the behavior when disabling a module.
-- `confirmation` — *Boolean.* Require confirmation when disabling a module.
-- `message` — *String.* Message with information about what will happen when disabling a module.
+  - `confirmation` — *Boolean.* Requires confirmation when disabling the module.
+  - `message` — *String.* Message explaining what will happen when the module is disabled.
 
-If confirmation is required to disable a module (the `confirmation` parameter is set to `true`), then disabling the module will only be possible if the `modules.deckhouse.io/allow-disabling=true` label is set on the corresponding ModuleConfig object. If such a label is not present, then a warning will be displayed when attempting to disable the module, with the message from the `message` parameter added.
+  If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the annotation `modules.deckhouse.io/allow-disabling=true`. If this annotation is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
-- `requirements` — *Object.* [Dependencies](../dependencies/) of a pod — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to be able to start the pod.
-- `bootstrapped` — *Boolean.* Pod dependency [on cluster installation status](../dependencies/#cluster-installation-status-dependency) (for built-in DKP pods only).
-- `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
-- `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
-- `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
-- `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This behavior prevents conflicts between modules that perform similar or incompatible functions.
+- `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
+- `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+  - `bootstrapped` — *Boolean.* Dependency on the [cluster installation status](../dependencies/#cluster-installation-status-dependency) (only for built-in DKP modules).
+  - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
+  - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
+  - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
-For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
-- `weight` — *Number.* The weight of the module. Used to control the order in which the module is launched compared to other modules. The lower the weight, the earlier the module will be launched. Default: 900.
+  For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
+- `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.
 
-  The order in which a module is launched can also be influenced by the list of [module dependencies](../dependencies/).  
+  The startup order can also be influenced by the list of [module dependencies](../dependencies/).
 
 Example of metadata description for the `hello-world` module:
 

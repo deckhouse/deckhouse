@@ -18,11 +18,20 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+type OnPhaseFuncData[OperationPhaseDataT any] struct {
+	CompletedPhase      OperationPhase
+	CompletedPhaseState DhctlState
+	CompletedPhaseData  OperationPhaseDataT
+	NextPhase           OperationPhase
+	NextPhaseCritical   bool
+}
+
 type (
-	OnPhaseFunc[OperationPhaseDataT any] func(completedPhase OperationPhase, completedPhaseState DhctlState, completedPhaseData OperationPhaseDataT, nextPhase OperationPhase, nextPhaseCritical bool) error
+	OnPhaseFunc[OperationPhaseDataT any] func(data OnPhaseFuncData[OperationPhaseDataT]) error
 
 	PhasedExecutionContext[OperationPhaseDataT any] interface {
 		InitPipeline(stateCache dstate.Cache) error
@@ -31,12 +40,13 @@ type (
 		CompletePhase(stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		CompletePipeline(stateCache dstate.Cache) error
 		SwitchPhase(phase OperationPhase, isCritical bool, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) (bool, error)
+		CompleteSubPhase(completedSubPhase OperationSubPhase)
 		CompletePhaseAndPipeline(stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		GetLastState() DhctlState
 	}
 
-	DefaultPhasedExecutionContext PhasedExecutionContext[interface{}]
-	DefaultOnPhaseFunc            OnPhaseFunc[interface{}]
+	DefaultPhasedExecutionContext PhasedExecutionContext[any]
+	DefaultOnPhaseFunc            OnPhaseFunc[any]
 )
 
 type phasedExecutionContext[OperationPhaseDataT any] struct {
@@ -48,14 +58,23 @@ type phasedExecutionContext[OperationPhaseDataT any] struct {
 	currentPhase              OperationPhase
 	stopOperationCondition    bool
 	pipelineCompletionCounter int
+
+	progressTracker *ProgressTracker
 }
 
-func NewDefaultPhasedExecutionContext(onPhaseFunc DefaultOnPhaseFunc) *phasedExecutionContext[interface{}] {
-	return NewPhasedExecutionContext[interface{}](OnPhaseFunc[interface{}](onPhaseFunc))
+func NewDefaultPhasedExecutionContext(
+	operation Operation, onPhaseFunc DefaultOnPhaseFunc, onProgressFunc OnProgressFunc,
+) *phasedExecutionContext[any] {
+	return NewPhasedExecutionContext[any](operation, OnPhaseFunc[any](onPhaseFunc), onProgressFunc)
 }
 
-func NewPhasedExecutionContext[OperationPhaseDataT any](onPhaseFunc OnPhaseFunc[OperationPhaseDataT]) *phasedExecutionContext[OperationPhaseDataT] {
-	return &phasedExecutionContext[OperationPhaseDataT]{onPhaseFunc: onPhaseFunc}
+func NewPhasedExecutionContext[OperationPhaseDataT any](
+	operation Operation, onPhaseFunc OnPhaseFunc[OperationPhaseDataT], onProgressFunc OnProgressFunc,
+) *phasedExecutionContext[OperationPhaseDataT] {
+	return &phasedExecutionContext[OperationPhaseDataT]{
+		onPhaseFunc:     onPhaseFunc,
+		progressTracker: NewProgressTracker(operation, onProgressFunc),
+	}
 }
 
 func (pec *phasedExecutionContext[OperationPhaseDataT]) setLastState(stateCache dstate.Cache) error {
@@ -68,11 +87,22 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) setLastState(stateCache 
 }
 
 func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, completedPhaseData OperationPhaseDataT, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
+	err := pec.progressTracker.Progress(completedPhase, "")
+	if err != nil {
+		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
+	}
+
 	if pec.onPhaseFunc == nil {
 		return false, nil
 	}
 
-	onPhaseErr := pec.onPhaseFunc(completedPhase, completedPhaseState, completedPhaseData, nextPhase, nextPhaseIsCritical)
+	onPhaseErr := pec.onPhaseFunc(OnPhaseFuncData[OperationPhaseDataT]{
+		CompletedPhase:      completedPhase,
+		CompletedPhaseState: completedPhaseState,
+		CompletedPhaseData:  completedPhaseData,
+		NextPhase:           nextPhase,
+		NextPhaseCritical:   nextPhaseIsCritical,
+	})
 
 	if onPhaseErr != nil {
 		if err := pec.setLastState(stateCache); err != nil {
@@ -137,11 +167,12 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(stateCache
 	return pec.setLastState(stateCache)
 }
 
-func (pec *phasedExecutionContext[OperationPhaseDataT]) commitState(stateCache dstate.Cache) error {
-	if pec.stopOperationCondition {
-		return nil
+// CompleteSubPhase completes specified sub phase.
+func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
+	err := pec.progressTracker.Progress("", completedSubPhase)
+	if err != nil {
+		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
 	}
-	return pec.setLastState(stateCache)
 }
 
 // CompletePipeline stops whole phased process execution pipeline (onPhaseFunc will be called).
@@ -152,7 +183,9 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePipeline(stateCa
 	if pec.stopOperationCondition {
 		return nil
 	}
+
 	pec.completedPhase = pec.currentPhase
+
 	if pec.completedPhase == "" {
 		return nil
 	}

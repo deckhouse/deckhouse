@@ -169,6 +169,43 @@
         }
 
     }
+
+    &_guides_card {
+            display: flex;
+            transition: all .25s ease;
+            flex-direction: column;
+            flex-wrap: wrap;
+            border-radius: 0.5em;
+            height: 8em;
+            overflow: hidden;
+            width: 49em;
+
+            &:not(.button_disabled):hover {
+                transform: scale(1.1);
+            }
+
+            & div.icon {
+                display: flex;
+                align-items: center;
+                margin-right: 10px;
+                width: 40px;
+                height: 40px;
+            }
+            & span.name {
+                font-width: 2em;
+                margin: 5px 0px 0px 0px;
+            }
+
+            & div.footer {
+              display: flex;
+              flex-direction: row;
+              gap: 1rem;
+              padding: 0.5em 2em;
+              margin: auto -1.5rem -0.75rem -1.5rem;
+              background-color: #02003E;
+            }
+
+        }
 }
 
 .button-group {
