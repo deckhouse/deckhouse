@@ -140,6 +140,10 @@ resource "azurerm_virtual_network_peering" "kube-with-remote" {
   remote_virtual_network_id    = local.peered_vnets_data[count.index].id
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
+
+  lifecycle {
+    ignore_changes = [allow_gateway_transit]
+  }
 }
 
 resource "azurerm_virtual_network_peering" "remote-with-kube" {
@@ -150,4 +154,8 @@ resource "azurerm_virtual_network_peering" "remote-with-kube" {
   remote_virtual_network_id    = azurerm_virtual_network.kube.id
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
+
+  lifecycle {
+    ignore_changes = [allow_gateway_transit]
+  }
 }

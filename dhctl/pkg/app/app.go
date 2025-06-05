@@ -36,9 +36,9 @@ const (
 )
 
 var (
-	deckhouseDir             = "/deckhouse"
-	VersionFile              = deckhouseDir + "/version"
-	EditionFile              = deckhouseDir + "/edition"
+	deckhouseDir = "/deckhouse"
+	VersionFile  = deckhouseDir + "/version"
+	EditionFile  = deckhouseDir + "/edition"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -56,6 +56,7 @@ var (
 
 	DoNotWriteDebugLogFile = false
 	DebugLogFilePath       = ""
+	ProgressFilePath       = ""
 )
 
 func init() {
@@ -97,6 +98,10 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("DEBUG_LOG_FILE_PATH")).
 		Default("").
 		StringVar(&DebugLogFilePath)
+	cmd.Flag("progress-log-file-path", `If specified, DHCTL will write operation progress in jsonl format`).
+		Envar(configEnvName("PROGRESS_LOG_FILE_PATH")).
+		Default("").
+		StringVar(&ProgressFilePath)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
