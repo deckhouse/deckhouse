@@ -38,7 +38,7 @@ shell:
   install:
   - git clone $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falco.git /src/falco
   - cd /src/falco
-  - git checkout 2071cab984daeac3582a8f55504b4528a55f8cbb
+  - git checkout d2c63dd5ddde4beffc47f1262d54f8db91dbba46
   - git clone --branch {{ $pluginsVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/plugins.git /src/plugins
   - git clone --branch v{{ $falcoctlVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falcoctl.git /src/falcoctl
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
