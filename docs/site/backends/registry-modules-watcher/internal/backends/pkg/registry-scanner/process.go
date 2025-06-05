@@ -169,8 +169,13 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, versionData
 		}
 		versionData.Version = version
 
-		// Extract tar file
-		tarFile, err := s.extractTar(ctx, versionData)
+		tarExtractor := TarExtractor{
+			// Extract tar file
+			registryClient: s.registryClients[versionData.Registry],
+			logger:         s.logger,
+		}
+
+		tarFile, err := tarExtractor.extractTar(ctx, versionData)
 		if err != nil {
 			s.logger.Error("failed to process release channel",
 				slog.String("registry", registry),
@@ -187,13 +192,19 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, versionData
 	return nil
 }
 
-func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
-	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
+type TarExtractor struct {
+	registryClient Client
+
+	logger *log.Logger
+}
+
+func (e *TarExtractor) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
+	image, err := e.registryClient.Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
 
-	tarFile, err := s.extractDocumentation(image)
+	tarFile, err := e.extractDocumentation(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract documentation: %w", err)
 	}
@@ -201,7 +212,7 @@ func (s *registryscanner) extractTar(ctx context.Context, version *internal.Vers
 	return tarFile, nil
 }
 
-func (s *registryscanner) extractDocumentation(image crv1.Image) ([]byte, error) {
+func (e *TarExtractor) extractDocumentation(image crv1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
@@ -218,7 +229,7 @@ func (s *registryscanner) extractDocumentation(image crv1.Image) ([]byte, error)
 	}
 
 	// Copy relevant files from source tar to destination tar
-	if err := s.copyDocumentationFiles(readCloser, tarWriter); err != nil {
+	if err := e.copyDocumentationFiles(readCloser, tarWriter); err != nil {
 		return nil, err
 	}
 
@@ -238,7 +249,7 @@ func createDocumentationDirectoryStructure(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
+func (e *TarExtractor) copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 	tarReader := tar.NewReader(source)
 
 	for {
@@ -264,7 +275,7 @@ func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *ta
 				return fmt.Errorf("write file content: %w", err)
 			}
 
-			s.logger.Debug("copied file", slog.String("file", hdr.Name))
+			e.logger.Debug("copied file", slog.String("file", hdr.Name))
 		}
 	}
 
