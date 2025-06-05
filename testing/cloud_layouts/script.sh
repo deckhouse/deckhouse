@@ -447,10 +447,38 @@ function run-test() {
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
-    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    change_deckhouse_image "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
+}
+
+# Parse DEV_BRANCH and convert to semver format
+parse_version_from_branch() {
+    local branch="$1"
+    local version=""
+    
+    # Extract version pattern like "1.69" from various formats
+    if [[ "$branch" =~ release-([0-9]+\.[0-9]+) ]]; then
+        version="v${BASH_REMATCH[1]}.0"
+    elif [[ "$branch" =~ v?([0-9]+\.[0-9]+)(\.[0-9]+)? ]]; then
+        # Handle cases like "v1.69" or "1.69.1"
+        if [[ -n "${BASH_REMATCH[2]}" ]]; then
+            version="v${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        else
+            version="v${BASH_REMATCH[1]}.0"
+        fi
+    else
+        # Fallback: try to extract any version-like pattern
+        if [[ "$branch" =~ ([0-9]+\.[0-9]+) ]]; then
+            version="v${BASH_REMATCH[1]}.0"
+        else
+            # If no version pattern found, return original or default
+            version="v0.0.0"
+        fi
+    fi
+    
+    echo "$version"
 }
 
 function test_requirements() {
@@ -466,6 +494,12 @@ function test_requirements() {
 
 
   >&2 echo "Run script ... "
+
+  SEMVER_VERSION=$(parse_version_from_branch "${DEV_BRANCH}")
+  if [ -z "${SEMVER_VERSION:-}" ]; then
+    >&2 echo "Failed to parse version from branch '${DEV_BRANCH}'"
+    return 1
+  fi
 
   testScript=$(cat <<ENDSC
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -507,23 +541,26 @@ spec:
 
 >&2 echo "Apply deckhousereleases ..."
 
-echo 'apiVersion: deckhouse.io/v1alpha1
+echo "apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
-    dryrun: "true"
-  name: v1.96.3
+    dryrun: \"true\"
+  name: ${SEMVER_VERSION}
 spec:
-  version: v1.96.3
+  version: ${SEMVER_VERSION}
   requirements: {}
-' | \$python_binary -c "
+" | \$python_binary -c "
 import yaml, sys
 
 data = yaml.safe_load(sys.stdin)
 with open('/tmp/releaseFile.yaml') as f:
   d1 = yaml.safe_load(f)
-data['spec']['requirements'] = d1.get('requirements', {})
+r = d1.get('requirements', {})
+r.pop('k8s', None)  # remove the 'k8s' key
+r.pop('autoK8sVersion', None)  # remove the 'autoK8sVersion' key
+data['spec']['requirements'] = r
 print(yaml.dump(data))
 " | kubectl apply -f -
 
@@ -1139,15 +1176,15 @@ ENDSSH
 #  - master_ip
 #  - branch
 function change_deckhouse_image() {
-  new_image_tag="${1}"
-  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  new_image="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image}."
   if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+kubectl -n d8-system set image deployment/deckhouse deckhouse=${new_image}
 ENDSSH
-    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    >&2 echo "Cannot change deckhouse image to ${new_image}."
     return 1
   fi
 }
