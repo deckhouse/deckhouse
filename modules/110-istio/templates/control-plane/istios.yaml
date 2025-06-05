@@ -79,6 +79,8 @@ spec:
     istiodRemote:
         enabled: false
     global:
+      istiod:
+        enableAnalysis: false
       istiodRemote:
         enabled: false
       defaultPodDisruptionBudget:
