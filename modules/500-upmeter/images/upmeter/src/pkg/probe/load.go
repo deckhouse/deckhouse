@@ -68,6 +68,14 @@ type DynamicConfig struct {
 	NodeGroups              []string
 	Zones                   []string
 	ZonePrefix              string
+
+	Converge ConvergeConfig
+}
+
+type ConvergeConfig struct {
+	WindowSize                  int
+	FreezeThreshold             time.Duration
+	AllowedTasksPerTimeInterval float64
 }
 
 func (l *Loader) Load() []*check.Runner {
@@ -145,7 +153,7 @@ func (l *Loader) collectConfigs() []runnerConfig {
 	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access, l.nodeLister, l.preflight)...)
 	l.configs = append(l.configs, initExtensions(l.access, l.preflight)...)
 	l.configs = append(l.configs, initLoadBalancing(l.access, l.preflight)...)
-	l.configs = append(l.configs, initDeckhouse(l.access, l.preflight, l.logger)...)
+	l.configs = append(l.configs, initDeckhouse(l.access, l.preflight, l.dynamic.Converge, l.logger)...)
 	l.configs = append(l.configs, initNginx(l.access, l.preflight, l.dynamic.IngressNginxControllers)...)
 	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.preflight, l.dynamic.NodeGroups, l.dynamic.Zones, l.dynamic.ZonePrefix)...)
 

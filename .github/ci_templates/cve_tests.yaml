@@ -63,22 +63,3 @@
     rm -r ${{ env.WORKDIR }}
 # </template: cve_tests_upload_reports_artifacts>
 {!{- end -}!}
-
-{!{ define "defectdojo_dev_tests_rotator" }!}
-# <template: defectdojo_dev_tests_rotator>
-- name: Set up Python
-  uses: actions/setup-python@v4
-  with:
-    python-version: ${{ env.PYTHON_VERSION }}
-- name: Install dependencies
-  run: pip install requests
-- name: DefectDojo rotate dev tests
-  env:
-    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
-    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
-    DEFECTDOJO_DEV_TESTS_ROTATION_DAYS: 7
-  shell: bash
-  run: |
-    python .github/scripts/python/defectdojo_dev_tests_rotator.py
-# </template: defectdojo_dev_tests_rotator>
-{!{- end -}!}

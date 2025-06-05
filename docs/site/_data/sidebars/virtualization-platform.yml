@@ -7,7 +7,23 @@ entries:
     - title:
         en: About the platform
         ru: О платформе
-      url: /virtualization-platform/documentation/about.html
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /virtualization-platform/documentation/about.html
+        - title:
+            en: Platform editions
+            ru: Редакции платформы
+          url: /virtualization-platform/documentation/about/editions.html
+        - title:
+            en: Update channels
+            ru: Каналы обновлений
+          url: /virtualization-platform/documentation/about/release-channels.html
+        - title:
+            en: Requirements
+            ru: Требования
+          url: /virtualization-platform/documentation/about/requirements.html
     - title:
         en: Administration
         ru: Администрирование
@@ -16,18 +32,6 @@ entries:
             en: Overview
             ru: Введение
           url: /virtualization-platform/documentation/admin/overview.html
-        - title:
-            en: Platform editions
-            ru: Редакции платформы
-          url: /virtualization-platform/documentation/admin/editions.html
-        - title:
-            en: Update channels
-            ru: Каналы обновлений
-          url: /virtualization-platform/documentation/admin/release-channels.html
-        - title:
-            en: Requirements
-            ru: Требования
-          url: /virtualization-platform/documentation/admin/install/requirements.html
             # - title:
             #     en: Setup scenarios
             #     ru: Сценарии установки
@@ -36,10 +40,10 @@ entries:
             en: Installation steps
             ru: Порядок установки
           folders:
-                - title:
-                    en: Installation overview
-                    ru: Обзор установки
-                  url: /virtualization-platform/documentation/admin/install/steps/overview.html
+               # - title:
+               #     en: Installation overview
+               #     ru: Обзор установки
+               #   url: /virtualization-platform/documentation/admin/install/steps/overview.html
                 - title:
                     en: Planning and preparing
                     ru: Планирование и подготовка

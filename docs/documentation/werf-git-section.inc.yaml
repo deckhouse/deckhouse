@@ -32,7 +32,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml','conversions/v*.yml','conversions/v*.yaml']
 - add: /candi/openapi
   to: /src/global
   owner: jekyll

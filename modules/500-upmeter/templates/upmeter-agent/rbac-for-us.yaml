@@ -30,6 +30,11 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list"]
+  # - In deckhouse-controller probe we need to discover deckhouse-leader service
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
+    resourceNames: ["deckhouse-leader"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: ["deckhouse.io"]
     resources: ["upmeterhookprobes" , "nodegroups"]
@@ -46,6 +51,7 @@ rules:
   - apiGroups: ["cert-manager.io"]
     resources: ["certificates"]
     verbs: ["create", "delete"]
+  
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

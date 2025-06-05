@@ -1,9 +1,9 @@
-{{- $gopsVersion := "v0.3.28" }}
+{{- $gopsVersion := "v0.3.27" }}
 ---
 # #####################################################################
 # Build gops binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/build-gops.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/build-gops.sh
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
