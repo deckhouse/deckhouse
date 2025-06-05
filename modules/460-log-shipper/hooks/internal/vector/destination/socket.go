@@ -33,7 +33,6 @@ type Socket struct {
 	Address string `json:"address,omitempty"`
 
 	TLS CommonTLS `json:"tls,omitempty"`
-
 }
 
 func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
