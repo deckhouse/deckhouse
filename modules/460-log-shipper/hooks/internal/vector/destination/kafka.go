@@ -15,8 +15,6 @@
 package destination
 
 import (
-	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -38,7 +36,6 @@ type Kafka struct {
 
 	SASL KafkaSASL `json:"sasl,omitempty"`
 
-	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type KafkaSASL struct {
@@ -51,24 +48,6 @@ type KafkaSASL struct {
 
 func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 	spec := cspec.Kafka
-
-	labels := make(map[string]string)
-
-	var dataField string
-	keys := make([]string, 0, len(cspec.ExtraLabels))
-	for key := range cspec.ExtraLabels {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-		} else {
-			labels[k] = cspec.ExtraLabels[k]
-		}
-	}
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
@@ -154,7 +133,6 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		SASL:             sasl,
 		KeyField:         spec.KeyField,
 		Compression:      "gzip",
-		Labels:           labels,
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
 	}
 }
