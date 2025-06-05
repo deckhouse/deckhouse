@@ -622,26 +622,35 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 	if (state.Mode == registry_const.ModeProxy ||
 		state.Mode == registry_const.ModeDirect) &&
-		state.Bashible.IsRunning() {
+		state.Bashible.UnmanagedParams != nil {
+		unmanagedParams := *state.Bashible.UnmanagedParams
+
+		bashibleParams := bashible.Params{
+			RegistrySecret: inputs.RegistrySecret,
+			ModeParams: bashible.ModeParams{
+				Unmanaged: &unmanagedParams,
+			},
+		}
+
+		registrySecretParams := registrysecret.Params{
+			RegistrySecret: inputs.RegistrySecret,
+			UnmanagedMode: &registrysecret.UnmanagedModeParams{
+				ImagesRepo: unmanagedParams.ImagesRepo,
+				Scheme:     unmanagedParams.Scheme,
+				CA:         unmanagedParams.CA,
+				Username:   unmanagedParams.Username,
+				Password:   unmanagedParams.Password,
+			},
+		}
+
 		// Bashible with actual params
-		unmanagedParams, processedBashible, err := state.processBashibleUnmanagedTransition(inputs.RegistrySecret, inputs)
+		processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
 		if err != nil {
 			return err
 		}
 		if !processedBashible {
 			state.setReadyCondition(false, inputs)
 			return nil
-		}
-
-		registrySecretParams := registrysecret.Params{
-			RegistrySecret: inputs.RegistrySecret,
-			UnmanagedMode: &registrysecret.UnmanagedModeParams{
-				ImagesRegistry: unmanagedParams.ImagesRepo,
-				Scheme:         unmanagedParams.Scheme,
-				CA:             unmanagedParams.CA,
-				Username:       unmanagedParams.Username,
-				Password:       unmanagedParams.Password,
-			},
 		}
 
 		// Deckhouse-registry secret
@@ -653,10 +662,16 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 			state.setReadyCondition(false, inputs)
 			return nil
 		}
+		state.Bashible.UnmanagedParams = nil
 	}
 
-	// Cleanup (bashible-api-server use deckhouse-registry secret)
-	bashibleReady := state.processBashibleUnmanagedFinalize(inputs)
+	// Cleanup
+
+	// Only input params. Or skip, if registry has never been enabled
+	bashibleReady, err := state.processBashibleUnmanagedFinalize(inputs.RegistrySecret, inputs)
+	if err != nil {
+		return err
+	}
 	if !bashibleReady {
 		state.setReadyCondition(false, inputs)
 		return nil
@@ -766,33 +781,11 @@ func (state *State) processBashibleFinalize(params bashible.Params, inputs Input
 	return true, nil
 }
 
-func (state *State) processBashibleUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (bashible.UnmanagedModeParams, bool, error) {
-	params, processResult, err := state.Bashible.ProcessUnmanagedTransition(registrySecret, inputs.Bashible)
+func (state *State) processBashibleUnmanagedFinalize(registrySecret deckhouse_registry.Config, inputs Inputs) (bool, error) {
+	result, err := state.Bashible.FinalizeUnmanagedTransition(registrySecret, inputs.Bashible)
 	if err != nil {
-		return params, false, fmt.Errorf("cannot process Bashible: %w", err)
+		return false, fmt.Errorf("cannot process Bashible: %w", err)
 	}
-
-	if !processResult.Ready {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeBashibleTransitionStage,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            processResult.Message,
-		})
-		return params, false, nil
-	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeBashibleTransitionStage,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-	return params, true, nil
-}
-
-func (state *State) processBashibleUnmanagedFinalize(inputs Inputs) bool {
-	result := state.Bashible.FinalizeUnmanagedTransition(inputs.Bashible)
 
 	if !result.Ready {
 		state.setCondition(metav1.Condition{
@@ -802,7 +795,7 @@ func (state *State) processBashibleUnmanagedFinalize(inputs Inputs) bool {
 			Reason:             ConditionReasonProcessing,
 			Message:            result.Message,
 		})
-		return false
+		return false, nil
 	}
 
 	state.setCondition(metav1.Condition{
@@ -810,7 +803,7 @@ func (state *State) processBashibleUnmanagedFinalize(inputs Inputs) bool {
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})
-	return true
+	return true, nil
 }
 
 func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {

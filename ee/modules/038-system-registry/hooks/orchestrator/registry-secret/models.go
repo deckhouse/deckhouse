@@ -29,11 +29,11 @@ type ManagedModeParams struct {
 }
 
 type UnmanagedModeParams struct {
-	ImagesRegistry string
-	Scheme         string
-	CA             string
-	Username       string
-	Password       string
+	ImagesRepo string
+	Scheme     string
+	CA         string
+	Username   string
+	Password   string
 }
 
 type State struct {
@@ -80,7 +80,7 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.C
 }
 
 func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Config, error) {
-	address, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRegistry)
+	address, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
 
 	dockerCfg, err := helpers.DockerCfgFromCreds(params.Username, params.Password, address)
 	if err != nil {

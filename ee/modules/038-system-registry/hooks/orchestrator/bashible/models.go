@@ -149,29 +149,25 @@ func (state *State) FinalizeTransition(params Params, inputs Inputs) (Result, er
 	return state.process(params, inputs, false)
 }
 
-// ProcessUnmanagedTransition applies the unmanaged configuration in combination with the existing one.
-// Useful to transition from managed to unmanaged mode.
-func (state *State) ProcessUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (UnmanagedModeParams, Result, error) {
-	if state.UnmanagedParams == nil {
-		return UnmanagedModeParams{}, failedResult, fmt.Errorf("unmanaged parameters are not initialized")
+// FinalizeUnmanagedTransition handles the transition away from managed configuration mode.
+// If the registry secret is not present, the internal state is cleared and the transition is considered complete.
+// If the secret is present – we preserve and support its configuration instead of using Deckhouse registry secret.
+func (state *State) FinalizeUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (Result, error) {
+	if !inputs.IsSecretExist {
+		*state = State{}
+		return buildResult(inputs, true, registry_const.UnknownVersion), nil
+	}
+
+	modeParams := ModeParams{}
+	if err := modeParams.fromRegistrySecret(registrySecret); err != nil {
+		return failedResult, err
 	}
 
 	params := Params{
 		RegistrySecret: registrySecret,
-		ModeParams: ModeParams{
-			Unmanaged: state.UnmanagedParams,
-		},
+		ModeParams:     modeParams,
 	}
-
-	result, err := state.process(params, inputs, true)
-	return *state.UnmanagedParams, result, err
-}
-
-// FinalizeUnmanagedTransition resets the internal state and removes any configuration secrets.
-// It is the final cleanup stage when switching away from Managed configurations.
-func (state *State) FinalizeUnmanagedTransition(inputs Inputs) Result {
-	*state = State{}
-	return buildResult(inputs, true, registry_const.UnknownVersion)
+	return state.process(params, inputs, false)
 }
 
 // IsRunning returns true if there is an active configuration managed by this state.
