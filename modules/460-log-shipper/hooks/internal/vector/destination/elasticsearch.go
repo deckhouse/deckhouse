@@ -17,8 +17,6 @@ limitations under the License.
 package destination
 
 import (
-	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -50,8 +48,6 @@ type Elasticsearch struct {
 
 	Mode string `json:"mode,omitempty"`
 
-	Labels map[string]string `json:"labels,omitempty"`
-
 	DocType          string `json:"doc_type,omitempty"`
 	SuppressTypeName bool   `json:"suppress_type_name"`
 }
@@ -81,24 +77,6 @@ type ElasticsearchBulk struct {
 
 func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
-
-	labels := make(map[string]string)
-
-	var dataField string
-	keys := make([]string, 0, len(cspec.ExtraLabels))
-	for key := range cspec.ExtraLabels {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-		} else {
-			labels[k] = cspec.ExtraLabels[k]
-		}
-	}
 
 	bulkAction := "index"
 	mode := "bulk"
@@ -166,6 +144,5 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 		DocType:          spec.DocType,
 		SuppressTypeName: spec.DocType == "",
 		Mode:             mode,
-		Labels:           labels,
 	}
 }

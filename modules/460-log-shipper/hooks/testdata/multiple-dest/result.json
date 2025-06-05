@@ -237,9 +237,6 @@
         "index": "logs-%F"
       },
       "mode": "bulk",
-      "labels": {
-        "foo": "bar"
-      },
       "suppress_type_name": true
     },
     "destination/cluster/test-logstash-dest": {
@@ -268,9 +265,6 @@
         "verify_hostname": false,
         "verify_certificate": true,
         "enabled": true
-      },
-      "labels": {
-        "foo": "bar"
       },
       "keepalive": {
         "time_secs": 7200

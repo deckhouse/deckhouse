@@ -49,9 +49,6 @@
         "codec": "text",
         "timestamp_format": "rfc3339"
       },
-      "labels": {
-        "app": "{{ parsed_data.pod_labels.app }}"
-      },
       "compression": "gzip",
       "default_token": "test-token",
       "endpoint": "192.168.1.1:9200",

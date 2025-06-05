@@ -17,9 +17,6 @@ limitations under the License.
 package destination
 
 import (
-	"fmt"
-	"sort"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
@@ -36,8 +33,6 @@ type Logstash struct {
 	TLS CommonTLS `json:"tls"`
 
 	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
-
-	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type LogstashKeepalive struct {
@@ -46,24 +41,6 @@ type LogstashKeepalive struct {
 
 func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
-
-	labels := make(map[string]string)
-
-	var dataField string
-	keys := make([]string, 0, len(cspec.ExtraLabels))
-	for key := range cspec.ExtraLabels {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-		} else {
-			labels[k] = cspec.ExtraLabels[k]
-		}
-	}
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
@@ -95,7 +72,6 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 			TimestampFormat: "rfc3339",
 		},
 		TLS:     tls,
-		Labels:  labels,
 		Mode:    "tcp",
 		Address: spec.Endpoint,
 		Keepalive: LogstashKeepalive{

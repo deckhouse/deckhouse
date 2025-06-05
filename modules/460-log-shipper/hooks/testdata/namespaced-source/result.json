@@ -190,9 +190,6 @@
         "verify_certificate": true
       },
       "compression": "gzip",
-      "labels": {
-        "foo": "bar"
-      },
       "bulk": {
         "action": "index",
         "index": "logs-%F"

@@ -130,10 +130,6 @@
       },
       "mode": "tcp",
       "address": "0.0.0.0:7252",
-      "labels": {
-        "cef.name": "d8",
-        "cef.severity": "1"
-      },
       "tls": {
         "verify_hostname": true,
         "verify_certificate": true

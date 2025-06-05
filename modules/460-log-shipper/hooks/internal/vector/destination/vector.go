@@ -17,9 +17,6 @@ limitations under the License.
 package destination
 
 import (
-	"fmt"
-	"sort"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
@@ -34,8 +31,6 @@ type Vector struct {
 	TLS CommonTLS `json:"tls"`
 
 	Keepalive VectorKeepalive `json:"keepalive,omitempty"`
-
-	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type VectorKeepalive struct {
@@ -44,24 +39,6 @@ type VectorKeepalive struct {
 
 func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
-
-	labels := make(map[string]string)
-
-	var dataField string
-	keys := make([]string, 0, len(cspec.ExtraLabels))
-	for key := range cspec.ExtraLabels {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-		} else {
-			labels[k] = cspec.ExtraLabels[k]
-		}
-	}
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
@@ -90,7 +67,6 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 		},
 		TLS:     tls,
 		Version: "2",
-		Labels:  labels,
 		Address: spec.Endpoint,
 		// TODO(nabokihms): Only available for vector the first version sink, consider different load balancing solution
 		//
