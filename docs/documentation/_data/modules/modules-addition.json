@@ -78,9 +78,15 @@
   },
   "console": {
     "editions": [
+      "ce",
+      "be",
       "se",
       "se-plus",
       "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
