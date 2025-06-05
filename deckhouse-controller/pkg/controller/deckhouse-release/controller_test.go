@@ -1063,6 +1063,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			mup := embeddedMUP.DeepCopy()
 			mup.Update.Mode = v1alpha1.UpdateModeManual.String()
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusNotFound,
+				}, nil)
 			suite.setupController("clear-data-after-deploy.yaml", initValues, mup)
 			dr := suite.getDeckhouseRelease("v1.31.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
