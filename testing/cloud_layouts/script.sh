@@ -447,7 +447,7 @@ function run-test() {
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
-    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    change_deckhouse_image "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
@@ -1139,15 +1139,15 @@ ENDSSH
 #  - master_ip
 #  - branch
 function change_deckhouse_image() {
-  new_image_tag="${1}"
-  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  new_image="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image}."
   if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+kubectl -n d8-system set image deployment/deckhouse deckhouse=${new_image}
 ENDSSH
-    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    >&2 echo "Cannot change deckhouse image to ${new_image}."
     return 1
   fi
 }
