@@ -198,6 +198,8 @@ spec:
         PILOT_ENABLE_AMBIENT: "true"
   {{- end }}
       autoscaleEnabled: false
+      taint:
+        enabled: false
       podAnnotations:
         istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
