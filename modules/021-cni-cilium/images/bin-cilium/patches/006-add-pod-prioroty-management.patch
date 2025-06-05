@@ -1,4 +1,4 @@
-From b8ae25a0562040df25d3661f593fb15c3bd0545b Mon Sep 17 00:00:00 2001
+From 87c5164e03ec598e758f13c9aca0f106bbb94019 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 2 Jun 2025 14:44:31 +0300
 Subject: [PATCH] add: priority patch
@@ -170,7 +170,7 @@ index b678668ac0..d42dae075b 100644
  	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
  	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 3b3ffc13ef..6a75bf3bc7 100644
+index 3b3ffc13ef..8f65a5b003 100644
 --- a/operator/pkg/ciliumendpointslice/endpointslice.go
 +++ b/operator/pkg/ciliumendpointslice/endpointslice.go
 @@ -6,8 +6,12 @@ package ciliumendpointslice
@@ -351,7 +351,7 @@ index 3b3ffc13ef..6a75bf3bc7 100644
 +			oldOwner = currentOwner
 +			fmt.Printf("DEBUG !isOwner && isHighest old, new: %v %v\n", oldOwner, newOwner)
 +		} else { // !isOwner && !isHighest
-+			cep.Status.Networking.Addressing = emptyAddrList
++			ccep.ccep.Networking.Addressing = emptyAddrList
 +			fmt.Printf("DEBUG !isOwner && !isHighest old, new: %v %v\n", oldOwner, newOwner)
 +		}
 +	} else {
@@ -444,7 +444,7 @@ index 3b3ffc13ef..6a75bf3bc7 100644
 +
 +	touchedCESs := c.manager.UpdateCEPMapping(newOwner.ccep, newOwner.ns)
 +	c.enqueueCESReconciliation(touchedCESs, delay)
-+	fmt.Printf("DEBUG onEndpointDelete %v, %p, %v\n", cep.Name, cep, cep.Status.Networking.Addressing)
++	fmt.Printf("DEBUG onEndpointUpdate %v, %p, %v\n", cep.Name, cep, cep.Status.Networking.Addressing)
  }
  
  func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
