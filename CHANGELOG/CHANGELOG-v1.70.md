@@ -1,0 +1,156 @@
+# Changelog v1.70
+
+## Know before update
+
+
+ - Dashboards and alerts based on the `falco_events` metric might be broken.
+ - Deckhouse will not update if `ceph-csi` is enabled in the cluster. Use `csi-ceph` module.
+ - Dhctl in commander mode will skip draining errors.
+ - Reassembling all images.
+
+## Features
+
+
+ - **[candi]** Updated `containerd` to v1.7.27 with patches and `runc` to v1.2.5. [#13205](https://github.com/deckhouse/deckhouse/pull/13205)
+    Containerd will restart.
+ - **[candi]** Added ability to reboot node if annotation `update.node.deckhouse.io/reboot` is set. [#13176](https://github.com/deckhouse/deckhouse/pull/13176)
+ - **[candi]** Added `cgroup` version step `bashible` label on node. [#12911](https://github.com/deckhouse/deckhouse/pull/12911)
+ - **[candi]** Delete all users created by `Deckhouse` from `NodeUser` manifests when cleaning up a static node. [#12908](https://github.com/deckhouse/deckhouse/pull/12908)
+ - **[candi]** Added using local pinned images for sandbox and `kubernetes-api-proxy`. [#12804](https://github.com/deckhouse/deckhouse/pull/12804)
+    Kubernetes-api-proxy will be restart.
+ - **[candi]** Added a `bashible` step that assigns the `node.deckhouse.io/provider-id` annotation to nodes with a `static://` provider ID. [#11807](https://github.com/deckhouse/deckhouse/pull/11807)
+ - **[candi]** Added support for the new cloud provider — `DVP`. [#11649](https://github.com/deckhouse/deckhouse/pull/11649)
+ - **[cloud-provider-aws]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-azure]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-dynamix]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-gcp]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-huaweicloud]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-openstack]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-vcd]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-vsphere]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-yandex]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cloud-provider-zvirt]** Increased the leader election timeouts for the components of the `CSI controller`. [#13339](https://github.com/deckhouse/deckhouse/pull/13339)
+ - **[cni-cilium]** Added `Node-to-node` encryption mode (was reverted in https://github.com/deckhouse/deckhouse/pull/13557). [#12886](https://github.com/deckhouse/deckhouse/pull/12886)
+ - **[control-plane-manager]** Added settings for `etcd` backup. [#13193](https://github.com/deckhouse/deckhouse/pull/13193)
+ - **[control-plane-manager]** Added ability to select encryptionAlgorithm for cluster certificates. [#13153](https://github.com/deckhouse/deckhouse/pull/13153)
+ - **[deckhouse]** Added `opentelemetry` support. [#12541](https://github.com/deckhouse/deckhouse/pull/12541)
+ - **[deckhouse-controller]** Added step by step update modules. [#13387](https://github.com/deckhouse/deckhouse/pull/13387)
+ - **[descheduler]** Added CRD `descheduler` global parameters. [#13248](https://github.com/deckhouse/deckhouse/pull/13248)
+ - **[dhctl]** Added fail drain confirmation for `commander` mode returns always yes. [#13292](https://github.com/deckhouse/deckhouse/pull/13292)
+    Dhctl in commander mode will skip draining errors.
+ - **[dhctl]** Added waiting for become ready first master node. [#12918](https://github.com/deckhouse/deckhouse/pull/12918)
+ - **[dhctl]** Use OpenTofu instead of Terraform for Yandex Cloud. [#12688](https://github.com/deckhouse/deckhouse/pull/12688)
+ - **[dhctl]** Disable `automountServiceAccountToken` for all ServiceAccounts, enable in PodSpecs if necessary. [#11962](https://github.com/deckhouse/deckhouse/pull/11962)
+ - **[go_lib]** Added using `pkg/log` instead of `logrus`. [#12733](https://github.com/deckhouse/deckhouse/pull/12733)
+ - **[ingress-nginx]** Added a `controllerLogLevel` parameter to the `IngressNginxController` CR to configure the verbosity of ingress controller logs. [#12920](https://github.com/deckhouse/deckhouse/pull/12920)
+ - **[ingress-nginx]** Added the ability to periodically update `GeoIP` databases without restarting the `ingress-controller` pods. [#11676](https://github.com/deckhouse/deckhouse/pull/11676)
+ - **[istio]** Added garbage collection of `istio-ca-root-cert` and `IstioMulticluster/IstioFederation` resources after module disabling. [#13229](https://github.com/deckhouse/deckhouse/pull/13229)
+ - **[istio]** Added metrics for `IstioMulticluster` remote cluster synchronization. [#12799](https://github.com/deckhouse/deckhouse/pull/12799)
+ - **[istio]** Added `Istio` debugging resources to collect-debug-info. [#12649](https://github.com/deckhouse/deckhouse/pull/12649)
+ - **[node-manager]** Added event about successful draining node before deletion. [#13258](https://github.com/deckhouse/deckhouse/pull/13258)
+ - **[openvpn]** Added end-of-life alerts, CA certificate re-creation and a grafana dashboard. [#12581](https://github.com/deckhouse/deckhouse/pull/12581)
+
+## Fixes
+
+
+ - **[admission-policy-engine]** Increased severity of alerts for objects that violate policies. [#13497](https://github.com/deckhouse/deckhouse/pull/13497)
+ - **[candi]** Added retry logic for `401` in bootstrap script. [#13426](https://github.com/deckhouse/deckhouse/pull/13426)
+ - **[candi]** Added using `bb-d8-node-name` instead `HOSTNAME` variable for getting current node name in `bashible` step for `GCP`. [#13405](https://github.com/deckhouse/deckhouse/pull/13405)
+ - **[candi]** Replaced `Terraform` with `OpenTofu` for `Dynamix`. [#13402](https://github.com/deckhouse/deckhouse/pull/13402)
+ - **[candi]** Replaced `Terraform` with `OpenTofu` for `Zvirt`. [#13386](https://github.com/deckhouse/deckhouse/pull/13386)
+ - **[candi]** Fixed some `OpenAPI` schemas for cloud discovery data. [#13035](https://github.com/deckhouse/deckhouse/pull/13035)
+ - **[candi]** Added support for `dnf` package manager. [#13026](https://github.com/deckhouse/deckhouse/pull/13026)
+ - **[candi]** Added lock the node name during node bootstrap. [#12996](https://github.com/deckhouse/deckhouse/pull/12996)
+ - **[candi]** Fixed `bashible` configure-kubelet step. [#12722](https://github.com/deckhouse/deckhouse/pull/12722)
+ - **[chrony]** Fixed `chrony` exporter CVE vulnerabilities. [#13317](https://github.com/deckhouse/deckhouse/pull/13317)
+ - **[cloud-provider-aws]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-aws]** Added cloud-controller-manager continues processing routes creation without blocking, even when errors occur. [#13350](https://github.com/deckhouse/deckhouse/pull/13350)
+ - **[cloud-provider-aws]** Bumped `terraform-provider-aws` to `5.83.1`. [#11546](https://github.com/deckhouse/deckhouse/pull/11546)
+ - **[cloud-provider-azure]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-azure]** bump Azure Terraform provider (azurerm) to v3.117.1 [#12937](https://github.com/deckhouse/deckhouse/pull/12937)
+ - **[cloud-provider-dvp]** fix cluster-autoscaler rbac issues [#13642](https://github.com/deckhouse/deckhouse/pull/13642)
+ - **[cloud-provider-dvp]** fix cloud-data-discoverer rbac [#13625](https://github.com/deckhouse/deckhouse/pull/13625)
+ - **[cloud-provider-dvp]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-dynamix]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-dynamix]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
+ - **[cloud-provider-gcp]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-huaweicloud]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-huaweicloud]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
+ - **[cloud-provider-huaweicloud]** Added the `--cluster-name` CLI flag to the `cloud-controller-manager`. [#12950](https://github.com/deckhouse/deckhouse/pull/12950)
+ - **[cloud-provider-openstack]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-openstack]** Fixed terraform bastion default `root_disk_size`. [#12924](https://github.com/deckhouse/deckhouse/pull/12924)
+ - **[cloud-provider-vcd]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-vcd]** Removed trailing slash from `VCDClusterConfiguration.provider.server`. [#13204](https://github.com/deckhouse/deckhouse/pull/13204)
+ - **[cloud-provider-vcd]** The usage of `VCDCluster.spec.proxyConfigSpec` removed. [#13138](https://github.com/deckhouse/deckhouse/pull/13138)
+ - **[cloud-provider-vcd]** Add support for searching `vAppTemplates` by an organization name in the `VCDInstanceClass` resource. [#13079](https://github.com/deckhouse/deckhouse/pull/13079)
+ - **[cloud-provider-vsphere]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-vsphere]** Added condition that values for `settings.storageClass.compatibilityFlag` must be capitalized. [#13434](https://github.com/deckhouse/deckhouse/pull/13434)
+ - **[cloud-provider-yandex]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-zvirt]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
+ - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
+ - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** Fixed performance regression in `etcd`. [#13581](https://github.com/deckhouse/deckhouse/pull/13581)
+ - **[deckhouse]** Added changes for the `CSE` edition build. [#13312](https://github.com/deckhouse/deckhouse/pull/13312)
+    Reassembling all images.
+ - **[deckhouse]** Added a condition to apply patch releases in the maintenance window, if it exists. [#12935](https://github.com/deckhouse/deckhouse/pull/12935)
+ - **[deckhouse]** Removed system-wide proxy from `/etc/systemd/system.conf.d/`. [#12832](https://github.com/deckhouse/deckhouse/pull/12832)
+ - **[deckhouse]** Changed the method of connecting deckhouse-controller to API-server. [#12282](https://github.com/deckhouse/deckhouse/pull/12282)
+ - **[descheduler]** Fixed bug go mod tidy. [#13447](https://github.com/deckhouse/deckhouse/pull/13447)
+ - **[descheduler]** Fixed `descheduler` CVE vulnerabilities. [#13306](https://github.com/deckhouse/deckhouse/pull/13306)
+ - **[dhctl]** Added using `--force` flag to drain master nodes. [#13423](https://github.com/deckhouse/deckhouse/pull/13423)
+ - **[dhctl]** Fixed `dhctl` CVE vulnerabilities. [#13308](https://github.com/deckhouse/deckhouse/pull/13308)
+ - **[dhctl]** Disabled converge `Deckhouse` configuration for `Terraform autoconverger` and converge from CLI. [#13226](https://github.com/deckhouse/deckhouse/pull/13226)
+ - **[dhctl]** Fixed checking `bashible` already run. [#13163](https://github.com/deckhouse/deckhouse/pull/13163)
+ - **[dhctl]** Added deny additional properties for validation schema eg module config. [#12889](https://github.com/deckhouse/deckhouse/pull/12889)
+ - **[dhctl]** Added waiting for `kubeadm` command completion result. [#12826](https://github.com/deckhouse/deckhouse/pull/12826)
+ - **[dhctl]** Fixed a bug that prevented `PersistentVolumes` from being properly deleted by the `dhctl destroy` command in `Stronghold`. [#12814](https://github.com/deckhouse/deckhouse/pull/12814)
+ - **[ingress-nginx]** Implemented iptables cleanup when `HostWithFailover` Inlet was reconfigured to another nodes or deleted. [#13106](https://github.com/deckhouse/deckhouse/pull/13106)
+ - **[ingress-nginx]** Forbidden to enable `enableIstioSidecar` when `HostWithFailover` is enabled. [#12789](https://github.com/deckhouse/deckhouse/pull/12789)
+ - **[istio]** Added condition if the `cloud-provider-huaweicloud` module is enabled, define `RBAC` permissions granting the `cloud-controller-manager` access to list pods in the `d8-istio` namespace. [#13270](https://github.com/deckhouse/deckhouse/pull/13270)
+ - **[istio]** Added `RBAC` rules to grant the HuaweiCloud `cloud-controller-manager` permission to view pods in the `d8-istio` namespace. [#12951](https://github.com/deckhouse/deckhouse/pull/12951)
+ - **[metallb]** Dashboards are aligned with user experience expectations. [#12666](https://github.com/deckhouse/deckhouse/pull/12666)
+ - **[monitoring-deckhouse]** Fixed many to many error in `ModuleReleaseIsWaitingManualApproval` alert. [#13429](https://github.com/deckhouse/deckhouse/pull/13429)
+ - **[monitoring-ping]** Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289 [#13684](https://github.com/deckhouse/deckhouse/pull/13684)
+ - **[node-local-dns]** Fixing of the stale-dns-connections-cleaner pods [#13615](https://github.com/deckhouse/deckhouse/pull/13615)
+ - **[node-manager]** Added `appendApprovalConditionfunc` filter csr status condition. [#13461](https://github.com/deckhouse/deckhouse/pull/13461)
+ - **[node-manager]** Fixed `bashible apiserver` CVE vulnerabilities. [#13314](https://github.com/deckhouse/deckhouse/pull/13314)
+ - **[node-manager]** Changed `mcm` version to use `node manager token` instead `mcm`. [#13305](https://github.com/deckhouse/deckhouse/pull/13305)
+ - **[node-manager]** Fixed increased `403` errors from `capi-controller-manager` accessing the `Kubernetes API server` root path ('/'). [#13125](https://github.com/deckhouse/deckhouse/pull/13125)
+ - **[node-manager]** Fixed panic in `vSphere` provider during VM creation. [#13083](https://github.com/deckhouse/deckhouse/pull/13083)
+ - **[node-manager]** Rewrite static Node adoption for `CAPS`. [#11807](https://github.com/deckhouse/deckhouse/pull/11807)
+ - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
+ - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
+ - **[prometheus]** Improved caching of the long-range requests. [#13436](https://github.com/deckhouse/deckhouse/pull/13436)
+    Aggregating-proxy will be rollout restarted with no disruption.
+ - **[prometheus]** Kube-rbac-proxy stale cache request timeout has been set. [#11986](https://github.com/deckhouse/deckhouse/pull/11986)
+    All components using kube-rbac-proxy will be restarted.
+ - **[registry-packages-proxy]** Fixed `registry-packages-proxy` CVE vulnerabilities. [#13307](https://github.com/deckhouse/deckhouse/pull/13307)
+ - **[runtime-audit-engine]** Fixed usage lib in `falco`. [#13475](https://github.com/deckhouse/deckhouse/pull/13475)
+ - **[runtime-audit-engine]** Fixed `falco` CVE vulnerabilities. [#13318](https://github.com/deckhouse/deckhouse/pull/13318)
+ - **[upmeter]** Added a hook for replacing old sts, increase storage capacity, and scale down retention to 13 months. [#12809](https://github.com/deckhouse/deckhouse/pull/12809)
+ - **[user-authn]** Added the ability to create `DexAuthenticator` with numbers in the name. [#12902](https://github.com/deckhouse/deckhouse/pull/12902)
+ - **[vertical-pod-autoscaler]** Fixed `VPA` CVE vulnerabilities. [#13319](https://github.com/deckhouse/deckhouse/pull/13319)
+
+## Chore
+
+
+ - **[candi]** Update Deckhouse CLI to 0.12.1 [#13651](https://github.com/deckhouse/deckhouse/pull/13651)
+ - **[cloud-provider-vcd]** Added еhe `VCD provider` outputs logs in JSON format. [#13183](https://github.com/deckhouse/deckhouse/pull/13183)
+ - **[cni-cilium]** Revert adding the encryption mode. [#13557](https://github.com/deckhouse/deckhouse/pull/13557)
+ - **[cni-cilium]** Fixed `cni-cilium` CVE vulnerabilities. [#13406](https://github.com/deckhouse/deckhouse/pull/13406)
+ - **[deckhouse]** Removed `ceph-csi` module (use `csi-ceph` instead). [#13529](https://github.com/deckhouse/deckhouse/pull/13529)
+    Deckhouse will not update if `ceph-csi` is enabled in the cluster. Use `csi-ceph` module.
+ - **[deckhouse]** Added module version to module source. [#13128](https://github.com/deckhouse/deckhouse/pull/13128)
+ - **[deckhouse]** Added module stage column. [#13113](https://github.com/deckhouse/deckhouse/pull/13113)
+ - **[dhctl]** Added revision check before installation. [#12938](https://github.com/deckhouse/deckhouse/pull/12938)
+ - **[dhctl]** Set `additionalProperties` `false` for all objects in openapi. [#11832](https://github.com/deckhouse/deckhouse/pull/11832)
+ - **[ingress-nginx]** Added TLS between `ingress-nginx controller` and `documentation.d8-system` pod. [#13539](https://github.com/deckhouse/deckhouse/pull/13539)
+ - **[ingress-nginx]** Enabled `HSTS` for all module's Ingresses. [#12705](https://github.com/deckhouse/deckhouse/pull/12705)
+ - **[ingress-nginx]** Added `ingress-nginx` version `1.12`. The `defaultControllerVersion` is set to `1.10`, all ingress controllers without specified version will restart. [#12609](https://github.com/deckhouse/deckhouse/pull/12609)
+ - **[monitoring-ping]** The exporter was rewritten in go. [#12745](https://github.com/deckhouse/deckhouse/pull/12745)
+ - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
+ - **[operator-trivy]** Set proxy env for updater and operator. [#13337](https://github.com/deckhouse/deckhouse/pull/13337)
+ - **[runtime-audit-engine]** Removed deprecated `falco_events` metric. [#13228](https://github.com/deckhouse/deckhouse/pull/13228)
+    Dashboards and alerts based on the `falco_events` metric might be broken.
+
