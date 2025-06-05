@@ -2,6 +2,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -9,6 +15,7 @@ shell:
   install:
     - git clone --depth 1 --branch v3.18.1 $(cat /run/secrets/SOURCE_REPO)/enix/x509-certificate-exporter.git /src
     - cd /src
+    - git apply /patches/*.patch --verbose
     - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
