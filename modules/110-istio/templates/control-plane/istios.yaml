@@ -93,6 +93,9 @@ spec:
       multiCluster:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
+      sds:
+        token:
+          aud: "istio-ca"
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
@@ -230,6 +233,10 @@ spec:
       enabled: true
       v2:
         enabled: true
+        prometheus:
+          enabled: true
+        stackdriver:
+          enabled: false
     sidecarInjectorWebhook:
       injectedAnnotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
