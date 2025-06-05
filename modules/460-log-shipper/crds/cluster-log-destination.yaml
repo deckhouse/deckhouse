@@ -29,6 +29,11 @@ spec:
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'EnsureStructuredMessage').size() <= 1 : true"
+                message: "Only one EnsureStructuredMessage transformation is allowed."
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'NormalizeLabelKeys').size() <= 1 : true"
+                message: "Only one NormalizeLabelKeys transformation is allowed."
               oneOf:
                 - properties:
                     loki: {}
@@ -834,6 +839,78 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                transformations:
+                  maxItems: 3
+                  type: array
+                  description: >
+                    List of transformations that can be applied to logs before sending them to the destination.
+                  items:
+                    type: object
+                    oneOf:
+                      - properties:
+                          action:
+                            enum: ["NormalizeLabelKeys"]
+                        required:
+                          - action
+                      - properties:
+                          action:
+                            enum: ["EnsureStructuredMessage"]
+                        required:
+                          - action
+                          - targetField
+                      - properties:
+                          action:
+                            enum: ["DropLabels"]
+                        required:
+                          - action
+                          - labels      
+                    properties:
+                      action:
+                        type: string
+                        enum: ["NormalizeLabelKeys", "EnsureStructuredMessage", "DropLabels"]
+                        description: |
+                          Type of transformation. Available options:
+
+                          - `NormalizeLabelKeys`: Replaces dots with underscores in the `pod_labels` field.
+
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: NormalizeLabelKeys
+                            ```
+
+                          - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                            
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: EnsureStructuredMessage
+                              targetField: msg
+                            ```
+
+                          - `DropLabels`: Removes the specified labels.
+                            
+                            Example:
+
+                            ```yaml
+                            transformation:
+                            - action: DropLabels
+                              labels:
+                              - first
+                              - second
+                            ```
+
+                      targetField:
+                        type: string
+                        description: Name of the field where the structured message will be placed.
+                      labels:
+                        type: array
+                        minItems: 1
+                        description: List of labels to be removed.
+                        items:
+                          type: string
                 buffer:
                   type: object
                   oneOf:
