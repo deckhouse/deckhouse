@@ -25,9 +25,9 @@ import:
   before: setup
 - image: tools/util-linux
   add: /
-  to: /bin
+  to: /
   includePaths:
-  - '**/lsblk'
+  - usr/bin/lsblk
   before: setup
 imageSpec:
   config:
