@@ -33,7 +33,7 @@ bb-discover-node-name() {
     if [[ -s "$kubelet_crt" ]]; then
       openssl x509 -in "$kubelet_crt" \
         -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' > "$discovered_name_file"
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
     else
     {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
       if [[ "$(hostname)" != "$(hostname -s)" ]]; then
