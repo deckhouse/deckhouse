@@ -245,7 +245,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	return r.handleRelease(ctx, release)
+	res, err := r.handleRelease(ctx, release)
+	if err != nil {
+		r.log.Warn("handle release", log.Err(err))
+	}
+
+	return res, err
 }
 
 // handleRelease handles releases
