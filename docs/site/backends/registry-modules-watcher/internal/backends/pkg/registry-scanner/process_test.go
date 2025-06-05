@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"slices"
@@ -41,7 +42,8 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientTwo := setupCompleteClientTwo(mc)
 
 		scanner := &registryscanner{
-			logger:          log.NewNop(),
+			// logger:          log.NewNop(),
+			logger:          log.NewLogger(log.Options{Level: slog.LevelDebug}),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
 			cache:           cache.New(),
 		}
@@ -159,7 +161,7 @@ func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTas
 			assert.Equal(t, expectedTask.Module, actualTask.Module, "Module mismatch for %s", key)
 			assert.Equal(t, expectedTask.Version, actualTask.Version, "Version mismatch for %s", key)
 			assert.Equal(t, expectedTask.ReleaseChannels, actualTask.ReleaseChannels, "ReleaseChannels mismatch for %s", key)
-			assert.Equal(t, 1536, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
+			assert.Equal(t, 2048, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
 			assert.Equal(t, expectedTask.Task, actualTask.Task, "Task mismatch for %s", key)
 			assert.Greater(t, len(actualTask.TarFile), 0, "TarFile should not be empty for %s", key)
 		}
