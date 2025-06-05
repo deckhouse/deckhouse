@@ -128,6 +128,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
 	}
+
+	if err = (&deckhousev1alpha1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
+		os.Exit(1)
+	}
+
 	if err = (&deckhousev1alpha2.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
 		os.Exit(1)
