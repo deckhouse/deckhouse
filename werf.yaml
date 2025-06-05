@@ -48,7 +48,7 @@ cleanup:
 # version map
 {{- include "parse_version_map" . }}
 # do not forget change /deckhouse-controller/files/kubectl_wrapper.sh and /deckhouse-controller/files/bashrc
-{{- $_ := set . "kubectlForBaseComponents" (list "1.30" "1.33") }}
+{{- $_ := set . "kubectlForBaseComponents" (list "1.30" "1.32") }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}

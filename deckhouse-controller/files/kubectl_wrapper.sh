@@ -27,8 +27,8 @@ case "$kubernetes_version" in
   1.29.* | 1.30.* | 1.31.* )
     kubectl_version="1.30"
     ;;
-  1.32.* | 1.33.* | 1.34.* )
-    kubectl_version="1.33"
+  1.32.* | 1.33.* )
+    kubectl_version="1.32"
     ;;
   *)
     >&2 echo "ERROR: unsupported kubernetes version $kubernetes_version"
