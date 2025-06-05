@@ -195,7 +195,7 @@ spec:
                                 key:
                                   description: key — это ключ метки, к которому применяется селектор.
                                 operator:
-                                  description: operator представляет взаимоотношение ключа с набором значений. Допустимые операторы: In, NotIn, Exists и DoesNotExist.
+                                  description: "operator представляет взаимоотношение ключа с набором значений. Допустимые операторы: In, NotIn, Exists и DoesNotExist."
                                 values:
                                   description: values — это массив строковых значений. Если оператор In или NotIn, массив values должен быть непустым. Если оператор Exists или DoesNotExist, массив values должен быть пустым. Этот массив заменяется во время стратегического объединения патчей.
                           matchLabels:

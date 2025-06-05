@@ -54,7 +54,7 @@ spec:
               consulSDConfigs:
                 description: ConsulSDConfigs определяет список конфигураций обнаружения сервисов Consul.
                 items:
-                  description: ConsulSDConfig определяет конфигурацию обнаружения сервисов Consul. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config
+                  description: "ConsulSDConfig определяет конфигурацию обнаружения сервисов Consul. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config"
                   properties:
                     allow_stale:
                       description: Разрешить устаревшие результаты Consul (смотри https://www.consul.io/api/features/consistency.html). Снизит нагрузку на Consul. Если не указано, Prometheus использует свое значение по умолчанию.
@@ -245,7 +245,7 @@ spec:
               dnsSDConfigs:
                 description: DNSSDConfigs определяет список конфигураций обнаружения сервисов DNS.
                 items:
-                  description: DNSSDConfig позволяет указывать набор доменных имен DNS, которые периодически запрашиваются для обнаружения списка целей. DNS-серверы для контакта читаются из /etc/resolv.conf. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dns_sd_config
+                  description: "DNSSDConfig позволяет указывать набор доменных имен DNS, которые периодически запрашиваются для обнаружения списка целей. DNS-серверы для контакта читаются из /etc/resolv.conf. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dns_sd_config"
                   properties:
                     names:
                       description: Список доменных имен DNS для запроса.
@@ -258,7 +258,7 @@ spec:
               fileSDConfigs:
                 description: FileSDConfigs определяет список конфигураций обнаружения сервисов в файле.
                 items:
-                  description: FileSDConfig определяет конфигурацию обнаружения сервисов в файле Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
+                  description: "FileSDConfig определяет конфигурацию обнаружения сервисов в файле Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config"
                   properties:
                     files:
                       description: 'Список файлов для использования в обнаружении по файлам. Рекомендация: использовать абсолютные пути. Хотя относительные пути работают, проект prometheus-operator не дает никаких гарантий относительно рабочего каталога, где хранится конфигурационный файл. Файлы должны быть смонтированы с использованием Prometheus.ConfigMaps или Prometheus.Secrets.'
@@ -273,7 +273,7 @@ spec:
               httpSDConfigs:
                 description: HTTPSDConfigs определяет список конфигураций обнаружения сервисов HTTP.
                 items:
-                  description: HTTPSDConfig определяет конфигурацию обнаружения сервисов HTTP Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config
+                  description: "HTTPSDConfig определяет конфигурацию обнаружения сервисов HTTP Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config"
                   properties:
                     authorization:
                       description: Конфигурация заголовка авторизации для аутентификации на целевой конечной точке HTTP.
@@ -377,7 +377,7 @@ spec:
               kubernetesSDConfigs:
                 description: KubernetesSDConfigs определяет список конфигураций обнаружения сервисов Kubernetes.
                 items:
-                  description: KubernetesSDConfig позволяет получать цели для сбора из REST API Kubernetes. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config
+                  description: "KubernetesSDConfig позволяет получать цели для сбора из REST API Kubernetes. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config"
                   properties:
                     role:
                       description: Роль сущностей Kubernetes, которые должны быть обнаружены. В настоящее время поддерживается только роль "Node".
@@ -445,7 +445,7 @@ spec:
               staticConfigs:
                 description: StaticConfigs определяет список статических целей с общим набором меток.
                 items:
-                  description: StaticConfig определяет статическую конфигурацию Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config
+                  description: "StaticConfig определяет статическую конфигурацию Prometheus. Смотри подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config"
                   properties:
                     labels:
                       additionalProperties:

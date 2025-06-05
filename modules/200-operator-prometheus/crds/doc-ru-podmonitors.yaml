@@ -263,10 +263,11 @@ spec:
                         key:
                           description: key — это ключ метки, к которому применяется селектор.
                         operator:
-                          description: operator представляет взаимоотношение ключа с набором значений. Допустимые операторы: In, NotIn, Exists и DoesNotExist.
+                          description: "operator представляет взаимоотношение ключа с набором значений. Допустимые операторы: In, NotIn, Exists и DoesNotExist."
                         values:
                           description: values — это массив строковых значений. Если оператор In или NotIn, массив values должен быть непустым. Если оператор Exists или DoesNotExist, массив values должен быть пустым. Этот массив заменяется во время стратегического объединения патчей.
                   matchLabels:
                     description: matchLabels — это карта пар {ключ, значение}. Один {ключ, значение} в карте matchLabels эквивалентен элементу matchExpressions, у которого поле ключа — "key", оператор — "In", а массив values содержит только "value". Требования объединены с помощью логического оператора И (AND).
               targetLimit:
                 description: TargetLimit определяет предел количества целей, которые будут приняты для сбора.
+
