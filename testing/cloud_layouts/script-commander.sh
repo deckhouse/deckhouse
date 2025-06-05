@@ -260,16 +260,14 @@ function prepare_environment() {
     ;;
 
   "Static")
+    pre_bootstrap_static_setup
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
-        envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
-    # "Hide" infra template from terraform.
-    mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
+    export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
+    export TF_VAR_PREFIX="$PREFIX"
 
     # use different users for different OSs
     ssh_user="astra"
@@ -279,6 +277,462 @@ function prepare_environment() {
     ssh_rosa_user_worker="centos"
     ;;
   esac
+}
+
+function pre_bootstrap_static_setup() {
+  cd $cwd/registry-mirror
+
+  BASTION_INTERNAL_IP=192.168.199.254
+  IMAGES_REPO="${BASTION_INTERNAL_IP}:5000/sys/deckhouse-oss"
+
+  LOCAL_REGISTRY_MIRROR_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+
+  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 -w0)
+
+  # emulate using local registry
+  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${BASTION_INTERNAL_IP}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 -w0)
+
+  cd ..
+  # todo: delete after migrating openstack to opentofy
+  cp -a /plugins/registry.terraform.io/terraform-provider-openstack/ /plugins/registry.opentofu.org/terraform-provider-openstack/
+}
+
+function bootstrap_static() {
+  cwd="testing/cloud_layouts/Static"
+  >&2 echo "Run terraform to create nodes for Static cluster ..."
+  pushd "$cwd"
+
+  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
+  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" "opentofu"
+  docker rm "$CONTAINER_ID"
+  chmod +x ./opentofu
+
+  ./opentofu init -input=false -plugin-dir=/plugins -backend-config="key=${TF_VAR_PREFIX}" || return $?
+  ./opentofu apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  popd
+
+  if ! master_ip="$(opentofu output -raw master_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get master_ip from opentofu output"
+    return 1
+  fi
+
+  if ! system_ip="$(opentofu output -raw system_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get system_ip from opentofu output"
+    return 1
+  fi
+
+  if ! worker_redos_ip="$(opentofu output -raw worker_redos_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
+    return 1
+  fi
+
+  if ! worker_opensuse_ip="$(opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
+    return 1
+  fi
+
+  if ! worker_rosa_ip="$(opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
+    return 1
+  fi
+
+  if ! bastion_ip="$(opentofu output -raw bastion_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get bastion_ip from opentofu output"
+    return 1
+  fi
+
+  # Add key to access to hosts thru bastion
+  eval "$(ssh-agent -s)"
+  ssh-add "$ssh_private_key_path"
+  ssh_bastion="-J $ssh_user@$bastion_ip"
+
+  waitForInstancesAreBootstrappedAttempts=20
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: master instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: master instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: system instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: rosa worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: rosa worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+
+  tar -cvf $cwd/registry-mirror.tar $cwd/registry-mirror
+  testRunAttempts=20
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    # Install http/https proxy on bastion node
+    $scp_command -i "$ssh_private_key_path" $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+      apt-get update
+      apt-get install -y docker.io docker-compose wget curl
+
+      tar -xvf /tmp/registry-mirror.tar
+      cd deckhouse/testing/cloud_layouts/Static/registry-mirror
+      ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
+      ./gen-ssl.sh
+      env BASTION_INTERNAL_IP=${BASTION_INTERNAL_IP} envsubst '\$BASTION_INTERNAL_IP' < registry-config.tpl.yaml > registry-config.yaml
+      docker-compose up -d
+      cd -
+ENDSSH
+
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
+    MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
+    WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
+    WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
+    WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
+    envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
+    <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
+  D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+  D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  testRunAttempts=20
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    # Install http/https proxy on bastion node
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+       cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
+#!/bin/bash
+# get latest d8-cli release
+URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
+DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
+if [ -z "\${DOWNLOAD_URL}" ]; then
+  echo "Failed to retrieve the URL for the download"
+  exit 1
+fi
+# download
+wget -q "\${DOWNLOAD_URL}" -O /tmp/d8.tar.gz
+# install
+file /tmp/d8.tar.gz
+mkdir d8cli
+tar -xf /tmp/d8.tar.gz -C d8cli
+mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
+
+d8 --version
+# pull
+d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+# push
+d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
+set +x
+EOF
+       chmod +x /tmp/install-d8-and-pull-push-images.sh
+       /tmp/install-d8-and-pull-push-images.sh
+
+       # cleanup
+       rm -f /tmp/install-d8-and-pull-push-images.sh
+       rm -rf d8
+
+       docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
+ENDSSH
+
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    # Convert to air-gap environment by removing default route
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+       echo "ip route del default" >> /etc/network/if-up.d/add-routes
+       chmod 0755 /etc/network/if-up.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/rc.d/rc.local
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
+       echo "ip route del default" >> /etc/rc.d/rc.local
+       chmod 0755 /etc/rc.d/rc.local
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of system in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  # Prepare resources.yaml for starting working node with CAPS
+  # shellcheck disable=SC2016
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
+      MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
+      WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
+      WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
+      WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
+      envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
+      <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
+  # Bootstrap
+  >&2 echo "Run dhctl bootstrap ..."
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    $scp_command -i "$ssh_private_key_path" $cwd/configuration.yaml "$ssh_user@$bastion_ip:/tmp/configuration.yaml"
+    $scp_command -i "$ssh_private_key_path" $cwd/resources.yaml "$ssh_user@$bastion_ip:/tmp/resources.yaml"
+    $scp_command -i "$ssh_private_key_path" $ssh_private_key_path "$ssh_user@$bastion_ip:/tmp/sshkey"
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+      mkdir -p /etc/docker
+      echo '{"insecure-registries":["192.168.199.254:5000"]}' > /etc/docker/daemon.json
+      systemctl restart docker
+      docker login -p ${LOCAL_REGISTRY_MIRROR_PASSWORD} -u mirror ${IMAGES_REPO}
+      docker run \
+        -v /tmp/sshkey:/tmp/sshkey \
+        -v /tmp/configuration.yaml:/tmp/configuration.yaml \
+        -v /tmp/resources.yaml:/tmp/resources.yaml \
+        ${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG} \
+        dhctl --do-not-write-debug-log-file bootstrap \
+            --resources-timeout="30m" --yes-i-want-to-drop-cache \
+            --ssh-host "$master_ip" \
+            --ssh-agent-private-keys "/tmp/sshkey" \
+            --ssh-user "$ssh_user" \
+            --ssh-extra-args="-S ssh" \
+            --config "/tmp/configuration.yaml" \
+            --config "/tmp/resources.yaml" | tee -a "$bootstrap_log" || return $?
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Bootstrap cluster (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+  >&2 echo "==============================================================
+
+  Cluster bootstrapped. Register 'system' and 'worker' nodes and starting the test now.
+
+  If you'd like to pause the cluster deletion for debugging:
+   1. ssh to cluster: 'ssh $ssh_user@$master_ip'
+   2. execute 'kubectl create configmap pause-the-test'
+
+=============================================================="
+
+  >&2 echo 'Fetch registration script ...'
+  for ((i=0; i<10; i++)); do
+    bootstrap_system="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
+ENDSSH
+)" && break
+    >&2 echo "Attempt to get secret manual-bootstrap-for-system in d8-cloud-instance-manager namespace #$i failed. Sleeping 30 seconds..."
+    sleep 30
+  done
+
+  if [[ -z "$bootstrap_system" ]]; then
+    >&2 echo "Couldn't get secret manual-bootstrap-for-system in d8-cloud-instance-manager namespace."
+    return 1
+  fi
+
+  # shellcheck disable=SC2087
+  # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+base64 -d <<< "$bootstrap_system" | bash
+ENDSSH
+
+  registration_failed=
+  >&2 echo 'Waiting until Node registration finishes ...'
+  for ((i=1; i<=20; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get nodes -o wide
+kubectl get nodes -o json | jq -re '.items | length == 5' >/dev/null
+kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
+ENDSSH
+      registration_failed=""
+      break
+    else
+      registration_failed="true"
+      >&2 echo "Node registration is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
+      sleep 60
+    fi
+  done
+
+  if [[ -z $provisioning_failed && $CIS_ENABLED == "true" ]]; then
+    for ((i=1; i<=5; i++)); do
+      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
+ENDSSH
+        break
+      else
+        sleep 20
+      fi
+    done
+  fi
+
+  if [[ $registration_failed == "true" ]] ; then
+    return 1
+  fi
 }
 
 function get_cluster_status() {
