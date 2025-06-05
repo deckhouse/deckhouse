@@ -1,4 +1,4 @@
-From 14dd565d43b65b41a5aa7c9f020712359da878b7 Mon Sep 17 00:00:00 2001
+From b8ae25a0562040df25d3661f593fb15c3bd0545b Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 2 Jun 2025 14:44:31 +0300
 Subject: [PATCH] add: priority patch
@@ -12,7 +12,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  daemon/cmd/hostips-sync.go                    |   2 +-
  daemon/cmd/state.go                           |   2 +-
  daemon/cmd/status.go                          |   2 +-
- .../pkg/ciliumendpointslice/endpointslice.go  | 270 ++++++++++++-
+ .../pkg/ciliumendpointslice/endpointslice.go  | 271 ++++++++++++-
  operator/watchers/cilium_endpoint.go          |   1 +
  pkg/datapath/alignchecker/alignchecker.go     |   2 +-
  pkg/datapath/linux/config/config.go           |   2 +-
@@ -25,7 +25,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/maps/bwmap/bwmap.go                       |   2 +-
  pkg/maps/lxcmap/doc.go                        |   9 -
  pkg/maps/lxcmap/lxcmap.go                     | 252 -------------
- 20 files changed, 662 insertions(+), 288 deletions(-)
+ 20 files changed, 663 insertions(+), 288 deletions(-)
  delete mode 100644 pkg/maps/lxcmap/doc.go
  delete mode 100644 pkg/maps/lxcmap/lxcmap.go
 
@@ -170,7 +170,7 @@ index b678668ac0..d42dae075b 100644
  	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
  	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 3b3ffc13ef..c9a799cc38 100644
+index 3b3ffc13ef..6a75bf3bc7 100644
 --- a/operator/pkg/ciliumendpointslice/endpointslice.go
 +++ b/operator/pkg/ciliumendpointslice/endpointslice.go
 @@ -6,8 +6,12 @@ package ciliumendpointslice
@@ -194,7 +194,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  	"github.com/cilium/cilium/pkg/logging/logfields"
  )
  
-@@ -49,10 +54,233 @@ const (
+@@ -49,10 +54,234 @@ const (
  	// batched and synced together after a short delay.
  	DefaultCESSyncTime = 500 * time.Millisecond
  
@@ -264,7 +264,7 @@ index 3b3ffc13ef..c9a799cc38 100644
 +
 +func getCepAddressPair(cep *cilium_api_v2.CiliumEndpoint) cilium_api_v2.AddressPair {
 +	var shared cilium_api_v2.AddressPair
-+	fmt.Printf("DEBUG getCepAddressPair %v, %p, %v", cep.Name, cep, cep.Status.Networking.Addressing)
++	fmt.Printf("DEBUG getCepAddressPair %v, %p, %v\n", cep.Name, cep, cep.Status.Networking.Addressing)
 +	for _, pair := range cep.Status.Networking.Addressing {
 +		if pair.IPV4 == "" {
 +			continue
@@ -335,6 +335,7 @@ index 3b3ffc13ef..c9a799cc38 100644
 +		isHighest := equalCeps(ccep, highest.cep)
 +		if isOwner && isHighest {
 +			// just skip
++			fmt.Printf("DEBUG isOwner && isHighest new: %v\n", newOwner)
 +		} else if isOwner && !isHighest {
 +			ccep.ccep.Networking.Addressing = emptyAddrList
 +			addr := &cilium_api_v2.AddressPair{
@@ -428,7 +429,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  func (c *Controller) initializeQueue() {
  	c.logger.Info("CES controller workqueue configuration",
  		logfields.WorkQueueQPSLimit, c.rateLimit.current.Limit,
-@@ -73,31 +301,48 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
+@@ -73,31 +302,48 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
  	if cep.Status.Networking == nil || cep.Status.Identity == nil || cep.GetName() == "" || cep.Namespace == "" {
  		return
  	}
@@ -443,7 +444,7 @@ index 3b3ffc13ef..c9a799cc38 100644
 +
 +	touchedCESs := c.manager.UpdateCEPMapping(newOwner.ccep, newOwner.ns)
 +	c.enqueueCESReconciliation(touchedCESs, delay)
-+	fmt.Printf("DEBUG onEndpointDelete %v, %p, %v", cep.Name, cep, cep.Status.Networking.Addressing)
++	fmt.Printf("DEBUG onEndpointDelete %v, %p, %v\n", cep.Name, cep, cep.Status.Networking.Addressing)
  }
  
  func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
@@ -458,7 +459,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
 -	c.enqueueCESReconciliation([]CESKey{touchedCES})
 +	c.enqueueCESReconciliation([]CESKey{touchedCES}, DefaultCESSyncTime)
-+	fmt.Printf("DEBUG onEndpointDelete %v, %p, %v", cep.Name, cep, cep.Status.Networking.Addressing)
++	fmt.Printf("DEBUG onEndpointDelete %v, %p, %v\n", cep.Name, cep, cep.Status.Networking.Addressing)
  }
  
  func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
@@ -485,7 +486,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  			c.fastQueue.Add(ces)
  		} else {
  			c.standardQueue.Add(ces)
-@@ -108,7 +353,7 @@ func (c *Controller) addToQueue(ces CESKey) {
+@@ -108,7 +354,7 @@ func (c *Controller) addToQueue(ces CESKey) {
  
  }
  
@@ -494,7 +495,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  	for _, ces := range cess {
  		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
  		if ces.Name != "" {
-@@ -117,7 +362,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
+@@ -117,7 +363,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
  				c.enqueuedAt[ces] = time.Now()
  			}
  			c.enqueuedAtLock.Unlock()
@@ -503,7 +504,7 @@ index 3b3ffc13ef..c9a799cc38 100644
  		}
  	}
  }
-@@ -186,6 +431,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
+@@ -186,6 +432,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
  			return c.processNamespaceEvents(ctx)
  		}),
  	)
