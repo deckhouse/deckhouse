@@ -1007,6 +1007,21 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
+		suite.Run("clear data after deploy", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusNotFound,
+				}, nil)
+			suite.setupController("clear-data-after-deploy.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.2")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			require.Empty(suite.T(), dr.Status.Message)
+		})
 	})
 }
 
