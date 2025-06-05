@@ -142,7 +142,7 @@ apiVersions:
                   type: object
                   description: |
                     Virtual machine settings for the created master node.
-                  required: [cpu, memory]
+                  required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
                       description: |
@@ -179,10 +179,9 @@ apiVersions:
                           example: 4Gi
                     virtualMachineClassName:
                       type: string
-                      default: generic
                       description: |
                         The VirtualMachineClass resource is intended for centralized configuration of preferred virtual machine parameters.
-                        It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources.
+                        It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                     bootloader:
                       type: string
                       enum:
