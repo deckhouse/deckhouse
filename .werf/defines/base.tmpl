@@ -168,9 +168,9 @@ shell:
     {{- $chunk = append $chunk $value }}
     {{- /* If the chunk has reached size 3 or it is the last element */}}
     {{- if or (eq (len $chunk) 3) (eq (add $index 1) $lens) }}
-      {{- /* Determine kubectl version: take the second element of the chunk if there is one, otherwise the first */}}
+      {{- /* Determine kubectl version: take the second element of the chunk if it has 3 elements , otherwise the first */}}
       {{- $kubectl := index $chunk 0 }}
-      {{- if ge (len $chunk) 2 }}
+      {{- if ge (len $chunk) 3 }}
         {{- $kubectl = index $chunk 1 }}
       {{- end }}
       {{- /* Add the chunk to the chunks */}}
