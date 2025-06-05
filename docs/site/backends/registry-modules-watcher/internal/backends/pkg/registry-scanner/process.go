@@ -140,22 +140,22 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, versionData
 		Image:          releaseImage,
 	}
 
+	// Check if we already have this release in cache
+	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
+	if ok && releaseChecksum == versionData.Checksum {
+		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
+		if ok {
+			versionData.Version = version
+			versionData.TarFile = tarFile
+
+			versionDataCh <- versionData
+			return nil
+		}
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		// Check if we already have this release in cache
-		releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-		if ok && releaseChecksum == versionData.Checksum {
-			version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-			if ok {
-				versionData.Version = version
-				versionData.TarFile = tarFile
-
-				versionDataCh <- versionData
-				return
-			}
-		}
 
 		// Extract version from image
 		version, err := getVersionFromImage(versionData.Image)
