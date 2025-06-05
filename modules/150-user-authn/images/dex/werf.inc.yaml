@@ -44,7 +44,7 @@ shell:
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
-{{- include "image-build.fromImage" $ }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact

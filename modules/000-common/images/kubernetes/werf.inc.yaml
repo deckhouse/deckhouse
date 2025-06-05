@@ -43,7 +43,7 @@ shell:
   - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-{{- include "image-build.fromImage" $ }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
@@ -58,9 +58,11 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
+{{- if eq $.SVACE_ENABLED "false" }}
   beforeInstall:
-  {{- include "alt packages proxy" $ | nindent 2 }}
-  - apt-get install -y curl
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash rsync
+{{- end }}
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src

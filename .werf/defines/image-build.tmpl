@@ -18,11 +18,3 @@ set -e
 {{ .BuildCommand }}
 {{-   end }}
 {{- end }}
-
-{{- define "image-build.fromImage" }}
-{{-   if eq $.SVACE_ENABLED "true" }}
-fromImage: common/alt-p11-svace
-{{-   else }}
-fromImage: common/alt-p11-go
-{{-   end }}
-{{- end }}
