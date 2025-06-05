@@ -93,9 +93,6 @@ spec:
       multiCluster:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
-      sds:
-        token:
-          aud: "istio-ca"
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
