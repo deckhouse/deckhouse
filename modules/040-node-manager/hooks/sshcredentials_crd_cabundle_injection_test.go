@@ -205,13 +205,25 @@ spec:
 		})
 		It("Should be a CRD with caBundle injected", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Have a CRD with caBundle injected and secret with TLS generated", func() {
+	Context("Have a CRD with caBundle injecte, service and secret with TLS generated", func() {
 		BeforeEach(func() {
 			state := `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caps-controller-manager-webhook-service
+  namespace: d8-cloud-instance-manager
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook-server
+  selector:
+    app: caps-controller-manager
 ---
 apiVersion: v1
 data:
@@ -397,6 +409,18 @@ spec:
 	Context("Have a CRD with no spec.conversion set and secret with TLS generated", func() {
 		BeforeEach(func() {
 			stateNew := `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caps-controller-manager-webhook-service
+  namespace: d8-cloud-instance-manager
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook-server
+  selector:
+    app: caps-controller-manager
 ---
 apiVersion: v1
 data:

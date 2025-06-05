@@ -67,12 +67,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyCAPSWebhookTLSFilter,
 		},
+		{
+			Name:                         "webhook-service",
+			ApiVersion:                   "v1",
+			Kind:                         "Service",
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"caps-controller-manager-webhook-service"},
+			},
+			FilterFunc: applyCAPSServiceFilter,
+		},
 	},
 }, injectCAtoCRD)
 
 type CRD struct {
 	Name     string
 	CABundle string
+}
+
+type Svc struct {
+	Name string
 }
 
 func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -114,8 +134,25 @@ func applyCAPSWebhookTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
+func applyCAPSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var svc v1.Service
+
+	err := sdk.FromUnstructured(obj, &svc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	}
+
+	return Svc{
+		Name: svc.Name,
+	}, nil
+}
+
 func injectCAtoCRD(input *go_hook.HookInput) error {
 	if len(input.Snapshots["sshcredentials"]) == 0 {
+		return nil
+	}
+
+	if len(input.Snapshots["webhook-service"]) == 0 {
 		return nil
 	}
 
