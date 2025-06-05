@@ -22,14 +22,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	coordination "k8s.io/api/coordination/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -42,7 +41,7 @@ metadata:
   name: d8-cloud-instance-manager
 `
 
-	leaseYaml = `
+	lsYaml = `
 ---
 apiVersion: coordination.k8s.io/v1
 kind: Lease
@@ -72,7 +71,7 @@ var _ = Describe("node-manager :: hooks :: remove_old_caps_lease_migration ::", 
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 
 			createNs(f.KubeClient(), nsYaml)
-			createLease(f.KubeClient(), leaseYaml)
+			createLease(f.KubeClient(), lsYaml)
 
 			f.RunGoHook()
 		})
@@ -96,7 +95,7 @@ func createNs(kubeClient client.KubeClient, spec string) {
 }
 
 func createLease(kubeClient client.KubeClient, spec string) {
-	ls := new(coordination.Lease)
+	ls := new(coordinationv1.Lease)
 	if err := yaml.Unmarshal([]byte(spec), ls); err != nil {
 		panic(err)
 	}
