@@ -228,3 +228,66 @@ properties:
                     observedGeneration:
                       format: int64
                       type: integer
+      checker:
+        type: object
+        default: {}
+        properties:
+          params:
+            type: object
+            properties:
+              registries:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    scheme:
+                      type: string
+                      enum: [HTTP, HTTPS]
+                      default: "HTTPS"
+                    ca:
+                      type: string
+                    username:
+                      type: string
+                    password:
+                      type: string
+              hash:
+                type: string
+          state:
+            type: object
+            default: {}
+            properties:
+              queues:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    processed:
+                      type: integer
+                      format: int64
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          image:
+                            type: string
+                          info:
+                            type: string
+                          error:
+                            type: string
+                    retry:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          image:
+                            type: string
+                          info:
+                            type: string
+                          error:
+                            type: string
+                    last_attempt:
+                      type: string
+                      format: date-time

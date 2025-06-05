@@ -6,7 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package checker
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	deckhouse_types "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 const (
@@ -112,34 +115,45 @@ var _ = sdk.RegisterFunc(
 	},
 	func(input *go_hook.HookInput) error {
 		startTime := time.Now()
+		paramsAccessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
+		stateAccessor := helpers.NewValuesAccessor[State](input, "systemRegistry.internal.checker.state")
 
-		log := input.Logger
+		state := stateAccessor.Get()
 
-		repoRef1, err := gcr_name.NewRepository("fake-registry.local/flant/deckhouse")
+		inputs := Inputs{
+			Params: prepareParams(paramsAccessor.Get()),
+		}
+		paramsAccessor.Set(inputs.Params) // testing
+
+		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
+
+		var err error
+
+		inputs.ImagesInfo.DeckhouseImages, err = helpers.SnapshotToSingle[deckhouseImagesModel](input, deckhouseDeploymentSnapName)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("cannot get deckhouse deployment snapshot: %w", err)
 		}
 
-		repoRef2, err := gcr_name.NewRepository("test-registry.local/flant/dkp")
+		inputs.ImagesInfo.ModulesImagesDigests, err = getModulesImagesDigests(input)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("cannot get modules images: %w", err)
 		}
 
-		repos := map[string]gcr_name.Repository{
-			"fake": repoRef1,
-			"test": repoRef2,
+		if err := state.process(inputs); err != nil {
+			return err
 		}
 
-		images, err := buildQueue(input, repos)
-		if err != nil {
-			return fmt.Errorf("cannot collect images: %w", err)
+		var imagesCount int64
+		for _, v := range state.Queues {
+			imagesCount += int64(len(v.Items)) + int64(len(v.Retry))
 		}
+
+		stateAccessor.Set(state)
 
 		executionDuration := time.Since(startTime)
-		log.Warn(
+		input.Logger.Warn(
 			"ImageChecker Run",
-			"images.items", images,
-			"images.count", len(images),
+			"images.count", imagesCount,
 			"execution.start", startTime,
 			"execution.duration", executionDuration.String(),
 		)
@@ -147,3 +161,78 @@ var _ = sdk.RegisterFunc(
 		return nil
 	},
 )
+
+func getModulesImagesDigests(input *go_hook.HookInput) (map[string]string, error) {
+	moduleNames, err := helpers.SnapshotToList[string](input, modulesSnapName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get modules snapshot: %w", err)
+	}
+
+	if len(moduleNames) == 0 {
+		return nil, fmt.Errorf("modules snapshot contains no entries")
+	}
+
+	sort.Strings(moduleNames) // for stable results
+	digests := make(map[string]string)
+	for _, module := range moduleNames {
+		valuesPath := fmt.Sprintf("%v.%v", moduleDigestsValuesPath, module)
+
+		images, err := helpers.GetValue[map[string]string](input, valuesPath)
+		if err != nil && !errors.Is(err, helpers.ErrNoValue) {
+			return nil, fmt.Errorf("cannot get images digests for module %q: %w", module, err)
+		}
+
+		imageNames := make([]string, 0, len(images))
+		for k := range images {
+			imageNames = append(imageNames, k)
+		}
+		sort.Strings(imageNames) // for stable results
+
+		for _, image := range imageNames {
+			d := images[image]
+			if _, ok := digests[d]; ok {
+				continue
+			}
+
+			info := fmt.Sprintf("module/%v/%v", strcase.ToKebab(module), strcase.ToKebab(image))
+			digests[d] = info
+		}
+	}
+
+	if len(digests) == 0 {
+		return nil, fmt.Errorf("modules has no images")
+	}
+
+	return digests, nil
+}
+
+func prepareParams(value Params) Params {
+	repoRef1, err := gcr_name.NewRepository("fake-registry.local/flant/deckhouse")
+	if err != nil {
+		panic(err)
+	}
+
+	repoRef2, err := gcr_name.NewRepository("test-registry.local/flant/dkp")
+	if err != nil {
+		panic(err)
+	}
+
+	repos := map[string]gcr_name.Repository{
+		"fake": repoRef1,
+		"test": repoRef2,
+	}
+
+	if value.Registries == nil {
+		value.Registries = make(map[string]RegistryParams)
+	}
+	for k, v := range repos {
+		item := value.Registries[k]
+
+		item.Address = v.Registry.Name()
+		item.Scheme = strings.ToUpper(v.Registry.Scheme())
+
+		value.Registries[k] = item
+	}
+
+	return value
+}
