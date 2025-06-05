@@ -1,4 +1,4 @@
-From 9260204adc447af1313f960aac30d3230d215ce0 Mon Sep 17 00:00:00 2001
+From 33a0e3e138ac8581a1eb9c29694f6b9ec7189423 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 2 Jun 2025 14:44:31 +0300
 Subject: [PATCH] add: priority patch
@@ -12,7 +12,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  daemon/cmd/hostips-sync.go                    |   2 +-
  daemon/cmd/state.go                           |   2 +-
  daemon/cmd/status.go                          |   2 +-
- .../pkg/ciliumendpointslice/endpointslice.go  | 264 ++++++++++++-
+ .../pkg/ciliumendpointslice/endpointslice.go  | 266 ++++++++++++-
  operator/watchers/cilium_endpoint.go          |   1 +
  pkg/datapath/alignchecker/alignchecker.go     |   2 +-
  pkg/datapath/linux/config/config.go           |   2 +-
@@ -25,7 +25,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/maps/bwmap/bwmap.go                       |   2 +-
  pkg/maps/lxcmap/doc.go                        |   9 -
  pkg/maps/lxcmap/lxcmap.go                     | 252 -------------
- 20 files changed, 656 insertions(+), 288 deletions(-)
+ 20 files changed, 658 insertions(+), 288 deletions(-)
  delete mode 100644 pkg/maps/lxcmap/doc.go
  delete mode 100644 pkg/maps/lxcmap/lxcmap.go
 
@@ -170,7 +170,7 @@ index b678668ac0..d42dae075b 100644
  	"github.com/cilium/cilium/pkg/maps/ratelimitmap"
  	"github.com/cilium/cilium/pkg/maps/timestamp"
 diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
-index 3b3ffc13ef..3ea4482de1 100644
+index 3b3ffc13ef..b59350c817 100644
 --- a/operator/pkg/ciliumendpointslice/endpointslice.go
 +++ b/operator/pkg/ciliumendpointslice/endpointslice.go
 @@ -6,6 +6,9 @@ package ciliumendpointslice
@@ -191,7 +191,7 @@ index 3b3ffc13ef..3ea4482de1 100644
  	"github.com/cilium/cilium/pkg/logging/logfields"
  )
  
-@@ -49,10 +53,230 @@ const (
+@@ -49,10 +53,232 @@ const (
  	// batched and synced together after a short delay.
  	DefaultCESSyncTime = 500 * time.Millisecond
  
@@ -256,6 +256,8 @@ index 3b3ffc13ef..3ea4482de1 100644
 +
 +func getCepAddressPair(cep *cilium_api_v2.CiliumEndpoint) cilium_api_v2.AddressPair {
 +	var shared cilium_api_v2.AddressPair
++	fmt.Printf("DEBUG getCepAddressPair addr: %p", cep)
++	fmt.Printf("DEBUG getCepAddressPair cep name: %v", cep.Name)
 +	fmt.Printf("DEBUG getCepAddressPair: %v", cep.Status.Networking.Addressing)
 +	for _, pair := range cep.Status.Networking.Addressing {
 +		if pair.IPV4 == "" {
@@ -422,7 +424,7 @@ index 3b3ffc13ef..3ea4482de1 100644
  func (c *Controller) initializeQueue() {
  	c.logger.Info("CES controller workqueue configuration",
  		logfields.WorkQueueQPSLimit, c.rateLimit.current.Limit,
-@@ -73,31 +297,46 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
+@@ -73,31 +299,46 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
  	if cep.Status.Networking == nil || cep.Status.Identity == nil || cep.GetName() == "" || cep.Namespace == "" {
  		return
  	}
@@ -477,7 +479,7 @@ index 3b3ffc13ef..3ea4482de1 100644
  			c.fastQueue.Add(ces)
  		} else {
  			c.standardQueue.Add(ces)
-@@ -108,7 +347,7 @@ func (c *Controller) addToQueue(ces CESKey) {
+@@ -108,7 +349,7 @@ func (c *Controller) addToQueue(ces CESKey) {
  
  }
  
@@ -486,7 +488,7 @@ index 3b3ffc13ef..3ea4482de1 100644
  	for _, ces := range cess {
  		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
  		if ces.Name != "" {
-@@ -117,7 +356,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
+@@ -117,7 +358,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
  				c.enqueuedAt[ces] = time.Now()
  			}
  			c.enqueuedAtLock.Unlock()
@@ -495,7 +497,7 @@ index 3b3ffc13ef..3ea4482de1 100644
  		}
  	}
  }
-@@ -186,6 +425,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
+@@ -186,6 +427,11 @@ func (c *Controller) Start(ctx cell.HookContext) error {
  			return c.processNamespaceEvents(ctx)
  		}),
  	)
