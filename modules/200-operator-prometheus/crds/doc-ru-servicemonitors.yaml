@@ -135,8 +135,6 @@ spec:
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                         endpointParams:
-                          additionalProperties:
-                            type: string
                           description: Параметры для добавления к URL токена
                         scopes:
                           description: Области OAuth2, используемые для запроса токена
@@ -148,7 +146,6 @@ spec:
                       description: HTTP-путь для сбора метрик. Если не указано, Prometheus использует значение по умолчанию (например, `/metrics`).
                     port:
                       description: Имя порта сервиса, к которому относится эта конечная точка. Взаимоисключается с targetPort.
-                      type: string
                     proxyUrl:
                       description: ProxyURL, например http://proxyserver:2195. Направляет запросы сбора через прокси посредством этой конечной точки.
                     relabelings:

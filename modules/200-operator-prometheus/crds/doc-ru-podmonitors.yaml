@@ -189,7 +189,7 @@ spec:
                     scrapeTimeout:
                       description: Таймаут, после которого сбор данных прекращается. Если не указано, используется глобальный интервал сбора Prometheus.
                     targetPort:
-                      description: 'Устарело: используйте ''port'' вместо этого.'
+                      description: 'Устарело: используйте port вместо этого.'
                     tlsConfig:
                       description: Конфигурация TLS для использования при сканировании с конечной точки.
                       properties:

@@ -137,7 +137,6 @@ spec:
                 description: Спецификация для prob для использования пробиры целей. Параметр prober.URL обязателен. Цели не могут быть пробированы, если не указаны.
                 properties:
                   path:
-                    default: /probe
                     description: Путь для сбора метрик. По умолчанию `/probe`.
                   proxyUrl:
                     description: Необязательный ProxyURL.
