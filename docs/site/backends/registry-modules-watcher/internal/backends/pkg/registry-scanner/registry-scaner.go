@@ -92,10 +92,10 @@ func (s *registryscanner) Subscribe(ctx context.Context, scanInterval time.Durat
 					switch task.Task {
 					case backends.TaskCreate:
 						createCounter++
-						s.logger.Info("received a new module version, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
+						s.logger.Info("received a new module version", slog.String("module", task.Module), slog.String("version", task.Version))
 					case backends.TaskDelete:
 						deleteCounter++
-						s.logger.Info("find module version to remove, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
+						s.logger.Info("find module version to remove", slog.String("module", task.Module), slog.String("version", task.Version))
 					}
 				}
 
