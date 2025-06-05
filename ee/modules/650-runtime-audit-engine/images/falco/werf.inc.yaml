@@ -1,3 +1,5 @@
+# We use https://github.com/falcosecurity/falco/pull/3602 to fix build problems in the Release mode.
+# When this PR will be merged, we will return to the release version of Falco.
 {{- $falcoVersion := "2071cab984daeac3582a8f55504b4528a55f8cbb" }}
 {{- $falcoctlVersion := "0.11.2" }}
 {{- $pluginsVersion := "plugins/gcpaudit/v0.6.0" }}
