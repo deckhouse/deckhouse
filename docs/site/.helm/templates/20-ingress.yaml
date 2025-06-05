@@ -321,7 +321,7 @@ spec:
   dnsNames:
   - {{ .URL }}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: {{ $.Chart.Name }}-{{ .Lang }}
