@@ -74,12 +74,11 @@ func applyProviderClusterConfigurationSecretLegacyModeFilter(obj *unstructured.U
 		return nil, fmt.Errorf("failed to unmarshal 'cloud-provider-cluster-configuration.yaml' from 'd8-provider-cluster-configuration' secret: %v", err)
 	}
 
-	var legacyMode *bool
+	var legacyMode bool
 
 	value, ok := configData["legacyMode"]
 	if ok {
-		legacyMode = new(bool)
-		*legacyMode = value.(bool)
+		legacyMode = value.(bool)
 	}
 
 	return legacyMode, nil
@@ -107,7 +106,7 @@ func applyCloudProviderDiscoveryDataSecretVCDAPIVersionFilter(obj *unstructured.
 }
 
 func handleLegacyMode(input *go_hook.HookInput) error {
-	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[*bool](input.NewSnapshots, "legacy_mode")
+	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "legacy_mode")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal legacy_mode snapshot: %w", err)
 	}
@@ -118,9 +117,9 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if legacyModeBools[0] != nil {
+	if len(legacyModeBools) > 0 {
 		// legacyMode is set in the provider cluster configuration secret
-		input.Values.Set("cloudProviderVcd.internal.legacyMode", *legacyModeBools[0])
+		input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyModeBools[0])
 
 		return nil
 	}
@@ -132,6 +131,12 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 
 	if len(vcdAPIVers) == 0 {
 		input.Logger.Warn("VCD API version not defined")
+
+		legacyMode := input.Snapshots["legacy_mode"][0].(bool)
+		if legacyMode {
+			// legacyMode is set in the provider cluster configuration secret
+			input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyMode)
+		}
 
 		return nil
 	}
