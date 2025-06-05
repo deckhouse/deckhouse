@@ -127,7 +127,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Preflight Checks
-	if !state.preflightChecks(inputs) {
+	if !state.bashiblePreflightCheck(inputs) {
 		return nil
 	}
 
@@ -279,7 +279,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Preflight Checks
-	if !state.preflightChecks(inputs) {
+	if !state.bashiblePreflightCheck(inputs) {
 		return nil
 	}
 
@@ -450,7 +450,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
 	// Preflight Checks
-	if !state.preflightChecks(inputs) {
+	if !state.bashiblePreflightCheck(inputs) {
 		return nil
 	}
 
@@ -693,6 +693,29 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	return nil
 }
 
+func (state *State) bashiblePreflightCheck(inputs Inputs) bool {
+	bashiblePreflightCheck := bashible.PreflightCheck(inputs.Bashible)
+
+	if !bashiblePreflightCheck.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeBashiblePreflightCheck,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            bashiblePreflightCheck.Message,
+		})
+		return false
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeBashiblePreflightCheck,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+
+	return true
+}
+
 func (state *State) processBashibleTransition(params bashible.Params, inputs Inputs) (bool, error) {
 	processResult, err := state.Bashible.ProcessTransition(params, inputs.Bashible)
 	if err != nil {
@@ -842,29 +865,6 @@ func (state *State) cleanupInClusterProxy(inputs Inputs) bool {
 
 	state.setCondition(metav1.Condition{
 		Type:               ConditionTypeInClusterProxyCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
-	return true
-}
-
-func (state *State) preflightChecks(inputs Inputs) bool {
-	bashiblePreflightCheck := bashible.PreflightCheck(inputs.Bashible)
-
-	if !bashiblePreflightCheck.Ready {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypePreflightChecks,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            bashiblePreflightCheck.Message,
-		})
-		return false
-	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypePreflightChecks,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})

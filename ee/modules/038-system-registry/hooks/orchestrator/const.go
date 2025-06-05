@@ -13,11 +13,11 @@ import (
 
 const (
 	ConditionTypeReady                   = "Ready"
-	ConditionTypePreflightChecks         = "PreflightChecks"
 	ConditionTypeNodeServices            = "NodeServicesReady"
 	ConditionTypeNodeServicesCleanup     = "CleanupNodeServices"
 	ConditionTypeInClusterProxy          = "InClusterProxyReady"
 	ConditionTypeInClusterProxyCleanup   = "CleanupInClusterProxy"
+	ConditionTypeBashiblePreflightCheck  = "ContainerdConfigPreflightReady"
 	ConditionTypeBashibleTransitionStage = "TransitionContainerdConfigReady"
 	ConditionTypeBashibleFinalStage      = "FinalContainerdConfigReady"
 
@@ -28,11 +28,11 @@ const (
 
 var supportedConditions = map[string]struct{}{
 	ConditionTypeReady:                   {},
-	ConditionTypePreflightChecks:         {},
 	ConditionTypeNodeServices:            {},
 	ConditionTypeNodeServicesCleanup:     {},
 	ConditionTypeInClusterProxy:          {},
 	ConditionTypeInClusterProxyCleanup:   {},
+	ConditionTypeBashiblePreflightCheck:  {},
 	ConditionTypeBashibleTransitionStage: {},
 	ConditionTypeBashibleFinalStage:      {},
 }

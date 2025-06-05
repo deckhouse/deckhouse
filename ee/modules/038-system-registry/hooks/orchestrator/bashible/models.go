@@ -18,7 +18,7 @@ import (
 
 const (
 	transitionMessage     = "Applying configuration to nodes"
-	preflightCheckMessage = "Check containerd configuration"
+	preflightCheckMessage = "Check current nodes configuration"
 )
 
 var (
@@ -97,8 +97,10 @@ func PreflightCheck(input Inputs) Result {
 	var msg strings.Builder
 	fmt.Fprintln(&msg, preflightCheckMessage)
 
+	total := len(input.NodeStatus)
 	if input.IsSecretExist {
-		fmt.Fprintln(&msg, "Bashible secret already exists.")
+		fmt.Fprintln(&msg, "Configuration from registry module already exists.")
+		fmt.Fprintf(&msg, "All %d node(s) Ready to configure.\n", total)
 		return Result{Ready: true, Message: msg.String()}
 	}
 
@@ -109,15 +111,12 @@ func PreflightCheck(input Inputs) Result {
 		}
 	}
 
-	total := len(input.NodeStatus)
-	ready := total - len(pending)
-
 	if len(pending) == 0 {
-		fmt.Fprintf(&msg, "All %d node(s) have default containerd configuration.\n", total)
+		fmt.Fprintf(&msg, "All %d node(s) Ready to configure.\n", total)
 		return Result{Ready: true, Message: msg.String()}
 	}
 
-	fmt.Fprintf(&msg, "%d/%d node(s) ready. Waiting:\n", ready, total)
+	fmt.Fprintf(&msg, "%d/%d node(s) Unready:\n", len(pending), total)
 
 	slices.Sort(pending)
 	const maxShown = 10
@@ -130,9 +129,9 @@ func PreflightCheck(input Inputs) Result {
 
 		switch input.NodeStatus[name].ContainerdCfgMode {
 		case containerdCfgModeCustom:
-			fmt.Fprintf(&msg, "- %s: has custom containerd configuration\n", name)
+			fmt.Fprintf(&msg, "- %s: has custom toml merge containerd configuration\n", name)
 		default:
-			fmt.Fprintf(&msg, "- %s: unknown containerd configuration\n", name)
+			fmt.Fprintf(&msg, "- %s: unknown containerd configuration, waiting...\n", name)
 		}
 	}
 	return Result{Ready: false, Message: msg.String()}
