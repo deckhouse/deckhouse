@@ -243,7 +243,6 @@ properties:
                   properties:
                     X-Scope-OrgID:
                       type: string
-                  required: [ "X-Scope-OrgID" ]
                 writeRelabelConfigs:
                   type: array
                   items:
