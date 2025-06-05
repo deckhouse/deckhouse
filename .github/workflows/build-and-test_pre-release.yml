@@ -462,7 +462,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -475,7 +475,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -744,7 +744,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -757,7 +757,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1026,7 +1026,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1039,7 +1039,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1308,7 +1308,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1321,7 +1321,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1590,7 +1590,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1603,7 +1603,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1872,7 +1872,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1885,7 +1885,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -2215,7 +2215,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:56b70215b98ad0ffd33c01a12b1712dac7334cfbef584cae3415398dc18d9ee5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:e738db27d74414500f273d63e7345b9368cab5c1c5833bc2e32c33aa47cb9936"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
