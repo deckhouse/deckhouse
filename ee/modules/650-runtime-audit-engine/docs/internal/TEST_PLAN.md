@@ -1,4 +1,4 @@
-## Testing plan for the new version of Falco
+# Testing plan for the new version of Falco
 
 If we have updated the Falco version, it is necessary to test its performance and correctness.
 
@@ -55,7 +55,16 @@ kubectl -n d8-runtime-audit-engine logs daemonsets/runtime-audit-engine -f
 - The logs should contain an entry like:
 
 ```json
-{"hostname":"romanenko-master-0","output":"11:18:41.382570987: Notice Inbound SSH Connection (command=sshd pid=1298 connection=185.125.115.231:63352->10.10.0.10:22 user=root user_loginuid=-1 type=accept)","output_fields":{"evt.time":1749208721382570987,"evt.type":"accept","fd.name":"185.125.115.231:63352->10.10.0.10:22","proc.cmdline":"sshd","proc.pid":1298,"user.loginuid":-1,"user.name":"root"},"priority":"Notice","rule":"Inbound SSH Connection","source":"syscall","tags":["auth_attempts","fstec"],"time":"2025-06-06T11:18:41.382570987Z"}
+{
+  "hostname":"romanenko-master-0",
+  "output":"11:18:41.382570987: Notice Inbound SSH Connection (command=sshd pid=1298 connection=185.125.115.231:63352->10.10.0.10:22 user=root user_loginuid=-1 type=accept)",
+  "output_fields":{"evt.time":1749208721382570987,"evt.type":"accept","fd.name":"185.125.115.231:63352->10.10.0.10:22","proc.cmdline":"sshd","proc.pid":1298,"user.loginuid":-1,"user.name":"root"},
+  "priority":"Notice",
+  "rule":"Inbound SSH Connection",
+  "source":"syscall",
+  "tags":["auth_attempts","fstec"],
+  "time":"2025-06-06T11:18:41.382570987Z"
+}
 ```
 
 ### Test 2
@@ -108,5 +117,13 @@ kubectl -n d8-runtime-audit-engine logs $pod -f
 - The logs should contain an entry like
 
 ```json
-{"hostname":"romanenko-worker-f05368e7-4m2dt-wkcj4","output":"11:23:11.855188321: Warning Shell spawned in a container other than entrypoint (user=root container_id=998306071edc container_name=nginx shell=bash parent=runc cmdline=bash)","output_fields":{"container.id":"998306071edc","container.name":"nginx","evt.time":1749208991855188321,"proc.cmdline":"bash","proc.name":"bash","proc.pname":"runc","user.name":"root"},"priority":"Warning","rule":"run_shell_in_container","source":"syscall","tags":[],"time":"2025-06-06T11:23:11.855188321Z"}
+{"hostname":"romanenko-worker-f05368e7-4m2dt-wkcj4",
+  "output":"11:23:11.855188321: Warning Shell spawned in a container other than entrypoint (user=root container_id=998306071edc container_name=nginx shell=bash parent=runc cmdline=bash)",
+  "output_fields":{"container.id":"998306071edc","container.name":"nginx","evt.time":1749208991855188321,"proc.cmdline":"bash","proc.name":"bash","proc.pname":"runc","user.name":"root"},
+  "priority":"Warning",
+  "rule":"run_shell_in_container",
+  "source":"syscall",
+  "tags":[],
+  "time":"2025-06-06T11:23:11.855188321Z"
+}
 ```
