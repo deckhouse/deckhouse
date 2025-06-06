@@ -27,7 +27,7 @@ import:
   add: /
   to: /
   includePaths:
-  - usr/bin/lsblk
+  - bin/lsblk
   before: setup
 imageSpec:
   config:
