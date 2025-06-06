@@ -8,6 +8,7 @@ cpu: 50m
 memory: 100Mi
 {{- end }}
 
+{{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
 {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{ $imageSuffix := get $versionInfo "imageSuffix" }}
@@ -94,6 +95,12 @@ spec:
           runAsUser: 1337
           runAsNonRoot: true
         imagePullPolicy: IfNotPresent
+        {{- if (eq (first $versions) "1.25") }}
+        volumeMounts:
+        - mountPath: /etc/sail-operator
+          name: operator-config
+          readOnly: true
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -120,4 +127,14 @@ spec:
             value: 300s
           - name: REVISION
             value: {{ $revision }}
+      {{- if (eq (first $versions) "1.25") }}
+      volumes:
+        - downwardAPI:
+            defaultMode: 420
+            items:
+            - fieldRef:
+                fieldPath: metadata.annotations
+              path: config.properties
+          name: operator-config
+      {{- end }}
 {{- end }}

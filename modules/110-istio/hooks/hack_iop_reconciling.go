@@ -35,12 +35,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 )
 
 const validatingErrorStr = `failed calling webhook`
 
-type IstioOperatorCrdSnapshot struct {
+type IstioResourceSnapshot struct {
 	Revision  string
 	NeedPunch bool
 }
@@ -63,7 +62,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:        "install.istio.io/v1alpha1",
 			Kind:              "IstioOperator",
 			NamespaceSelector: lib.NsSelector(),
-			FilterFunc:        applyIopFilter,
+			FilterFunc:        filterIstioResource,
+		},
+		{
+			Name:              "istios",
+			ApiVersion:        "sailoperator.io/v1",
+			Kind:              "Istio",
+			NamespaceSelector: lib.NsSelector(),
+			FilterFunc:        filterIstioResource,
 		},
 		{
 			Name:              "istio_operator_pods",
@@ -83,29 +89,51 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			FilterFunc: applyIstioOperatorPodFilter,
+			FilterFunc: filterIstioOperatorPod,
 		},
 	},
-}, hackIopReconcilingHook)
+}, reconcileIstioResources)
 
-func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var iop crd.IstioOperator
-	var result IstioOperatorCrdSnapshot
-	err := sdk.FromUnstructured(obj, &iop)
+func filterIstioResource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var result IstioResourceSnapshot
 
-	if err != nil {
+	// Get revision from spec
+	revision, found, err := unstructured.NestedString(obj.Object, "spec", "revision")
+	if err != nil || !found {
 		return nil, err
 	}
+	result.Revision = revision
 
-	result.Revision = iop.Spec.Revision
-	if iop.Status.ComponentStatus.Pilot.Status == "ERROR" &&
-		strings.Contains(iop.Status.ComponentStatus.Pilot.Error, validatingErrorStr) {
+	// Check for validation errors in status
+	status, found, err := unstructured.NestedMap(obj.Object, "status")
+	if !found || err != nil {
+		return result, nil
+	}
+
+	componentStatus, ok := status["componentStatus"].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	pilot, ok := componentStatus["Pilot"].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	pilotStatus, ok := pilot["status"].(string)
+	if !ok || pilotStatus != "ERROR" {
+		return result, nil
+	}
+
+	errorMsg, ok := pilot["error"].(string)
+	if ok && strings.Contains(errorMsg, validatingErrorStr) {
 		result.NeedPunch = true
 	}
+
 	return result, nil
 }
 
-func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterIstioOperatorPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod v1.Pod
 	var result IstioOperatorPodSnapshot
 	err := sdk.FromUnstructured(obj, &pod)
@@ -121,9 +149,10 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return result, nil
 }
 
-func hackIopReconcilingHook(input *go_hook.HookInput) error {
+func reconcileIstioResources(input *go_hook.HookInput) error {
 	operatorPodMap := make(map[string]string)
 
+	// Build map of operator pods by revision
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
 		if time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.Phase == v1.PodRunning {
@@ -131,14 +160,16 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 		}
 	}
 
-	for _, iopRaw := range input.Snapshots["istio_operators"] {
-		iop := iopRaw.(IstioOperatorCrdSnapshot)
-		if iop.NeedPunch {
-			input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
-			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.Logger.Info("Pod is allowed to punch.", slog.String("name", podName))
-				input.PatchCollector.DeleteInBackground("v1", "Pod", "d8-istio", podName)
-				input.Logger.Info("Pod deleted.", slog.String("name", podName))
+	// Process all Istio resources (both IstioOperator and Istio)
+	for _, snapshot := range []string{"istio_operators", "istios"} {
+		for _, resourceRaw := range input.Snapshots[snapshot] {
+			resource := resourceRaw.(IstioResourceSnapshot)
+			if resource.NeedPunch {
+				input.Logger.Info("Resource needs punch", slog.String("revision", resource.Revision))
+				if podName, ok := operatorPodMap[resource.Revision]; ok {
+					input.Logger.Info("Deleting operator pod", slog.String("name", podName))
+					input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName)
+				}
 			}
 		}
 	}
