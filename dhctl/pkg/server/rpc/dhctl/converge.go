@@ -44,6 +44,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type convergeParams struct {
+	request      *pb.ConvergeStart
+	switchPhase  phases.DefaultOnPhaseFunc
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
+}
+
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -58,6 +65,12 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	sendCh := make(chan *pb.ConvergeResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.ConvergeResponse, any]{
 		f: f, dataFunc: s.convergeSwitchPhaseData, sendCh: sendCh, next: make(chan error),
+	}
+	pt := progressTracker[*pb.ConvergeResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.ConvergeResponse {
+			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Progress{Progress: convertProgress(progress)}}
+		},
 	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
@@ -103,7 +116,12 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
+					result := s.convergeSafe(ctx, convergeParams{
+						request:      message.Start,
+						switchPhase:  phaseSwitcher.switchPhase(ctx),
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
+					})
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
 
@@ -137,34 +155,35 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) convergeSafe(ctx context.Context, request *pb.ConvergeStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.ConvergeResult) {
+func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.ConvergeResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.ConvergeResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
-	return s.converge(ctx, request, switchPhase, options)
+	return s.converge(ctx, p)
 }
 
-func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.ConvergeResult {
+func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   options.DefaultWriter,
-		Width:       int(request.Options.LogWidth),
-		DebugStream: options.DebugWriter,
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DebugWriter,
 	})
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -172,10 +191,10 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -189,8 +208,8 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 	err = log.Process("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -211,8 +230,8 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 	infrastructureContext := infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.ConvergeResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
@@ -220,16 +239,17 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
-		CommanderMode: request.Options.CommanderMode,
+		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 	}
 
 	convergeParams := &converge.Params{
-		OnPhaseFunc: switchPhase,
+		OnPhaseFunc:    p.switchPhase,
+		OnProgressFunc: p.sendProgress,
 		ChangesSettings: infrastructure.ChangeActionSettings{
 			AutomaticSettings: infrastructure.AutomaticSettings{
 				AutoDismissDestructive: false,
@@ -243,24 +263,24 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 		CommanderMode: true,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 		InfrastructureContext:      infrastructureContext,
-		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
+		ApproveDestructiveChangeID: p.request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: request.Options.CommanderMode,
-		ApiServerUrl:  request.Options.ApiServerUrl,
+		CommanderMode: p.request.Options.CommanderMode,
+		ApiServerUrl:  p.request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{
-			Token:                    request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+			Token:                    p.request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
 		},
 		SchemaStore:         s.schemaStore,
-		SSHConnectionConfig: request.ConnectionConfig,
+		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
 	cleanuper.Add(cleanup)
 	if err != nil {
@@ -277,12 +297,12 @@ func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switc
 	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
-	state := converger.GetLastState()
-	stateData, marshalStateErr := json.Marshal(state)
-	resultString, marshalResultErr := json.Marshal(result)
-	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
+	resultData, marshalResultErr := json.Marshal(result)
+	state, stateErr := extractLastState()
 
-	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
+	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+
+	return &pb.ConvergeResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) convergeServerTransitions() []fsm.Transition {
@@ -305,20 +325,14 @@ func (s *Service) convergeServerTransitions() []fsm.Transition {
 	}
 }
 
-func (s *Service) convergeSwitchPhaseData(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	_ any,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) (*pb.ConvergeResponse, error) {
+func (s *Service) convergeSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[any]) (*pb.ConvergeResponse, error) {
 	return &pb.ConvergeResponse{
 		Message: &pb.ConvergeResponse_PhaseEnd{
 			PhaseEnd: &pb.ConvergePhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
+				CompletedPhase:      string(onPhaseData.CompletedPhase),
+				CompletedPhaseState: onPhaseData.CompletedPhaseState,
+				NextPhase:           string(onPhaseData.NextPhase),
+				NextPhaseCritical:   onPhaseData.NextPhaseCritical,
 			},
 		},
 	}, nil

@@ -95,12 +95,3 @@ spec:
   version: 2
   enabled: true
   settings:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: openvpn
-spec:
-  version: 2
-  enabled: true
-  settings:

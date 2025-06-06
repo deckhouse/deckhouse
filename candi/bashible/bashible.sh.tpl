@@ -243,7 +243,7 @@ function main() {
     fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
-    $BOOTSTRAP_DIR/bashible-new.sh --no-lock
+    bash --noprofile --norc -c "$BOOTSTRAP_DIR/bashible-new.sh --no-lock"
 
     # At this step we already know that new version is functional
     mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
@@ -293,7 +293,7 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
+    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then

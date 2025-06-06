@@ -119,7 +119,7 @@ jobs:
 
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
-{!{ tmpl.Exec "block-e2e-until-image-is-not-ready" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "block-until-image-is-not-ready" . | strings.Indent 2 }!}
 
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 

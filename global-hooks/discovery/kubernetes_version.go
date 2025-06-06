@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/module"
@@ -226,10 +228,13 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 		return nil, err
 	}
 
-	serviceSnap := input.Snapshots[kubeServiceSnap]
+	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, kubeServiceSnap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeServiceSnap, err)
+	}
 
 	if len(serviceSnap) > 0 {
-		endpoint := serviceSnap[0].(string)
+		endpoint := serviceSnap[0]
 
 		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
 		if err != nil {
@@ -243,9 +248,8 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 }
 
 func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
-	endpointsSnap := input.Snapshots[kubeEndpointsSnap]
-	serverK8sLabeledSnap := input.Snapshots[kubeAPIServK8sLabeledSnap]
-	serverCPLabeledSnap := input.Snapshots[kubeAPIServCPLabeledSnap]
+	serverK8sLabeledSnap := input.NewSnapshots.Get(kubeAPIServK8sLabeledSnap)
+	serverCPLabeledSnap := input.NewSnapshots.Get(kubeAPIServCPLabeledSnap)
 
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
@@ -256,13 +260,18 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		input.Logger.Info("k8s version. Pods snapshots is empty")
 	}
 
+	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, kubeEndpointsSnap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSnap, err)
+	}
+
 	var endpoints []string
 	if len(endpointsSnap) > 0 {
-		endpointsRaw := endpointsSnap[0]
-		endpoints = endpointsRaw.([]string)
+		endpoints = endpointsSnap[0]
 	} else {
 		input.Logger.Info("k8s version. Endpoints snapshots is empty")
 	}
+
 	endpointsCnt := len(endpoints)
 
 	if endpointsCnt == 0 && podsCnt == 0 {

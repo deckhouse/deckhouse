@@ -97,7 +97,7 @@ groups:
     description:
       en: "*sds-replicated-volume* DRBD replication"
       ru: "Репликация DRBD для *sds-replicated-volume*"
-  - ports: "8469, 8472, 4299, 4298"
+  - ports: "8469, 8472, 4295-4299"
     protocol: UDP
     description:
       en: VXLAN for pod-to-pod traffic encapsulation
@@ -212,7 +212,7 @@ groups:
     description:
       en: chrony-exporter metrics port
       ru: Метрики chrony-exporter
-  - ports: "4288, 4229"
+  - ports: "4288, 4289"
     protocol: TCP
     description:
       en: "monitoring-ping metrics"

@@ -43,6 +43,11 @@ properties:
       рекомендует отключать проверку `svcSourceRangeCheck`.
 
       Не включайте, если перед сервисами есть другой балансировщик или какие-либо виды SNAT.
+  loadBalancerSourceRangeAllTypes:
+    description: |
+      Включает проверку source IP для всех типов сервисов, а не только для LoadBalancer.
+      К соответствующему NodePort или ClusterIP также будет применен фильтр CIDR.
+      Для получения более подробной информации, пожалуйста, перейдите по [ссылке](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
   policyAuditMode:
     description: |
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.

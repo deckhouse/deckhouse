@@ -27,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -91,11 +93,14 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
-	sa := input.Snapshots["default-sa"]
+	sas, err := sdkobjectpatch.UnmarshalToStruct[SA](input.NewSnapshots, "default-sa")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal default-sa snapshot: %w", err)
+	}
 
-	for _, s := range sa {
-		if s.(*SA).AutomountServiceAccountToken {
-			input.PatchCollector.PatchWithMerge(automountPatch, "v1", "ServiceAccount", s.(*SA).Namespace, s.(*SA).Name)
+	for _, sa := range sas {
+		if sa.AutomountServiceAccountToken {
+			input.PatchCollector.PatchWithMerge(automountPatch, "v1", "ServiceAccount", sa.Namespace, sa.Name)
 		}
 	}
 

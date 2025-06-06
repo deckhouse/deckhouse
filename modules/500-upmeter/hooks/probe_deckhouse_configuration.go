@@ -23,6 +23,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(
@@ -69,17 +71,20 @@ func mirrorProbeValue(input *go_hook.HookInput) error {
 		namespace  = ""
 	)
 
-	snaps := input.Snapshots["probe_objects"]
-	input.MetricsCollector.Set("d8_upmeter_upmeterhookprobe_count", float64(len(snaps)), nil)
+	probeObjects, err := sdkobjectpatch.UnmarshalToStruct[probeObject](input.NewSnapshots, "probe_objects")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal probe_objects snapshot: %w", err)
+	}
 
-	for _, raw := range snaps {
-		obj := raw.(probeObject)
+	input.MetricsCollector.Set("d8_upmeter_upmeterhookprobe_count", float64(len(probeObjects)), nil)
 
+	for _, obj := range probeObjects {
 		patchRaw := map[string]interface{}{
 			"spec": map[string]string{
 				"mirror": obj.Inited,
 			},
 		}
+
 		patch, err := json.Marshal(patchRaw)
 		if err != nil {
 			return err
