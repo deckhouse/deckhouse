@@ -9,7 +9,7 @@ The web interface for visualizing the cluster network stack is intended for real
 
 To access the web interface for visualizing the cluster network stack, open the URL: `hubble.<CLUSTER_NAME_TEMPLATE>`, where `<CLUSTER_NAME_TEMPLATE>` is the string matching the cluster’s DNS name template, as specified by the global parameter `modules.publicDomainTemplate`.
 
-When you navigate to `hubble.<CLUSTER_NAME_TEMPLATE>`, you will see a namespace selection screen to choose which namespace’s network stack will be visualized.
+When you navigate to `hubble.<CLUSTER_NAME_TEMPLATE>`, you will see a namespace selection screen to choose which namespace’s network stack will be displayed.
 
 ![Web Interface Hubble](../../images/hubble/hubble-choose-namespace.png)
 
