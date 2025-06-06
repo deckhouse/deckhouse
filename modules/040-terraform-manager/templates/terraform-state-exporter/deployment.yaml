@@ -57,6 +57,8 @@ spec:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: terraform-state-exporter
+      securityContext:
+        fsGroup: 64535
       containers:
       - name: exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -90,7 +92,7 @@ spec:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         volumeMounts:
         - name: terraform-workdir
-          mountPath: /terraform
+          mountPath: /home/terraform
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

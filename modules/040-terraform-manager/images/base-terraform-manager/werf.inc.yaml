@@ -4,9 +4,9 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    workingDir: "/terraform"
+    workingDir: "/home/terraform"
     entrypoint: ["/dhctl"]
-    env: { "PATH": "/:", "HOME": "/terraform"}
+    env: { "PATH": "/:", "HOME": "/home/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -34,9 +34,9 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    workingDir: "/terraform"
+    workingDir: "/home/terraform"
     entrypoint: ["/dhctl"]
-    env: { "PATH": "/:", "HOME": "/terraform"}
+    env: { "PATH": "/:", "HOME": "/home/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
