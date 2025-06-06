@@ -261,12 +261,6 @@ function prepare_environment() {
 
   "Static")
     pre_bootstrap_static_setup
-    # shellcheck disable=SC2016
-#    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-#        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-#        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
-#        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -276,12 +270,35 @@ function prepare_environment() {
     ssh_redos_user_worker="redos"
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
+
+    cluster_template_id="dbe33391-02c1-4f23-a77b-0edb8b079ff6"
+    values="{
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"sshMasterHost\"
+      \"sshMasterUser\"
+      \"sshBastionHost\"
+      \"sshBastionUser\"
+      \"sshRedosHost\"
+      \"sshRedosUser\"
+      \"sshOpensuseHost\"
+      \"sshOpensuseUser\"
+      \"sshRosaHost\"
+      \"sshRosaUser\"
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"imagesRepo\"
+      \"deckhouseDockercfg\"
+      \"branch\": \"${DEV_BRANCH}\",
+
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
+
     ;;
   esac
 }
 
 function pre_bootstrap_static_setup() {
-  cwd=testing/cloud_layouts/Static
+  cwd=$(pwd)/testing/cloud_layouts/Static
   cd $cwd/registry-mirror
 
   BASTION_INTERNAL_IP=192.168.199.254
@@ -298,19 +315,23 @@ function pre_bootstrap_static_setup() {
   cd ..
 }
 
+function get_opentofu() {
+  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
+  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" $cwd/opentofu
+  docker rm "$CONTAINER_ID"
+  chmod +x $cwd/opentofu
+}
+
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
 
-  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
-  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" ./opentofu
-  docker rm "$CONTAINER_ID"
-  chmod +x ./opentofu
+  get_opentofu
 
-#  $(pwd)/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-#  $(pwd)/opentofu apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+#  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+#  $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   # TODO to delete, mac os debug
   tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  tofu apply -state="${terraform_state_file}" -auto-approve -no-color || return $?
+  tofu apply -auto-approve -no-color || return $?
 
   if ! master_ip="$(tofu output -raw master_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get master_ip from opentofu output"
@@ -343,13 +364,15 @@ function bootstrap_static() {
   fi
 
   # Add key to access to hosts thru bastion
+  set_common_ssh_parameters
   eval "$(ssh-agent -s)"
-  ssh-add "$ssh_private_key_path"
+  ssh-add "id_rsa"
+  scp_command="scp -S /usr/bin/ssh -F /tmp/cloud-test-ssh-config"
   ssh_bastion="-J $ssh_user@$bastion_ip"
 
   waitForInstancesAreBootstrappedAttempts=20
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: master instance couldn't get bootstrapped"
@@ -360,7 +383,7 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: system instance couldn't get bootstrapped"
@@ -371,7 +394,7 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
@@ -382,7 +405,7 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
@@ -393,7 +416,7 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: rosa worker instance couldn't get bootstrapped"
@@ -403,18 +426,17 @@ function bootstrap_static() {
     sleep 5
   done
 
-
-  tar -cvf $cwd/registry-mirror.tar $cwd/registry-mirror
+  tar -cvf $cwd/registry-mirror.tar registry-mirror
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
-    $scp_command -i "$ssh_private_key_path" $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
-    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+    $scp_command $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
+    if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
       apt-get update
       apt-get install -y docker.io docker-compose wget curl
 
       tar -xvf /tmp/registry-mirror.tar
-      cd deckhouse/testing/cloud_layouts/Static/registry-mirror
+      cd registry-mirror
       ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
       ./gen-ssl.sh
       env BASTION_INTERNAL_IP=${BASTION_INTERNAL_IP} envsubst '\$BASTION_INTERNAL_IP' < registry-config.tpl.yaml > registry-config.yaml
@@ -433,14 +455,6 @@ ENDSSH
   if [[ $initial_setup_failed == "true" ]] ; then
     return 1
   fi
-
-  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
-    MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
-    WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
-    WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
-    WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
-    envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
-    <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
   D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
@@ -643,53 +657,10 @@ ENDSSH
   if [[ $initial_setup_failed == "true" ]] ; then
     return 1
   fi
+}
 
-  # Prepare resources.yaml for starting working node with CAPS
-  # shellcheck disable=SC2016
-  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
-      MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
-      WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
-      WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
-      WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
-      envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
-      <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+function system_node_register() {
 
-  # Bootstrap
-  >&2 echo "Run dhctl bootstrap ..."
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    $scp_command -i "$ssh_private_key_path" $cwd/configuration.yaml "$ssh_user@$bastion_ip:/tmp/configuration.yaml"
-    $scp_command -i "$ssh_private_key_path" $cwd/resources.yaml "$ssh_user@$bastion_ip:/tmp/resources.yaml"
-    $scp_command -i "$ssh_private_key_path" $ssh_private_key_path "$ssh_user@$bastion_ip:/tmp/sshkey"
-    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-      mkdir -p /etc/docker
-      echo '{"insecure-registries":["192.168.199.254:5000"]}' > /etc/docker/daemon.json
-      systemctl restart docker
-      docker login -p ${LOCAL_REGISTRY_MIRROR_PASSWORD} -u mirror ${IMAGES_REPO}
-      docker run \
-        -v /tmp/sshkey:/tmp/sshkey \
-        -v /tmp/configuration.yaml:/tmp/configuration.yaml \
-        -v /tmp/resources.yaml:/tmp/resources.yaml \
-        ${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG} \
-        dhctl --do-not-write-debug-log-file bootstrap \
-            --resources-timeout="30m" --yes-i-want-to-drop-cache \
-            --ssh-host "$master_ip" \
-            --ssh-agent-private-keys "/tmp/sshkey" \
-            --ssh-user "$ssh_user" \
-            --ssh-extra-args="-S ssh" \
-            --config "/tmp/configuration.yaml" \
-            --config "/tmp/resources.yaml" | tee -a "$bootstrap_log" || return $?
-ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Bootstrap cluster (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
-    fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
   >&2 echo "==============================================================
 
   Cluster bootstrapped. Register 'system' and 'worker' nodes and starting the test now.
@@ -789,7 +760,7 @@ ConnectTimeout 10
 LogLevel quiet
 EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
-  chmod 400 id_rsa
+  chmod 600 id_rsa
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
 }
@@ -1148,6 +1119,10 @@ function run-test() {
     fi
   done
 
+  if [[ ${PROVIDER} == "Static" ]]; then
+    system_node_register || return $?
+  fi
+
   wait_upmeter_green || return $?
 
   check_resources_state_results || return $?
@@ -1275,6 +1250,16 @@ function cleanup() {
       return 1
     fi
   done
+
+  if [[ ${PROVIDER} == "Static" ]]; then
+    get_opentofu
+    #  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    #  $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+    # TODO to delete, mac os debug
+    tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    tofu destroy -auto-approve -no-color || return $?
+  fi
+
 }
 
 
