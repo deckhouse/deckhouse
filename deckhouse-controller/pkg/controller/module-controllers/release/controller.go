@@ -966,13 +966,28 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		if valuesByConfig || strings.Contains(err.Error(), "is required") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet("{PREFIX}module_config_configuration_error",
+			r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
 				1,
 				configConfigurationErrorMetricsLabels,
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
 			status.Message = "initial module config validation failed: " + err.Error()
+
+			module := new(v1alpha1.Module)
+			if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
+			}
+
+			module.SetConditionFalse(
+				v1alpha1.ModuleConditionEnabledByModuleConfig,
+				"",
+				fmt.Sprintf("Initial config for module %s is not valid", release.GetModuleName()),
+			)
+
+			if err := r.client.Update(ctx, module); err != nil {
+				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
+			}
 		}
 
 		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
@@ -984,7 +999,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
-	r.metricStorage.GaugeSet("{PREFIX}module_config_configuration_error",
+	r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
 		0,
 		configConfigurationErrorMetricsLabels,
 	)

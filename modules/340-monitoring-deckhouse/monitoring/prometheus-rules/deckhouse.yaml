@@ -545,9 +545,9 @@
         ```
 
         A new suitable policy will be detected automatically.
-  - alert: D8DeckhouseModuleReleaseValidationError
+  - alert: D8DeckhouseModuleValidationError
     expr: |
-      increase(deckhouse_module_config_configuration_error[3m]) > 0
+      deckhouse_module_configuration_error > 0
     for: 3m
     labels:
       tier: cluster
@@ -556,7 +556,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: Module update policy not found for `{{ $labels.module_release }}`.
+      summary: Module configuration failed for module {{ $labels.module }}.
       description: |
         Initial config for module {{ $labels.module }} is not valid. 
         

@@ -1069,16 +1069,6 @@ alerts:
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook is crashing too frequently.
       severity: "9"
       markupFormat: markdown
-    - name: D8DeckhouseModuleReleaseValidationError
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n \n```bash\nkubectl get mr -l module={{ $labels.module }}\n```\n\nProvided  error: {{ $labels.error }}\n"
-      summary: |
-        Module update policy not found for {{ $labels.module_release }}.
-      severity: "5"
-      markupFormat: markdown
     - name: D8DeckhouseModuleUpdatePolicyNotFound
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -1096,6 +1086,16 @@ alerts:
         A new suitable policy will be detected automatically.
       summary: |
         Module update policy not found for {{ $labels.module_release }}.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8DeckhouseModuleValidationError
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n \n```bash\nkubectl get mr -l module={{ $labels.module }}\n```\n\nProvided  error: {{ $labels.error }}\n"
+      summary: |
+        Module configuration failed for module {{ $labels.module }}.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
