@@ -11,7 +11,7 @@ import:
   - lib64
   before: install
 - image: {{ $.ModuleName }}/falco-falcoctl-artifact
-  add: /src/falcoctl
+  add: /out/falcoctl
   to: /usr/bin/falcoctl
   before: install
 - image: {{ $.ModuleName }}/falco-plugins-artifact

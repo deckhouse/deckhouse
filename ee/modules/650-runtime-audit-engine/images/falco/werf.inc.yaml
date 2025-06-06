@@ -17,7 +17,7 @@ import:
   - lib64
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
-  add: /src/falcoctl
+  add: /out/falcoctl
   to: /usr/bin/falcoctl
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
@@ -69,8 +69,10 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
-  - chown 64535:64535 falcoctl
-  - chmod 0755 falcoctl
+  - mkdir -p /out
+  - cp falcoctl /out
+  - chown 64535:64535 /out/falcoctl
+  - chmod 0755 /out/falcoctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
@@ -122,6 +124,7 @@ shell:
   - make clean
   - cd /out
   - /binary_replace.sh -i usr/bin/falco -o /out
+  - chown -R 64535:64535 /out
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
@@ -159,6 +162,7 @@ shell:
   - make clean
   - cd /out
   - /binary_replace.sh -i "usr/share/falco/plugins/libjson.so usr/share/falco/plugins/libk8saudit.so usr/share/falco/plugins/libk8smeta.so" -o /out
+  - chown -R 64535:64535 /out
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
 fromImage: common/relocate-artifact
