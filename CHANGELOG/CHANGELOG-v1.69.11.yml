@@ -1,0 +1,19 @@
+ci:
+  fixes:
+    - summary: fix static e2e tests for fe/upgrade
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13752
+      impact: fix static e2e tests for fe/upgrade
+istio:
+  fixes:
+    - summary: proxy-buffer-size increased in kiali Ingress.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13721
+metallb:
+  fixes:
+    - summary: >-
+        Reverted the fix for handling deleted Services and revising the IP pools in L2 mode. The
+        correct fix is under construction.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13836
+      impact: >-
+        In L2 mode, the Public IP address will not be marked as free in the pool after deleting the
+        LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
+
