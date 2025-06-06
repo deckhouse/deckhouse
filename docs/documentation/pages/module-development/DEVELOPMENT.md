@@ -381,3 +381,27 @@ An example:
 $ crane export registry.example.io/modules-source/module-1/release:alpha - | tar -Oxf - version.json
 {"version":"v1.23.2"}
 ```
+
+## Module auto-update logic
+
+1. **Module installation**. When a module is enabled (`Enable module X`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
+
+1. **Module disabling**. When a module is disabled (`Disable module X`):
+   - The module stops receiving new releases.
+   - The currently deployed version remains in the cluster with the `Deployed` status.
+
+1. **Behavior on re-enabling**.
+
+   If the module is re-enabled within 72 hours:
+   - The previously deployed version (ModuleRelease v1.0.0) is used.
+   - New releases are checked.
+   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
+   - The module is then updated according to the standard update rules (Update).
+
+   If the module is re-enabled after 72 hours:
+   - The old version is deleted (Delete ModuleRelease v1.0.0).
+   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
+   - The cycle starts again as if the module was enabled for the first time (see step 1).
+
+1. **Behavior of a disabled module**. If a module is disabled, no new releases are downloaded. The previously deployed version (the last one that was enabled) is removed after 72 hours if the module is not re-enabled within that time.
+
