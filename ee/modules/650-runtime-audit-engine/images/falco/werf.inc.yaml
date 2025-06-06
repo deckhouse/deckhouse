@@ -1,6 +1,6 @@
 # We use https://github.com/falcosecurity/falco/pull/3602 to fix build problems in the Release mode.
 # When this PR will be merged, we will return to the release version of Falco.
-{{- $falcoVersion := "2071cab984daeac3582a8f55504b4528a55f8cbb" }}
+{{- $falcoVersion := "0.41.0" }}
 {{- $falcoctlVersion := "0.11.2" }}
 {{- $pluginsVersion := "plugins/gcpaudit/v0.6.0" }}
 ---
@@ -36,9 +36,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falco.git /src/falco
-  - cd /src/falco
-  - git checkout d2c63dd5ddde4beffc47f1262d54f8db91dbba46
+  - git clone --branch {{ $falcoVersion}} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falco.git /src/falco
   - git clone --branch {{ $pluginsVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/plugins.git /src/plugins
   - git clone --branch v{{ $falcoctlVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falcoctl.git /src/falcoctl
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
@@ -108,6 +106,8 @@ shell:
   - mkdir -p /src/build
   - cd /src/build
   - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src
+  # fix build tbb lib on altlinux (redefine FORTIFY_SOURCE)
+  - sed -i 's|cd /src/build/tbb-prefix/src/tbb && /usr/bin/cmake -E touch /src/build/tbb-prefix/src/tbb-stamp/tbb-configure|&\n\tsed -i "s\|-D_FORTIFY_SOURCE=2\|-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2\|g" /src/build/tbb-prefix/src/tbb/src/tbb/CMakeFiles/tbb.dir/flags.make|' CMakeFiles/tbb.dir/build.make
   {{- if $.DistroPackagesProxy }}
   # build in the closed env
   - |
