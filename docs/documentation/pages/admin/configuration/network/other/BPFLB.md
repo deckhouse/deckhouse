@@ -9,7 +9,7 @@ You can use the [Cilium](../../reference/mc/cni-cilium/) module to configure the
 
 Kubernetes typically uses schemes where traffic comes to a balancer that distributes it among many servers. Both incoming and outgoing traffic passes through the balancer. Thus, the total throughput is limited by the resources and channel width of the balancer. To optimize traffic and unload the balancer, the `DSR` mechanism was invented, in which incoming packets go through the balancer, and outgoing ones go directly from the terminating servers. Since responses are usually much larger in size than requests, this approach can significantly increase the overall throughput of the scheme.
 
-To extend the capabilities, the module allows [selectable mode of operation](configuration.html#parameters-bpflbmode), which affects the behavior of `Service` with the `NodePort` and `LoadBalancer` types:
+To extend the capabilities, the module allows selectable mode of operation via the [bpfLBMode](configuration.html#parameters-bpflbmode) parameter, which affects the behavior of `Service` with the `NodePort` and `LoadBalancer` types:
 
 * `SNAT` (Source Network Address Translation) — is a subtype of NAT in which, for each outgoing packet, the source IP address is translated to the IP address of the gateway from the target subnet, and incoming packets passing through the gateway are translated back based on a translation table. In this mode, `bpfLB` fully replicates the logic of `kube-proxy`:
   * if `externalTrafficPolicy: Local` is specified in the `Service`, the traffic will be forwarded and balanced only to those target pods running on the same node where the traffic arrived. If the target pod is not running on this node, the traffic will be dropped.
@@ -31,3 +31,18 @@ To extend the capabilities, the module allows [selectable mode of operation](con
 In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
 Network equipment must be ready for asymmetric traffic flow: IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
 {% endalert %}
+
+Example of bpfLB operation mode setting:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  settings:
+    tunnelMode: VXLAN
+    bpfLBMode: SNAT # SNAT (Source Network Address Translation) mode is selected
+  version: 1
+  enabled: true
+```
