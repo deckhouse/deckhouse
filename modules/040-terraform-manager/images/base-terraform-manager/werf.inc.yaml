@@ -20,7 +20,7 @@ import:
   owner: 64535
   group: 64535
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate
   to: /
   before: setup
