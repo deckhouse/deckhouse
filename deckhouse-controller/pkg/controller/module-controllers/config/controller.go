@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -62,6 +63,7 @@ func RegisterController(
 	mm moduleManager,
 	handler *confighandler.Handler,
 	ms metric.Storage,
+	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -72,6 +74,7 @@ func RegisterController(
 		moduleManager:   mm,
 		metricStorage:   ms,
 		configValidator: configtools.NewValidator(mm),
+		exts:            exts,
 	}
 
 	r.init.Add(1)
@@ -113,11 +116,12 @@ func RegisterController(
 type reconciler struct {
 	init            *sync.WaitGroup
 	client          client.Client
-	log             *log.Logger
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
 	metricStorage   metric.Storage
 	configValidator *configtools.Validator
+	exts            *extenders.ExtendersStack
+	log             *log.Logger
 }
 
 type moduleManager interface {

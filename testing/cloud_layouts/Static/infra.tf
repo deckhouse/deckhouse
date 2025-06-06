@@ -65,7 +65,6 @@ data "openstack_networking_network_v2" "external" {
 resource "openstack_networking_network_v2" "internal" {
   name                  = "candi-${var.PREFIX}"
   admin_state_up        = "true"
-  port_security_enabled = "false"
 }
 
 resource "openstack_networking_subnet_v2" "internal" {
@@ -195,7 +194,7 @@ resource "openstack_compute_instance_v2" "master" {
 
 resource "openstack_blockstorage_volume_v3" "bastion" {
   name                 = "candi-${var.PREFIX}-bastion-0"
-  size                 = "60"
+  size                 = "90"
   image_id             = data.openstack_images_image_v2.astra_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone

@@ -47,8 +47,7 @@ cleanup:
 ---
 # version map
 {{- include "parse_version_map" . }}
-# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh and /deckhouse-controller/files/bashrc
-{{- $_ := set . "kubectlForBaseComponents" (list "1.30" "1.32") }}
+{{- include "base_k8s_versions" . }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
@@ -74,9 +73,9 @@ cleanup:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
-{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
+{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
+{{ include "base_for_go_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---

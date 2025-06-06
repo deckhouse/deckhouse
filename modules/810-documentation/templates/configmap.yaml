@@ -112,7 +112,7 @@ data:
 
         # Modules from source index page
         location ~* ^/(ru|en)/modules/$ {
-            try_files /modules/$1/readme.html =404;
+            try_files /modules/$1/index.html =404;
         }
 
         # Redirects for modules folders

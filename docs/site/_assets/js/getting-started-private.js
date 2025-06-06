@@ -44,11 +44,8 @@ $(document).ready(function () {
 
     if (noProxyAddressList && noProxyAddressList.length > 0) {
       noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
-    } else {
-      noProxyAddressList = '<NO_PROXY_LIST>';
-      }
-    update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
-
+      update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
+    }
   } else {
     // Delete proxy section
     $('code span.na').filter(function () {

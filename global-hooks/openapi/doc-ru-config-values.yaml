@@ -45,8 +45,9 @@ properties:
 
           **Обратите внимание:**
           - Нельзя использовать в кластере DNS-имена (создавать соответствующие Ingress-ресурсы), подпадающие под указанный шаблон. Это может вызвать пересечения с создаваемыми Deckhouse Ingress-ресурсами.
-          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain). Например, если `clusterDomain` установлен в `cluster.local` (значение по умолчанию), то `publicDomainTemplate` не может быть `%s.cluster.local`.
-          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) и внутренней сервисной зоне сети. Например, если clusterDomain установлен в cluster.local (по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть %s.cluster.local или %s.ru-central1.internal.
+          - Домен, указанный в шаблоне, не должен совпадать с доменом, заданным в параметре [clusterDomain](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain).
+          - Домен, используемый в шаблоне, также не должен совпадать с доменом внутренней сервисной зоны сети.  
+          Например, если внутренняя зона — `ru-central1.internal`, то publicDomainTemplate не может быть `%s.ru-central1.internal`.
           - Если параметр не указан, Ingress-ресурсы создаваться не будут.
       placement:
         description: |

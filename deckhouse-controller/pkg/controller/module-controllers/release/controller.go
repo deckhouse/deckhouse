@@ -82,6 +82,8 @@ func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
 	dc dependency.Container,
+	exts *extenders.ExtendersStack,
+
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	ms metric.Storage,
 	logger *log.Logger,
@@ -97,6 +99,7 @@ func RegisterController(
 		embeddedPolicy:       embeddedPolicy,
 		delayTimer:           time.NewTimer(delayTimer),
 		dependencyContainer:  dc,
+		exts:                 exts,
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
 	}
 
@@ -131,10 +134,12 @@ type MetricsUpdater interface {
 }
 
 type reconciler struct {
-	init                 *sync.WaitGroup
-	client               client.Client
-	log                  *log.Logger
-	dependencyContainer  dependency.Container
+	init                *sync.WaitGroup
+	client              client.Client
+	log                 *log.Logger
+	dependencyContainer dependency.Container
+	exts                *extenders.ExtendersStack
+
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
 	metricStorage        metric.Storage
@@ -601,7 +606,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.log)
+	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, r.log)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
@@ -1209,7 +1214,8 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 	}
 
 	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
-		extenders.DeleteConstraints(release.GetModuleName())
+		r.exts.DeleteConstraints(release.GetModuleName())
+
 		symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.GetWeight(), release.GetModuleName()))
 		if err := os.RemoveAll(symlinkPath); err != nil {
 			r.log.Error("failed to remove module in downloaded symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))

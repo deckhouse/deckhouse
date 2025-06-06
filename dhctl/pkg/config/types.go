@@ -19,6 +19,8 @@ import "fmt"
 const (
 	CloudClusterType  = "Cloud"
 	StaticClusterType = "Static"
+	ProviderVCD       = "VCD"
+	ProviderYandex    = "Yandex"
 )
 
 type SchemaIndex struct {
@@ -84,4 +86,13 @@ type DeckhouseClusterConfig struct {
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+}
+
+type VCDProviderConfig struct {
+	Server   string `json:"server"`
+	Insecure bool   `json:"insecure,omitempty"`
+}
+
+type VCDProviderInfo struct {
+	ApiVersion string
 }

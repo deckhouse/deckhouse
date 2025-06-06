@@ -105,7 +105,7 @@ help:
 
 
 GOLANGCI_VERSION = 2.1.2
-TRIVY_VERSION= 0.60.0
+TRIVY_VERSION= 0.63.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -230,7 +230,7 @@ cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/d8_images_cve_scan.sh
 
-cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
+cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/check-non-root.sh
 

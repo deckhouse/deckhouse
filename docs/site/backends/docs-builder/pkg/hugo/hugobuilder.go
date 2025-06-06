@@ -85,7 +85,7 @@ func (b *hugoBuilder) build() error {
 	return nil
 }
 
-func (b *hugoBuilder) buildSites(noBuildLock bool) (err error) {
+func (b *hugoBuilder) buildSites(noBuildLock bool) error {
 	h, err := b.hugo()
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	if syncer.Delete {
 		infol.Logf("removing all files from destination that don't exist in static dirs")
 
-		syncer.DeleteFilter = func(f os.FileInfo) bool {
+		syncer.DeleteFilter = func(f fsync.FileInfo) bool {
 			return f.IsDir() && strings.HasPrefix(f.Name(), ".")
 		}
 	}
@@ -295,8 +295,7 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"
-	// for v0.120.0 +
-	// conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
+	conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
 
 	b.conf = conf
 
