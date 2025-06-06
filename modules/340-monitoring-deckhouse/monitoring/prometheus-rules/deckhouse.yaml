@@ -547,7 +547,7 @@
         A new suitable policy will be detected automatically.
   - alert: D8DeckhouseModuleReleaseValidationError
     expr: |
-      increase(d8_module_config_configuration_error[3m]) > 0
+      increase(deckhouse_module_config_configuration_error[3m]) > 0
     for: 3m
     labels:
       tier: cluster
