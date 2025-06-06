@@ -24,7 +24,7 @@ index c1dd745583d..153534861c7 100644
  	github.com/golang/protobuf v1.5.4 // @grafana/backend-platform
  	github.com/google/btree v1.1.2 // indirect
 @@ -398,7 +398,7 @@ require (
- 
+
  require (
  	cloud.google.com/go/iam v1.1.12 // indirect
 -	filippo.io/age v1.1.1 // @grafana/grafana-authnz-team
