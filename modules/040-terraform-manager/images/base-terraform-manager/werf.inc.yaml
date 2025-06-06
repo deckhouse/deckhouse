@@ -6,7 +6,7 @@ imageSpec:
   config:
     workingDir: "/terraform"
     entrypoint: ["/dhctl"]
-    env: { "PATH": "/terraform:/", "HOME": "/terraform/"}
+    env: { "PATH": "/:", "HOME": "/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -15,10 +15,8 @@ import:
   group: 64535
   before: setup
 - image: terraform
-  add: /terraform
+  add: /terraform/terraform
   to:  /terraform
-  includePaths:
-    - terraform
   owner: 64535
   group: 64535
   before: setup
@@ -36,27 +34,23 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    workingDir: "/opentofu"
+    workingDir: "/terraform"
     entrypoint: ["/dhctl"]
-    env: { "PATH": "/opentofu:/", "HOME": "/opentofu/"}
+    env: { "PATH": "/:", "HOME": "/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
-- image: terraform
-  add: /opentofu
+- image: opentofu
+  add: /opentofu/opentofu
   to:  /opentofu
-  includePaths:
-    - opentofu
   owner: 64535
   group: 64535
   before: setup
-- image: terraform
-  add: /opentofu
-  to:  /opentofu
-  includePaths:
-    - terraform
+- image: opentofu # just backwards compatibility
+  add: /opentofu/opentofu
+  to:  /terraform
   owner: 64535
   group: 64535
   before: setup

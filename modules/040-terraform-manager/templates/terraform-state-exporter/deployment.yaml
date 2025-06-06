@@ -59,7 +59,7 @@ spec:
       serviceAccountName: terraform-state-exporter
       containers:
       - name: exporter
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         args:
         - "--do-not-write-debug-log-file"
         - "terraform"
@@ -88,6 +88,9 @@ spec:
         - name: DHCTL_CLI_ALLOWED_COMMANDS
           value: "terraform converge-exporter check"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        volumeMounts:
+        - name: terraform-workdir
+          mountPath: /terraform
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -133,4 +136,6 @@ spec:
 {{- end }}
       volumes:
         - name: tmp
+          emptyDir: {}
+        - name: terraform-workdir
           emptyDir: {}
