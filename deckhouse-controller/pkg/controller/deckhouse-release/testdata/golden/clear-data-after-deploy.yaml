@@ -1,0 +1,15 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.26.2
+  resourceVersion: "1000"
+spec:
+  version: v1.26.2
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  transitionTime: null
