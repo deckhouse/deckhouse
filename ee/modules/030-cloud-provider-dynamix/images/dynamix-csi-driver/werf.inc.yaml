@@ -39,7 +39,7 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="chore/cve-fix"
+  - export VERSION="v0.3.1-RC1"
   - export VERSION_COMMON="chore/cve-fix"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
@@ -49,7 +49,6 @@ shell:
   - cd /src/dynamix-common
   - rm -rf .git vendor
 ---
-# stub diff
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 fromImage: builder/golang-alpine
