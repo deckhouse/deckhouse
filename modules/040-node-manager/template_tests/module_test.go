@@ -1912,7 +1912,6 @@ internal:
 					} else {
 						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
 					}
-
 				}
 
 				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
@@ -2217,7 +2216,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-71610da1",
+					templateName: "worker-75eea1e8",
 				})
 			})
 		})
