@@ -14,19 +14,19 @@ import (
 	"strings"
 	"time"
 
-	"report-updater/internal/cache"
-
 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
+
+	"report-updater/internal/cache"
 )
 
 var _ http.Handler = (*Handler)(nil)
 
 // Handler is a main entrypoint for the webhook
 type Handler struct {
-	logger     *log.Logger
-	dictionary cache.Cache
-	settings   *HandlerSettings
+	logger   *log.Logger
+	dict     *cache.VulnerabilityCache
+	settings *HandlerSettings
 }
 
 type HandlerSettings struct {
@@ -39,28 +39,26 @@ type patchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func NewHandler(logger *log.Logger, dict cache.Cache, settings *HandlerSettings) (*Handler, error) {
+func NewHandler(logger *log.Logger, dict *cache.VulnerabilityCache, settings *HandlerSettings) (*Handler, error) {
 	return &Handler{
-		logger:     logger,
-		dictionary: dict,
-		settings:   settings,
+		logger:   logger,
+		dict:     dict,
+		settings: settings,
 	}, nil
 }
 
 func (h *Handler) StartRenewCacheLoop(ctx context.Context) {
 	ticker := time.NewTicker(h.settings.DictRenewInterval)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			h.logger.Println("Starting periodic dictionary update")
-			h.dictionary.Renew(ctx)
-		}
+
+	for range ticker.C {
+		h.logger.Println("Starting periodic dict update")
+		h.dict.Renew(ctx)
 	}
 }
 
 func (h *Handler) CheckBDU() error {
-	return h.dictionary.Check()
+	return h.dict.Check()
 }
 
 func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperation, error) {
@@ -73,7 +71,7 @@ func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperatio
 
 	for k, v := range report.Report.Vulnerabilities {
 		if !strings.HasPrefix(v.VulnerabilityID, "BDU") {
-			entry, found := h.dictionary.Get(v.VulnerabilityID)
+			entry, found := h.dict.Get(v.VulnerabilityID)
 			if found && len(entry) > 0 {
 				patches = append(patches, patchOperation{
 					Op:    "replace",
@@ -120,6 +118,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) mutateRequest(review *admissionv1.AdmissionReview) (*admissionv1.AdmissionReview, error) {
 	patches, err := h.createPatch(review)
+	if err != nil {
+		return nil, err
+	}
 
 	patchBytes, err := json.Marshal(patches)
 	if err != nil {
