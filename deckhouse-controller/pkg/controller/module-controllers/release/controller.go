@@ -966,7 +966,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		if valuesByConfig || strings.Contains(err.Error(), "is required") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet("{PREFIX}module_config_configuration_error",
+			r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
 				1,
 				configConfigurationErrorMetricsLabels,
 			)
@@ -984,7 +984,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
-	r.metricStorage.GaugeSet("{PREFIX}module_config_configuration_error",
+	r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
 		0,
 		configConfigurationErrorMetricsLabels,
 	)
