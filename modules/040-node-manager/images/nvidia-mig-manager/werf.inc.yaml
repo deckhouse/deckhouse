@@ -3,9 +3,30 @@
 image: {{ .ModuleName }}/nvidia-mig-manager
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /nvidia-mig-manager
-  to: /nvidia-mig-manager
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  includePaths:
+    - nvidia-mig-parted
+    - nvidia-mig-manager
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /usr/lib64
+  includePaths:
+    - libc.so.6
+    - libresolv.so.2
+    - ld-linux-x86-64.so.2
+    - libpthread.so.0
+    - librt.so.1
+    - libdl.so.2
+    - libm.so.6
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  includePaths:
+    - lib64
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /busybox
   before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

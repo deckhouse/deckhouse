@@ -68,9 +68,9 @@ version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,2}[.][0-9]{1,2}" /proc/driver/nvidia
 compare $version
 bb-log-info "NVidia drivers version: ${version}"
 
-    {{ if eq .gpu.sharing "Mig" }}
+    {{ if eq .nodeGroup.gpu.sharing "Mig" }}
 
-bb-package-install "nvidia-mig-parted:{{ .images.registrypackages.nvidiaMigParted0121 }}"
+nvidia-smi -mig 1
 
     {{- end }}
   {{- end }}

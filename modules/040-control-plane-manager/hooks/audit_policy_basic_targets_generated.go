@@ -62,6 +62,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-instance-manager:node-group",
 	"system:serviceaccount:d8-cloud-instance-manager:nvidia-device-plugin",
 	"system:serviceaccount:d8-cloud-instance-manager:nvidia-gpu-feature-discovery",
+	"system:serviceaccount:d8-cloud-instance-manager:nvidia-mig-manager",
 	"system:serviceaccount:d8-cloud-instance-manager:registry-packages-proxy",
 	"system:serviceaccount:d8-cloud-provider-aws:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-aws:cloud-data-discoverer",

@@ -122,6 +122,8 @@ linters-settings:
           name: nvidia-gpu-feature-discovery
         - kind: ServiceAccount
           name: node-feature-discovery-master
+        - kind: ServiceAccount
+          name: nvidia-mig-manager
         - kind: Role
           name: node-manager:nvidia-gpu:node-feature-discovery-worker
         - kind: RoleBinding
