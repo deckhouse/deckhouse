@@ -26,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
@@ -67,21 +69,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, clusterConfiguration)
 
 func clusterConfiguration(input *go_hook.HookInput) error {
-	currentConfig, ok := input.Snapshots["clusterConfiguration"]
+	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.NewSnapshots, "clusterConfiguration")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
+	}
 
 	// no cluster configuration — unset global value if there is one.
-	if !ok {
+	if len(currentConfig) == 0 {
 		if input.Values.Exists("global.clusterConfiguration") {
 			input.Values.Remove("global.clusterConfiguration")
 		}
 	}
 
-	if ok && len(currentConfig) > 0 {
+	if len(currentConfig) > 0 {
 		// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
-		configYamlBytes := currentConfig[0].(*ClusterConfigurationYaml)
+		configYamlBytes := currentConfig[0]
 
 		var metaConfig *config.MetaConfig
-		metaConfig, err := config.ParseConfigFromData(string(configYamlBytes.Content))
+		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content))
 		if err != nil {
 			return err
 		}

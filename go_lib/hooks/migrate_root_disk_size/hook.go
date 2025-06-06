@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -25,6 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -108,12 +113,16 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) error {
-	providerConfigSecretSnap := input.Snapshots["provider_configuration"]
-	if len(providerConfigSecretSnap) == 0 {
+	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.NewSnapshots, "provider_configuration")
+	if err != nil {
+		return fmt.Errorf("unable to parse provider_configuration snapshot: %w", err)
+	}
+
+	if len(providerConfigSecrets) == 0 {
 		return nil
 	}
 
-	needMigration, err := needMigrateForDeckhouseInstallVersion(input.Snapshots)
+	needMigration, err := needMigrateForDeckhouseInstallVersion(input.NewSnapshots)
 	if err != nil {
 		return err
 	}
@@ -123,7 +132,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 		return nil
 	}
 
-	providerConfigSecret := providerConfigSecretSnap[0].(*corev1.Secret)
+	providerConfigSecret := providerConfigSecrets[0]
 
 	backupSecret := providerConfigSecret.DeepCopy()
 
@@ -252,16 +261,20 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}, oldSize in
 }
 
 // check install version. if version > 1.63 we do not need migration because right default was set
-func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error) {
-	is := snaps["install_version"]
-	if len(is) == 0 {
+func needMigrateForDeckhouseInstallVersion(snaps pkg.Snapshots) (bool, error) {
+	installVersions, err := sdkobjectpatch.UnmarshalToStruct[string](snaps, "install_version")
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal install_version snapshot: %w", err)
+	}
+
+	if len(installVersions) == 0 {
 		// install-data configmap available from 1.55
 		// https://github.com/deckhouse/deckhouse/pull/6522
 		// if cm not found we should try to migration
 		return true, nil
 	}
 
-	versionStr := is[0].(string)
+	versionStr := installVersions[0]
 	// do not migrate for dev build
 	if versionStr == "dev" {
 		return false, nil

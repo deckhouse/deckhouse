@@ -1,5 +1,6 @@
 name: dashboard
 weight: 500
+stage: Deprecated
 subsystems:
   - observability
 namespace: d8-dashboard

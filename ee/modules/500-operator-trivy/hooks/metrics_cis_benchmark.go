@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -14,6 +14,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
@@ -71,15 +73,17 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupName)
 
-	snap := input.Snapshots[cisBenchmarkQueue]
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get(cisBenchmarkQueue)
+	if len(snaps) == 0 {
 		input.Logger.Error("No CIS benchmark found")
 		return nil
 	}
 
-	compReport, ok := snap[0].(filteredComplianceReport)
-	if !ok {
-		return errors.New("can't use snapshot as filteredComplianceReport")
+	compReport := new(filteredComplianceReport)
+
+	err := snaps[0].UnmarshalTo(compReport)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal filtered compliance report: %w", err)
 	}
 
 	switch {

@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -64,11 +68,14 @@ type discoveryCM struct {
 }
 
 func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
-	snap := input.Snapshots["auth-cm"]
+	authCMs, err := sdkobjectpatch.UnmarshalToStruct[discoveryCM](input.NewSnapshots, "auth-cm")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal auth-cm: %w", err)
+	}
+
 	var authZData, authNData, auditData map[string]string
 
-	for _, s := range snap {
-		cm := s.(discoveryCM)
+	for _, cm := range authCMs {
 		switch cm.Namespace {
 		case "d8-user-authn":
 			authNData = cm.Data

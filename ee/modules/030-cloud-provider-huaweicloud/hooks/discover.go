@@ -22,6 +22,8 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
@@ -79,21 +81,23 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
+	if len(input.NewSnapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots["storage_classes"]) == 0 {
+		if len(input.NewSnapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for huaweicloud provisioner")
 
 			return nil
 		}
 
-		storageClassesSnapshots := input.Snapshots["storage_classes"]
+		storageClassesSnapshots := input.NewSnapshots.Get("storage_classes")
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
-		for _, storageClassSnapshot := range storageClassesSnapshots {
-			sc := storageClassSnapshot.(*storage.StorageClass)
+		for sc, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over storage classes: %v", err)
+			}
 
 			allowVolumeExpansion := true
 			if sc.AllowVolumeExpansion != nil {
@@ -112,11 +116,21 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	secret := input.Snapshots["cloud_provider_discovery_data"][0].(*v1.Secret)
+	secret := new(v1.Secret)
+
+	snaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+	if len(snaps) == 0 {
+		return fmt.Errorf("cloud_provider_discovery_data snapshot is empty")
+	}
+
+	err := snaps[0].UnmarshalTo(secret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi"})
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
@@ -129,7 +143,9 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderHuaweicloud.internal.providerDiscoveryData", discoveryData)
 
-	handleDiscoveryDataVolumeTypes(input, discoveryData.VolumeTypes)
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.VolumeTypes); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -137,7 +153,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	volumeTypes []cloudDataV1.HuaweiCloudVolumeType,
-) {
+) error {
 	storageClassStorageDomain := make(map[string]cloudDataV1.HuaweiCloudVolumeType, len(volumeTypes))
 
 	for _, vt := range volumeTypes {
@@ -160,9 +176,13 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	storageClassSnapshots := make(map[string]*storage.StorageClass)
-	for _, snapshot := range input.Snapshots["storage_classes"] {
-		s := snapshot.(*storage.StorageClass)
+	storageClassSnapshots := make(map[string]storage.StorageClass)
+	sclasses, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
+	}
+
+	for _, s := range sclasses {
 		storageClassSnapshots[s.Name] = s
 	}
 
@@ -187,6 +207,8 @@ func handleDiscoveryDataVolumeTypes(
 	input.Logger.Info("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data", slog.Any("data", storageClasses))
 
 	setStorageClassesValues(input, storageClasses)
+
+	return nil
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

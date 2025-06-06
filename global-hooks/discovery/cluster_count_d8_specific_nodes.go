@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/iancoleman/strcase"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -53,9 +56,13 @@ func applyDeckhouseNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func countDeckhouseNodes(input *go_hook.HookInput) error {
+	nodeRoles, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, "node_roles")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal node_roles snapshot: %w", err)
+	}
+
 	nodesCountByRole := make(map[string]int)
-	for _, rolesListRaw := range input.Snapshots["node_roles"] {
-		rolesForNode := rolesListRaw.([]string)
+	for _, rolesForNode := range nodeRoles {
 		for _, role := range rolesForNode {
 			if role != "" {
 				roleCamel := strcase.ToLowerCamel(role)

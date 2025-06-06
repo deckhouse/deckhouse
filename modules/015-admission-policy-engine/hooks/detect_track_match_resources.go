@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -48,23 +52,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleValidationKinds))
 
 func handleValidationKinds(input *go_hook.HookInput, _ dependency.Container) error {
-	snap := input.Snapshots["constraint-exporter-cm"]
-	if len(snap) == 0 {
+	resourcesRaw, err := sdkobjectpatch.UnmarshalToStruct[matchData](input.NewSnapshots, "constraint-exporter-cm")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal constraint-exporter-cm snapshot: %w", err)
+	}
+
+	if len(resourcesRaw) == 0 {
 		input.Logger.Info("no exporter cm found")
 		return nil
 	}
 
-	resourcesRaw := snap[0].(matchData)
 	validateRes := make([]matchResource, 0)
 	mutateRes := make([]matchResource, 0)
 
-	err := yaml.Unmarshal([]byte(resourcesRaw.ValidateData), &validateRes)
-	if err != nil {
+	if err := yaml.Unmarshal([]byte(resourcesRaw[0].ValidateData), &validateRes); err != nil {
 		return err
 	}
 
-	err = yaml.Unmarshal([]byte(resourcesRaw.MutateData), &mutateRes)
-	if err != nil {
+	if err := yaml.Unmarshal([]byte(resourcesRaw[0].MutateData), &mutateRes); err != nil {
 		return err
 	}
 

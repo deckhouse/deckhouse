@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
@@ -76,15 +78,18 @@ func RegisterHook(moduleName string) bool {
 
 func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
-		snapshots, ok := input.Snapshots["custom_certificates"]
-		if !ok {
+		snapshots := input.NewSnapshots.Get("custom_certificates")
+		if len(snapshots) == 0 {
 			input.Logger.Info("No custom certificates received, skipping setting values")
 			return nil
 		}
 
 		customCertificates := make(map[string][]byte, len(snapshots))
-		for _, snapshot := range snapshots {
-			cs := snapshot.(*CustomCertificate)
+		for cs, err := range sdkobjectpatch.SnapshotIter[CustomCertificate](snapshots) {
+			if err != nil {
+				continue
+			}
+
 			customCertificates[cs.Name] = cs.Data
 		}
 

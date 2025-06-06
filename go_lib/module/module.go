@@ -24,6 +24,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/tidwall/gjson"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
