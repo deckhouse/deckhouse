@@ -20,6 +20,10 @@ import:
   owner: 64535
   group: 64535
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
 git:
 - add: /{{ .ModulePath }}
   owner: 64535
@@ -28,6 +32,15 @@ git:
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+---
+{{- $binaries := "/bin/cp" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+ setup:
+   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
