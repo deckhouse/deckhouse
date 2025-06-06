@@ -262,9 +262,10 @@ function prepare_environment() {
   "Static")
     pre_bootstrap_static_setup
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+#    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+#        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+#        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
+#        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
     export TF_VAR_PREFIX="$PREFIX"
@@ -280,64 +281,63 @@ function prepare_environment() {
 }
 
 function pre_bootstrap_static_setup() {
+  cwd=testing/cloud_layouts/Static
   cd $cwd/registry-mirror
 
   BASTION_INTERNAL_IP=192.168.199.254
   IMAGES_REPO="${BASTION_INTERNAL_IP}:5000/sys/deckhouse-oss"
 
-  LOCAL_REGISTRY_MIRROR_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
-  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+  LOCAL_REGISTRY_MIRROR_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
 
-  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 -w0)
+  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 | tr -d '\n')
 
   # emulate using local registry
-  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${BASTION_INTERNAL_IP}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 -w0)
+  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${BASTION_INTERNAL_IP}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 | tr -d '\n')
 
   cd ..
-  # todo: delete after migrating openstack to opentofy
-  cp -a /plugins/registry.terraform.io/terraform-provider-openstack/ /plugins/registry.opentofu.org/terraform-provider-openstack/
 }
 
 function bootstrap_static() {
-  cwd="testing/cloud_layouts/Static"
   >&2 echo "Run terraform to create nodes for Static cluster ..."
-  pushd "$cwd"
 
   CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
-  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" "opentofu"
+  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" ./opentofu
   docker rm "$CONTAINER_ID"
   chmod +x ./opentofu
 
-  ./opentofu init -input=false -plugin-dir=/plugins -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  ./opentofu apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-  popd
+#  $(pwd)/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+#  $(pwd)/opentofu apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  # TODO to delete, mac os debug
+  tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+  tofu apply -state="${terraform_state_file}" -auto-approve -no-color || return $?
 
-  if ! master_ip="$(opentofu output -raw master_ip_address_for_ssh)"; then
+  if ! master_ip="$(tofu output -raw master_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get master_ip from opentofu output"
     return 1
   fi
 
-  if ! system_ip="$(opentofu output -raw system_ip_address_for_ssh)"; then
+  if ! system_ip="$(tofu output -raw system_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get system_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_redos_ip="$(opentofu output -raw worker_redos_ip_address_for_ssh)"; then
+  if ! worker_redos_ip="$(tofu output -raw worker_redos_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_opensuse_ip="$(opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
+  if ! worker_opensuse_ip="$(tofu output -raw worker_opensuse_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_rosa_ip="$(opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
+  if ! worker_rosa_ip="$(tofu output -raw worker_rosa_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
     return 1
   fi
 
-  if ! bastion_ip="$(opentofu output -raw bastion_ip_address_for_ssh)"; then
+  if ! bastion_ip="$(tofu output -raw bastion_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get bastion_ip from opentofu output"
     return 1
   fi
@@ -471,6 +471,38 @@ d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
+
+# Checking that it's FE-UPGRADE
+# Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
+dh_version="${DECKHOUSE_IMAGE_TAG#release-}"
+dh_major="\${dh_version%%.*}"
+
+# Handle both 'release-x.y' and 'release-x.y-test-z'
+dh_minor_version_part="\${dh_version#*.}"
+dh_minor_number="\${dh_minor_version_part%%-*}"
+dh_minor="\${dh_minor_number%.*}"
+
+# Extracting the major and minor versions from INITIAL_IMAGE_TAG
+initial_version="${INITIAL_IMAGE_TAG#release-}"
+initial_major="\${initial_version%%.*}"
+
+initial_minor_version_part="\${initial_version#*.}"
+initial_minor_number="\${initial_minor_version_part%%-*}"
+initial_minor="\${initial_minor_number%.*}"
+
+echo "Initial Minor Version: \$initial_minor"
+echo "Deckhouse Minor Version: \$dh_minor"
+
+# Check that the major versions match and the minor differs by +1
+if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor + 1))" ]; then
+    >&2 echo "Pull both versions of fe-upgrade"
+    # pull
+    d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+    --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
+    # push
+    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login mirror --registry-password ${LOCAL_REGISTRY_MIRROR_PASSWORD}
+fi
+
 set +x
 EOF
        chmod +x /tmp/install-d8-and-pull-push-images.sh
@@ -479,6 +511,7 @@ EOF
        # cleanup
        rm -f /tmp/install-d8-and-pull-push-images.sh
        rm -rf d8
+       rm -rf d8-upgrade
 
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
@@ -1012,6 +1045,10 @@ function run-test() {
   local payload
   local response
   local cluster_id
+
+  if [[ ${PROVIDER} == "Static" ]]; then
+    bootstrap_static || return $?
+  fi
 
   cluster_template_version_id=$(curl -s -X 'GET' \
     "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
