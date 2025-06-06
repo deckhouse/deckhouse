@@ -21,6 +21,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
 fromImage: builder/golang-bullseye
+fromCacheVersion: "2025-07-06"
 mount:
 {{ include "mount points for golang builds" . }}
 import:
