@@ -177,6 +177,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
 	}
 
+	log.InfoF("[DCHLT-TEST] skip resources %v \n", d.skipResources)
 	if !d.skipResources {
 		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false, d.stateCache); err != nil {
 			return err
@@ -200,9 +201,12 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 
 	// only after load and save all states into cache
 	// set resources as deleted
+	log.InfoF("[DCHLT-TEST] set resourcesDestroyed\n")
 	if err := d.state.SetResourcesDestroyed(); err != nil {
+		log.InfoF("[DCHLT-TEST] set resourcesDestroyed err\n")
 		return err
 	}
+	log.InfoF("[DCHLT-TEST] set resourcesDestroyed ok\n")
 
 	// why only unwatch lock without request unlock
 	// user may not delete resources and converge still working in cluster
