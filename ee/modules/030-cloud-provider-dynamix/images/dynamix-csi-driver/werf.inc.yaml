@@ -22,6 +22,10 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
+- image: tools/util-linux
+  add: /bin/lsblk
+  to: /bin/lsblk
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/dynamix-csi-driver"]
