@@ -1,3 +1,12 @@
+# Render build command based on svace enabled condition.
+# Passed context should contain variables:
+#   - SVACE_ENABLED - svace build toogler
+#   - SVACE_ANALYZE_SSH_USER - ssh user to connect to svace analyze server with
+#   - SVACE_ANALYZE_HOST - svace analyze server host
+#   - ProjectName - project name which will be used in svacer (report server)
+#   - Commit.Hash - build commit hash, which is used to distinct artifacts on the analyze server and to add into import custom field
+# Svace build uploads gathered artifacts to the analyze server
+
 {{- define "image-build.build" }}
 {{-   if eq $.SVACE_ENABLED "true" }}
 svace build --init --clear-build-dir {{ .BuildCommand }}
