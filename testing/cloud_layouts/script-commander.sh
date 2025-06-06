@@ -625,6 +625,27 @@ function run-test() {
     if [[ $test_failed == "true" ]]; then
       return 1
     fi
+  if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
+    echo "Run Autoscaler test"
+    testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
+    testRunAttempts=5
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAutoscalerScript}"; then
+        test_failed=""
+        break
+      else
+        test_failed="true"
+        >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+        sleep 30
+      fi
+    done
+  else
+    echo "Autoscaler test skipped."
+  fi
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting switch deckhouse image"
