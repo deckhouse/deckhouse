@@ -90,8 +90,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "The system part of the platform in UI is available in read-only mode",
-        "ru": "Системная часть платформы в UI доступна только на чтение"
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
       }
     },
     "external": "true",
