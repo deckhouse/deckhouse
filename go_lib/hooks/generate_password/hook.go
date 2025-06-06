@@ -30,6 +30,7 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -127,7 +128,7 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 	// Try to restore generated password from the Secret, or generate a new one.
 	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.NewSnapshots.Get(secretBindingName))
 	if err != nil {
-		input.Logger.Infof("No password in Secret, generate new one: %s", err)
+		input.Logger.Info("No password in Secret, generate new one", log.Err(err))
 		pass = GeneratePassword()
 	}
 

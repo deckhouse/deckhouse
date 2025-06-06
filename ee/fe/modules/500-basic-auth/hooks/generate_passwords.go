@@ -18,6 +18,7 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Set locations from config values or set a default one with generated password.
@@ -90,7 +91,7 @@ func generatePassword(input *go_hook.HookInput) error {
 
 	pass, err := restorePasswordFromSnapshot(input.NewSnapshots.Get(secretBinding))
 	if err != nil {
-		input.Logger.Infof("Generate default location for basic auth: %s", err)
+		input.Logger.Info("Generate default location for basic auth", log.Err(err))
 		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 

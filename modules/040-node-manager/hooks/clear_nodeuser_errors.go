@@ -156,7 +156,7 @@ func clearNodeUserIncorrectErrors(
 	}
 
 	input.Logger.Debug("clearErrors", slog.Any("patch", patch))
-	input.PatchCollector.MergePatch(
+	input.PatchCollector.PatchWithMerge(
 		patch,
 		"deckhouse.io/v1",
 		"NodeUser",

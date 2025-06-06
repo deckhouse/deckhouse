@@ -98,7 +98,7 @@ func handleLabelsUpdate(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(labelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	for _, node := range nodesToLabel {
@@ -109,7 +109,7 @@ func handleLabelsUpdate(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(labelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil

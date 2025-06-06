@@ -358,7 +358,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		egressInternalMap[egName] = eg
 
 		patchStatus := makeEGStatusPatchForState(egState, egressGatewayInstances)
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			patchStatus,
 			"network.deckhouse.io/v1alpha1",
 			"EgressGateway",
@@ -383,7 +383,8 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		if slices.Contains(egNodes, egi.NodeName) {
 			continue
 		}
-		input.PatchCollector.MergePatch(deleteFinalizersPatch,
+
+		input.PatchCollector.PatchWithMerge(deleteFinalizersPatch,
 			"internal.network.deckhouse.io/v1alpha1",
 			"SDNInternalEgressGatewayInstance",
 			"",

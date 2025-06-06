@@ -162,7 +162,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", secretName)
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", secretName)
 
 	return err
 }

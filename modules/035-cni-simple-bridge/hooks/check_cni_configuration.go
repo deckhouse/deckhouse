@@ -27,7 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -205,7 +205,7 @@ func checkCni(input *go_hook.HookInput) error {
 			Name: cniName,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:  pointer.Bool(true),
+			Enabled:  ptr.To(true),
 			Version:  1,
 			Settings: v1alpha1.SettingsValues{},
 		},
