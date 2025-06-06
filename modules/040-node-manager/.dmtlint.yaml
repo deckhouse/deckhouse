@@ -25,7 +25,7 @@ linters-settings:
           container: nvidia-device-plugin-ctr
         - kind: DaemonSet
           name: nvidia-mig-manager
-          container: ntoolkit-validation
+          container: toolkit-validation
         - kind: DaemonSet
           name: nvidia-mig-manager
           container: nvidia-mig-manager
