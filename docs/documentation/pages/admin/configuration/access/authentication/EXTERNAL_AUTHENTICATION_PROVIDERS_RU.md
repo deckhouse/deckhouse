@@ -127,6 +127,7 @@ spec:
     issuer: https://keycloak.my-company.com/realms/myrealm # Используйте имя вашего realm
     clientID: plainstring
     clientSecret: plainstring
+    insecureSkipEmailVerified: true
     getUserInfo: true
     scopes:
       - openid
@@ -134,6 +135,10 @@ spec:
       - email
       - groups
 ```
+
+{% alert level="warning" %}
+При использовании Keycloak, как Identity Provider [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»). Это необходимо для корректной обработки значения `true` поля [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
+{% endalert %}
 
 #### Blitz Identity Provider
 
