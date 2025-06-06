@@ -2,7 +2,7 @@
 
 If we have updated the Falco version, it is necessary to test its performance and correctness.
 
-### Preliminary preparation
+## Preliminary preparation
 
 - Create a secret:
 
@@ -41,7 +41,7 @@ rules:
   - RequestReceived
 ```
 
-### Test 1
+## Test 1
 
 We determine the accesses to the node via ssh.
 
@@ -67,7 +67,7 @@ kubectl -n d8-runtime-audit-engine logs daemonsets/runtime-audit-engine -f
 }
 ```
 
-### Test 2
+## Test 2
 
 We determine the fact of exec into the pod.
 
