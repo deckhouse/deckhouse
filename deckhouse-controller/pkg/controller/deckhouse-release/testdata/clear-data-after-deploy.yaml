@@ -1,0 +1,12 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.31.0
+spec:
+  version: v1.31.0
+status:
+  approved: false
+  message: "This message must be cleaned"
+  phase: Deployed
