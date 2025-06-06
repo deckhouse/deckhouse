@@ -193,7 +193,7 @@ provider:
 
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
-Также для работы втоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
+Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
 
 | Тип | Репликация | Имя StorageClass |
 |---|---|---|
@@ -204,7 +204,7 @@ provider:
 | ssd | none | pd-ssd-not-replicated |
 | ssd | regional | pd-ssd-replicated |
 
-Можно отфильтровать ненужные StorageClass'ы, для этого нужно указать их в параметре `exclude`.
+Можно отфильтровать ненужные StorageClass'ы, для этого укажите их в параметре `exclude`.
 
 ### Настройка политик безопасности на узлах
 
@@ -218,7 +218,7 @@ provider:
 
 ### Установка дополнительных network tags на статических и master-узлах
 
-Данный параметр можно задать либо при создании кластера или в уже существующем кластере. В обоих случаях дополнительные network tags указываются в `GCPClusterConfiguration`:
+Данный параметр можно задать либо при создании кластера или в уже существующем кластере. В обоих случаях дополнительные network tags указываются в GCPClusterConfiguration:
 
 - для master-узлов — в секции `masterNodeGroup` в поле `additionalNetworkTags`;
 - для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalNetworkTags`.

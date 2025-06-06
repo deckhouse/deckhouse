@@ -13,14 +13,14 @@ lang: ru
 Подробную инструкцию по созданию Service Account можно найти [в документации провайдера](https://cloud.google.com/iam/docs/service-accounts).
 
 {% alert level="warning" %}
-**Внимание!** Созданный `service account key` невозможно восстановить, только удалить и создать новый.
+Созданный `service account key` невозможно восстановить, только удалить и создать новый.
 {% endalert %}
 
 ### Настройка через Google Cloud Console
 
 Перейдите [по ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).
 
-Созданному service account'у должны быть присвоены несколько необходимых ролей:
+Созданному service account'у должны быть присвоены несколько обязательных ролей:
 
 ```text
 Compute Admin
@@ -30,7 +30,7 @@ Network Management Admin
 
 Роли можно присвоить на этапе создания service account'а либо изменить [на этой странице](https://console.cloud.google.com/iam-admin/iam).
 
-Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке «Actions» нажмите  на три вертикальные точки и выберите «Manage keys». Затем нажмите «Add key» -> «Create new key» -> «Key type» -> «JSON».
+Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке «Actions» нажмите  на три вертикальные точки и выберите «Manage keys». Затем нажмите «Add key» → «Create new key» → «Key type» → «JSON».
 
 ### Настройка через gcloud CLI
 
@@ -45,19 +45,19 @@ Network Management Admin
    export SERVICE_ACCOUNT_NAME=deckhouse
    ```
 
-2. Выберите project:
+1. Выберите project:
 
    ```shell
    gcloud config set project $PROJECT_ID
    ```
 
-3. Создайте service account:
+1. Создайте service account:
 
    ```shell
    gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
    ```
 
-4. Присвойте роли созданному service account:
+1. Присвойте роли созданному service account:
 
    ```shell
    for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin;
@@ -73,14 +73,14 @@ Network Management Admin
    roles/networkmanagement.admin
    ```
 
-5. Выполните проверку ролей service account:
+1. Выполните проверку ролей service account:
 
    ```shell
    gcloud projects get-iam-policy ${PROJECT_ID} --flatten="bindings[].members" --format='table(bindings.role)' \
          --filter="bindings.members:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
    ```
 
-6. Создайте `service account key`:
+1. Создайте `service account key`:
 
    ```shell
    gcloud iam service-accounts keys create --iam-account ${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
