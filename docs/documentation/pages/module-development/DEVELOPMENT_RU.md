@@ -404,4 +404,3 @@ crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar 
 $ crane export registry.example.io/modules-source/module-1/release:alpha - | tar -Oxf - version.json
 {"version":"v1.23.2"}
 ```
-
