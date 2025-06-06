@@ -20,7 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 var (

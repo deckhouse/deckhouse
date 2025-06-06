@@ -29,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 var (

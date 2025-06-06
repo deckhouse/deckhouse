@@ -69,9 +69,7 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
-
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
-	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 )
 
 var (

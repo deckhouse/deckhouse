@@ -18,7 +18,6 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (

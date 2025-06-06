@@ -29,8 +29,6 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 /*

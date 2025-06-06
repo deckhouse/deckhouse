@@ -27,8 +27,6 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 func getFirstDefined(values sdkpkg.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
