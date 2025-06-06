@@ -23,6 +23,12 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-device-plugin
           container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: ntoolkit-validation
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
       resources:
         - kind: Deployment
           name: standby-holder-name
@@ -67,6 +73,9 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-device-plugin
           container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
       readiness-probe:
         - kind: Deployment
           name: standby-holder-name
@@ -95,6 +104,9 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-device-plugin
           container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
   templates:
     exclude-rules:
       pdb:

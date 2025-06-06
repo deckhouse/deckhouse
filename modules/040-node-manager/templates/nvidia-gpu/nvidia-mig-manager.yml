@@ -59,6 +59,12 @@ spec:
           args: ["until [ -f /run/nvidia/validations/toolkit-ready ]; do echo waiting for nvidia container toolkit to be setup; sleep 5; done"]
           securityContext:
             privileged: true
+          resources:
+            requests:
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              cpu: 50m
+              memory: 64Mi
+          {{- end }}
           volumeMounts:
             - name: run-nvidia-validations
               mountPath: /run/nvidia/validations
