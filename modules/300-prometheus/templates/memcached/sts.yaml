@@ -47,7 +47,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
         - name: memcached
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "memcached") }}
           command:
             - memcached
@@ -73,7 +73,7 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
               {{- include "memcached_resources" . | nindent 14 }}
         - name: exporter
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "memcachedExporter") }}
           imagePullPolicy: IfNotPresent
           ports:
