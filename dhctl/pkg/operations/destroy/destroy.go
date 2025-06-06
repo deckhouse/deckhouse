@@ -142,17 +142,17 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	}
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
-	if d.CommanderMode {
-		kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
-		if err != nil {
-			return err
-		}
-
-		_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
-		if err != nil {
-			return fmt.Errorf("uuid consistency check failed: %w", err)
-		}
-	}
+	//if d.CommanderMode {
+	//	kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
+	//	if err != nil {
+	//		return fmt.Errorf("uuid consistency check failed: %w", err)
+	//	}
+	//}
 
 	// populate cluster state in cache
 	metaConfig, err := d.terrStateLoader.PopulateMetaConfig(ctx)
