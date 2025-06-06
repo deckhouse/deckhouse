@@ -49,6 +49,7 @@ shell:
   - cd /src/dynamix-common
   - rm -rf .git vendor
 ---
+# stub diff
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 fromImage: builder/golang-alpine
