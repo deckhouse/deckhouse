@@ -67,24 +67,67 @@ func init() {
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
 }
 
+func normalizeUbuntuVersion(ver string) string {
+	parts := strings.Split(ver, ".")
+	if len(parts) == 2 {
+		// Remove leading zeros
+		major := strings.TrimLeft(parts[0], "0")
+		if major == "" {
+			major = "0"
+		}
+		minor := strings.TrimLeft(parts[1], "0")
+		if minor == "" {
+			minor = "0"
+		}
+		return major + "." + minor + ".0"
+	}
+	if len(parts) == 3 {
+		major := strings.TrimLeft(parts[0], "0")
+		if major == "" {
+			major = "0"
+		}
+		minor := strings.TrimLeft(parts[1], "0")
+		if minor == "" {
+			minor = "0"
+		}
+		patch := strings.TrimLeft(parts[2], "0")
+		if patch == "" {
+			patch = "0"
+		}
+		return major + "." + minor + "." + patch
+	}
+	return ver
+}
+
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
 	var minVersionValuesKey string
-	desiredVersion, err := semver.NewVersion(requirementValue)
-	if err != nil {
-		return false, err
-	}
+	var desiredVersion *semver.Version
+	var err error
+
 	switch osImage {
 	case "Ubuntu":
 		minVersionValuesKey = minUbuntuVersionValuesKey
+		requirementValue = normalizeUbuntuVersion(requirementValue)
 	case "Debian":
 		minVersionValuesKey = minDebianVersionValuesKey
+	}
+
+	desiredVersion, err = semver.NewVersion(requirementValue)
+	if err != nil {
+		return false, err
 	}
 
 	currentVersionRaw, exists := getter.Get(minVersionValuesKey)
 	if !exists {
 		return true, nil
 	}
-	currentVersion, err := semver.NewVersion(currentVersionRaw.(string))
+
+	currentVersionStr := currentVersionRaw.(string)
+	if osImage == "Ubuntu" {
+		currentVersionStr = normalizeUbuntuVersion(currentVersionStr)
+	}
+
+	currentVersion, err := semver.NewVersion(currentVersionStr)
 	if err != nil {
 		return false, err
 	}
