@@ -345,6 +345,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
+		"nodeFeatureDiscovery":     "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nvidiaDevicePlugin":       "imageHash-nodeManager-nvidiaDevicePlugin",
+		"nvidiaMigManager":         "imageHash-nodeManager-nvidiaMigManager",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
@@ -428,6 +431,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesCni162":          "imageHash-registrypackages-kubernetesCni162",
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
+		"nvidiaMigParted0121":       "imageHash-registrypackages-nvidiaMigParted0121",
 		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
 		"pause":                     "imageHash-registrypackages-pause",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
