@@ -238,6 +238,7 @@ common:
     ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
   virtualization-platform: Virtualization Platform
   stronghold: Stronghold
+  code: Code
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
