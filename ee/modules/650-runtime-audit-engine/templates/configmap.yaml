@@ -90,6 +90,12 @@ data:
     #
     # https://github.com/falcosecurity/plugins/tree/master/plugins/k8saudit
     plugins:
+    - name: container
+      # For a summary of config option, see https://github.com/FedeDP/container_plugin?tab=readme-ov-file#configuration
+      library_path: libcontainer.so
+      init_config:
+        label_max_len: 100
+        with_size: false
     - name: k8saudit
       library_path: libk8saudit.so
       init_config:
@@ -115,6 +121,7 @@ data:
     # @ Add here the names of the plugins that you want to be loaded by Falco. Please make sure that
     # plugins have been configured under the "plugins" section before adding them here.
     load_plugins:
+    - "container"
     - "k8saudit"
     - "json"
     - "k8smeta"
