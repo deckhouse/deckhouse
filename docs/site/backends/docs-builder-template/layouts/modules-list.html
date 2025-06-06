@@ -1,0 +1,85 @@
+{{ define "main" }}
+
+
+
+<hr />
+<div class="docs docs-modules">
+    <div class="docs__wrap-title">
+        <h1 class="docs__title">{{ .Title }}</h1>
+    </div>
+
+    <div class="post-content">
+
+     {{.Content}}
+
+<script type="text/javascript" src='/assets/js/tile.js'></script>
+
+{{ $modulesChannelsData := .Site.Data.modules.channels }}
+{{ $channelsInfo := .Site.Data.channels.info }}
+{{ $modulesList := slice }}
+{{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{ $ctx := $ }}
+
+{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{ $currentModuleName := index $_pathElements 1 }}
+{{ $currentModuleChannel := index $_pathElements 2 }}
+
+{{ range $module, $data := $modulesChannelsData }}
+  {{ $moduleTitle := "" }}
+  {{ $moduleChannel := "" }}
+  {{ $moduleDescription := "" }}
+  {{ $moduleTags := slice }}
+
+  {{ range sort $channelsInfo "stability" "desc" }}
+    {{/* Skip rock-solid channel */}}
+    {{ if eq .code "rock-solid"  }}{{ continue }}{{ end }}
+    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
+    {{ $code := .code }}
+    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
+      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
+      {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
+      {{ end }}
+      {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+      {{ if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
+      {{ if not $moduleTags }}{{ $moduleTags = .Params.tags }}{{ end }}
+    {{ end}}
+  {{ end}}
+  {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{ if (not $moduleChannel ) }}{{ continue }}{{ end }}
+  {{ $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
+{{ end}}
+
+{{ hugo.Store.Set "modulesList" (sort $modulesList "module" "asc" ) }}
+
+{{/* hugo.Store.SetInMap "modulesList" (sort (hugo.Store.Get "modulesList") "title" "asc") */}}
+
+
+<hr />
+
+<div class="block__tile">
+{{- range hugo.Store.Get "modulesList" }}
+  <a class="button-tile" href="{{ .url }}">
+  <h2 class="button-tile__title">{{ .module }}</h2>
+  <p class="button-tile__descr">{{ .description }}</p>
+    <div class="button-tile__bottom">
+      <div class="button-tile__tags">
+        {{range .tags}}
+          <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
+        {{end}}
+      </div>
+      {{/* <div class="button-tile__time">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="6" cy="6" r="5.25" stroke="#5E6697" stroke-width="1.5"/>
+          <path d="M4.25 6H6V3.375" stroke="#5E6697" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+         <p class="button-tile__descr tile__descr--time">{{ .WordCount }} words</p>
+      </div> */}}
+    </div>
+  </a>
+{{- end }}
+
+</div>
+
+    </div>
+</div>
+{{ end }}
