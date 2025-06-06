@@ -44,6 +44,7 @@ shell:
   setup:
   - |
     CI_COMMIT_TAG="{{- env "CI_COMMIT_TAG" "" }}"
+    CI_COMMIT_REF_SLUG="{{- env "CI_COMMIT_REF_SLUG" "" }}"
     if [ -z "$CI_COMMIT_TAG" ]; then
       if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-([0-9]+\.[0-9]+)$ ]]; then
           # CI_COMMIT_REF_SLUG for release branch `release-X.Y`. Need for e2e testing
