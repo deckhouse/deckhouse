@@ -25,6 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type CiliumConfigStruct struct {
@@ -79,19 +81,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func setCiliumMode(input *go_hook.HookInput) error {
 	// if secret exists, use it
-	cniConfigurationSecrets, ok := input.Snapshots["cni_configuration_secret"]
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
+	}
 
-	if ok && len(cniConfigurationSecrets) > 0 {
-		if cniConfigurationSecrets[0] != nil {
-			ciliumConfig := cniConfigurationSecrets[0].(CiliumConfigStruct)
-			if ciliumConfig.Mode != "" {
-				input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
-			}
-			if ciliumConfig.MasqueradeMode != "" {
-				input.Values.Set("cniCilium.internal.masqueradeMode", ciliumConfig.MasqueradeMode)
-			}
-			return nil
+	if len(cniConfigurationSecrets) > 0 {
+		ciliumConfig := cniConfigurationSecrets[0]
+		if ciliumConfig.Mode != "" {
+			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
 		}
+		if ciliumConfig.MasqueradeMode != "" {
+			input.Values.Set("cniCilium.internal.masqueradeMode", ciliumConfig.MasqueradeMode)
+		}
+		return nil
 	}
 
 	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
