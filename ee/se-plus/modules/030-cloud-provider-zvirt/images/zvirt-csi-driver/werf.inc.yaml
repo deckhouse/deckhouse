@@ -24,10 +24,8 @@ import:
   to: /lib/udev/scsi_id
   before: setup
 - image: tools/util-linux
-  add: /
-  to: /
-  includePaths:
-  - bin/lsblk
+  add: /bin/lsblk
+  to: /bin/lsblk
   before: setup
 imageSpec:
   config:
