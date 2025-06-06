@@ -86,7 +86,10 @@ securityContext:
 {{- /* .uid  – int, runAsUser/runAsGroup (default 64535) */ -}}
 {{- /* Usage: include "helm_lib_module_container_security_context_pss_restricted_flexible" dict */ -}}
 {{- define "helm_lib_module_container_security_context_pss_restricted_flexible" -}}
-{{- $ro   := default true  .ro   -}}
+{{- $ro := true -}}
+{{- if hasKey . "ro" -}}
+  {{- $ro = .ro -}}
+{{- end -}}
 {{- $caps := default (list) .caps -}}
 {{- $uid  := default 64535 .uid  -}}
 
