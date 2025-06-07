@@ -47,7 +47,7 @@ git:
 # we have some required patches for kubernetes located in ee edition
 # therese patches should be added for all kubernetes versions because we do not doing any actions for verify
 # that patches exists in directory
-{{- range _, $patch_path := $required_patches_from_ee_dir }}
+{{- range $_, $patch_path := $required_patches_from_ee_dir }}
 - add: {{ $patch_path }}
   to: /patches
   stageDependencies:
