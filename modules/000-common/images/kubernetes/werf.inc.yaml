@@ -30,7 +30,7 @@
       {{- fail (printf "k8s %s should contain least one patch" $version) }}
     {{- end }}
 
-    {{- $_ := set . $version $patches_names_for_verification }}
+    {{- $_ := set $required_patches_from_ee_dir_by_versions $version $patches_names_for_verification }}
   {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
