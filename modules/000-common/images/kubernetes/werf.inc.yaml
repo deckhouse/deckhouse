@@ -4,18 +4,13 @@
   {{- $v := semver $version }}
   {{- $full_version := printf "%s.%s" $version $patch }}
   {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+  {{- $required_patches_from_ee := (printf "/%see/modules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
   {{- $patch := false }}
   {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
     {{- if contains $version $path }}
       {{- $patch = true }}
     {{- end }}
-  {{- $requirement_ee_patches := (printf "/%see/modules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-  {{- range $path, $_ := $.Files.Glob (printf "%s/*" $requirement_ee_patches) }}
-    {{- if not (contains $version $path) }}
-      {{- fail (printf "required ee patch %s was not added for version %s" $path $version) }}
-    {{- end }}
   {{- end }}
-{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
@@ -28,6 +23,15 @@ git:
     install:
     - '**/*'
   {{- end }}
+
+## we hase some required patches for kubernetes located in ee edition
+# therese patches should be added for all kubernetes versions because we do not doing any actions for verify
+# that patches exists in directory
+- add: {{ $required_patches_from_ee }}/patches/{{ $version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
