@@ -50,6 +50,8 @@ cleanup:
   {{- end }}
 {{- end }}
 
+{{- fail (printf "k8s %s should contain least one patch" .Env) }}
+
 {{- $_ := set . "isEE" $eeEdition }}
 
 ---
