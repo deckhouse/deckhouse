@@ -40,7 +40,7 @@ spec:
                   description: PodMetricsEndpoint определяет конечную точку Kubernetes Pod, поддерживающую сканирование метрик Prometheus.
                   properties:
                     authorization:
-                      description: Раздел авторизации для этой конечной точки
+                      description: Раздел авторизации для этой endpoint
                       properties:
                         credentials:
                           description: Выбирает ключ Секрета в пространстве имен, который содержит учетные данные для аутентификации.

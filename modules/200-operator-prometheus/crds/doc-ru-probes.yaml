@@ -199,13 +199,11 @@ spec:
                                 values:
                                   description: values — это массив строковых значений. Если оператор In или NotIn, массив values должен быть непустым. Если оператор Exists или DoesNotExist, массив values должен быть пустым. Этот массив заменяется во время стратегического объединения патчей.
                           matchLabels:
-                            additionalProperties:
                             description: matchLabels — это отображение пар {ключ, значение}. Одиночная пара {ключ, значение} в matchLabels эквивалентна элементу matchExpressions, у которого поле ключа — "key", оператор — "In", а массив значений содержит только "value". Эти требования объединяются с помощью логического оператора И (AND).
                   staticConfig:
                     description: 'staticConfig определяет статический список целей для пробинга и конфигурации переименования. Если также определен `ingress`, `staticConfig` имеет приоритет. Более подробно: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#static_config.'
                     properties:
                       labels:
-                        additionalProperties:
                         description: Метки, присваиваемые всем метрикам, полученным с целей.
                       relabelingConfigs:
                         description: 'RelabelConfigs для применения к набору меток целей до их сбора. Более подробно: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
@@ -231,7 +229,7 @@ spec:
                       static:
                         description: Список хостов для пробинга.
               tlsConfig:
-                description: Конфигурация TLS для использования при сборе данных с конечной точки.
+                description: Конфигурация TLS для использования при сборе данных с endpoint.
                 properties:
                   ca:
                     description: Удостоверяющий центр, используемый при проверке сертификатов сервера.
