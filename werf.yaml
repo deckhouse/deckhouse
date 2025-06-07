@@ -46,7 +46,6 @@ cleanup:
   {{- end }}
 
   {{- if eq $edition.name $.Env }}
-    {{- fail (printf "!! %s %s" $edition.name .Env ) }}
     {{- break }}
   {{- end }}
 {{- end }}
