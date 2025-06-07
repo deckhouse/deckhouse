@@ -20,7 +20,7 @@
     {{- $patch = true }}
 
     {{- $patches_names_for_verification := dict }}
-    {{- $patches_from_ee_dir := (printf "/%see/modules/%s-%s/images/%s/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName $version) }}
+    {{- $patches_from_ee_dir := (printf "/%see/modules/%s-%s/images/%s/patches/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName $version) }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches_from_ee_dir) }}
       {{- $required_patches_from_ee_dir = append $required_patches_from_ee_dir $path }}
       {{- $_ := set $patches_names_for_verification (base $path) true }}
