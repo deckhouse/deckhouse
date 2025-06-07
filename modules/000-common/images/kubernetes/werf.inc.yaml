@@ -1,14 +1,36 @@
+{{- $required_patches_from_ee_dir_by_versions := dict }}
+
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
   {{- $v := semver $version }}
   {{- $full_version := printf "%s.%s" $version $patch }}
+
   {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
   {{- $patch := false }}
   {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
     {{- if contains $version $path }}
       {{- $patch = true }}
     {{- end }}
+  {{- end }}
+
+  {{- $required_patches_from_ee_dir := list }}
+
+  {{- if $.isEE}}
+    {{- $patch = true }}
+
+    {{- $patches_names_for_verification := dict }}
+    {{- $patches_from_ee_dir := (printf "/%see/modules/%s-%s/images/%s/patches/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName $version) }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches_from_ee_dir) }}
+      {{- $required_patches_from_ee_dir = append $required_patches_from_ee_dir $path }}
+      {{- $_ := set $patches_names_for_verification (base $path) true }}
+    {{- end }}
+
+    {{- if eq (len $required_patches_from_ee_dir) 0 }}
+      {{- fail (printf "k8s %s should contain least one patch" $version) }}
+    {{- end }}
+
+    {{- $_ := set $required_patches_from_ee_dir_by_versions $version $patches_names_for_verification }}
   {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
@@ -22,6 +44,17 @@ git:
     install:
     - '**/*'
   {{- end }}
+
+{{- range $_, $patch_path := $required_patches_from_ee_dir }}
+# we have some required patches for kubernetes located in ee edition
+# therese patches should be added for all kubernetes versions because we do not doing any actions for verify
+# that patches exists in directory
+- add: /{{ $patch_path }}
+  to: /patches/{{ base $patch_path }}
+  stageDependencies:
+    install:
+    - '**/*'
+{{- end }}
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
@@ -68,4 +101,28 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
+{{- end }}
+
+# verify that all required patches present across all kubernetes versions
+{{- if .isEE}}
+  {{- range $key := .CandiVersionMap.k8s }}
+    {{- $version := toString $key }}
+    {{- $patches_in_version := get $required_patches_from_ee_dir_by_versions $version }}
+
+    {{- range $kk := .CandiVersionMap.k8s }}
+      {{- $verification_version := toString $kk }}
+
+      {{- if eq $verification_version $version }}
+        continue
+      {{- end }}
+
+      {{- $patches_for_verify := get $required_patches_from_ee_dir_by_versions $verification_version }}
+      {{- range $patch_name := $patches_for_verify }}
+        {{- if not hasKey $patches_in_version $patch_name }}
+          {{- fail (printf "k8s %s should contain patch %s which contain in version %s" $version $patch_name $verification_version) }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+
+  {{- end }}
 {{- end }}

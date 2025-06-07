@@ -47,6 +47,7 @@
       {{- $_ := set $ctx "ImageBuildData" $content }}
       {{- $_ := set $ctx "Files" $Root.Files }}
       {{- $_ := set $ctx "Env" $Root.Env }}
+      {{- $_ := set $ctx "isEE" $Root.isEE }}
 
       {{- $_ := set $ctx "Images" $Root.Images }}
       {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
