@@ -45,7 +45,7 @@ cleanup:
      {{- $eeEdition = true }}
   {{- end }}
 
-  {{- if eq $edition.name .Env }}
+  {{- if eq $edition.name $.Env }}
     {{- fail (printf "!! %s %s" $edition.name .Env ) }}
     {{- break }}
   {{- end }}
