@@ -17,8 +17,6 @@
   {{- $required_patches_from_ee_dir := list }}
 
   {{- if $.isEE}}
-    {{- $patch = true }}
-
     {{- $patches_names_for_verification := dict }}
     {{- $patches_from_ee_dir := (printf "/%see/modules/%s-%s/images/%s/patches/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName $version) }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches_from_ee_dir) }}
@@ -35,6 +33,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
+fromCacheVersion: "2025-06-07.0"
 final: false
   {{- if $patch }}
 git:
