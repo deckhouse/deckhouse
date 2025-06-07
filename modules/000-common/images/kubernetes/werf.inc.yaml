@@ -12,7 +12,7 @@
   {{- $requirement_ee_patches := (printf "/%see/modules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
   {{- range $path, $_ := $.Files.Glob (printf "%s/*" $requirement_ee_patches) }}
     {{- if not (contains $version $path) }}
-      {{- fail (printf "required ee patch was not added for version %s" $version) }}
+      {{- fail (printf "required ee patch %s was not added for version %s" $path $version) }}
     {{- end }}
   {{- end }}
 {{- end }}
