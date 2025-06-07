@@ -46,11 +46,10 @@ cleanup:
   {{- end }}
 
   {{- if eq $edition.name .Env }}
+    {{- fail (printf "!! %s %s" $edition.name .Env ) }}
     {{- break }}
   {{- end }}
 {{- end }}
-
-{{- fail (printf "k8s %s should contain least one patch" $eeEdition ) }}
 
 {{- $_ := set . "isEE" $eeEdition }}
 
