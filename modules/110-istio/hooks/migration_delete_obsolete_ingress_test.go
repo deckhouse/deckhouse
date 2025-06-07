@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -158,25 +157,3 @@ spec:
 		})
 	})
 })
-
-func createNs(namespace string) error {
-	var ns corev1.Namespace
-	_ = yaml.Unmarshal([]byte(namespace), &ns)
-
-	_, err := dependency.TestDC.MustGetK8sClient().
-		CoreV1().
-		Namespaces().
-		Create(context.TODO(), &ns, metav1.CreateOptions{})
-	return err
-}
-
-func createIngress(ingress, namespace string) error {
-	var i netv1.Ingress
-	_ = yaml.Unmarshal([]byte(ingress), &i)
-
-	_, err := dependency.TestDC.MustGetK8sClient().
-		NetworkingV1().
-		Ingresses(namespace).
-		Create(context.TODO(), &i, metav1.CreateOptions{})
-	return err
-}

@@ -199,9 +199,9 @@ spec:
    EOF
    ```
 
-   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
+1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup). Параметр `count` обозначает количество `staticInstances`, подпадающих под `labelSelector`, которые будут добавлены в кластер, в данном случае `1`:
 
-1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить `labelSelector`, нужно создать новую `NodeGroup` и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
    kubectl create -f - <<EOF

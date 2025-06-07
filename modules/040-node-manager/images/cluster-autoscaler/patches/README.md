@@ -12,6 +12,11 @@ Cluster autoscaler can't tell the difference between pods created by apps/v1 and
 daemonsets when simulating if a node can be terminated. This patch makes cluster autoscaler check PDB 
 instead of checking if an apps/v1 daemonset exists, when it bumps into a pod created by an advanced daemonset.
 
-# Remove additional cordon by mcm cloud provider
-Gardner cluster autoscaler cordon node of main flow of autoscaler.
-It can be keep nodes in cordon status without deleting them.
+# Set priorities for to de deleted machines and clean annotation node.machine.sapcloud.io/trigger-deletion-by-mcm
+Remove additional cordoning nodes from mcm cloud provider.
+
+New autoscaler works with new version MCM witch select nodes for deleting from annotation `node.machine.sapcloud.io/trigger-deletion-by-mcm`
+This annotation does not support by our MCM, and we should set deleting priority with annotation `machinepriority.machine.sapcloud.io`.
+We set priority for machines and keep `node.machine.sapcloud.io/trigger-deletion-by-mcm` annotation for calculation replicas,
+but we need to clean deleted machines from annotation in refresh function for keeping up to date annotation value to avoid
+drizzling replicas count in machine deployment.

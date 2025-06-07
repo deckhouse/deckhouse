@@ -36,6 +36,8 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -243,6 +245,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // handleRelease handles releases
 func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleRelease")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("release", release.GetName()))
+	span.SetAttributes(attribute.String("module", release.GetModuleName()))
+	span.SetAttributes(attribute.String("source", release.GetModuleSource()))
+	span.SetAttributes(attribute.String("phase", release.GetPhase()))
+
 	res, err := r.preHandleCheck(ctx, release)
 	if err != nil {
 		r.log.Error("failed to update module release before handling", slog.String("release", release.GetName()), log.Err(err))
@@ -258,7 +268,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	case "":
 		release.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
-		if err := r.client.Status().Update(ctx, release); err != nil {
+		if err = r.client.Status().Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -271,7 +281,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 				release.Labels = make(map[string]string)
 			}
 			release.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(release.GetPhase())
-			if err := r.client.Update(ctx, release); err != nil {
+			if err = r.client.Update(ctx, release); err != nil {
 				r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -322,6 +332,9 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 
 // handleDeployedRelease handles deployed releases
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleDeployedRelease")
+	defer span.End()
+
 	var needsUpdate bool
 
 	var modulesChangedReason string
@@ -468,6 +481,9 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 // handlePendingRelease handles pending releases
 func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handlePendingRelease")
+	defer span.End()
+
 	var res ctrl.Result
 
 	var modulesChangedReason string
@@ -549,8 +565,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		r.log.Warn("forced release found")
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
-		err := r.ApplyRelease(ctx, release, task)
-		if err != nil {
+		if err = r.ApplyRelease(ctx, release, task); err != nil {
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
@@ -564,7 +579,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	case releaseUpdater.Process:
 		// pass
 	case releaseUpdater.Skip:
-		err := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
+		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSkipped,
 			Message: task.Message,
 		})
@@ -575,7 +590,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 		return res, nil
 	case releaseUpdater.Await:
-		err := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
+		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
 			Message: task.Message,
 		})
@@ -607,7 +622,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
 	}()
 
-	reasons := checker.MetRequirements(release)
+	reasons := checker.MetRequirements(ctx, release)
 	if len(reasons) > 0 {
 		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
@@ -615,7 +630,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			msgs = append(msgs, reason.Message)
 		}
 
-		err := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
+		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
 			Message: strings.Join(msgs, ";"),
 		})
@@ -722,6 +737,9 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 
 // ApplyRelease applies predicted release
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
+	defer span.End()
+
 	var dri *releaseUpdater.ReleaseInfo
 
 	if task != nil {
@@ -743,6 +761,9 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
 func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "runReleaseDeploy")
+	defer span.End()
+
 	r.log.Info("applying release", slog.String("release", release.GetName()))
 
 	downloadStatistic, err := r.loadModule(ctx, release)
@@ -874,6 +895,9 @@ func (r *reconciler) runDryRunDeploy(mr *v1alpha1.ModuleRelease) {
 }
 
 func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRelease) (*downloader.DownloadStatistic, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "loadModule")
+	defer span.End()
+
 	// dryrun for testing purpose
 	if release.GetDryRun() {
 		go r.runDryRunDeploy(release)
@@ -902,7 +926,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
 	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
 
-	downloadStatistic, err := md.DownloadByModuleVersion(release.GetModuleName(), release.GetVersion().String())
+	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
 	if err != nil {
 		return nil, fmt.Errorf("download the '%s/%s' module: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
@@ -990,6 +1014,9 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 //
 // - Calculating deploy time (if zero - deploy)
 func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "preApplyReleaseCheck")
+	defer span.End()
+
 	timeResult := r.DeployTimeCalculate(ctx, mr, task, us, metricLabels)
 
 	if timeResult == nil {
@@ -1092,7 +1119,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 
 	// for minor release we must check additional conditions
 	checker := releaseUpdater.NewPreApplyChecker(us, r.log)
-	reasons := checker.MetRequirements(&mr)
+	reasons := checker.MetRequirements(ctx, &mr)
 	if len(reasons) > 0 {
 		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
 

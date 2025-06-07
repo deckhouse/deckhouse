@@ -89,6 +89,9 @@ common:
   contact_us_button:
     en: Contact us
     ru: Свяжитесь с нами
+  features:
+    en: "Features"
+    ru: "Возможности"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
@@ -152,6 +155,9 @@ common:
   search_placeholder_text:
     en: Search...
     ru: Поиск...
+  search_placeholder_text_guides:
+    en: Search for guides...
+    ru: Поиск гайдов...
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -224,7 +230,12 @@ common:
   crd_has_no_parameters:
     en: The CRD has no fields for configuration.
     ru: У CRD нет полей для настройки.
-
+  show_more:
+    en: Show more
+    ru: Показать ещё
+  guides_description:
+    en: Helping you achieve a goal or solve a problem with Deckhouse.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

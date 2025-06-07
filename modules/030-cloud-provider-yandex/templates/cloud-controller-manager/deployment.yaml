@@ -61,6 +61,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}

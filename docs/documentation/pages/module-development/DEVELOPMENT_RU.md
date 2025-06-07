@@ -29,6 +29,31 @@ spec:
 
 Необязательный параметр `spec.rollback` — если установить этот параметр в `true`, это восстановит развернутый модуль до предыдущего состояния после удаления `ModulePullOverride`.
 
+Deckhouse предоставляет возможность временно изменить поведение модуля с помощью дополнительных параметров объекта `ModulePullOverride`. Эти параметры позволяют управлять жизненным циклом модуля независимо от `module.yaml`:
+
+- `unmanaged` — *boolean*. Отключает управление модулем со стороны Deckhouse (никаких обновлений или удалений).
+- `disable` — *boolean*. Временно отключает модуль и удаляет все его ресурсы.
+- `terminating` — *boolean*. Переводит модуль в состояние удаления, в результате чего удаляются все ресурсы и сам объект Module.
+- `rollback` — *boolean*. Если установлен в `true`, то при удалении объекта `ModulePullOverride`:
+  - будут удалены артефакты модуля;
+  - Deckhouse перезапустится;
+  - будет восстановлена последняя стабильная версия модуля.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePullOverride
+metadata:
+  name: example
+spec:
+  version: v1.2.3
+  unmanaged: false
+  disable: false
+  terminating: false
+  rollback: true
+```
+
 Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает конфликт.
 
 Пример отсутствия конфликтов при применении ModulePullOverride:

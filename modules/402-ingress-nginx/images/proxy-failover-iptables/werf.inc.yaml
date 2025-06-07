@@ -30,7 +30,7 @@ git:
     - '**/*.mod'
 ---
 image: {{ .ModuleName }}/failover-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

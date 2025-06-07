@@ -14,7 +14,6 @@
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
 user deckhouse;
@@ -41,7 +40,7 @@ stream {
     server {{ $value }};
   {{- end }}
 {{- else if eq .runType "ClusterBootstrap" }}
-    server ${discovered_node_ip}:6443;
+    server $(bb-d8-node-ip):6443;
 {{- end }}
   }
   server {

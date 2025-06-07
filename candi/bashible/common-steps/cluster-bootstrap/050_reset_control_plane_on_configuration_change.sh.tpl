@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-current_kubeadm_checksum="$(find /var/lib/bashible/kubeadm -type f -name '*.yaml' | sort | xargs cat | md5sum - | awk '{print $1}')"
+{{ $kubernetesVersion := .kubernetesVersion | toString }}
+{{- $kubeadmDir := ternary "/var/lib/bashible/kubeadm/v1beta4" "/var/lib/bashible/kubeadm/v1beta3" (semverCompare ">=1.31" $kubernetesVersion) -}}
+
+current_kubeadm_checksum="$(find {{ $kubeadmDir }} -type f -name '*.yaml' | sort | xargs cat | md5sum - | awk '{print $1}')"
 
 if [ -f /.kubeadm.checksum ]; then
   previous_kubeadm_checksum="$(</.kubeadm.checksum)"
@@ -33,7 +36,7 @@ if [ -f /etc/kubernetes/admin.conf ]; then
       sleep 1
     done
 
-  elif bb-kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/${D8_NODE_HOSTNAME}$"; then
+  elif bb-kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/$(bb-d8-node-name)$"; then
     >&2 echo "ERROR: Trying to re-bootstrap cluster which has more than one node."
     exit 1
   fi

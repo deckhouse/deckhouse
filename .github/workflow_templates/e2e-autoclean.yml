@@ -15,7 +15,7 @@
 name: E2E Autoclean
 on:
   schedule:
-  - cron: '0 */7 * * *'
+  - cron: '0 7 * * *'
   workflow_dispatch:
 
 jobs:
@@ -40,11 +40,4 @@ jobs:
     - name: Run clean
       run: |
         python ${SCRIPT_DIR}/main.py
-    - name: Send fail report
-      if: failure()
-      env:
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
-      run: |
-        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-        bash ./.github/scripts/send-report.sh --message "🛑E2E clean schedule failure🛑\n[URL]($WORKFLOW_URL)"
+    {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}

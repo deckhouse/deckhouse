@@ -29,6 +29,7 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
 spec:

@@ -1,5 +1,6 @@
 name: user-authn
 weight: 150
+stage: "General Availability"
 subsystems:
   - security
 namespace: d8-user-authn

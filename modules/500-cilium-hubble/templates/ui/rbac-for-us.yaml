@@ -4,6 +4,7 @@ metadata:
   name: "ui"
   namespace: d8-cni-cilium
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
+automountServiceAccountToken: false
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1

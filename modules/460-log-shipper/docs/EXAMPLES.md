@@ -8,7 +8,7 @@ description: Examples of using the log-shipper Deckhouse module. Examples of mod
 ## Getting logs from all cluster Pods and sending them to Loki
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -32,7 +32,7 @@ spec:
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: whispers-booking-logs
@@ -403,7 +403,7 @@ spec:
 Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` Pod:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubernetes-events
@@ -433,7 +433,7 @@ Users can filter logs by applying two filters:
 ### Collect only logs of the `nginx` container
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: nginx-logs
@@ -450,7 +450,7 @@ spec:
 ### Collect logs without strings `GET /status" 200`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -468,7 +468,7 @@ spec:
 ### Audit of kubelet actions
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -488,7 +488,7 @@ spec:
 ### Deckhouse system logs
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: system-logs
@@ -518,7 +518,7 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 ## Collect logs from production namespaces using the namespace label selector option
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: production-logs

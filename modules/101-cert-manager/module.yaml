@@ -1,5 +1,6 @@
 name: cert-manager
 weight: 101
+stage: "General Availability"
 subsystems:
   - security
 namespace: d8-cert-manager

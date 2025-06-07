@@ -64,10 +64,10 @@ spec:
 
   Это значит, что параметр [settings.update.mode](configuration.html#parameters-update-mode) ModuleConfig `deckhouse` установлен в `Manual` (подтверждение как patch-версии, так и минорной версии Deckhouse) или в `AutoPatch` (подтверждение минорной версии Deckhouse).
   
-  Для подтверждения обновления необходимо выполнить следующую команду, указав необходимую версию Deckhouse:
+  Для подтверждения обновления выполните следующую команду (укажите необходимую версию Deckhouse):
 
   ```shell
-  kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
+  kubectl patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Если для какой-либо группы узлов отключено автоматическое применение обновлений, которые могут привести к кратковременному простою в работе системных компонентов.

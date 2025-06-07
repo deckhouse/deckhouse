@@ -38,7 +38,7 @@ const (
     kind: ClusterConfiguration
     clusterType: Static
     clusterDomain: "cluster.local"
-    kubernetesVersion: "1.28"
+    kubernetesVersion: "1.29"
     serviceSubnetCIDR: "10.222.0.0/16"
     podSubnetCIDR: "10.111.0.0/16"
   modules:
@@ -132,7 +132,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
           }
         ]
 `))
-
 		})
 	})
 })

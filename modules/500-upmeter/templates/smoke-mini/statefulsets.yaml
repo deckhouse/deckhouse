@@ -60,6 +60,7 @@ spec:
         app: smoke-mini
         smoke-mini: {{ $k }}
     spec:
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       terminationGracePeriodSeconds: 30

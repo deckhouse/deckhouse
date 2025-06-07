@@ -92,7 +92,7 @@ spec:
 
 1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
-1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `operation-policy.deckhouse.io/baseline-enabled: "true"` либо `operation-policy.deckhouse.io/restricted-enabled: "true"`
+1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
 
 SecurityPolicy, соответствующая baseline:
 
@@ -160,7 +160,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/baseline-enabled: "true"
+          security-policy.deckhouse.io/baseline-enabled: "true"
 ```
 
 SecurityPolicy, соответствующая restricted:
@@ -228,7 +228,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/restricted-enabled: "true"
+          security-policy.deckhouse.io/restricted-enabled: "true"
 ```
 
 ## Что, если несколько политик (операционных или безопасности) применяются на один объект?

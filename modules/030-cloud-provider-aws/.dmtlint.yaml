@@ -21,9 +21,6 @@ linters-settings:
           name: cloud-controller-manager
       liveness-probe:
         - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
-        - kind: Deployment
           name: csi-controller
           container: provisioner
         - kind: Deployment
@@ -75,9 +72,6 @@ linters-settings:
         - kind: DaemonSet
           name: node-termination-handler
           container: node-termination-handler
-        - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
   templates:
     exclude-rules:
       pdb:

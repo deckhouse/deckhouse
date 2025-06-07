@@ -139,6 +139,8 @@ properties:
               oneOf:
                 - required: ["name"]
                 - required: ["value"]
+            evictLocalStoragePods:
+              type: boolean
             strategies:
               type: object
               default: {}

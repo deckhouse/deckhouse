@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="6EXt89o7fHejoy0miyVt" name="Page-1">
-        <mxGraphModel dx="729" dy="1653" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="927" dy="1767" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -46,10 +46,10 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="169" value="" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=12;fontColor=#ffffff;fillColor=none;arcSize=9;" parent="1" vertex="1">
+                <mxCell id="169" value="" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#5e6697;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=12;fontColor=#ffffff;fillColor=none;arcSize=9;" parent="1" vertex="1">
                     <mxGeometry x="290" y="-130" width="360" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="178" value="VM" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#0066ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=12;fontStyle=1" parent="1" vertex="1">
+                <mxCell id="178" value="VM" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=default;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=12;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="-120" width="60" height="20" as="geometry"/>
                 </mxCell>
                 <mxCell id="179" value="spec:&lt;br&gt;&amp;nbsp; affinity:&lt;br&gt;&amp;nbsp; &amp;nbsp; nodeAffinity:&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; requiredDuringSchedulingIgnoredDuringExecution:&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; nodeSelectorTerms:&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - matchExpressions:&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - key: disktype&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; operator: In&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; values:&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - ssd" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontColor=#000000;fontSize=9;spacing=3;horizontal=1;html=1;" parent="1" vertex="1">

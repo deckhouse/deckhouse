@@ -32,12 +32,11 @@ spec:
               type: object
               oneOf:
               - required:
-                - uid
                 - sshPublicKey
-                - passwordHash
               - required:
-                - uid
                 - sshPublicKeys
+              required:
+                - uid
                 - passwordHash
               properties:
                 uid:
@@ -139,12 +138,11 @@ spec:
               type: object
               oneOf:
               - required:
-                - uid
                 - sshPublicKey
-                - passwordHash
               - required:
-                - uid
                 - sshPublicKeys
+              required:
+                - uid
                 - passwordHash
               properties:
                 uid:

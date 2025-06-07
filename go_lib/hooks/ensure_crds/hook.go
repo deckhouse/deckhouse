@@ -141,6 +141,7 @@ func (cp *CRDsInstaller) Run(ctx context.Context) error {
 	return cp.installer.Run(ctx)
 }
 
+//nolint:unused // Will uses later
 func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		existCRD, err := cp.getCRDFromCluster(ctx, crd.GetName())
@@ -182,7 +183,6 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 		return err
 	})
 }
-
 func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) (*v1.CustomResourceDefinition, error) {
 	crd := &v1.CustomResourceDefinition{}
 

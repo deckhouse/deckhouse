@@ -14,7 +14,7 @@ description: "Описание схем размещения и взаимоде
 > Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 
 ![resources](../../images/cloud-provider-openstack/openstack-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -119,7 +119,7 @@ virtual IP создается в публичной сети, он все рав
 > В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
 
 ![resources](../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -203,7 +203,7 @@ Master-узел и узлы кластера подключаются к сущ�
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 
 ![resources](../../images/cloud-provider-openstack/openstack-simple.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -282,7 +282,7 @@ Master-узел и узлы кластера подключаются к сущ�
 > Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в `OpenStackClusterConfiguration` для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
 
 ![resources](../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10917&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 

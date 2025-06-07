@@ -12,8 +12,7 @@ lang: ru
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
    metadata:
-     annotations:
-       name: code
+     name: code
    spec:
      registry:
        ca: ""
@@ -30,8 +29,7 @@ lang: ru
    apiVersion: deckhouse.io/v1alpha2
    kind: ModuleUpdatePolicy
    metadata:
-     annotations:
-       name: code-policy
+     name: code-policy
    spec:
      releaseChannel: EarlyAccess
      update:

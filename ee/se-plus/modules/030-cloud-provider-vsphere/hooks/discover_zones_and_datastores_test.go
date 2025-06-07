@@ -2,7 +2,7 @@
 Copyright 2021 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
-
+//nolint:unused // TODO: fix unused linter
 package hooks
 
 import (
@@ -53,7 +53,6 @@ cloudProviderVsphere:
     - bar
     default: other-bar
 `
-
 		initValuesStringC = `
 global:
   defaultClusterStorageClass: default-cluster-sc
@@ -76,7 +75,6 @@ cloudProviderVsphere:
     - bar
     default: other-bar
 `
-
 		initValuesStringD = `
 global:
   defaultClusterStorageClass: ""

@@ -35,7 +35,11 @@
       description: |-
         The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
 
-        Run the following command to check its status: `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`.
+        To check the Pod's status, run the following command:
+        
+        ```shell
+        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        ```
 
   - alert: D8ClusterAutoscalerTargetDown
     expr: max by (job) (up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 0)
@@ -67,16 +71,31 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: There is no cluster-autoscaler target in Prometheus.
+      summary: Cluster-autoscaler target is missing in Prometheus.
       description: |-
-        Cluster-autoscaler automatically scales Nodes in the cluster; its unavailability will result in the inability
-        to add new Nodes if there is a lack of resources to schedule Pods. In addition, the unavailability of cluster-autoscaler
-        may result in over-spending due to provisioned but inactive cloud instances.
+        The cluster-autoscaler automatically scales nodes in the cluster.
+        If it's unavailable, it will be impossible to add new nodes when there's not enough resources for scheduling Pods.
+        It may also lead to unnecessary cloud costs due to unused but still provisioned cloud instances.
 
-        The recommended course of action:
-        1. Check the availability and status of cluster-autoscaler Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler`
-        2. Check whether the cluster-autoscaler deployment is present: `kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler`
-        3. Check the status of the cluster-autoscaler deployment: `kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler`
+        To resolve the issue, follow these steps:
+
+        1. Check availability and status of cluster-autoscaler Pods:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           ```
+
+        2. Verify that the cluster-autoscaler Deployment exists:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           ```
+
+        3. Check the Deployment's status:
+
+           ```bash
+           kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           ```
 
 - name: d8.cluster-autoscaler.malfunctioning
   rules:
@@ -93,13 +112,18 @@
       plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
-      summary: Too many cluster-autoscaler restarts have been detected.
+      summary: Too many cluster-autoscaler restarts detected.
       description: |
-        The number of restarts in the last hour: {{`{{ $value }}`}}.
+        The cluster-autoscaler has restarted {{`{{ $value }}`}} times in the past hour.
 
-        Excessive cluster-autoscaler restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Frequent restarts may indicate a problem.
+        The cluster-autoscaler is expected to run continuously without interruption.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
+        Check the logs for details:
+        
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        ```
 
   - alert: D8ClusterAutoscalerTooManyErrors
     expr: sum by(instance) (increase(cluster_autoscaler_errors_total[20m]) > 5)
@@ -115,11 +139,16 @@
       plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance"
-      summary: Cluster-autoscaler issues too many errors.
+      summary: Cluster-autoscaler is issuing too many errors.
       description: |
-        Cluster-autoscaler's scaling attempt resulted in an error from the cloud provider.
+        The cluster-autoscaler encountered multiple errors from the cloud provider when attempting to scale the cluster.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
+        Check the logs for details:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        ```
+
 {{- else }}
 []
 {{- end }}

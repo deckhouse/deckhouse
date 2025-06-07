@@ -18,4 +18,4 @@
         plk_create_group_if_not_exists__d8_okmeter_unavailable: "D8OkmeterUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_okmeter_unavailable: "D8OkmeterUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_labels_as_annotations: "pod"
-        summary: Okmeter agent is not Ready
+        summary: Okmeter agent is not Ready.

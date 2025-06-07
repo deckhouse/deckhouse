@@ -24,12 +24,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -126,7 +123,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 						release.ObjectMeta.Annotations = make(map[string]string)
 					}
 
-					release.ObjectMeta.Annotations[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged] = r.dependencyContainer.GetClock().Now().UTC().Format(time.RFC3339)
+					release.ObjectMeta.Annotations[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged] = r.dc.GetClock().Now().UTC().Format(time.RFC3339)
 					if err = r.client.Update(ctx, &release); err != nil {
 						return fmt.Errorf("set RegistrySpecChanged annotation to the '%s' module release: %w", release.Name, err)
 					}
@@ -194,97 +191,6 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 	return sourceModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !releaseExists)
 }
 
-func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UID, sourceName, moduleName, policy string, meta downloader.ModuleDownloadResult) error {
-	release := new(v1alpha1.ModuleRelease)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", moduleName, meta.ModuleVersion)}, release); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the module release: %w", err)
-		}
-		release = &v1alpha1.ModuleRelease{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.ModuleReleaseGVK.Kind,
-				APIVersion: "deckhouse.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-%s", moduleName, meta.ModuleVersion),
-				Labels: map[string]string{
-					v1alpha1.ModuleReleaseLabelModule: moduleName,
-					v1alpha1.ModuleReleaseLabelSource: sourceName,
-					// image digest has 64 symbols, while label can have maximum 63 symbols, so make md5 sum here
-					v1alpha1.ModuleReleaseLabelReleaseChecksum: fmt.Sprintf("%x", md5.Sum([]byte(meta.Checksum))),
-					v1alpha1.ModuleReleaseLabelUpdatePolicy:    policy,
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: v1alpha1.ModuleSourceGVK.GroupVersion().String(),
-						Kind:       v1alpha1.ModuleSourceGVK.Kind,
-						Name:       sourceName,
-						UID:        sourceUID,
-						Controller: ptr.To(true),
-					},
-				},
-			},
-			Spec: v1alpha1.ModuleReleaseSpec{
-				ModuleName: moduleName,
-				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleWeight,
-				Changelog:  meta.Changelog,
-			},
-		}
-		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Requirements != nil {
-			release.Spec.Requirements = &v1alpha1.ModuleReleaseRequirements{
-				ModuleReleasePlatformRequirements: v1alpha1.ModuleReleasePlatformRequirements{
-					Deckhouse:  meta.ModuleDefinition.Requirements.Deckhouse,
-					Kubernetes: meta.ModuleDefinition.Requirements.Kubernetes,
-				},
-				ParentModules: meta.ModuleDefinition.Requirements.ParentModules,
-			}
-		}
-
-		// if it's a first release for a Module, we have to install it immediately
-		// without any update Windows and update.mode manual approval
-		// the easiest way is to check the count or ModuleReleases for this module
-		{
-			labelSelector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}
-
-			releases := new(v1alpha1.ModuleReleaseList)
-			if err = r.client.List(ctx, releases, labelSelector, client.Limit(1)); err != nil {
-				return fmt.Errorf("list the '%s' module releases: %w", moduleName, err)
-			}
-			if len(releases.Items) == 0 {
-				// no other releases
-				if len(release.Annotations) == 0 {
-					release.Annotations = make(map[string]string, 1)
-				}
-				release.Annotations[v1alpha1.ModuleReleaseAnnotationApplyNow] = "true"
-			}
-		}
-
-		if err = r.client.Create(ctx, release); err != nil {
-			return fmt.Errorf("create module release: %w", err)
-		}
-		return nil
-	}
-
-	// seems weird to update already deployed/suspended release
-	if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
-		return nil
-	}
-
-	release.Spec = v1alpha1.ModuleReleaseSpec{
-		ModuleName: moduleName,
-		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleWeight,
-		Changelog:  meta.Changelog,
-	}
-
-	if err := r.client.Update(ctx, release); err != nil {
-		return fmt.Errorf("update module release: %w", err)
-	}
-
-	return nil
-}
-
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -340,8 +246,8 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 }
 
 func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source *v1alpha1.ModuleSource, message string) error {
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
-		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+	err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.Message = message
 		return true
 	})

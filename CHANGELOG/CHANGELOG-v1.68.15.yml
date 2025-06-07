@@ -1,0 +1,11 @@
+dhctl:
+  fixes:
+    - summary: Do not create a local-converger lock for commanderMode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13454
+docs:
+  fixes:
+    - summary: Fixed the parameter generator for modules on Hugo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13489
+    - summary: This reverts commit cf9d7590da7c4b23c7eab10da37abc16397faf87.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13452
+

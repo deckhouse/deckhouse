@@ -1,5 +1,5 @@
 ---
-title: "Настройка Ingress и DNS"
+title: "Прочие настройки"
 permalink: ru/virtualization-platform/documentation/admin/install/steps/ingress.html
 lang: ru
 ---
@@ -193,3 +193,12 @@ EOF
    ```
 
 Теперь можно авторизоваться в веб-интерфейсах кластера, используя электронную почту и пароль. Для дальнейшей настройки рекомендуется ознакомиться с разделом [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).
+
+## Включение модуля console
+
+{% alert level="info" %}
+Модуль доступен только только пользователям EE-редакции.
+{% endalert %}
+
+Модуль `console` позволит управлять компонентами виртуализации через веб-интерфейс Deckhouse.
+Чтобы включить его, воспользуйтесь инструкцией из раздела [Веб-интерфейс](https://deckhouse.ru/modules/console/stable/).

@@ -32,6 +32,11 @@ import (
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/shirou/gopsutil/v3/process"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +61,7 @@ const (
 	modulesDirEnv      = "MODULES_DIR"
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
+	serviceDeckhouse = "deckhouse"
 	leaseName        = "deckhouse-leader-election"
 	defaultNamespace = "d8-system"
 	leaseDuration    = 35
@@ -264,6 +270,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+	telemetryShutdown := registerTelemetry(ctx)
+
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
 	rm := reaperMutex{}
@@ -271,6 +279,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 		select {
 		case <-ctx.Done():
 			logger.Info("Context canceled - exiting")
+
 			exitCh <- struct{}{}
 			return
 
@@ -283,6 +292,10 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					environ = append(environ, skipEntrypointKeyValue)
 				}
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -350,6 +363,10 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -416,4 +433,46 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+}
+
+func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
+	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
+
+	if endpoint == "" {
+		return func(_ context.Context) error {
+			return nil
+		}
+	}
+
+	opts := make([]otlptracegrpc.Option, 0, 1)
+
+	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
+	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	if authToken != "" {
+		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
+			"Authorization": "Bearer " + strings.TrimSpace(authToken),
+		}))
+	}
+
+	exporter, _ := otlptracegrpc.New(ctx, opts...)
+
+	resource := sdkresource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(AppName),
+		semconv.ServiceVersionKey.String(DeckhouseVersion),
+		semconv.TelemetrySDKLanguageKey.String("en"),
+		semconv.K8SDeploymentName(AppName),
+	)
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	return provider.Shutdown
 }

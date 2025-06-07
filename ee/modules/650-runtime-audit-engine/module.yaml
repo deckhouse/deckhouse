@@ -1,5 +1,6 @@
 name: runtime-audit-engine
 weight: 650
+stage: "General Availability"
 subsystems:
   - security
 namespace: d8-runtime-audit-engine

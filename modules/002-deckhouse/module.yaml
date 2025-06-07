@@ -1,5 +1,6 @@
 name: deckhouse
 weight: 2
+stage: "General Availability"
 subsystems:
   - deckhouse
 namespace: d8-system

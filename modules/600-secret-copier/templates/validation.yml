@@ -29,9 +29,7 @@ spec:
   validations:
   - expression: request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
     reason: Forbidden
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
     messageExpression: '''Creating or updating secrets with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace is forbidden'''
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -51,7 +49,5 @@ spec:
           values:
             - default
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
 {{- end }}

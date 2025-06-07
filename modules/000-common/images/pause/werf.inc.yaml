@@ -19,6 +19,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}

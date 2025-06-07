@@ -56,6 +56,9 @@ spec:
                 releaseChannel:
                   type: string
                   description: Module release channel.
+                exclusiveGroup:
+                  type: string
+                  description: Indicates the group where only one module can be active at a time.
                 updatePolicy:
                   type: string
                   description: Module update policy.
@@ -134,7 +137,12 @@ spec:
         - name: Weight
           jsonPath: .properties.weight
           type: integer
-          description: Module _weight_ (priority).
+          priority: 1
+          description: Module weight
+        - name: Stage
+          jsonPath: .properties.stage
+          type: string
+          description: Module stage
         - name: Release channel
           jsonPath: .properties.releaseChannel
           description: Release channel of the module.

@@ -1,0 +1,9 @@
+metallb:
+  fixes:
+    - summary: Fixed deprecated CRD addresspools.metallb.io deletion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13553
+network-gateway:
+  fixes:
+    - summary: Fix python path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13574
+

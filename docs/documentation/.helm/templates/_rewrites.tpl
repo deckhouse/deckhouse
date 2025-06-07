@@ -12,7 +12,6 @@ rewrite ^/(.+)/modules/040-control-plane-manager/usage.html$ /$1/modules/control
 rewrite ^/(.+)/modules/040-node-manager/usage.html$ /$1/modules/node-manager/examples.html redirect;
 rewrite ^/(.+)/modules/042-kube-dns/usage.html$ /$1/modules/kube-dns/examples.html redirect;
 rewrite ^/(.+)/modules/050-network-policy-engine/usage.html$ /$1/modules/network-policy-engine/examples.html redirect;
-rewrite ^/(.+)/modules/031-ceph-csi/usage.html$ /$1/modules/ceph-csi/examples.html redirect;
 rewrite ^/(.+)/modules/110-istio/usage.html$ /$1/modules/istio/examples.html redirect;
 rewrite ^/(.+)/modules/302-vertical-pod-autoscaler/usage.html$ /$1/modules/vertical-pod-autoscaler/examples.html redirect;
 rewrite ^/(.+)/modules/303-prometheus-pushgateway/usage.html$ /$1/modules/prometheus-pushgateway/examples.html redirect;

@@ -371,7 +371,7 @@ index 15489c3f..4e1c5c09 100644
  		return ForAddresses(svc.Spec.ClusterIPs)
  	}
 diff --git a/internal/k8s/controllers/service_controller.go b/internal/k8s/controllers/service_controller.go
-index a804ee76..1060e172 100644
+index a804ee76..d5235cf8 100644
 --- a/internal/k8s/controllers/service_controller.go
 +++ b/internal/k8s/controllers/service_controller.go
 @@ -19,6 +19,8 @@ package controllers
@@ -410,28 +410,19 @@ index a804ee76..1060e172 100644
  
  	if !r.initialLoadPerformed {
  		level.Debug(r.Logger).Log("controller", "ServiceReconciler", "message", "filtered service, still waiting for the initial load to be performed")
-@@ -83,9 +83,19 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
+@@ -111,6 +111,11 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
+ 		updateErrors.Inc()
+ 		level.Error(r.Logger).Log("controller", "ServiceReconciler", "name", req.NamespacedName.String(), "service", dumpResource(service), "endpoints", dumpResource(epSlices), "event", "failed to handle service")
  		return ctrl.Result{}, nil
++	case SyncStateSuccess:
++		if service == nil {
++			level.Info(r.Logger).Log("controller", "ServiceReconciler", "event", "service deleted, forcing reload")
++			r.forceReload()
++		}
  	}
- 
-+	if service == nil {
-+		level.Info(r.Logger).Log("controller", "ServiceReconciler", "message", "service doesn't exist", "service", req.NamespacedName)
-+		return ctrl.Result{}, nil
-+	}
-+
-+	if service.Spec.ServiceRef.Name == "" || service.Spec.ServiceRef.Namespace == "" {
-+		level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "serviceRef.Name or serviceRef.Namespace is empty", "service", req.NamespacedName)
-+		return ctrl.Result{}, nil
-+	}
-+
- 	epSlices := []discovery.EndpointSlice{}
- 	if r.Endpoints {
--		epSlices, err = epSlicesForService(ctx, r, req.NamespacedName)
-+		epSlices, err = epSlicesForService(ctx, r, types.NamespacedName{Namespace: service.Spec.ServiceRef.Namespace, Name: service.Spec.ServiceRef.Name})
- 		if err != nil {
- 			level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "failed to get endpoints", "service", req.NamespacedName, "error", err)
- 			return ctrl.Result{}, err
-@@ -118,7 +128,7 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
+ 	return ctrl.Result{}, nil
+ }
+@@ -118,7 +123,7 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
  func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
  	if r.Endpoints {
  		return ctrl.NewControllerManagedBy(mgr).
@@ -440,7 +431,7 @@ index a804ee76..1060e172 100644
  			Watches(&discovery.EndpointSlice{},
  				handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
  					epSlice, ok := obj.(*discovery.EndpointSlice)
-@@ -132,20 +142,39 @@ func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+@@ -132,20 +137,43 @@ func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
  						return []reconcile.Request{}
  					}
  					level.Debug(r.Logger).Log("controller", "ServiceReconciler", "enqueueing", serviceName, "epslice", dumpResource(epSlice))
@@ -476,6 +467,10 @@ index a804ee76..1060e172 100644
 +			res = append(res, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: service.Namespace, Name: service.Name}})
 +		}
 +	}
++	if len(services.Items) == 0 {
++		level.Debug(r.Logger).Log("controller", "ServiceReconciler", "no sdninternall2lbservices found for parent service", name.String())
++		res = append(res, reconcile.Request{NamespacedName: name})
++	}
 +	return res
 +}
 +
@@ -484,7 +479,7 @@ index a804ee76..1060e172 100644
  	err := r.Get(ctx, name, &res)
  	if apierrors.IsNotFound(err) { // in case of delete, get fails and we need to pass nil to the handler
  		return nil, nil
-@@ -156,7 +185,7 @@ func (r *ServiceReconciler) serviceFor(ctx context.Context, name types.Namespace
+@@ -156,7 +184,7 @@ func (r *ServiceReconciler) serviceFor(ctx context.Context, name types.Namespace
  	return &res, nil
  }
  

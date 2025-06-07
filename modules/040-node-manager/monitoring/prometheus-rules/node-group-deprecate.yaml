@@ -12,8 +12,9 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: NodeGroup {{ $labels.name }} has deprecated filed spec.static.internalNetworkCIDRs
+      summary: NodeGroup {{ $labels.name }} uses deprecated field `spec.static.internalNetworkCIDRs`.
       description: |
-        Internal network CIDRs setting now located in the static cluster configuration.
-        Delete this field from NodeGroup {{ $labels.name }} to fix this alert.
-        Do not worry, it has been already migrated to another place.
+        The `spec.static.internalNetworkCIDRs` field is deprecated and has been moved to the static cluster configuration.
+
+        To resolve this issue, delete the field from NodeGroup {{ $labels.name }}.
+        This is safe, as the setting has already been migrated automatically.

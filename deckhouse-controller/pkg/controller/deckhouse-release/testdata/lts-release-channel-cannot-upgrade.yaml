@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: deckhouse
+          image: my.registry.com/deckhouse:v1.25.0
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.60.1
+spec:
+  version: v1.60.1
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.65.6
+spec:
+  version: v1.65.6
+status:
+  approved: false
+  message: ""
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.76.7
+spec:
+  version: v1.76.7
+status:
+  approved: false
+  message: ""
+  phase: Pending

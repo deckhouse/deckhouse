@@ -49,15 +49,17 @@ The following resource minimums are recommended for infrastructure nodes, depend
 - **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
 - **Monitoring node** (for high-load clusters) — 4 CPU, 8GB RAM, 50 GB of disk space on a fast disk (400+ IOPS).
 - **System node**:
-  - 2 CPU, 4 RAM, 50 GB of disk space — if there are dedicated monitoring nodes in the cluster;
-  - 4 CPU, 8 RAM, 50 GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
+  - 4 CPU, 8 RAM, 50 GB of disk space — if there are dedicated monitoring nodes in the cluster;
+  - 8 CPU, 16 RAM, 50 GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
 - **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
 
 Estimates of the resources required for the clusters to run:
-- **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 24 CPUs and 48GB RAM** along with fast 400+ IOPS disks for the master nodes.
+- **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 26 CPUs and 52GB RAM** along with fast 400+ IOPS disks for the master nodes.
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 28 CPUs and 64GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
 - We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass) on the fast disks for Deckhouse components.
 - Add worker nodes to this, taking into account the nature of the workloads.
+
+Also read [the instructions](./hardware-requirements.html) on the hardware requirements for cluster resources, which describes in detail how to select the necessary resources depending on the expected load.
 
 ## Things to consider when configuring
 

@@ -6,4 +6,5 @@ metadata:
   name: report-updater
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "report-updater")) | nindent 2 }}
+automountServiceAccountToken: false
 {{- end }}

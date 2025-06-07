@@ -115,18 +115,6 @@ func main() {
 		featureGates["ProxyTerminatingEndpoints"] = true
 	}
 
-	// The DaemonSetUpdateSurge feature gate has been removed in Kubernetes v1.27.
-	k8s127, _ := semver.NewVersion("1.27")
-	if kubernetesVersion.LessThan(k8s127) {
-		featureGates["DaemonSetUpdateSurge"] = true
-	}
-
-	// The EndpointSliceTerminatingCondition feature gate has been removed in Kubernetes v1.28.
-	k8s128, _ := semver.NewVersion("1.28")
-	if kubernetesVersion.LessThan(k8s128) {
-		featureGates["EndpointSliceTerminatingCondition"] = true
-	}
-
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KubeProxyConfiguration",
@@ -153,11 +141,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0644)
+	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0644)
+	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}

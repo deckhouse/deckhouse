@@ -134,11 +134,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/025-static-routing-manager
-  to: /deckhouse/modules/025-static-routing-manager
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   stageDependencies:
@@ -176,6 +171,11 @@
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/ngc-install-d8-shutdown-inhibitor.yaml
+  to: /deckhouse/modules/040-node-manager/templates/ngc-install-d8-shutdown-inhibitor.yaml
   stageDependencies:
     install:
         - '**/*'

@@ -10,13 +10,17 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus disk is over 95% used.
+      summary: Prometheus disk usage exceeds 95%.
       description: |
-        For more information, use the command:
+        Deckhouse has detected that the Prometheus disk is over 95% full.
+        
+        To check the current usage, run the following command:
+
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size
+
+        Consider expanding disk size following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size).
   # If there was retention in the last 24 hours and the oldest metric was recorded less than 10 days ago and storage.tsdb.retention.size has not been changed.
   - alert: PrometheusMainRotatingEarlierThanConfiguredRetentionDays
     expr: |
@@ -32,9 +36,15 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus-main data is being rotated earlier than configured retention days
+      summary: Prometheus-main data is rotating earlier than the configured retention period.
       description: |
-        You need to increase the disk size, reduce the number of metrics or decrease `retentionDays` module parameter.
+        The `prometheus-main` instance is rotating data earlier than specified by the `retentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `retentionDays` parameter in the module configuration.
   - alert: PrometheusLongtermRotatingEarlierThanConfiguredRetentionDays
     expr: |
       group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus-longterm"}[24h]) > 0)
@@ -49,6 +59,12 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus-longterm data is being rotated earlier than configured retention days
+      summary: Prometheus-longterm data is rotating earlier than the configured retention period.
       description: |
-        You need to increase the disk size, reduce the number of metrics or decrease `longtermRetentionDays` module parameter.
+        The `prometheus-longterm` instance is rotating data earlier than specified by the `longtermRetentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `longtermRetentionDays` parameter in the module configuration.

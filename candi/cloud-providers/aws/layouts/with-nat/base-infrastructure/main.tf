@@ -72,7 +72,7 @@ resource "aws_subnet" "kube_internal" {
 }
 
 resource "aws_eip" "natgw" {
-  vpc = true
+  domain = "vpc"
 
   tags = merge(local.tags, {
     Name = "${local.prefix}-natgw"
@@ -261,7 +261,7 @@ resource "aws_instance" "bastion" {
 
 resource "aws_eip" "bastion" {
   count = local.bastion_instance != {} ? 1 : 0
-  vpc   = true
+  domain = "vpc"
   tags = merge(local.tags, {
     Name = "${local.prefix}-bastion"
   })

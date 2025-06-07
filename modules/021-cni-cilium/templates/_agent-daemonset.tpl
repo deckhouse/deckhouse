@@ -32,6 +32,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $context | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -53,6 +54,7 @@ spec:
           failureThreshold: 105
           periodSeconds: 2
           successThreshold: 1
+          initialDelaySeconds: 5
         livenessProbe:
           httpGet:
             host: "127.0.0.1"
@@ -62,6 +64,8 @@ spec:
             httpHeaders:
             - name: "brief"
               value: "true"
+            - name: "require-k8s-connectivity"
+              value: "false"
           periodSeconds: 30
           successThreshold: 1
           failureThreshold: 10
@@ -90,6 +94,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.memory
+              divisor: '1'
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
@@ -118,6 +127,7 @@ spec:
               - IPC_LOCK
               # Used in iptables. Consider removing once we are iptables-free
               - SYS_MODULE
+              # Needed to switch network namespaces (used for health endpoint, socket-LB).
               # We need it for now but might not need it for >= 5.11 specially
               # for the 'SYS_RESOURCE'.
               # In >= 5.8 there's already BPF and PERMON capabilities
@@ -127,10 +137,16 @@ spec:
               # Both PERFMON and BPF requires kernel 5.8, container runtime
               # cri-o >= v1.22.0 or containerd >= v1.5.0.
               # If available, SYS_ADMIN can be removed.
-              #- PERFMON
-              #- BPF
+              - PERFMON
+              - BPF
               # Allow discretionary access control (e.g. required for package installation)
               - DAC_OVERRIDE
+              # Allow to set Access Control Lists (ACLs) on arbitrary files (e.g. required for package installation)
+              - FOWNER
+              # Allow to execute program that changes GID (e.g. required for package installation)
+              - SETGID
+              # Allow to execute program that changes UID (e.g. required for package installation)
+              - SETUID
             drop:
               - ALL
         volumeMounts:
@@ -145,6 +161,9 @@ spec:
           mountPath: "/run/cilium/cgroupv2"
         - name: cilium-run
           mountPath: /var/run/cilium
+        - name: cilium-netns
+          mountPath: /var/run/cilium/netns
+          mountPropagation: HostToContainer
         - name: cni-path
           mountPath: /host/opt/cni/bin
         - name: etc-cni-netd
@@ -205,7 +224,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
@@ -259,7 +278,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
         command:
-        - cilium
+        - cilium-dbg
         - build-config
         - --allow-config-keys=debug,single-cluster-route
         env:
@@ -390,6 +409,12 @@ spec:
               name: cilium-config
               key: clean-cilium-bpf-state
               optional: true
+        - name: WRITE_CNI_CONF_WHEN_READY
+          valueFrom:
+            configMapKeyRef:
+              name: cilium-config
+              key: write-cni-conf-when-ready
+              optional: true
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
@@ -440,6 +465,8 @@ spec:
           - "/install-plugin.sh"
         resources:
           requests:
+            cpu: 100m
+            memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
           seLinuxOptions:
@@ -469,6 +496,10 @@ spec:
       - name: cilium-run
         hostPath:
           path: "/var/run/cilium"
+          type: DirectoryOrCreate
+      - name: cilium-netns
+        hostPath:
+          path: /var/run/netns
           type: DirectoryOrCreate
       - name: bpf-maps
         hostPath:

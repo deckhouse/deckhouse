@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
-{!{- $ctx := coll.Merge $pullRequestContext . -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
 
 # on every push to dev branches
 name: Build and test for dev branches
@@ -37,66 +37,6 @@ jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  enable_fe:
-    if: ${{ needs.pull_request_info.outputs.edition == 'FE' }}
-    name: Enable FE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_ee:
-    if: ${{ needs.pull_request_info.outputs.edition == 'EE' }}
-    name: Enable EE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_ce:
-    if: ${{ needs.pull_request_info.outputs.edition == 'CE' }}
-    name: Enable CE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_be:
-    if: ${{ needs.pull_request_info.outputs.edition == 'BE' }}
-    name: Enable BE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_se:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE' }}
-    name: Enable SE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_se_plus:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
-    name: Enable SE-plus
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
   go_generate:
     name: Go Generate
     needs:
@@ -111,15 +51,80 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 
-  build_deckhouse:
-    name: Build Deckhouse
+  build_fe:
+    name: Build FE
     needs:
       - git_info
       - pull_request_info
       - go_generate
       - workflow_render
     env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_ee:
+    name: Build EE
+    if: contains(github.event.pull_request.labels.*.name, 'edition/ee')
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    env:
+      WERF_ENV: "EE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_se:
+    name: Build SE
+    if: contains(github.event.pull_request.labels.*.name, 'edition/se')
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_se_plus:
+    name: Build SE-plus
+    if: contains(github.event.pull_request.labels.*.name, 'edition/se-plus')
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    env:
+      WERF_ENV: "SE-plus"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_be:
+    name: Build BE
+    if: contains(github.event.pull_request.labels.*.name, 'edition/be')
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    env:
+      WERF_ENV: "BE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_ce:
+    name: Build CE
+    if: contains(github.event.pull_request.labels.*.name, 'edition/ce')
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    env:
+      WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   doc_web_build:
@@ -147,7 +152,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
+      - build_fe
 {!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
 
   tests:
@@ -179,8 +184,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
 
   golangci_lint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -188,8 +193,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
 
   openapi_test_cases:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -197,8 +202,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
 
   web_links_test:
     if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' && github.repository == 'deckhouse/deckhouse' }}
@@ -217,17 +222,22 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
   set_e2e_requirement_status:
     # if previous jobs were failed we do not need set status, because checks will be failed
-    if: ${{ success() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    if: ${{ !failure() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Set 'waiting for e2e' commit status
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
+      - build_fe
+      - build_ee
+      - build_se
+      - build_se_plus
+      - build_be
+      - build_ce
       - validators
       - openapi_test_cases
       - golangci_lint

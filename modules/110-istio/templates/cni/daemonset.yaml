@@ -61,6 +61,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       containers:
         - name: install-cni
           args:

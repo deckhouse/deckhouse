@@ -19,7 +19,7 @@ if [ ! -f "$kubeconfig" ]; then
   exit 0
 fi
 
-node=${D8_NODE_HOSTNAME}
+node=$(bb-d8-node-name)
 cgroup="$(stat -fc %T /sys/fs/cgroup)" || {
   bb-log-error "failed to get cgroup version from node $node"
   exit 1

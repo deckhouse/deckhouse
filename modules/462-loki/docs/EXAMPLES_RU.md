@@ -19,7 +19,7 @@ spec:
   enabled: true
   version: 1
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: development-logs

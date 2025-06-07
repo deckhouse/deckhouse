@@ -80,12 +80,12 @@
                       <span class="sidebar__badge_v2 sidebar__badge_commercial" title='{{ T "commercial" }}'>{{ T "currency_sign"  }}</span>
                       {{- end }}
                     {{- end }}
-                    {{- if and $sidebarItem.moduleStatus (index $.Site.Data.helpers.moduleStageBageMap ( replace (lower $sidebarItem.moduleStatus) " " "_")) -}}
+                    {{- if and (replace (lower $sidebarItem.moduleStatus) " " "_") (index $.Site.Data.helpers.moduleStageBageMap (replace (lower $sidebarItem.moduleStatus) " " "_")) -}}
                       <span class='sidebar__badge_v2'
-                          {{- if (T (printf "module_alert_%s_long" (lower $sidebarItem.moduleStatus ))) }}
-                            title='{{ (T (printf "module_alert_%s_long" (lower $sidebarItem.moduleStatus ))) }}'
+                          {{- if (T (printf "module_alert_%s_long" (replace (lower $sidebarItem.moduleStatus ) " " "_") )) }}
+                            title='{{ (T (printf "module_alert_%s_long" (replace (lower $sidebarItem.moduleStatus) " " "_") )) }}'
                           {{ end -}}
-                          >{{ index $.Site.Data.helpers.moduleStageBageMap ( lower $sidebarItem.moduleStatus ) -}}
+                          >{{ index $.Site.Data.helpers.moduleStageBageMap (replace (lower $sidebarItem.moduleStatus) " " "_") -}}
                       </span>
                     {{- end }}
                   </span>

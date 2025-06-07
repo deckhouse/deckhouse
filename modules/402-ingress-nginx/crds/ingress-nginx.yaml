@@ -1220,6 +1220,24 @@ spec:
                       message: "Annotations with 'istio.io' as a domain suffix are not allowed."
                     - rule: self.all(k, !k.matches('(^|\\.)kubernetes\\.io/'))
                       message: "Annotations with 'kubernetes.io' as a domain suffix are not allowed."
+                controllerLogLevel:
+                  type: string
+                  description: "Defines the verbosity level for the ingress controller logs."
+                  enum:
+                    - Error
+                    - Warn
+                    - Info
+                    - Extended
+                    - Debug
+                    - Trace
+                  default: Info
+                  x-enum-descriptions:
+                    - "Only critical errors will be logged."
+                    - "Warnings and errors will be logged."
+                    - "Informational messages, including basic debugging information."
+                    - "Extended information about changes in system state."
+                    - "Verbose debugging output, potentially very noisy."
+                    - "Trace-level logs with detailed step-by-step context."
               oneOf:
                 - properties:
                     inlet:

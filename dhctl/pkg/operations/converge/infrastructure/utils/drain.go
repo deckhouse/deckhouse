@@ -33,6 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type DrainOptions struct {
+	Force bool
+}
+
 func GetDrainConfirmation(commanderMode bool) func(string) bool {
 	if commanderMode {
 		return func(msg string) bool {
@@ -45,10 +49,10 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 	}
 }
 
-func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool) error {
+func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
 	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
 		RunContext(ctx, func() error {
-			return drainNode(ctx, kubeCl, nodeName)
+			return drainNode(ctx, kubeCl, nodeName, opts)
 		})
 	if err != nil {
 		if goerrors.Is(err, kubedrain.ErrDrainTimeout) {
@@ -65,7 +69,7 @@ func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeNa
 	return nil
 }
 
-func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, opts DrainOptions) error {
 	node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -82,6 +86,7 @@ func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName st
 		IgnoreAllDaemonSets: true,
 		DeleteEmptyDirData:  true,
 		GracePeriodSeconds:  -1,
+		Force:               opts.Force,
 		// If a pod is not evicted in 30 seconds, retry the eviction next time.
 		Timeout: 30 * time.Second,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {

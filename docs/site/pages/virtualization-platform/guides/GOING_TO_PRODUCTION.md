@@ -15,7 +15,7 @@ Use `Early Access` or `Stable` release channel.
 Configure the [auto-update window](/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
-Select the [release channel](../documentation/admin/release-channels.html) and [update mode](../documentation/admin/update/update.html) that suit your needs.
+Select the [release channel](../documentation/about/release-channels.html) and [update mode](../documentation/admin/update/update.html) that suit your needs.
 The more stable the release channel is, the longer you will have to wait before you can use new features.
 
 If possible, use separate release channels for clusters.

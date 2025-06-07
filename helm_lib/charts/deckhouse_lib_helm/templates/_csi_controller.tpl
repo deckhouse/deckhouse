@@ -56,12 +56,15 @@ memory: 50Mi
   {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
+  {{- $additionalCsiControllerPodAnnotations := $config.additionalCsiControllerPodAnnotations | default false }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
+  {{- $additionalControllerVPA := $config.additionalControllerVPA }}
   {{- $additionalContainers := $config.additionalContainers }}
+  {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
@@ -153,6 +156,9 @@ spec:
       maxAllowed:
         cpu: 20m
         memory: 100Mi
+    {{- if $additionalControllerVPA }}
+    {{- $additionalControllerVPA | toYaml | nindent 4 }}
+    {{- end }}
     {{- end }}
 ---
 apiVersion: policy/v1
@@ -174,10 +180,6 @@ metadata:
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
 
-  {{- if eq $context.Chart.Name "csi-nfs" }}
-  annotations:
-    pod-reloader.deckhouse.io/auto: "true"
-  {{- end }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -190,13 +192,20 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
-    {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
+      {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiControllerPodAnnotations) }}
       annotations:
+      {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
         cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
-    {{- end }}
+      {{- end }}
+      {{- if $additionalCsiControllerPodAnnotations }}
+        {{- $additionalCsiControllerPodAnnotations | toYaml | nindent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
-      hostNetwork: true
+      hostNetwork: {{ $csiControllerHostNetwork }}
+      {{- if eq $csiControllerHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- if $additionalPullSecrets }}
@@ -216,6 +225,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- end }}
       serviceAccountName: csi
+      automountServiceAccountToken: true
       containers:
       - name: provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -239,6 +249,9 @@ spec:
         - "--default-fstype=ext4"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=30s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
   {{- if $extraCreateMetadataEnabled }}
@@ -276,6 +289,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=30s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--worker-threads={{ $attacherWorkers }}"
         env:
         - name: ADDRESS
@@ -304,6 +320,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=30s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--workers={{ $resizerWorkers }}"
         env:
         - name: ADDRESS
@@ -360,6 +379,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=30s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--worker-threads={{ $snapshotterWorkers }}"
         env:
         - name: ADDRESS
@@ -384,14 +406,25 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
+  {{- if eq $csiControllerHostNetwork "true" }}
         - "--http-endpoint=$(HOST_IP):{{ $livenessProbePort }}"
+  {{- else }}
+        - "--http-endpoint=$(POD_IP):{{ $livenessProbePort }}"
+  {{- end }}
         env:
         - name: ADDRESS
           value: /csi/csi.sock
+  {{- if eq $csiControllerHostNetwork "true" }}
         - name: HOST_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+  {{- else }}
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+  {{- end }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -477,6 +510,7 @@ metadata:
   name: csi
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+automountServiceAccountToken: false
 
 # ===========
 # provisioner

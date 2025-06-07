@@ -57,6 +57,7 @@ spec:
         {{- if .Values.metallb.speaker.tolerations }}
         {{- .Values.metallb.speaker.tolerations | toYaml | nindent 6 }}
         {{- end }}
+      automountServiceAccountToken: true
       imagePullSecrets:
         - name: deckhouse-registry
       volumes:

@@ -12,7 +12,7 @@ title: "Модуль runtime-audit-engine: FAQ"
 Пример конфигурации [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: falco-events

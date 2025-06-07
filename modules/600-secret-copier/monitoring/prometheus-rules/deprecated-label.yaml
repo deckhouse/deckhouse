@@ -10,10 +10,10 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Obsolete `antiopa_secret_copier=yes` label has been found.
+      summary: Obsolete `antiopa_secret_copier=yes` label detected.
       description: |-
-        The [secrets copier module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed the service label for the original secrets in the `default` namespace.
+        The [`secret-copier` module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed its labeling approach for original secrets in the `default` namespace.
 
-        Soon we will abandon the old `antiopa-secret-copier: "yes"` label.
+        The label `antiopa-secret-copier: "yes"` is deprecated and will be removed soon.
 
-        You have to replace the `antiopa-secret-copier: "yes"` label with  `secret-copier.deckhouse.io/enabled: ""` for all secrets that the `secret-copier` module uses in the `default` namespace.
+        To resolve this issue, replace the label `antiopa-secret-copier: "yes"` with `secret-copier.deckhouse.io/enabled: ""` for all secrets used by the `secret-copier` module in the `default` namespace.

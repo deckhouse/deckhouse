@@ -136,6 +136,7 @@ data:
 
   {{- if $geoIP2.maxmindLicenseKey }}
   use-geoip2: "true"
+  geoip2-autoreload-in-minutes: "10"
   {{- end }}
 
   log-format-escape-json: "true"

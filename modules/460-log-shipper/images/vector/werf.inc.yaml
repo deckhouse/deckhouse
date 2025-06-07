@@ -1,12 +1,12 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
     add: /reloader
     to: /usr/bin/reloader
     before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /relocate
     to: /
     before: install
@@ -77,12 +77,13 @@ shell:
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
   - strip target/release/vector
   - mkdir -p /relocate/etc /relocate/usr/bin
-  - cp target/release/vector /relocate/usr/bin/vector
-  - cp -pr /etc/pki /relocate/etc
+  - cp target/release/vector /vector
   - rm -rf /srv/.cargo/config.toml ~/.gitconfig
+  - chown 64535:64535 /vector
+  - chmod 0755 /vector
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.24
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -101,3 +102,16 @@ shell:
   - go build -ldflags="-s -w" -o /reloader main.go
   - chown 64535:64535 /reloader
   - chmod 755 /reloader
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /vector
+    to: /relocate/usr/bin/vector
+    before: install
+shell:
+  install:
+  - /binary_replace.sh -i /relocate/usr/bin/vector -o /relocate
+  - cp -pr /etc/pki /relocate/etc

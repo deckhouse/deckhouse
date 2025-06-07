@@ -16,6 +16,7 @@ editions:
     - azure
     - gcp
     - yandex
+    - kubernetes
   # skip adding fix imports for release. need only for CE edition in general case
   skipFixingImports: true
 
@@ -39,7 +40,6 @@ editions:
 
   # exclude modules from templates and images
   excludeModules:
-  - ceph-csi
   - openvpn
 
 - name: SE

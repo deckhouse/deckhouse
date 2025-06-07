@@ -8,7 +8,6 @@
 025-static-routing-manager/     @apolovov
 030-cloud-provider-*/           @aleksey-su
 031-local-path-provisioner/     @AleksZimin
-031-ceph-csi/                   @AleksZimin
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
 036-kube-proxy/                 @apolovov

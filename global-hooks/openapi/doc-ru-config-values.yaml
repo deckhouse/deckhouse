@@ -32,7 +32,9 @@ properties:
     properties:
       ingressClass:
         description: |
-          Класс Ingress-контроллера ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+
+          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех модулей. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.

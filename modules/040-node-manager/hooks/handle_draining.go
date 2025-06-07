@@ -283,10 +283,6 @@ func (dn drainingNode) isDraining() bool {
 	return dn.DrainingSource != ""
 }
 
-func (dn drainingNode) isDrained() bool {
-	return dn.DrainedSource != ""
-}
-
 type drainedNodeRes struct {
 	NodeName       string
 	DrainingSource string

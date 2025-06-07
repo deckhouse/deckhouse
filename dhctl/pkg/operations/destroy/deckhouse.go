@@ -159,11 +159,6 @@ func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.
 		return err
 	}
 
-	err = deckhouse.DeletePV(ctx, kubeCl)
-	if err != nil {
-		return err
-	}
-
 	err = deckhouse.WaitForPVDeletion(ctx, kubeCl)
 	if err != nil {
 		return err

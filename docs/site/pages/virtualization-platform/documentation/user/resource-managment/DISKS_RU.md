@@ -35,15 +35,15 @@ d8 k get storageclass
 
 Пример вывода команды:
 
-```console
-NAME                          PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-i-linstor-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-i-linstor-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-i-linstor-thin-r3             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
-linstor-thin-r1               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-linstor-thin-r2               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-linstor-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
-nfs-4-1-wffc                  nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
+```txt
+NAME                                 PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+i-sds-replicated-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+i-sds-replicated-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+i-sds-replicated-thin-r3             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
+sds-replicated-thin-r1               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+sds-replicated-thin-r2               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
+nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
 Маркер `(default)` рядом с названием класса указывает, что данный `StorageClass` будет использоваться по умолчанию, в случае если пользователь не указал название класса явно в создаваемом ресурсе.
@@ -97,7 +97,7 @@ spec:
   # Настройки параметров хранения диска.
   persistentVolumeClaim:
     # Подставьте ваше название StorageClass.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
     size: 100Mi
 EOF
 ```
@@ -108,11 +108,17 @@ EOF
 - `Provisioning` — идет процесс создания диска.
 - `Resizing` — идет процесс изменения размера диска.
 - `WaitForFirstConsumer` — диск ожидает создания виртуальной машины, которая будет его использовать.
+- `WaitForUserUpload` - диск ожидает от пользователя загрузки образа (type: Upload).
 - `Ready` — диск создан и готов для использования.
 - `Failed` — произошла ошибка в процессе создания.
+- `PVCLost` - системная ошибка, PVC с данными утерян.
 - `Terminating` — идет процесс удаления диска. Процесс может «зависнуть» в этом состоянии если он еще подключен к виртуальной машине.
 
 До тех пор, пока диск не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создании диска запустится заново.
+
+Диагностика проблем с ресурсом осуществляется путем анализа информации в блоке `.status.conditions`.
+
+Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в [настройках виртуализации](../../admin/install/steps/virtualization.html#описание-параметров).
 
 Проверьте состояние диска после создания:
 
@@ -136,14 +142,14 @@ blank-disk   Ready   100Mi      1m2s
 На примере ранее созданного проектного образа [VirtualImage](../../../reference/cr/virtualimage.html), рассмотрим команду позволяющую определить размер распакованного образа:
 
 ```bash
-d8 k get cvi ubuntu-22.04 -o wide
+d8 k get cvi ubuntu-22-04 -o wide
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
-ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
+ubuntu-22-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
 
 Искомый размер указан в колонке UNPACKEDSIZE и равен 2.5Gi.
@@ -162,13 +168,13 @@ spec:
     # Укажем размер больше чем значение распакованного образа.
     size: 10Gi
     # Подставьте ваше название StorageClass.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
   # Источник из которого создается диск.
   dataSource:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22.04
+      name: ubuntu-22-04
 EOF
 ```
 
@@ -184,13 +190,13 @@ spec:
   # Настройки параметров хранения диска.
   persistentVolumeClaim:
     # Подставьте ваше название StorageClass.
-    storageClassName: i-linstor-thin-r2
+    storageClassName: i-sds-replicated-thin-r2
   # Источник из которого создается диск.
   dataSource:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22.04
+      name: ubuntu-22-04
 EOF
 ```
 

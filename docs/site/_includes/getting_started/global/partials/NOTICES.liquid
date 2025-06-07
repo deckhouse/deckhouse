@@ -4,6 +4,11 @@
 Доступно начиная с версии 1.65 Deckhouse Kubernetes Platform.
 {% endalert %}
 {%- endif %}
+{%- if page.platform_code == "red" %}
+{%- alert level="info" %}
+Перед установкой Deckhouse Kubernetes Platform в среде РЕД виртуализации необходимо предварительно создать нужное количество виртуальных машин с требуемыми параметрами.
+{% endalert %}
+{%- endif %}
 {%- if page.platform_code == "dynamix" %}
 {%- alert level="warning" %}
 Доступно начиная с версии 1.66 Deckhouse Kubernetes Platform.

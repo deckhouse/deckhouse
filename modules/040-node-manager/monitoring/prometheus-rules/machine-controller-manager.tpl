@@ -35,7 +35,11 @@
       description: |-
         The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
 
-        Run the following command to check the status of the Pod: `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`.
+        To check the Pod's status, run the following command:
+        
+        ```shell
+        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        ```
 
   - alert: D8MachineControllerManagerTargetDown
     expr: max by (job) (up{job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 0)
@@ -52,7 +56,7 @@
       plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
-      summary: Prometheus is unable to scrape machine-controller-manager's metrics.
+      summary: Prometheus is unable to scrape the machine-controller-manager's metrics.
 
   - alert: D8MachineControllerManagerTargetAbsent
     expr: absent(up{job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 1)
@@ -67,14 +71,30 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: There is no machine-controller-manager target in Prometheus.
+      summary: Machine-controller-manager target is missing in Prometheus.
       description: |-
-        Machine controller manager manages ephemeral Nodes in the cluster. Its unavailability will result in the inability to add/delete Nodes.
+        `Machine-controller-manager` controls ephemeral nodes in the cluster.
+        If it becomes unavailable, it will be impossible to create or delete nodes in the cluster.
 
-        The recommended course of action:
-        1. Check the availability and status of `machine-controller-manager` Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager`;
-        2. Check the availability of the `machine-controller-manager` Deployment: `kubectl -n d8-cloud-instance-manager get deploy machine-controller-manager`;
-        3. Check the status of the `machine-controller-manager` Deployment: `kubectl -n d8-cloud-instance-manager describe deploy machine-controller-manager`.
+        To resolve the issue, follow these steps:
+
+        1. Check availability and status of `machine-controller-manager` Pods:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
+           ```
+
+        2. Verify availability of the `machine-controller-manager` Deployment:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
+           ```
+
+        3. Check the Deployment’s status:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
+           ```
 
 - name: d8.machine-controller-manager.malfunctioning
   rules:
@@ -91,13 +111,19 @@
       plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
-      summary: The machine-controller-manager module restarts too often.
+      summary: Too many machine-controller-manager restarts detected.
       description: |
-        The number of restarts in the last hour: {{`{{ $value }}`}}.
+        The `machine-controller-manager` has restarted {{`{{ $value }}`}} times in the past hour.
 
-        Excessive machine-controller-manager restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Frequent restarts may indicate a problem.
+        The `machine-controller-manager` is expected to run continuously without interruption.
 
-        Please, refer to the logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller`.
+        Check the logs for details:
+        
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
+        ```
+
 {{- else }}
 []
 {{- end }}

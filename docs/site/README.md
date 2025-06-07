@@ -342,7 +342,6 @@ Below are some data structures used in the Jekyll projects.
       "versionMapFile": "ee/be/candi/version_map.yml",
       "modulesDir": "ee/be/modules",
       "excludeModules": [
-        "ceph-csi",
         "openvpn",
         "sds-node-configurator",
         "sds-replicated-volume",
@@ -407,7 +406,6 @@ Below are some data structures used in the Jekyll projects.
       ],
       "excludeModules": [
         "basic-auth",
-        "ceph-csi",
         "cert-manager",
         "cilium-hubble",
         "cloud-provider-aws",
@@ -473,7 +471,6 @@ Below are some data structures used in the Jekyll projects.
       ],
       "excludeModules": [
         "basic-auth",
-        "ceph-csi",
         "cert-manager",
         "cilium-hubble",
         "cloud-provider-aws",
