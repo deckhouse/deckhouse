@@ -117,7 +117,7 @@ shell:
 
       {{- $patches_for_verify := get $required_patches_from_ee_dir_by_versions $verification_version }}
       {{- range $patch_name := $patches_for_verify }}
-        {{- if no hasKey $patches_in_version $patch_name }}
+        {{- if not hasKey $patches_in_version $patch_name }}
           {{- fail (printf "k8s %s should contain patch %s which contain in version %s" $version $patch_name $verification_version) }}
         {{- end }}
       {{- end }}
