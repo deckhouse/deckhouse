@@ -50,6 +50,8 @@ cleanup:
   {{- end }}
 {{- end }}
 
+{{- fail (printf "isEE %v" $eeEdition) }}
+
 {{- $_ := set . "isEE" $eeEdition }}
 
 ---
