@@ -50,7 +50,7 @@ git:
 # that patches exists in directory
 {{- range $_, $patch_path := $required_patches_from_ee_dir }}
 - add: /{{ $patch_path }}
-  to: /patches
+  to: /patches/{{ base $patch_path }}
   stageDependencies:
     install:
     - '**/*'
