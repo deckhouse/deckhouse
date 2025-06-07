@@ -16,9 +16,7 @@
 
   {{- $required_patches_from_ee_dir := list }}
 
-  {{- fail (printf "isEE %v" $.isEE) }}
-
-  {{- if .isEE}}
+  {{- if $.isEE}}
     {{- $patch = true }}
 
     {{- $patches_names_for_verification := dict }}
