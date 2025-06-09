@@ -3,7 +3,7 @@ title: "Versioning modules"
 permalink: en/architecture/module-development/versioning/
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses [semantic versioning] (https://semver.org/lang/en/) for modules.
+Deckhouse Kubernetes Platform (DKP) uses [semantic versioning](https://semver.org/lang/en/) for modules.
 
 When choosing a version, stick to the following guidelines:
 
@@ -27,7 +27,7 @@ The recommended sequence of publication of the module version in release channel
 
 1. Publish a new version of the module in the `Alpha` release channel.
 1. If the version works stably, publish it in the following release channels sequentially:
-   ` Beta` → `Earlyaccess` →` Stable` → `Rocksolid`.
+   `Beta` → `Earlyaccess` →`Stable` → `Rocksolid`.
 1. If errors arise, stop the publication and correct them.
 1. Repeat the publication of the version, starting from the release channel `alpha`.
 
