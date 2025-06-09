@@ -66,7 +66,6 @@ function compare() {
 
 version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,2}[.][0-9]{1,2}" /proc/driver/nvidia/version)
 compare $version
-bb-log-info "NVidia drivers version: ${version}"
 
     {{ if eq .nodeGroup.gpu.sharing "Mig" }}
 
