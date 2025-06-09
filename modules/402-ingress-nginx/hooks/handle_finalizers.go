@@ -229,4 +229,3 @@ func DeleteFinalizer(input *go_hook.HookInput, crName, crNamespace, crAPIVersion
 		crName,
 	)
 }
-
