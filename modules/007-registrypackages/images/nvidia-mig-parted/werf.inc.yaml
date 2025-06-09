@@ -35,7 +35,7 @@ git:
     - '**/*'
 import:
 - image: node-manager/nvidia-mig-manager-build-artifact
-  add: /nvidia-mig-parted
+  add: /usr/bin/nvidia-mig-parted
   to: /nvidia-mig-parted
   before: setup
 shell:
