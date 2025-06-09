@@ -29,13 +29,12 @@ fi
 
 required_major="450"
 required_minor="80"
-required_patch="02"
 
 # $1 required version, $2 presented version, $3 name
 function compare_versions() {
     if (( $2 < $1 ))
       then
-        bb-log-error "$3 version is less then required"
+        echo "$3 version is less then required"
         exit 1
     fi
     if (( $1 == $2))
@@ -50,17 +49,10 @@ function compare_versions() {
 function compare() {
     local major=$(echo "$1" | cut -d '.' -f 1)
     local minor=$(echo "$1" | cut -d '.' -f 2)
-    local patch=$(echo "$1" | cut -d '.' -f 3)
     compare_versions $required_major $major "major"
     if [[ $need_resume = "true" ]]
       then
         compare_versions $required_minor $minor "minor"
-      else
-        return
-    fi
-    if [[ $need_resume = "true" ]]
-      then
-        compare_versions $required_patch $patch "patch"
     fi
 }
 
