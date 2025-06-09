@@ -215,7 +215,7 @@ groups:
   - ports: "4287"
     protocol: UDP
     description:
-      en: WireGuard's port for traffic encryption in the CNI Cilium.
+      en: WireGuard's port for traffic encryption in the CNI Cilium
       ru: Порт WireGuard для шифрования трафика в CNI Cilium
   - ports: "4288, 4289"
     protocol: TCP
