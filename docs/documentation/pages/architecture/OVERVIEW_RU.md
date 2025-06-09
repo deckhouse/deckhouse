@@ -1,6 +1,6 @@
 ---
-title: Кластер Kubernetes
-permalink: ru/kubernetes.html
+title: Обзор
+permalink: ru/architecture/
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Разработка и отладка модуля"
-permalink: ru/module-development/development/
+permalink: ru/architecture/module-development/development/
 lang: ru
 ---
 

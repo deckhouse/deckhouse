@@ -1,6 +1,6 @@
 ---
 title: "Deckhouse Kubernetes Platform module development"
-permalink: en/module-development/
+permalink: en/architecture/module-development/
 lang: en
 ---
 

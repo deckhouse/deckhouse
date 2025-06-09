@@ -1,6 +1,6 @@
 ---
 title: "Module structure"
-permalink: en/module-development/structure/
+permalink: en/architecture/module-development/structure/
 lang: en
 ---
 

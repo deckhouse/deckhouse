@@ -1,6 +1,6 @@
 ---
 title: "An example of creating a module with adaptation of an existing chart"
-permalink: en/module-development/example/
+permalink: en/architecture/module-development/example/
 ---
 
 {% raw %}
@@ -116,7 +116,7 @@ This section provides an example of creating a `helloworld` module based on [mod
 
    An example:
 
-   ![An example of module assembly workflow](../../images/module-development/build.png)
+   ![An example of module assembly workflow](../../../images/architecture/module-development/build.png)
 
 ## Publishing the module to the release channel
 
@@ -128,7 +128,7 @@ Here's how you can publish version `v0.0.1` of the module to the *Alpha* release
 
 1. Click on the *Run workflow* drop-down list on the right of the page and select `alpha`. Enter the `v0.0.1` tag in the tag input field. Click the *Run workflow* button.
 
-   ![An example of starting the workflow to publish a module](../../images/module-development/deploy.png)
+   ![An example of starting the workflow to publish a module](../../../images/architecture/module-development/deploy.png)
 
 1. Confirm that the module publishing workflow has completed successfully.
 

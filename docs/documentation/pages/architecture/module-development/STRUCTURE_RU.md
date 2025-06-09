@@ -1,6 +1,6 @@
 ---
 title: "Структура модуля"
-permalink: ru/module-development/structure/
+permalink: ru/architecture/module-development/structure/
 lang: ru
 ---
 

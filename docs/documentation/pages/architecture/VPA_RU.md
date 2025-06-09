@@ -1,5 +1,5 @@
 ---
-title: "Вертикальное масштабирование — архитектура"
+title: "Вертикальное масштабирование"
 permalink: ru/architecture/vpa.html
 lang: ru
 ---

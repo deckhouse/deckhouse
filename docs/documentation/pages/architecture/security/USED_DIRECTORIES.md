@@ -1,10 +1,10 @@
 ---
-title: Common settings
-permalink: en/security_software_setup.html
+title: Used directors
+permalink: en/architecture/security/used_directories.html
 ---
 
 If Kubernetes cluster nodes are analyzed by security scanners (antivirus tools), you may need to configure them to avoid false positives.
 
 Deckhouse Kubernetes Platform (DKP) uses the following directories when running ([download in CSV](deckhouse-directories.csv)):
 
-{% include security_software_setup.liquid %}
+{% include used_directories.liquid %}

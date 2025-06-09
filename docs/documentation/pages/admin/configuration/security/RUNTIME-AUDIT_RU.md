@@ -254,6 +254,7 @@ spec:
 ### Настройка оповещений о критических событиях
 
 Для создания оповещений о критических событиях создайте объект CustomPrometheusRules(#TODO), следуя примеру:
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -274,6 +275,8 @@ spec:
       expr: |
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
+
+{% endraw %}
 
 ### Просмотр метрик
 

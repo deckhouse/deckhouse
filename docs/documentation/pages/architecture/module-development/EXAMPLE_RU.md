@@ -1,6 +1,6 @@
 ---
 title: "Пример адаптации существующего чарта"
-permalink: ru/module-development/example/
+permalink: ru/architecture/module-development/example/
 lang: ru
 ---
 
@@ -117,7 +117,7 @@ lang: ru
 
    Пример:
 
-   ![Пример workflow сборки модуля](../../images/module-development/build.png)
+   ![Пример workflow сборки модуля](../../../images/architecture/module-development/build.png)
 
 ## Публикация модуля на канале обновлений
 
@@ -129,7 +129,7 @@ lang: ru
 
 1. В правой части страницы нажмите на выпадающий список *Run workflow* и выберите `alpha`. Укажите тег `v0.0.1` в поле ввода тега. Нажмите кнопку *Run workflow*.
 
-   ![Пример запуска workflow публикации модуля](../../images/module-development/deploy.png)
+   ![Пример запуска workflow публикации модуля](../../../images/architecture/module-development/deploy.png)
 
 1. Убедитесь, что workflow публикации модуля выполнился успешно.
 
