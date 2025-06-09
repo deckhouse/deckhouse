@@ -285,7 +285,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 			input.Logger.Info("evicting Pod due to PVC stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), slog.String("pvc_name", pvc.Name))
 
 			if err != nil {
-				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), log.Err(err))
+				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("name", pod.Name), log.Err(err))
 			}
 		}
 	}
