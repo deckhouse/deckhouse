@@ -73,7 +73,8 @@ RUN cp /usr/bin/deckhouse-controller /usr/bin/caps-deckhouse-controller && \
 # Replace module helm chart
 RUN rm -r \
   /deckhouse/modules/038-system-registry/templates \
-  /deckhouse/modules/038-system-registry/openapi
+  /deckhouse/modules/038-system-registry/openapi \
+  /deckhouse/modules/038-system-registry/monitoring
 
 USER deckhouse
 
