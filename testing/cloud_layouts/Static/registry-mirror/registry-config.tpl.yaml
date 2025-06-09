@@ -21,7 +21,7 @@ http:
     X-Content-Type-Options: [nosniff]
 auth:
   token:
-    realm: "http://${BASTION_INTERNAL_IP}:5001/auth"
+    realm: "http://${bastion_ip}:5001/auth"
     service: "docker-registry"
     issuer: "auth-service"
     rootcertbundle: /ssl/server.pem
