@@ -1,3 +1,5 @@
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if ((($orchestrator).state).node_services).run -}}
 ---
 apiVersion: v1
 kind: Service
@@ -19,3 +21,4 @@ spec:
     port: 8097
   selector:
     app: system-registry-staticpod-manager
+{{- end }}

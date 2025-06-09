@@ -1,3 +1,5 @@
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if ((($orchestrator).state).node_services).run -}}
 - name: d8.embedded-registry-manager.state
   rules:
     # Manager && StaticPod Manager
@@ -19,14 +21,14 @@
         plk_labels_as_annotations: "pod,namespace,node"
         plk_create_group_if_not_exists__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
+        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Ready.
         description: |
-          The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
+          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Ready.
 
           The recommended course of action:
-          1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n {{ $labels.namespace }} describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
-          2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
-          3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+          1. Retrieve details of the {{`{{ $labels.created_by_kind }}`}}: `kubectl -n {{`{{ $labels.namespace }}`}} describe {{`{{ $labels.created_by_kind }}`}}/{{`{{ $labels.created_by_name }}`}}`
+          2. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
+          3. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
 
     # Manager && StaticPod Manager
     - alert: D8EmbeddedRegistryManagerPodIsNotRunning
@@ -47,14 +49,14 @@
         plk_labels_as_annotations: "pod,namespace,node"
         plk_create_group_if_not_exists__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
+        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Running.
         description: |
-          The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
+          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Running.
 
           The recommended course of action:
-          1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n {{ $labels.namespace }} describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
-          2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
-          3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+          1. Retrieve details of the {{`{{ $labels.created_by_kind }}`}}: `kubectl -n {{`{{ $labels.namespace }}`}} describe {{`{{ $labels.created_by_kind }}`}}/{{`{{ $labels.created_by_name }}`}}`
+          2. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
+          3. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
 
     # Manager
     - alert: D8EmbeddedRegistryManagerPodIsNotRunning
@@ -101,3 +103,6 @@
           1. Retrieve details of the Daemonset: `kubectl -n d8-system describe Daemonset/system-registry-staticpod-manager`
           2. View the status of the Pod: `kubectl -n d8-system describe pod/system-registry-staticpod-manager-*`
           3. View the logs of the Pod: `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+{{- else }}
+[]
+{{- end }}

@@ -1,3 +1,6 @@
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if ((($orchestrator).state).node_services).run -}}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -32,3 +35,5 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+  {{- end }}
+{{- end }}

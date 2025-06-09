@@ -1,4 +1,5 @@
-{{- if ne .Values.systemRegistry.mode "Direct" }}
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if ((($orchestrator).state).node_services).nodes -}}
 - name: d8.embedded-registry-static-pods.state
   rules:
     - alert: D8EmbeddedRegistryPodIsNotReady
