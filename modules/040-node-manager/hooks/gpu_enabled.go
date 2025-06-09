@@ -155,7 +155,6 @@ func setGPULabel(input *go_hook.HookInput) error {
 			}
 
 			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.(NodeInfo).Name)
-
 		}
 	}
 	return nil
