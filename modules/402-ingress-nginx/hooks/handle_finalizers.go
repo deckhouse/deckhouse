@@ -137,9 +137,9 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
 	controllers := input.Snapshots["controller"]
-	serviceNames := set.NewFromSnapshot(input.Snapshots["services"])
-	daemonSetNames := set.NewFromSnapshot(input.Snapshots["daemonsetscruise"])
-	validationWebhooks := set.NewFromSnapshot(input.Snapshots["valwebhookconfnginx"])
+	serviceNames := set.NewFromSnapshot(input.NewSnapshots.Get("services"))
+	daemonSetNames := set.NewFromSnapshot(input.NewSnapshots.Get("daemonsetscruise"))
+	validationWebhooks := set.NewFromSnapshot(input.NewSnapshots.Get("valwebhookconfnginx"))
 
 	for _, c := range controllers {
 		controllerName := c.(INController).Name
@@ -229,3 +229,4 @@ func DeleteFinalizer(input *go_hook.HookInput, crName, crNamespace, crAPIVersion
 		crName,
 	)
 }
+
