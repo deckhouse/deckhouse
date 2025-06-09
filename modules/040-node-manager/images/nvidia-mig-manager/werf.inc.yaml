@@ -68,10 +68,6 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /usr/bin/reconfigure-mig.sh
-  to: /usr/bin/reconfigure-mig.sh
-  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
