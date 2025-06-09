@@ -1,4 +1,4 @@
-{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- $orchestrator := (.Values.systemRegistry.internal).orchestrator -}}
 {{- if ((($orchestrator).state).node_services).run -}}
 - name: d8.embedded-registry-manager.state
   rules:
