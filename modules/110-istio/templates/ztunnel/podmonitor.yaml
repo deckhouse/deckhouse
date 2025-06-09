@@ -1,0 +1,33 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+{{- if (.Values.istio.internal.enableAmbientMode) }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ztunnel
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https-metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+        - targetLabel: job
+          replacement: "ztunnel"
+  selector:
+    matchLabels:
+      app: ztunnel
+  namespaceSelector:
+    matchNames:
+      - d8-{{ .Chart.Name }}
+{{- end }}
+{{- end }}
