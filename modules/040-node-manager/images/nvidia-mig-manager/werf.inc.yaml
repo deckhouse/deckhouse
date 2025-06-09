@@ -1,13 +1,15 @@
 {{- $version := "0.12.1" }}
+{{- $kubernetesVersion := "1.33" }}
 ---
 image: {{ .ModuleName }}/nvidia-mig-manager
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /
+  add: /usr/bin/
   includePaths:
     - nvidia-mig-parted
     - nvidia-mig-manager
+    - reconfigure-mig.sh
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /usr/lib64
@@ -28,10 +30,27 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /busybox
   before: setup
+- image: {{ .ModuleName }}/nvidia-container-toolkit-build-artifact
+  add: /usr/bin/nvidia-ctk
+  to: /usr/bin/nvidia-ctk
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: common/kubernetes-artifact-{{ $kubernetesVersion }}
+  add: /src/_output/bin/kubectl
+  to: /usr/bin/kubectl
+  before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /usr/bin
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -47,6 +66,10 @@ from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /usr/bin/reconfigure-mig.sh
+  to: /usr/bin/reconfigure-mig.sh
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -65,5 +88,5 @@ shell:
   - cd /src
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/mig-parted/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
-  - make PREFIX=/ cmds
-  - chmod 0700 /nvidia-mig-parted /nvidia-mig-manager
+  - make PREFIX=/usr/bin/ cmds
+  - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager /usr/bin/reconfigure-mig.sh

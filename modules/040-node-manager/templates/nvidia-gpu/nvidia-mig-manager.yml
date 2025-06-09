@@ -58,7 +58,7 @@ spec:
       containers:
         - name: nvidia-mig-manager
           image: {{ include "helm_lib_module_image" (list . "nvidiaMigManager") }}
-          command: ["/nvidia-mig-manager"]
+          command: ["/usr/bin/nvidia-mig-manager"]
           securityContext:
             privileged: true
           resources:

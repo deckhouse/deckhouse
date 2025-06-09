@@ -29,7 +29,7 @@ const (
 	gpuEnabledLabel   = "node.deckhouse.io/gpu"
 	devicePluginLabel = "node.deckhouse.io/device-gpu.config"
 	ngLabel           = "node.deckhouse.io/group"
-	nvidiaMigConfig   = "nvidia.com/mig.config"
+	migConfigLabel    = "nvidia.com/mig.config"
 )
 
 // This hook discovers nodegroup GPU sharing type and labels nodes
@@ -100,7 +100,7 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 var removeMigLabel = map[string]interface{}{
 	"metadata": map[string]interface{}{
 		"labels": map[string]interface{}{
-			nvidiaMigConfig: nil,
+			migConfigLabel: nil,
 		},
 	},
 }
@@ -130,10 +130,10 @@ func setGPULabel(input *go_hook.HookInput) error {
 			}
 
 			if ng.(nodeGroupInfo).MIGConfig != nil {
-				labels[nvidiaMigConfig] = ng.(nodeGroupInfo).MIGConfig
+				labels[migConfigLabel] = ng.(nodeGroupInfo).MIGConfig
 			} else {
 				// remove MIG label if it's set and it's not a MIG node
-				if _, ok := node.(NodeInfo).Labels[nvidiaMigConfig]; ok {
+				if _, ok := node.(NodeInfo).Labels[migConfigLabel]; ok {
 					input.PatchCollector.PatchWithMerge(removeMigLabel, "v1", "Node", "", node.(NodeInfo).Name)
 				}
 			}
