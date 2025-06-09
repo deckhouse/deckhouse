@@ -56,6 +56,9 @@ const (
 
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
+
+	obsoleteConfigMetricGroup = "obsoleteVersion_%s"
+	moduleConflictMetricGroup = "module_%s_at_conflict"
 )
 
 func RegisterController(
@@ -212,8 +215,10 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 					return ctrl.Result{}, err
 				}
 			}
+
 			return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
 		}
+
 		return ctrl.Result{}, err
 	}
 
@@ -224,7 +229,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
+	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if !moduleConfig.IsEnabled() {
@@ -337,7 +342,11 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf("obsoleteVersion_%s", moduleConfig.Name)
+	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, moduleConfig.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	// clear conflict metrics
+	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	module := new(v1alpha1.Module)
@@ -348,8 +357,10 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 				r.logger.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
 				return ctrl.Result{}, err
 			}
+
 			return ctrl.Result{}, nil
 		}
+
 		r.logger.Error("failed to get module", slog.String("name", moduleConfig.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
