@@ -228,13 +228,14 @@
 # </template: unlink_bin_step>
 {!{- end -}!}
 
-{!{ define "login_git_step" }!}
-# <template: login_git_step>
+{!{ define "add_ssh_keys" }!}
+# <template: add_ssh_keys>
 - name: Start ssh-agent
   uses: {!{ index (ds "actions") "ssh-agent" }!}
   with:
     ssh-private-key: |
       ${{secrets.SOURCE_REPO_SSH_KEY}}
+      ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
 - name: Add ssh_known_hosts
   run: |
     HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -252,7 +253,24 @@
         echo "$KEY_LINE" >> ~/.ssh/known_hosts
       fi
     done <<< "$HOST_KEYS"
-# </template: login_git_step>
+- name: Add svace analyze server to ssh_known_hosts
+  continue-on-error: true
+  run: |
+    host=${{ secrets.SVACE_ANALYZE_HOST }}
+    host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+    echo "::add-mask::$host_ip"
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+        CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+        if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+            ssh-keygen -R $host
+            ssh-keygen -R $host_ip
+        fi
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+    done <<< "$HOST_KEYS"    
+# </template: add_ssh_keys>
 {!{- end -}!}
 
 
