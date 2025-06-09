@@ -1,6 +1,6 @@
 ---
 title: Sysctl parameters
-permalink: en/security/sysctl.html
+permalink: en/admin/configuration/security/sysctl.html
 lang: en
 ---
 

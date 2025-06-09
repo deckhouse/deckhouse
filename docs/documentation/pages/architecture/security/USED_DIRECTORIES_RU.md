@@ -1,6 +1,6 @@
 ---
-title: Общие настройки
-permalink: ru/security_software_setup.html
+title: Используемые директории
+permalink: ru/architecture/security/used_directories.html
 lang: ru
 ---
 
@@ -8,4 +8,4 @@ lang: ru
 
 Deckhouse Kubernetes Platform (DKP) использует следующие директории при работе ([скачать в csv](deckhouse-directories.csv)):
 
-{% include security_software_setup.liquid %}
+{% include used_directories.liquid %}

@@ -806,6 +806,10 @@ entries:
                     ru: Политики безопасности
                   url: /admin/configuration/security/policies.html
                 - title:
+                    en: Sysctl parameters
+                    ru: Параметры sysctl
+                  url: /admin/configuration/security/sysctl.html
+                - title:
                     en: Vulnerability scanning
                     ru: Сканирование на уязвимости
                   url: /admin/configuration/security/scanning.html
@@ -1218,79 +1222,11 @@ entries:
                 en: Architecture of security event audit
                 ru: Архитектура аудита событий безопасности
               url: /architecture/security/runtime-audit.html
-# ------------- The old parts -------------
-    - title:
-        en: Deckhouse Kubernetes Platform
-        ru: Deckhouse Kubernetes Platform
-      folders:
-        - title:
-            en: Security software settings
-            ru: Настройка ПО безопасности
-          folders:
             - title:
-                en: SIEM
-                ru: SIEM
-              folders:
-                - title:
-                    en: KUMA
-                    ru: KUMA
-                  url: /security/kuma.html
-            - title:
-                en: Security scanners
-                ru: Сканеры безопасности
-              folders:
-                - title:
-                    en: Common settings
-                    ru: Общие настройки
-                  url: /security_software_setup.html
-                - title:
-                    en: Sysctl parameters
-                    ru: Параметры sysctl
-                  url: /security/sysctl.html
-                - title:
-                    en: KESL
-                    ru: KESL
-                  url: /security/kesl.html
-        - title:
-            en: Modules
-            ru: Модули
-          folders:
-            - title:
-                en: deckhouse
-                ru: deckhouse
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/deckhouse/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/deckhouse/configuration.html
-                - title:
-                    en: Usage
-                    ru: Примеры
-                  url: /modules/deckhouse/usage.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/deckhouse/faq.html
-            - title:
-                en: documentation
-                ru: documentation
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/documentation/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/documentation/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/documentation/configuration.html
+                en: Common settings
+                ru: Общие настройки
+              url: /architecture/security/used_directories.html
+  # ------------- The old parts -------------
     - title:
         en: Kubernetes Cluster
         ru: Кластер Kubernetes
