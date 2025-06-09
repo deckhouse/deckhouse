@@ -4,8 +4,6 @@ permalink: ru/admin/configuration/access/authorization/
 lang: ru
 ---
 
-## Обзор
-
 В Deckhouse Kubernetes Platform авторизация реализована на основе стандартного механизма RBAC (Role-Based Access Control) Kubernetes. Это позволяет гибко управлять правами доступа для различных пользователей, групп и сервисных аккаунтов, обеспечивая безопасность и контроль над операциями в кластере.
 
 Платформа поддерживает две ролевые модели:

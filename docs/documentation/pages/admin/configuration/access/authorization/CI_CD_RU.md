@@ -1,9 +1,8 @@
 ---
 title: "Доступ для CI/CD"
-permalink: ru/admin/configuration/access/authorization/access_ci_cd.html
+permalink: ru/admin/configuration/access/authorization/ci_cd.html
 lang: ru
 ---
-## Доступ для CI/CD
 
 Для получения доступа к API-кластера Kubernetes для CI/CD-систем, таких как GitLab Runner, Jenkins и других, необходимо создать ServiceAccount, настроить права доступа и сгенерировать файл конфигурации kubeconfig. Этот файл будет использоваться для подключения к API-кластера.
 
@@ -31,6 +30,7 @@ lang: ru
 1. Назначьте необходимые для ServiceAccount права согласно инструкциям в разделе [Выдача прав пользователям и сервисным аккаунтам](../../configuration/access/authorization/grant.html).
 
    Для текущей ролевой модели:
+
    ```yaml
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
@@ -44,8 +44,9 @@ lang: ru
      accessLevel: SuperAdmin
      portForwarding: true
    ```
-   
+
    Для экспериментальной ролевой модели:
+
    ```yaml
    apiVersion: rbac.authorization.k8s.io/v1
    kind: ClusterRoleBinding
@@ -73,14 +74,14 @@ lang: ru
 
 1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl. Используйте один из следующих вариантов доступа к API-серверу кластера:
 
-  - Если есть прямой доступ к API-серверу:
-    - Получите сертификат CA-кластера Kubernetes:
+   - Если есть прямой доступ к API-серверу:
+     - Получите сертификат CA-кластера Kubernetes:
 
        ```shell
        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
        ```
 
-    - Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
+     - Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
        ```shell
        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -89,13 +90,13 @@ lang: ru
          --kubeconfig=$FILE_NAME
        ```
 
-  - Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
-    - включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
-    - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+   - Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
+     - включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
+     - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
-  - **Если используется непубличный CA:**
+   - **Если используется непубличный CA:**
 
-    - Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
+     - Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
        ```shell
        kubectl -n d8-user-authn get secrets -o json \
@@ -104,7 +105,7 @@ lang: ru
          | base64 -d > /tmp/ca.crt
        ```
 
-    - Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
+     - Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
        ```shell
        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -113,13 +114,13 @@ lang: ru
          --kubeconfig=$FILE_NAME
        ```
 
-  - **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
+   - **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
-    ```shell
-    kubectl config set-cluster $CLUSTER_NAME \
-      --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-      --kubeconfig=$FILE_NAME
-    ```
+     ```shell
+     kubectl config set-cluster $CLUSTER_NAME \
+       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       --kubeconfig=$FILE_NAME
+     ```
 
 1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
 
@@ -142,5 +143,5 @@ lang: ru
    ```shell
    kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
-   
+
 Далее можно использовать сгенерированный файл `$FILE_NAME` конфигурации `kubeconfig` для подключения к API-кластера Kubernetes из CI/CD-системы, такой как GitLab Runner или Jenkins.

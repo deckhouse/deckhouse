@@ -1,6 +1,6 @@
 ---
 title: "Выдача прав пользователям и серверам"
-permalink: ru/admin/configuration/access/authorization/grant.html
+permalink: ru/admin/configuration/access/authorization/granting.html
 lang: ru
 ---
 
@@ -13,11 +13,13 @@ subjects:
 - kind: User
   name: <email пользователя>
 ```
+
 {% alert level="warning" %}
 В случае использования модуля `user-authn` и статических пользователей, необходимо использовать именно email пользователя, а не имя ресурса User.
 {% endalert %}
 
 или
+
 ```yaml
 subjects:
 - kind: Group
