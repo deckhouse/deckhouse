@@ -260,7 +260,7 @@ function prepare_environment() {
     ;;
 
   "Static")
-    pre_bootstrap_static_setup
+    cwd=$(pwd)/testing/cloud_layouts/Static
     export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -271,48 +271,30 @@ function prepare_environment() {
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
 
+    bootstrap_static || exit 1
+
     cluster_template_id="dbe33391-02c1-4f23-a77b-0edb8b079ff6"
     values="{
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
-      \"sshMasterHost\"
-      \"sshMasterUser\"
-      \"sshBastionHost\"
-      \"sshBastionUser\"
-      \"sshRedosHost\"
-      \"sshRedosUser\"
-      \"sshOpensuseHost\"
-      \"sshOpensuseUser\"
-      \"sshRosaHost\"
-      \"sshRosaUser\"
+      \"sshMasterHost\": \"${master_ip}\",
+      \"sshMasterUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_ip}\",
+      \"sshBastionUser\": \"${ssh_user}\",
+      \"sshRedosHost\": \"${worker_redos_ip}\",
+      \"sshRedosUser\": \"${ssh_redos_user_worker}\",
+      \"sshOpensuseHost\": \"${worker_opensuse_ip}\",
+      \"sshOpensuseUser\": \"${ssh_opensuse_user_worker}\",
+      \"sshRosaHost\": \"${worker_rosa_ip}\",
+      \"sshRosaUser\": \"${ssh_rosa_user_worker}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
-      \"imagesRepo\"
-      \"deckhouseDockercfg\"
+      \"imagesRepo\": \"${IMAGES_REPO}\",
       \"branch\": \"${DEV_BRANCH}\",
-
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${LOCAL_DECKHOUSE_DOCKERCFG}\"
     }"
 
     ;;
   esac
-}
-
-function pre_bootstrap_static_setup() {
-  cwd=$(pwd)/testing/cloud_layouts/Static
-  cd $cwd/registry-mirror
-
-  BASTION_INTERNAL_IP=192.168.199.254
-  IMAGES_REPO="${BASTION_INTERNAL_IP}:5000/sys/deckhouse-oss"
-
-  LOCAL_REGISTRY_MIRROR_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
-  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
-
-  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 | tr -d '\n')
-
-  # emulate using local registry
-  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${BASTION_INTERNAL_IP}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 | tr -d '\n')
-
-  cd ..
 }
 
 function get_opentofu() {
@@ -324,6 +306,8 @@ function get_opentofu() {
 
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
+
+  cd $cwd
 
   get_opentofu
 
@@ -426,8 +410,17 @@ function bootstrap_static() {
     sleep 5
   done
 
+
   tar -cvf $cwd/registry-mirror.tar registry-mirror
   testRunAttempts=20
+
+  # emulate using local registry
+  LOCAL_REGISTRY_MIRROR_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
+  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 | tr -d '\n')
+  IMAGES_REPO="${bastion_ip}:5000/sys/deckhouse-oss"
+  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${bastion_ip}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 | tr -d '\n')
+
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
     $scp_command $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
@@ -439,7 +432,7 @@ function bootstrap_static() {
       cd registry-mirror
       ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
       ./gen-ssl.sh
-      env BASTION_INTERNAL_IP=${BASTION_INTERNAL_IP} envsubst '\$BASTION_INTERNAL_IP' < registry-config.tpl.yaml > registry-config.yaml
+      env bastion_ip=${bastion_ip} envsubst '\$bastion_ip' < registry-config.tpl.yaml > registry-config.yaml
       docker-compose up -d
       cd -
 ENDSSH
@@ -480,11 +473,16 @@ tar -xf /tmp/d8.tar.gz -C d8cli
 mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
 d8 --version
+
+# Debug
+echo "IMAGES_REPO = ${IMAGES_REPO}"
+echo "LOCAL_REGISTRY_MIRROR_PASSWORD = ${LOCAL_REGISTRY_MIRROR_PASSWORD}"
+
 # pull
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
-d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
+d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD --insecure
 
 # Checking that it's FE-UPGRADE
 # Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
@@ -1016,10 +1014,6 @@ function run-test() {
   local payload
   local response
   local cluster_id
-
-  if [[ ${PROVIDER} == "Static" ]]; then
-    bootstrap_static || return $?
-  fi
 
   cluster_template_version_id=$(curl -s -X 'GET' \
     "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
