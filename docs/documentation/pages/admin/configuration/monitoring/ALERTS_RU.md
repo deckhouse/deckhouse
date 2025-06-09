@@ -6,6 +6,79 @@ lang: ru
 
 {% raw %}
 
+## Перенаправление алертов в Zabbix
+
+Deckhouse поддерживает интеграцию с системой мониторинга Zabbix. Для этого используется внешний скрипт, который получает алерты из Deckhouse через `kubectl` и передаёт их в Zabbix с помощью Zabbix-агента.
+
+Для работы скрипта потребуются:
+
+- установленный и настроенный zabbix-agent;
+- утилиты `bash`, `jq`;
+- `kubectl` с рабочим конфигурационным файлом и правами на выполнение команды `kubectl get clusteralerts`.
+
+### Установка
+
+1. Импортируйте шаблон в Zabbix:
+   - В веб-интерфейсе Zabbix перейдите в раздел «Data collection → Templates»
+   - Нажмите «Import» и загрузите файл `zbx_export_templates.yaml`
+   - После установки шаблона укажите ему группу, соответствующую агентам, с которых будет происходить сбор метрик.
+
+1. Настройте Zabbix-агент:
+   - Скопируйте файл `d8alerts.conf` в директорию, указанную в параметре `Include` основного конфига Zabbix-агента (обычно расположен по пути `/etc/zabbix/zabbix_agentd.d/`)
+   - Скопируйте скрипт `clusteralerts.sh` в директорию `/etc/zabbix/scripts/` и убедитесь, что он имеет права на выполнение:
+
+     ```console
+     chmod +x /etc/zabbix/scripts/clusteralerts.sh
+     ```
+
+1. Проверьте доступ:
+   - Убедитесь, что скрипт имеет доступ к кластеру и может получать информацию об алертах:
+
+     ```console
+     /etc/zabbix/scripts/clusteralerts.sh discovery
+     ```
+
+     Вывод должен содержать список алертов с их статусами и уровнями критичности.
+
+1. Перезапустите Zabbix-агент для применения изменений:
+
+   ```console
+   systemctl restart zabbix-agent
+   ```
+
+### Устранение неполадок
+
+1. Проверьте логи Zabbix-агента:
+
+   ```console
+   tail -f /var/log/zabbix/zabbix_agentd.log
+   ```
+
+1. Проверьте работу скрипта:
+
+   ```console
+   /etc/zabbix/scripts/clusteralerts.sh discovery
+   /etc/zabbix/scripts/clusteralerts.sh severity "ID_АЛЕРТА"
+   ```
+
+   Убедитесь, что скрипт корректно выполняется и возвращает ожидаемые данные:
+
+1. Проверьте права пользователя `zabbix`.  Убедитесь, что агент выполняет скрипт от пользователя с нужными правами доступа к кластеру:
+
+   - Скрипт запускается от имени пользователя `zabbix`:
+
+     ```console
+     sudo -u zabbix /etc/zabbix/scripts/clusteralerts.sh
+     ```
+
+   - Переменная `KUBECONFIG` доступна пользователю:
+
+     Если конфигурационный файл Kubernetes недоступен по умолчанию, укажите его явно. Для этого сохраните kubeconfig, например, в `/etc/zabbix/kubeconfig` и добавьте в конфигурацию агента:
+
+     ```console
+     UserParameter=d8alerts.discovery,export KUBECONFIG=/etc/zabbix/kubeconfig;/etc/zabbix/scripts/clusteralerts.sh discovery
+     ```
+
 ## Отправка алертов в Telegram
 
 Alertmanager поддерживает прямую отправку алертов в Telegram.
