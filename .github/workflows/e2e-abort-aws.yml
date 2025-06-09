@@ -290,7 +290,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -303,6 +302,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -557,7 +559,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -570,6 +571,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -824,7 +828,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -837,6 +840,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1091,7 +1097,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1104,6 +1109,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1358,7 +1366,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1371,6 +1378,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1625,7 +1635,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1638,6 +1647,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1892,7 +1904,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1905,6 +1916,9 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
+          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
+          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
