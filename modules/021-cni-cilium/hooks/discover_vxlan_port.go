@@ -149,13 +149,13 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	if port, ok := cm.Data["tunnel-port"]; ok {
 		portInt, err := strconv.Atoi(port)
 		if err != nil {
-			return nil, nil
+			return 0, nil
 		}
 
 		return portInt, nil
 	}
 
-	return nil, nil
+	return 0, nil
 }
 
 func discoverVXLANPort(input *go_hook.HookInput) error {

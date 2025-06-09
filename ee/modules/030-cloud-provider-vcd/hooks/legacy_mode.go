@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
@@ -104,13 +106,30 @@ func applyCloudProviderDiscoveryDataSecretVCDAPIVersionFilter(obj *unstructured.
 }
 
 func handleLegacyMode(input *go_hook.HookInput) error {
-	if len(input.Snapshots["legacy_mode"]) == 0 {
+	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "legacy_mode")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal legacy_mode snapshot: %w", err)
+	}
+
+	if len(legacyModeBools) == 0 {
 		input.Logger.Warn("Legacy mode not defined")
 
 		return nil
 	}
 
-	if len(input.Snapshots["vcd_api_version"]) == 0 {
+	if len(legacyModeBools) > 0 {
+		// legacyMode is set in the provider cluster configuration secret
+		input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyModeBools[0])
+
+		return nil
+	}
+
+	vcdAPIVers, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "vcd_api_version")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal vcd_api_version snapshot: %w", err)
+	}
+
+	if len(vcdAPIVers) == 0 {
 		input.Logger.Warn("VCD API version not defined")
 
 		legacyMode := input.Snapshots["legacy_mode"][0].(bool)
@@ -122,11 +141,9 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	vcdAPIVersion := input.Snapshots["vcd_api_version"][0].(string)
-
-	version, err := semver.NewVersion(vcdAPIVersion)
+	version, err := semver.NewVersion(vcdAPIVers[0])
 	if err != nil {
-		return fmt.Errorf("failed to parse VCD API version '%s': %v", vcdAPIVersion, err)
+		return fmt.Errorf("failed to parse VCD API version '%s': %v", vcdAPIVers[0], err)
 	}
 
 	versionConstraint, err := semver.NewConstraint("<37.2")
