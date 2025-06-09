@@ -1,4 +1,5 @@
 name: cni-cilium
+stage: "General Availability"
 weight: 21
 subsystems:
   - networking

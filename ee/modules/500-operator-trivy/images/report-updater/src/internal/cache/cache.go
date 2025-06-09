@@ -37,21 +37,14 @@ const (
 	tarGzMediaType        = "application/deckhouse.io.bdu.layer.v1.tar+gzip"
 )
 
-type Cache interface {
-	Get(string) ([]string, bool)
-	Check() error
-	Renew(ctx context.Context) error
-}
-
 type VulnerabilityCache struct {
 	logger *log.Logger
-
-	dict         VulnerabilityDictionary
-	mu           sync.RWMutex
-	sourceConfig RegistryConfig
+	dict   Dictionary
+	mtx    sync.RWMutex
+	config RegistryConfig
 }
 
-type VulnerabilityDictionary struct {
+type Dictionary struct {
 	TS   time.Time           `json:"timestamp"`
 	Data map[string][]string `json:"data"`
 }
@@ -72,7 +65,7 @@ type DockerConfig struct {
 	Auths map[string]ContainerRegistry `json:"auths"`
 }
 
-func NewVulnerabilityCache(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
+func New(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
 	image := os.Getenv("DICTIONARY_OCI_IMAGE")
 	if len(image) == 0 {
 		return nil, fmt.Errorf("DICTIONARY_OCI_IMAGE env not set")
@@ -83,8 +76,6 @@ func NewVulnerabilityCache(ctx context.Context, logger *log.Logger) (*Vulnerabil
 		return nil, fmt.Errorf("parse the '%s' image: %w", image, err)
 	}
 
-	registry := ref.Context().RegistryStr()
-
 	dockerConfigFile, err := os.Open(dockerConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("open docker config.json: %w", err)
@@ -93,42 +84,21 @@ func NewVulnerabilityCache(ctx context.Context, logger *log.Logger) (*Vulnerabil
 
 	dockerConfig := new(DockerConfig)
 	if err = json.NewDecoder(dockerConfigFile).Decode(dockerConfig); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal docker config.json: %w", err)
+		return nil, fmt.Errorf("unmarshal docker config.json: %w", err)
 	}
 
-	var (
-		user     string
-		password string
-	)
-
-	containerRegistry, ok := dockerConfig.Auths[registry]
-	if !ok {
-		logger.Printf("failed to find auth config for bdu registry %s in docker file\n", registry)
-	} else {
-		if len(containerRegistry.Auth) == 0 {
-			return nil, fmt.Errorf("bdu registry auth config is empty")
-		}
-
-		decoded, err := base64.StdEncoding.DecodeString(containerRegistry.Auth)
-		if err != nil {
-			return nil, fmt.Errorf("decode bdu registry auth config: %w", err)
-		}
-
-		auth := string(decoded)
-		if len(strings.Split(auth, ":")) < 2 {
-			return nil, fmt.Errorf("bdu registry auth config seems to be malformed, should have the following format: 'user:password'")
-		}
-
-		user = strings.Split(auth, ":")[0]
-		password = strings.Split(auth, ":")[1]
+	registry := ref.Context().RegistryStr()
+	user, password, err := parseAuthConfig(dockerConfig, registry, logger)
+	if err != nil {
+		return nil, fmt.Errorf("parse docker config.json: %w", err)
 	}
 
 	cache := &VulnerabilityCache{
 		logger: logger,
-		dict: VulnerabilityDictionary{
+		dict: Dictionary{
 			Data: make(map[string][]string),
 		},
-		sourceConfig: RegistryConfig{
+		config: RegistryConfig{
 			registry:   registry,
 			repository: ref.Context().RepositoryStr(),
 			tag:        ref.Identifier(),
@@ -138,40 +108,54 @@ func NewVulnerabilityCache(ctx context.Context, logger *log.Logger) (*Vulnerabil
 	}
 
 	if err = cache.initDictionary(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("init dictionary: %w", err)
 	}
 
 	return cache, nil
+}
+
+func parseAuthConfig(config *DockerConfig, registry string, logger *log.Logger) (string, string, error) {
+	containerRegistry, ok := config.Auths[registry]
+	if !ok {
+		logger.Printf("failed to find auth config for the '%s' registry in docker file\n", registry)
+		return "", "", nil
+	}
+
+	if len(containerRegistry.Auth) == 0 {
+		logger.Printf("auth config for the '%s' registry is empty; using anonymous access\n", registry)
+		return "", "", nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(containerRegistry.Auth)
+	if err != nil {
+		return "", "", fmt.Errorf("decode the '%s' registry auth config: %w", registry, err)
+	}
+
+	splits := strings.Split(string(decoded), ":")
+	if len(splits) < 2 {
+		return "", "", fmt.Errorf("the '%s' registry auth config is malformed, should have the format: 'user:password'", registry)
+	}
+
+	return splits[0], splits[1], nil
 }
 
 func (c *VulnerabilityCache) initDictionary(ctx context.Context) error {
 	c.logger.Println("initialize BDU dictionary")
 	if err := c.Renew(ctx); err != nil {
 		c.logger.Println("failed to initialize BDU dictionary")
-		return err
+		return fmt.Errorf("renew the dictionary: %w", err)
 	}
 
 	return nil
 }
 
 func (c *VulnerabilityCache) Renew(ctx context.Context) error {
-	if err := c.getData(ctx); err != nil {
-		return fmt.Errorf("renew BDU base: get data from image descriptors: %w", err)
-	}
-
-	return nil
-}
-
-func (c *VulnerabilityCache) getData(ctx context.Context) error {
 	c.logger.Println("download BDU image")
 
-	// create oras in-memory storage
-	store := memory.New()
-
 	// set target repository
-	repo, err := remote.NewRepository(c.sourceConfig.registry + "/" + c.sourceConfig.repository)
+	repo, err := remote.NewRepository(c.config.registry + "/" + c.config.repository)
 	if err != nil {
-		return err
+		return fmt.Errorf("new repository: %w", err)
 	}
 
 	// customize http client transport
@@ -205,22 +189,25 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 			Transport: transport,
 		},
 		Cache: auth.DefaultCache,
-		Credential: auth.StaticCredential(c.sourceConfig.registry, auth.Credential{
-			Username: c.sourceConfig.user,
-			Password: c.sourceConfig.password,
+		Credential: auth.StaticCredential(c.config.registry, auth.Credential{
+			Username: c.config.user,
+			Password: c.config.password,
 		}),
 	}
 
+	// create oras in-memory storage
+	store := memory.New()
+
 	// copy the requested image from remote repository to oras in-memory storage and save its descriptor
-	descriptor, err := oras.Copy(ctx, repo, c.sourceConfig.tag, store, c.sourceConfig.tag, oras.DefaultCopyOptions)
+	descriptor, err := oras.Copy(ctx, repo, c.config.tag, store, c.config.tag, oras.DefaultCopyOptions)
 	if err != nil {
-		return fmt.Errorf("renew BDU base: copy BDU image to memory: %w", err)
+		return fmt.Errorf("copy BDU image to memory: %w", err)
 	}
 
 	// get successor descriptors of the descriptor
 	successors, err := content.Successors(ctx, store, descriptor)
 	if err != nil {
-		return fmt.Errorf("renew BDU base: get descriptors from BDU image: %w", err)
+		return fmt.Errorf("get descriptors from BDU image: %w", err)
 	}
 
 	// iterate over descriptors to get the ones with relevant MediaType
@@ -228,10 +215,10 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 		switch desc.MediaType {
 		case tarGzMediaType:
 			if err = c.processDescriptor(ctx, store, desc); err != nil {
-				return fmt.Errorf("renew BDU base: process tar archive: %w", err)
+				return fmt.Errorf("process tar archive: %w", err)
 			}
 		default:
-			//skip
+			// skip
 		}
 	}
 
@@ -241,13 +228,13 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 func (c *VulnerabilityCache) processDescriptor(ctx context.Context, store *memory.Store, desc ocispec.Descriptor) error {
 	tarGz, err := store.Fetch(ctx, desc)
 	if err != nil {
-		return fmt.Errorf("renew BDU base: fetch tar archive: %w", err)
+		return fmt.Errorf("fetch tar archive: %w", err)
 	}
 	defer tarGz.Close()
 
 	gzipReader, err := gzip.NewReader(tarGz)
 	if err != nil {
-		return fmt.Errorf("renew BDU base: uncompress tar archive: %w", err)
+		return fmt.Errorf("uncompress tar archive: %w", err)
 	}
 
 	tarReader := tar.NewReader(gzipReader)
@@ -258,27 +245,27 @@ func (c *VulnerabilityCache) processDescriptor(ctx context.Context, store *memor
 		}
 
 		if err != nil {
-			return fmt.Errorf("renew BDU base: iterate over tar: %w", err)
+			return fmt.Errorf("iterate over tar: %w", err)
 		}
 
 		if header.Name == bduDictionaryFilename {
-			tempDict := &VulnerabilityDictionary{
+			tempDict := &Dictionary{
 				Data: make(map[string][]string),
 			}
 
 			if err = json.NewDecoder(tarReader).Decode(tempDict); err != nil {
-				return fmt.Errorf("renew BDU base: unmarshal BDU dictionary: %w", err)
+				return fmt.Errorf("unmarshal BDU dictionary: %w", err)
 			}
 
 			if len(tempDict.Data) == 0 {
-				return fmt.Errorf("renew BDU base: dictionary is empty")
+				return fmt.Errorf("dictionary is empty")
 			}
 
 			if tempDict.TS != c.dict.TS {
-				c.mu.Lock()
+				c.mtx.Lock()
 				c.dict.Data = tempDict.Data
 				c.dict.TS = tempDict.TS
-				c.mu.Unlock()
+				c.mtx.Unlock()
 				c.logger.Printf("BDU dictionary dated %v has been applied", c.dict.TS)
 			} else {
 				c.logger.Printf("BDU dictionary is up to date (ts: %s)", c.dict.TS)
@@ -292,8 +279,8 @@ func (c *VulnerabilityCache) processDescriptor(ctx context.Context, store *memor
 }
 
 func (c *VulnerabilityCache) Get(vuln string) ([]string, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
 
 	entry, ok := c.dict.Data[vuln]
 	return entry, ok
