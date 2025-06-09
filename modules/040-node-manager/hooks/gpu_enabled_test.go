@@ -46,6 +46,7 @@ metadata:
     node.deckhouse.io/group: worker-gpu
     node.deckhouse.io/gpu: ""
     node.deckhouse.io/device-gpu.config: time-slicing
+    nvidia.com/mig.config: all-1g.5gb
 spec:
   providerID: static:///22d24f3645e885e88693cb5b235977af5acdc6c21efac9c075b56b618a1b5338
 `
