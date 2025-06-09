@@ -116,6 +116,10 @@ spec:
           - mountPath: /mig-parted-config
             name: mig-parted-config        
       volumes:
+      - name: run-nvidia-validations
+        hostPath:
+          path: /run/nvidia/validations
+          type: DirectoryOrCreate
       - name: host-root
         hostPath:
           path: /
