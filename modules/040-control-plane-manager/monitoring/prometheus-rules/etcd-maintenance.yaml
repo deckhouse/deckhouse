@@ -44,7 +44,7 @@
             | 72 GB       | 8589934592 (8 GB)   |
             | ...         | ...                 |
     - alert: D8NeedDecreaseEtcdQuotaBackendBytes
-      expr: max(last_over_time(d8_etcd_quota_backend_total[6h])) > 0
+      expr: max(d8_etcd_quota_backend_should_decrease[6h]) > 0
       labels:
         tier: cluster
         d8_component: control-plane-manager
