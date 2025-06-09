@@ -1,6 +1,6 @@
 ---
 title: "Запуск и проверка модуля в кластере"
-permalink: ru/module-development/run/
+permalink: ru/architecture/module-development/run/
 lang: ru
 ---
 

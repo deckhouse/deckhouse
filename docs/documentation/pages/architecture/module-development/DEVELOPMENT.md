@@ -1,6 +1,6 @@
 ---
 title: "Module development and debugging"
-permalink: en/module-development/development/
+permalink: en/architecture/module-development/development/
 ---
 
 {% raw %}

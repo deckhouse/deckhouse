@@ -1,6 +1,6 @@
 ---
 title: "Dependencies of the Deckhouse Kubernetes Platform modules"
-permalink: en/module-development/dependencies/
+permalink: en/architecture/module-development/dependencies/
 lang: en
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Сборка и публикация модуля"
-permalink: ru/module-development/build/
+permalink: ru/architecture/module-development/build/
 lang: ru
 ---
 

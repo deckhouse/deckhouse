@@ -1,6 +1,6 @@
 ---
 title: "How to run and verify a module in the DKP cluster"
-permalink: en/module-development/run/
+permalink: en/architecture/module-development/run/
 ---
 
 This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.

@@ -1,6 +1,6 @@
 ---
 title: "Разработка модуля Deckhouse Kubernetes Platform"
-permalink: ru/module-development/
+permalink: ru/architecture/module-development/
 lang: ru
 ---
 

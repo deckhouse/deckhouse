@@ -1128,35 +1128,35 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /module-development/
+              url: /architecture/module-development/
             - title:
                 en: Module structure
                 ru: Структура
-              url: /module-development/structure/
+              url: /architecture/module-development/structure/
             - title:
                 en: Building and publication
                 ru: Сборка и публикация
-              url: /module-development/build/
+              url: /architecture/module-development/build/
             - title:
                 en: Running and verifying in the cluster
                 ru: Запуск и проверка в кластере
-              url: /module-development/run/
+              url: /architecture/module-development/run/
             - title:
                 en: Module dependencies
                 ru: Зависимости модуля
-              url: /module-development/dependencies/
+              url: /architecture/module-development/dependencies/
             - title:
                 en: Versioning
                 ru: Версионирование
-              url: /module-development/versioning/
+              url: /architecture/module-development/versioning/
             - title:
                 en: Examples
                 ru: Примеры
-              url: /module-development/example/
+              url: /architecture/module-development/example/
             - title:
                 en: Development and debugging
                 ru: Разработка и отладка
-              url: /module-development/development/
+              url: /architecture/module-development/development/
         - title:
             en: Authentication
             ru: Аутентификация
@@ -1190,10 +1190,6 @@ entries:
             en: VPA
             ru: VPA
           url: /architecture/vpa.html
-        - title:
-            en: Module versioning
-            ru: Версионирование модулей
-          url: /architecture/functional/module-versioning.html
         - title:
             en: Monitoring
             ru: Мониторинг
