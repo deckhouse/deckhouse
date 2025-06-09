@@ -172,6 +172,9 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 
 func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	clusterStates, err := sdkobjectpatch.UnmarshalToStruct[StateClusterResult](input.NewSnapshots, "cluster_state")
+	if err != nil {
+		return err
+	}
 
 	input.MetricsCollector.Expire(metricGroup)
 
