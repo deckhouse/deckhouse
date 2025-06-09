@@ -105,7 +105,7 @@ for d8_tag in "${d8_tags[@]}"; do
   fi
 
   # set cpecial tag for DD if images from main
-  if [ "${module_tag}" == "main" ]; then
+  if [ "${d8_tag}" == "main" ]; then
     dd_default_branch_tag="default_branch"
   fi
   # if d8_tag is for release - we need to take it from prod registry
