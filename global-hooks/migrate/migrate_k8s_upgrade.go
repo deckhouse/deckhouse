@@ -149,7 +149,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		},
 	}
 
-	input.Logger.Info("create clusterrolebinding", slog.String("cluster_role_binding", clusterAdminsGroupAndClusterRoleBinding))
+	input.Logger.Info("create clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding))
 
 	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
 	if err != nil {

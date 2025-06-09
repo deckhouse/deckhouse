@@ -303,15 +303,15 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
 		if wasPvc {
 			for _, pvc := range pvcs {
-				input.Logger.Info("storage class changed, deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
+				input.Logger.Info("PVC StorageClass changed. Deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
-					input.Logger.Error("error occurred", log.Err(err))
+					input.Logger.Error("failed to delete PVC", log.Err(err))
 				}
 			}
 		}
 
-		input.Logger.Info("storage class changed, deleting", slog.String("namespace", args.Namespace), slog.String("object_kind", args.ObjectKind), slog.String("name", args.ObjectName))
+		input.Logger.Info("StorageClass changed. Deleting objects", slog.String("namespace", args.Namespace), slog.String("object_kind", args.ObjectKind), slog.String("name", args.ObjectName))
 		switch args.ObjectKind {
 		case "Prometheus":
 			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{
