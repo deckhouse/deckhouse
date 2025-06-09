@@ -23,7 +23,7 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-- image: registry.deckhouse.io/base_images@sha256:6dba1655a3c540573f856c81bafca47543cc1fffb429e5cb2db95f746a975b60
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lsblk
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
@@ -79,3 +79,7 @@ shell:
     - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lsblk
+from: registry.deckhouse.io/base_images@sha256:6dba1655a3c540573f856c81bafca47543cc1fffb429e5cb2db95f746a975b60
+final: false
