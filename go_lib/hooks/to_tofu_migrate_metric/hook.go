@@ -206,12 +206,12 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	if !needMigrate {
 		for _, nodeState := range nodeStates {
 			if nodeState.IsBackup {
-				input.Logger.Info("Node state is backup state. Skip", slog.String("secret_name", nodeState.SecretName))
+				input.Logger.Info("Node state is backup state. Skip", slog.String("name", nodeState.SecretName))
 				continue
 			}
 
 			if nodeState.TerraformVersion == terraformVersion {
-				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("secret_name", nodeState.SecretName))
+				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("name", nodeState.SecretName))
 				needMigrate = true
 				break
 			}

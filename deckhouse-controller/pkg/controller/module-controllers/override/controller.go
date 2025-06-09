@@ -237,7 +237,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		r.log.Info("apply new registry settings to the module", slog.String("name", mpo.Name))
 		modulePath := filepath.Join(r.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)
 		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, module.Properties.Source, modulePath); err != nil {
-			r.log.Error("failed to run with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
+			r.log.Error("failed to run the module with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 		// delete annotation and requeue
@@ -352,7 +352,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
-		r.log.Error("failed to enable the module", slog.String("module_name", mpo.Name), log.Err(err))
+		r.log.Error("failed to enable the module", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 

@@ -163,7 +163,7 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 		input.PatchCollector.PatchWithMerge(patch, "apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
 		input.Logger.Info("StatefulSet openvpn scheduled for restart")
 	} else {
-		input.Logger.Info("Server certificate is valid", slog.Time("valid_until", cert.NotAfter))
+		input.Logger.Info("Server certificate is valid", slog.Time("until", cert.NotAfter))
 	}
 
 	return nil

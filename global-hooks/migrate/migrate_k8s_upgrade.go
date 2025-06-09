@@ -110,7 +110,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		kubernetesVersion = config.KubernetesVersion
 	}
 
-	input.Logger.Info("", slog.String("kubernetes_version", kubernetesVersion))
+	input.Logger.Info("version info", slog.String("kubernetes_version", kubernetesVersion))
 
 	c, err := semver.NewConstraint("< 1.29")
 	if err != nil {
@@ -149,7 +149,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		},
 	}
 
-	input.Logger.Info("create clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding))
+	input.Logger.Info("create clusterrolebinding", slog.String("cluster_role_binding", clusterAdminsGroupAndClusterRoleBinding))
 
 	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
 	if err != nil {
