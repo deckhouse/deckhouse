@@ -174,7 +174,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			if err != nil {
 				return err
 			}
-			input.Logger.Info("Namespace deleted", slog.String("name", ns.GetName()))
+			input.Logger.Info("Namespace deleted", slog.String("namespace", ns.GetName()))
 		}
 	}
 
