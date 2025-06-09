@@ -125,7 +125,7 @@ func applyDaemonSetCruiseFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 
 func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var wh admissionregistrationv1.ValidatingWebhookConfiguration
-	err := sdk.FromUnstructured(obj, wh)
+	err := sdk.FromUnstructured(obj, &wh)
 	if err != nil {
 		return nil, err
 	}
