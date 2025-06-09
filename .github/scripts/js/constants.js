@@ -60,6 +60,9 @@ const labels = {
   'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
   'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
 
+  // E2E: autoscaler
+  'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
+
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 

@@ -1368,13 +1368,13 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1396,8 +1396,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
@@ -1434,13 +1434,13 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1462,8 +1462,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
