@@ -4,35 +4,33 @@ permalink: ru/admin/configuration/access/authorization/grant.html
 lang: ru
 ---
 
-В Kubernetes существуют две категории пользователей:
+Для выдачи прав в Deckhouse Kubernetes Platform в пользовательских ресурсах указывается блок `subjects`.
 
-- ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
-- Остальные (статические) пользователи, учёт которых ведёт не сам Kubernetes, а внешний софт, который настраивает администратор кластера. Существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
-  - через модуль [user-authn](../../reference/mc/user-authn/);
-  - с помощью сертификатов.
-
-При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этот механизм используется для аутентификации в кластере, когда, например, используется kubectl на bastion-узле. Пример выпуска сертификата находится в разделе [Создание пользователя](#создание-пользователя).
-
-Пример манифеста для создания статического пользователя:
+В случае пользователя он указывается в формате:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: new-user
-spec:
-  email: new-user@example.ru
-  password: $2a$10$MRhpW7jfXisdwLMM1bLEJehVojy3xWy0lfUzthSNoqG6mMUl.jLEG
+subjects:
+- kind: User
+  name: <email пользователя>
+```
+{% alert level="warning" %}
+В случае использования модуля `user-authn` и статических пользователей, необходимо использовать именно email пользователя, а не имя ресурса User.
+{% endalert %}
+
+или
+```yaml
+subjects:
+- kind: Group
+  name: <группа, в которой состоит пользователь>
 ```
 
-Пример манифеста для создания ServiceAccount:
+В случае сервисного аккаунта он указывается в формате:
 
 ```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: gitlab-runner-deploy-1
-  namespace: alpha-project
+subjects:
+- kind: ServiceAccount
+  name: <имя сервисного аккаунта>
+  namespace: <пространство имён, в котором создан сервисный аккаунт>
 ```
 
 ## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (текущая модель)
@@ -49,8 +47,8 @@ metadata:
   name: dev-access
 spec:
   subjects:
-    - kind: User
-      name: dev-user@example.com
+  - kind: User
+    name: dev-user@example.com
 ```
 
 [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) действует во всем кластере. Используйте его, если нужно предоставить права пользователю во всех пространствах имен, включая системные (например, для предоставления прав администратора).
@@ -59,266 +57,26 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1
-   kind: ClusterAuthorizationRule
-   metadata:
-     name: admin-access
-   spec:
-     subjects:
-     - kind: User
-       name: dev-user@example.com
-       # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
-       namespaceSelector:
-        labelSelector:
-          matchLabels:
-            env: review
-     accessLevel: SuperAdmin
-     portForwarding: true
-```  
-
-## Создание ServiceAccount для сервера и настройка его прав (текущая модель)
-
-Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развёртывания приложений через CI-системы.  
-
-1. Создайте ServiceAccount, например в пространстве имён `d8-service-accounts`:
-
-   ```shell
-   kubectl create -f - <<EOF
-   apiVersion: v1
-   kind: ServiceAccount
-   metadata:
-     name: gitlab-runner-deploy
-     namespace: d8-service-accounts
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: gitlab-runner-deploy-token
-     namespace: d8-service-accounts
-     annotations:
-       kubernetes.io/service-account.name: gitlab-runner-deploy
-   type: kubernetes.io/service-account-token
-   EOF
-   ```
-
-1. Назначьте необходимые для ServiceAccount права (используя кастомный ресурс [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)):
-
-   ```shell
-   kubectl create -f - <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: ClusterAuthorizationRule
-   metadata:
-     name: gitlab-runner-deploy
-   spec:
-     subjects:
-     - kind: ServiceAccount
-       name: gitlab-runner-deploy
-       namespace: d8-service-accounts
-     accessLevel: SuperAdmin
-     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
-     allowAccessToSystemNamespaces: true      
-   EOF
-   ```
-
-   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](../../reference/mc/user-authz/#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](../../reference/cr/clusterauthorizationrule/#clusterauthorizationrule-v1-spec-namespaceselector)).
-
-1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
-
-   ```shell
-   export CLUSTER_NAME=my-cluster
-   export USER_NAME=gitlab-runner-deploy.my-cluster
-   export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
-   export FILE_NAME=kube.config
-   ```
-
-1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl. Используйте один из следующих вариантов доступа к API-серверу кластера:
-
-   - Если есть прямой доступ к API-серверу:
-     - Получите сертификат CA-кластера Kubernetes:
-
-        ```shell
-        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
-        ```
-
-     - Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
-
-        ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
-          --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$FILE_NAME
-        ```
-
-   - Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
-     - включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
-     - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
-
-   - **Если используется непубличный CA:**
-
-     - Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
-
-        ```shell
-        kubectl -n d8-user-authn get secrets -o json \
-          $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
-          | jq -rc '.data."ca.crt" // .data."tls.crt"' \
-          | base64 -d > /tmp/ca.crt
-        ```
-
-     - Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
-
-        ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-          --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$FILE_NAME
-        ```
-
-   - **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
-
-     ```shell
-     kubectl config set-cluster $CLUSTER_NAME \
-       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-       --kubeconfig=$FILE_NAME
-     ```
-
-1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
-     --kubeconfig=$FILE_NAME
-   ```
-
-1. Сгенерируйте контекст в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config set-context $CONTEXT_NAME \
-     --cluster=$CLUSTER_NAME --user=$USER_NAME \
-     --kubeconfig=$FILE_NAME
-   ```
-
-1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
-   ```
-
-## Создание пользователя с помощью клиентского сертификата и настройка его прав (текущая модель)
-
-### Создание пользователя
-
-1. Получите корневой сертификат кластера (ca.crt и ca.key).
-1. Сгенерируйте ключ пользователя:
-
-   ```shell
-   openssl genrsa -out myuser.key 2048
-   ```
-
-1. Создайте CSR с указанием пользователя `myuser`, входящего в группы `mygroup1` и `mygroup2`:
-
-   ```shell
-   openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-   ```
-
-1. Подпишите CSR корневым сертификатом кластера:
-
-   ```shell
-   openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-   ```
-
-1. Укажите полученный сертификат в файле конфигурации:
-
-   ```shell
-   cat << EOF
-   apiVersion: v1
-   clusters:
-   - cluster:
-       certificate-authority-data: $(cat ca.crt | base64 -w0)
-       server: https://<хост кластера>:6443
-     name: kubernetes
-   contexts:
-   - context:
-       cluster: kubernetes
-       user: myuser
-     name: myuser@kubernetes
-   current-context: myuser@kubernetes
-   kind: Config
-   preferences: {}
-   users:
-   - name: myuser
-     user:
-       client-certificate-data: $(cat myuser.crt | base64 -w0)
-       client-key-data: $(cat myuser.key | base64 -w0)
-   EOF
-   ```
-
-### Предоставление доступа созданному пользователю
-
-Для предоставления доступа созданному пользователю создайте `ClusterAuthorizationRule`.
-
-Пример `ClusterAuthorizationRule`:
-
-```yaml
-apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
-  name: myuser
+  name: admin-access
 spec:
   subjects:
   - kind: User
-    name: myuser
-  accessLevel: PrivilegedUser
+    name: dev-user@example.com
+  # Опция доступна только при включенном режиме enableMultiTenancy 
+  # в модуле user-authz (версия Enterprise Edition).
+  namespaceSelector:
+    labelSelector:
+      matchLabels:
+        env: review
+  accessLevel: SuperAdmin
   portForwarding: true
-```
+```  
 
-## Настройка прав высокоуровневых ролей (текущая модель)
+## Предоставление прав с помощью ClusterRoleBinding и RoleBinding (экспериментальная модель)
 
-Если требуется добавить права для определённой [высокоуровневой роли](../access/authorization-rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели), создайте ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
-
-Пример:
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
-    user-authz.deckhouse.io/access-level: Editor
-  name: user-editor
-rules:
-- apiGroups:
-  - kuma.io
-  resources:
-  - trafficroutes
-  - trafficroutes/finalizers
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - flagger.app
-  resources:
-  - canaries
-  - canaries/status
-  - metrictemplates
-  - metrictemplates/status
-  - alertproviders
-  - alertproviders/status
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-```
-
-<!-- перенесено из [## Пример назначения прав администратору кластера](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/user-authz/usage.html#%D0%BF%D1%80%D0%B8%D0%BC%D0%B5%D1%80-%D0%BD%D0%B0%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D1%8F-%D0%BF%D1%80%D0%B0%D0%B2-%D0%B0%D0%B4%D0%BC%D0%B8%D0%BD%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%82%D0%BE%D1%80%D1%83-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0) -->
-
-## Назначение прав администратору кластера (экспериментальная модель)
+### Назначение прав администратору кластера (экспериментальная модель)
 
 Для назначения прав администратору кластера используйте [manage-роль](../access/authorization-rbac-experimental.html#manage-роли) `d8:manage:all:manager` в `ClusterRoleBinding`.
 
@@ -351,9 +109,9 @@ roleRef:
   - `kubectl exec`;
   - `kubectl port-forward`;
   - `kubectl proxy`.
-{% endofftopic %}
+    {% endofftopic %}
 
-## Назначение прав сетевому администратору (экспериментальная модель)
+### Назначение прав сетевому администратору (экспериментальная модель)
 
 Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../access/authorization-rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в `ClusterRoleBinding`.
 
@@ -462,9 +220,9 @@ roleRef:
   - `kubectl exec`;
   - `kubectl port-forward`;
   - `kubectl proxy`.
-{% endofftopic %}
+    {% endofftopic %}
 
-## Назначение административных прав пользователю в рамках пространства имён (экспериментальная модель)
+### Назначение административных прав пользователю в рамках пространства имён (экспериментальная модель)
 
 Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в `RoleBinding` [use-роль](../access/authorization-rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
 
@@ -530,4 +288,4 @@ roleRef:
   - `kubectl exec`;
   - `kubectl port-forward`;
   - `kubectl proxy`.
-{% endofftopic %}
+    {% endofftopic %}
