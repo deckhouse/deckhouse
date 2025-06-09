@@ -1,16 +1,44 @@
 - name: openvpn.admin.info
   rules:
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire > 0
+      expr: ovpn_client_cert_expire == 0
       for: 1m
       labels:
         severity_level: "4"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: Some OpenVPN client certificates have expired.
+        summary: "OpenVPN client certificate expired for {{ $labels.client }}"
         description: |-
-          There are {{ $value }} expired OpenVPN client certificates.
+          The OpenVPN client certificate for **{{ $labels.client }}** has expired.
+
+          Renew the expired certificates if needed.
+
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire < 30
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN client certificate expired for {{ $labels.client }} in less than 30 days.
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 30 days.
+
+          Renew the expired certificates if needed.
+
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire < 7
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN client certificate expired for {{ $labels.client }} in less than 7 days.
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 7 days.
 
           Renew the expired certificates if needed.
 

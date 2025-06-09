@@ -5817,12 +5817,38 @@ alerts:
       module: openvpn
       edition: ce
       description: |-
-        There are {{ $value }} expired OpenVPN client certificates.
+        The OpenVPN client certificate for **{{ $labels.client }}** has expired.
 
         Renew the expired certificates if needed.
       summary: |
-        Some OpenVPN client certificates have expired.
+        OpenVPN client certificate expired for {{ $labels.client }}
       severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 30 days.
+
+        Renew the expired certificates if needed.
+      summary: |
+        OpenVPN client certificate expired for {{ $labels.client }} in less than 30 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 7 days.
+
+        Renew the expired certificates if needed.
+      summary: |
+        OpenVPN client certificate expired for {{ $labels.client }} in less than 7 days.
+      severity: "5"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
