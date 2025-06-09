@@ -116,6 +116,27 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /metrics
+              port: metrics
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /metrics
+              port: metrics
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
           env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:
