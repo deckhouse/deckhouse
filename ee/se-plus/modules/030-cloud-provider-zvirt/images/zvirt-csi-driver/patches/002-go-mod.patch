@@ -6,7 +6,7 @@ index a81a290..b5be917 100644
  module github.com/ovirt/csi-driver
  
 -go 1.19
-+go 1.23.6
++go 1.23.9
  
  require (
  	github.com/container-storage-interface/spec v1.2.0

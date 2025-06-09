@@ -1,6 +1,6 @@
 module discoverer
 
-go 1.23.6
+go 1.23.9
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible

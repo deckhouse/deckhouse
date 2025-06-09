@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.23.6
+go 1.23.9
 
 require (
 	github.com/go-logr/logr v1.4.1

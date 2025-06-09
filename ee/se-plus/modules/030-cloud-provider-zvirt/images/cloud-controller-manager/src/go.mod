@@ -1,6 +1,6 @@
 module github.com/deckhouse/zvirt-cloud-controller-manager
 
-go 1.23.6
+go 1.23.9
 
 require (
 	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0
