@@ -120,7 +120,7 @@ spec:
           readinessProbe:
             failureThreshold: 3
             httpGet:
-              path: /metrics
+              path: /livez
               port: metrics
               scheme: HTTP
             initialDelaySeconds: 30
@@ -130,7 +130,7 @@ spec:
           livenessProbe:
             failureThreshold: 10
             httpGet:
-              path: /metrics
+              path: /livez
               port: metrics
               scheme: HTTP
             initialDelaySeconds: 30
