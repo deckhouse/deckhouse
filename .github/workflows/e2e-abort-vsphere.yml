@@ -297,7 +297,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -319,7 +318,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -588,7 +586,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -610,7 +607,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -879,7 +875,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -901,7 +896,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1170,7 +1164,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1192,7 +1185,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1461,7 +1453,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1483,7 +1474,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1752,7 +1742,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1774,7 +1763,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2043,7 +2031,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2065,7 +2052,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
