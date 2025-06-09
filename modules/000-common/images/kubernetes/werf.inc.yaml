@@ -43,7 +43,7 @@ shell:
   - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-fromImage: builder/golang-alpine
+{{- include "image-build.fromImage" $ }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
@@ -59,13 +59,14 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash rsync
+  {{- include "alt packages proxy" $ | nindent 2 }}
+  - apt-get install -y curl
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"`) | indent 4 }}
   - rm -rf vendor
 {{- end }}
