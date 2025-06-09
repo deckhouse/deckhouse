@@ -30,8 +30,6 @@ shell:
   - export VERSION_COMMON="v0.5.0"
   - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-data-discoverer.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
-  - mv /deckhouse/go_lib /src
-  - mv /deckhouse/pkg /src
   - cd /src
   - mv /go_lib /src
   - rm -rf .git vendor
