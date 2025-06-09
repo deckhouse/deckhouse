@@ -95,11 +95,15 @@ entries:
                     - title:
                         en: Granting rights to users and servers
                         ru: Выдача прав пользователям и серверам
-                      url: /admin/configuration/access/authorization/grant.html
+                      url: /admin/configuration/access/authorization/granting.html
                     - title:
                         en: Checking whether the user has rights
                         ru: Проверка наличия прав у пользователя
                       url: /admin/configuration/access/authorization/check.html
+                    - title:
+                        en: Access for CI/CD
+                        ru: Доступ для CI/CD
+                      url: /admin/configuration/access/authorization/ci_cd.html
             - title:
                 en: Platform integration with infrastructure
                 ru: Интеграция платформы с инфраструктурой

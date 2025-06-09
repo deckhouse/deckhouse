@@ -231,30 +231,48 @@ spec:
         team: frontend
 ```
 
-<!-- delete or move to user auth documentation
-### Настройка `kube-apiserver` для работы в режиме multitenancy
+## Расширение прав доступа для высокоуровневых ролей
 
-Режим multitenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](../../reference/mc/user-authz#parameters-enablemultitenancy) модуля [user-authz](../../reference/mc/user-authz/).
+Если требуется добавить права для определённой [высокоуровневой роли](../access/authorization-rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели), создайте ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
-Работа в режиме multitenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multitenancy действия **выполняются автоматически** модулем [control-plane-manager](../../reference/mc/control-plane-manager/), никаких ручных действий не требуется.
+Пример:
 
-Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multitenancy:
-
-* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например, `--authorization-mode=Node,Webhook,RBAC`);
-* добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
-* добавление `volumeMounts`:
-
-  ```yaml
-  - name: authorization-webhook-config
-    mountPath: /etc/kubernetes/authorization-webhook-config.yaml
-    readOnly: true
-  ```
-
-* добавление `volumes`:
-
-  ```yaml
-  - name: authorization-webhook-config
-    hostPath:
-      path: /etc/kubernetes/authorization-webhook-config.yaml
-      type: FileOrCreate
-  ``` -->
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+  name: user-editor
+rules:
+- apiGroups:
+  - kuma.io
+  resources:
+  - trafficroutes
+  - trafficroutes/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - flagger.app
+  resources:
+  - canaries
+  - canaries/status
+  - metrictemplates
+  - metrictemplates/status
+  - alertproviders
+  - alertproviders/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+```
