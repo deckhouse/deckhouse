@@ -22,6 +22,8 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,6 +71,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector:            internal.NsSelector(),
 			FilterFunc:                   applyDaemonSetCruiseFilter,
 		},
+		{
+			Name:                         "valwebhookconfnginx",
+			ApiVersion:                   "admissionregistration.k8s.io/v1",
+			Kind:                         "validatingwebhookconfigurations",
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
+			WaitForSynchronization:       ptr.To(true),
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{
+					{
+						Field:    "metadata.name",
+						Operator: "Equals",
+						Value:    "d8-ingress-nginx-admission",
+					},
+				},
+			},
+			FilterFunc: applyIngressControllerWebhookFilter,
+		},
 	},
 }, hadleFinalizers)
 
@@ -103,12 +123,23 @@ func applyDaemonSetCruiseFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	return ds.Name, nil
 }
 
+func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var wh admissionregistrationv1.ValidatingWebhookConfiguration
+	err := sdk.FromUnstructured(obj, wh)
+	if err != nil {
+		return nil, err
+	}
+
+	return wh.Name, nil
+}
+
 func hadleFinalizers(input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
 	controllers := input.Snapshots["controller"]
 	serviceNames := set.NewFromSnapshot(input.Snapshots["services"])
 	daemonSetNames := set.NewFromSnapshot(input.Snapshots["daemonsetscruise"])
+	validationWebhooks := set.NewFromSnapshot(input.Snapshots["valwebhookconfnginx"])
 
 	for _, c := range controllers {
 		controllerName := c.(INController).Name
@@ -124,6 +155,9 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 			fmt.Sprintf("proxy-%s-failover", controllerName),
 			fmt.Sprintf("controller-%s-failover", controllerName),
 		}
+		expectedValidationWebhooks := []string{
+			"d8-ingress-nginx-admission",
+		}
 
 		found := false
 
@@ -137,6 +171,15 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 		if !found {
 			for _, ds := range expectedDaemonSets {
 				if _, d := daemonSetNames[ds]; d {
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			for _, vw := range expectedValidationWebhooks {
+				if _, v := validationWebhooks[vw]; v {
 					found = true
 					break
 				}
