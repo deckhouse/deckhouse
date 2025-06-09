@@ -282,7 +282,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{
 				ObjectMeta: metav1.ObjectMeta{Name: pod.Name},
 			})
-			input.Logger.Info("evicting Pod due to PVC stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("POD name", pod.Name), slog.String("PVC name", pvc.Name))
+			input.Logger.Info("evicting Pod due to PVC stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), slog.String("pvc_name", pvc.Name))
 
 			if err != nil {
 				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), log.Err(err))
