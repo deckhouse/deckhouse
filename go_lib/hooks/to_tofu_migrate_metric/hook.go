@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -184,7 +185,7 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 
 	for _, clusterState := range clusterStates {
 		if !clusterState.ClusterState {
-			input.Logger.Warnf("Secret %s is not terraform state. Probably you located in test env", clusterState.SecretName)
+			input.Logger.Warn("Secret is not terraform state. Probably you located in test env", slog.String("secret_name", clusterState.SecretName))
 			continue
 		}
 
@@ -205,12 +206,12 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	if !needMigrate {
 		for _, nodeState := range nodeStates {
 			if nodeState.IsBackup {
-				input.Logger.Infof("Node state %s is backup state. Skip", nodeState.SecretName)
+				input.Logger.Info("Node state is backup state. Skip", slog.String("name", nodeState.SecretName))
 				continue
 			}
 
 			if nodeState.TerraformVersion == terraformVersion {
-				input.Logger.Infof("Node state %s has terraform state. Needing to migrate to tofu", nodeState.SecretName)
+				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("name", nodeState.SecretName))
 				needMigrate = true
 				break
 			}

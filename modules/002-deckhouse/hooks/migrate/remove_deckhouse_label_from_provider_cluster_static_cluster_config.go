@@ -124,7 +124,7 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 		}
 
 		input.Logger.Warn("Remove label 'heritage: deckhouse' from secret", slog.String("name", snapSecretName))
-		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", snapSecretName)
 		return nil
 	}
 
