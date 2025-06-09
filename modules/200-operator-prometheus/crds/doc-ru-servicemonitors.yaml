@@ -280,3 +280,4 @@ spec:
                 description: TargetLabels переносят метки с Kubernetes `Service` на созданные метрики.
               targetLimit:
                 description: TargetLimit определяет предел количества целей, которые будут приняты для сбора.
+
