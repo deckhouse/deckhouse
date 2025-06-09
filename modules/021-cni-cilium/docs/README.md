@@ -49,15 +49,16 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 ## Using CiliumClusterwideNetworkPolicies
 
+{% alert level="danger" %}
+Using CiliumClusterwideNetworkPolicies if the `policyAuditMode` option is absent in the cni-cilium module settings may lead to incorrect operation of Control plane or loss of SSH access to all cluster nodes.
+{% endalert %}
+
 Follow these steps to use CiliumClusterwideNetworkPolicies:
 
 1. Apply the primary set of `CiliumClusterwideNetworkPolicy` objects. To do this, in the settings of the cni-cilium module add the configuration option [`policyAuditMode`](../cni-cilium/configuration.html#parameters-policyauditmode) with the value `true`.
+The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
 
-    > Using CiliumClusterwideNetworkPolicies if the `policyAuditMode` option is absent in the cni-cilium module settings may lead to incorrect operation of Control plane or loss of SSH access to all cluster nodes.
-
-    The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
-
-2. Apply network security policy rule:
+1. Apply network security policy rule:
 
    ```yaml
    apiVersion: "cilium.io/v2"

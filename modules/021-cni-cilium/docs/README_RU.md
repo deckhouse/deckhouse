@@ -51,13 +51,14 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 ## Использование CiliumClusterwideNetworkPolicies
 
+{% alert level="danger" %}
+Использование CiliumClusterwideNetworkPolicies при отсутствии опции `policyAuditMode` в настройках модуля cni-cilium может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH.
+{% endalert %}
+
 Для использования CiliumClusterwideNetworkPolicies выполните следующие шаги:
 
 1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](../cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
-
-      > Использование CiliumClusterwideNetworkPolicies при отсутствии опции `policyAuditMode` в настройках модуля cni-cilium может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH.
-
-      Опция `policyAuditMode` может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
+Опция `policyAuditMode` может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
 
 1. Примените правило политики сетевой безопасности:
 
