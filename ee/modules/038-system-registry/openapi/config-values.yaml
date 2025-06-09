@@ -1,5 +1,4 @@
 type: object
-x-examples: []
 properties:
   imagesOverride:
     type: object
