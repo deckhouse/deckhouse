@@ -1087,6 +1087,10 @@ entries:
         ru: Архитектура
       folders:
         - title:
+            en: Overview
+            ru: Обзор
+          url: /architecture/
+        - title:
             en: TODO Overview
             ru: TODO Обзор
           url: /architecture/architecture-overview.html
@@ -1231,10 +1235,6 @@ entries:
         en: Kubernetes Cluster
         ru: Кластер Kubernetes
       folders:
-        - title:
-            en: Description
-            ru: Описание
-          url: /kubernetes.html
         - title:
             en: Cloud providers
             ru: Cloud providers
@@ -1670,7 +1670,7 @@ entries:
                       url: /modules/cloud-provider-dynamix/cr.html
         - title:
             en: Control plane management
-            ru: Управление control plane
+            ru: Управление control plane (УНЕСТИ)
           moduleName: control-plane-manager
           folders:
             - title:
@@ -1699,7 +1699,7 @@ entries:
               url: /modules/control-plane-manager/faq.html
         - title:
             en: Node management
-            ru: Управление узлами
+            ru: Управление узлами (УНЕСТИ)
           moduleName: node-manager
           folders:
             - title:
@@ -1727,60 +1727,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
-            en: Other modules
-            ru: Другие модули
+            en: node-local-dns
+            ru: node-local-dns (унести в Сеть->Управление DNS в кластере Kubernetes)
           folders:
             - title:
-                en: node-local-dns
-                ru: node-local-dns
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/node-local-dns/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/node-local-dns/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/node-local-dns/configuration.html
+                en: Description
+                ru: Описание
+              url: /modules/node-local-dns/
             - title:
-                en: terraform-manager
-                ru: terraform-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/terraform-manager/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/terraform-manager/configuration.html
+                en: Examples
+                ru: Примеры
+              url: /modules/node-local-dns/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/node-local-dns/configuration.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру
       folders:
         - title:
-            en: dashboard
-            ru: dashboard
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/dashboard/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/dashboard/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/dashboard/configuration.html
-        - title:
             en: openvpn
-            ru: openvpn
+            ru: openvpn (УНЕСТИ)
           featureStatus: experimental
           folders:
             - title:
@@ -1799,273 +1767,6 @@ entries:
                 en: FAQ
                 ru: FAQ
               url: /modules/openvpn/faq.html
-    - title:
-        en: Network
-        ru: Сеть
-      folders:
-        - title:
-            en: CNI
-            ru: CNI
-          folders:
-            - title:
-                en: cilium-hubble
-                ru: cilium-hubble
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/cilium-hubble/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/cilium-hubble/configuration.html
-            - title:
-                en: cni-cilium
-                ru: cni-cilium
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-cilium/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/cni-cilium/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/cni-cilium/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cni-cilium/examples.html
-            - title:
-                en: cni-flannel
-                ru: cni-flannel
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-flannel/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/cni-flannel/configuration.html
-            - title:
-                en: cni-simple-bridge
-                ru: cni-simple-bridge
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-simple-bridge/
-        - title:
-            en: Load Balancing
-            ru: Балансировка трафика
-          folders:
-            - title:
-                en: ingress-nginx
-                ru: ingress-nginx
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/ingress-nginx/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/ingress-nginx/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/ingress-nginx/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/ingress-nginx/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/ingress-nginx/faq.html
-            - title:
-                en: istio
-                ru: istio
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/istio/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/istio/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/istio/cr.html
-                    - title:
-                        en: "Custom Resources (by istio.io)"
-                        ru: "Custom Resources (от istio.io)"
-                      url: /modules/istio/istio-cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/istio/examples.html
-            - title:
-                en: keepalived
-                ru: keepalived
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/keepalived/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/keepalived/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/keepalived/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/keepalived/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/keepalived/faq.html
-            - title:
-                en: metallb
-                ru: metallb
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/metallb/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/metallb/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/metallb/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/metallb/cr.html
-
-        - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: kube-dns
-                ru: kube-dns
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/kube-dns/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/kube-dns/configuration.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/kube-dns/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/kube-dns/faq.html
-            - title:
-                en: kube-proxy
-                ru: kube-proxy
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/kube-proxy/
-            - title:
-                en: network-gateway
-                ru: network-gateway
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-gateway/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-gateway/configuration.html
-            - title:
-                en: service-with-healthchecks
-                ru: service-with-healthchecks
-              featureStatus: experimental
-              moduleName: service-with-healthchecks
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/service-with-healthchecks/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/service-with-healthchecks/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/service-with-healthchecks/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/service-with-healthchecks/examples.html
-            - title:
-                en: static-routing-manager
-                ru: static-routing-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/static-routing-manager/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/static-routing-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/static-routing-manager/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/static-routing-manager/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -2309,123 +2010,9 @@ entries:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами
       folders:
-        - title:
-            en: Priority classes
-            ru: Priority classes
-          moduleName: priority-class
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/priority-class/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/priority-class/configuration.html
-        - title:
-            en: Scaling by any metric
-            ru: Масштабирование по метрикам
-          moduleName: prometheus-metrics-adapter
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/prometheus-metrics-adapter/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/prometheus-metrics-adapter/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/prometheus-metrics-adapter/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/prometheus-metrics-adapter/cr.html
-        - title:
-            en: Vertical Pod autoscaler
-            ru: Вертикальное масштабирование
-          moduleName: vertical-pod-autoscaler
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/vertical-pod-autoscaler/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/vertical-pod-autoscaler/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/vertical-pod-autoscaler/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/vertical-pod-autoscaler/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/vertical-pod-autoscaler/faq.html
-        - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: descheduler
-                ru: descheduler
-              moduleName: descheduler
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/descheduler/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/descheduler/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/descheduler/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/descheduler/cr.html
-            - title:
-                en: flow-schema
-                ru: flow-schema
-              moduleName: flow-schema
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/flow-schema/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/flow-schema/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/flow-schema/faq.html
             - title:
                 en: pod-reloader
-                ru: pod-reloader
+                ru: pod-reloader (УНЕСТИ)
               moduleName: pod-reloader
               folders:
                 - title:

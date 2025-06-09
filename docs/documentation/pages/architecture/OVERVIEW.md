@@ -1,6 +1,6 @@
 ---
 title: Kubernetes Cluster
-permalink: en/kubernetes.html
+permalink: en/architecture/
 ---
 
 Deckhouse makes it possible to run the Kubernetes cluster on **any supported infrastructure** and in the **same manner**:
