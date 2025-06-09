@@ -7,37 +7,6 @@ properties:
       registryManager:
         description: |
           Образ registry manager-а
-  mode:
-    description: |
-      Тип регистри
-  proxy:
-    description: |
-      Параметры для proxy режима
-    properties:
-      imagesRepo:
-        description: |
-          Адрес container registry с образами Deckhouse.
-
-          Укажите его, если используется Deckhouse Enterprise Edition или сторонний container registry (например, registry в закрытой среде).
-
-          Адрес должен соответствовать используемой редакции Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
-      username:
-              description: Имя пользователя для доступа к container registry с образами Deckhouse.
-      password:
-        description: Пароль для доступа к container registry с образами Deckhouse.
-      scheme:
-        description: |
-          Протокол доступа к container registry (HTTP или HTTPS).
-      ca:
-        description: |
-          Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
-      ttl:
-        description: |
-          TTL указывает время жизни кэшированного содержимого, по истечении которого оно будет автоматически очищено.
-
-          Значение по умолчанию: Если параметр не задан, TTL по умолчанию составляет 7 дней (168 часов).
-
-          Постоянный кэш: Если установить значение 0, кэш никогда не будет автоматически очищаться.
 
   whitelistSourceRanges:
     description: "Список адресов в формате CIDR, которым разрешено подключение к embedded registry. Если не указано, то разрешено подключение с любых адресов"

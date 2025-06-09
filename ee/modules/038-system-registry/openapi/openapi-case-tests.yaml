@@ -2,15 +2,7 @@ positive:
   values:
     - {}
   configValues:
-    - mode: Direct
-    - mode: Proxy
-      proxy:
-        imagesRepo: registry.deckhouse.ru/deckhouse/ee
-        ca: ""
-        password: "password"
-        scheme: HTTP
-        username: "user"
-    - mode: Detached
+    - {}
 negative:
   values:
     - somethingInConfig: yes
