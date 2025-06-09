@@ -40,36 +40,21 @@ spec:
         component: nvidia-mig-manager
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      nodeSelector:
-        node.deckhouse.io/device-gpu.config: "TimeSlicing"
-      # tolerations:
-      #   - key: nvidia.com/gpu
-      #     operator: Exists
-      #     effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/mig.capable
+                    operator: In
+                    values:
+                    - "true"
       priorityClassName: cluster-medium
       serviceAccountName: nvidia-mig-manager
       automountServiceAccountToken: true
       hostPID: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      initContainers:
-        - name: toolkit-validation
-          image: {{ include "helm_lib_module_image" (list . "nvidiaMigManager") }}
-          command: ['sh', '-c']
-          args: ["until [ -f /run/nvidia/validations/toolkit-ready ]; do echo waiting for nvidia container toolkit to be setup; sleep 5; done"]
-          securityContext:
-            privileged: true
-          resources:
-            requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 14 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              cpu: 50m
-              memory: 64Mi
-          {{- end }}
-          volumeMounts:
-            - name: run-nvidia-validations
-              mountPath: /run/nvidia/validations
-              mountPropagation: HostToContainer
       containers:
         - name: nvidia-mig-manager
           image: {{ include "helm_lib_module_image" (list . "nvidiaMigManager") }}
@@ -116,10 +101,6 @@ spec:
           - mountPath: /mig-parted-config
             name: mig-parted-config        
       volumes:
-      - name: run-nvidia-validations
-        hostPath:
-          path: /run/nvidia/validations
-          type: DirectoryOrCreate
       - name: host-root
         hostPath:
           path: /
