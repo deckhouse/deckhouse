@@ -5,6 +5,14 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
+        en: Platform overview
+        ru: О платформе
+      folders:
+        - title:
+            en: Platform editions
+            ru: Редакции платформы
+          url: /stronghold/documentation/about/editions.html
+    - title:
         en: Administration guide
         ru: Руководство администратора
       folders:
@@ -32,10 +40,6 @@ entries:
             en: Launch in DKP
             ru: Запуск в DKP
           folders:
-            - title:
-                en: Platform editions
-                ru: Редакции платформы
-              url: /stronghold/documentation/admin/editions.html
             - title:
                 en: Update channels
                 ru: Каналы обновлений

@@ -1,6 +1,6 @@
 ---
 title: "Platform editions"
-permalink: en/stronghold/documentation/admin/editions.html
+permalink: en/stronghold/documentation/about/editions.html
 ---
 
 Deckhouse Stronghold is licensed separately and available for use in the following commercial editions of the Deckhouse Kubernetes Platform: 

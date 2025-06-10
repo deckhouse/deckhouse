@@ -1,6 +1,6 @@
 ---
 title: "Редакции платформы"
-permalink: ru/stronghold/documentation/admin/editions.html
+permalink: ru/stronghold/documentation/about/editions.html
 lang: ru
 ---
 
