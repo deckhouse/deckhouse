@@ -18,6 +18,7 @@ masterNodeGroup:
         size: 8Gi
       ipAddresses:
         - Auto
+      virtualMachineClassName: generic
     rootDisk:
       size: 50Gi
       storageClass: ceph-pool-r2-csi-rbd-immediate
