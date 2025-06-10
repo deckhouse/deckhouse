@@ -28,7 +28,7 @@ standard:
   internalNetworkDNSServers:
     - 8.8.8.8
   internalNetworkCIDR: 192.168.195.0/24
-  internalNetworkSecurity: false
+  internalNetworkSecurity: true
   externalNetworkName: "external-network"
 provider:
   authURL: 'https://api.selvpc.ru/identity/v3'
