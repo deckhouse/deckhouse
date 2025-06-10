@@ -149,14 +149,14 @@ common: {}
 		assertMetricVal(f, 0.0)
 	}
 
-	Context("Cluster has empty state", func() {
+	Context("Cluster has empty state (hybrid cluster)", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
-		It("Hook should fail with not found cluster state error", func() {
-			Expect(f).ToNot(ExecuteSuccessfully())
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
