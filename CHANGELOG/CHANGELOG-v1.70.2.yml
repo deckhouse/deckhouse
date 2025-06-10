@@ -2,14 +2,6 @@ candi:
   fixes:
     - summary: memory.available calculation python2 fix
       pull_request: https://github.com/deckhouse/deckhouse/pull/13899
-cloud-provider-dvp:
-  features:
-    - summary: Add vmClassName to the config
-      pull_request: https://github.com/deckhouse/deckhouse/pull/13779
-deckhouse-controller:
-  fixes:
-    - summary: Handle hybrid clusters case in the to_tofu_migrate_metric hook
-      pull_request: https://github.com/deckhouse/deckhouse/pull/13903
 openvpn:
   fixes:
     - summary: Fixed condition of alert triggering for client certificate.
