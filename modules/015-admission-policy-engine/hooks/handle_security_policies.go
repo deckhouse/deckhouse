@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -43,17 +46,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSP)
 
 func handleSP(input *go_hook.HookInput) error {
-	result := make([]*securityPolicy, 0)
-	refs := make(map[string]set.Set, 0)
+	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal security-policies snapshot: %w", err)
+	}
 
-	snap := input.Snapshots["security-policies"]
+	refs := make(map[string]set.Set)
 
-	for _, sn := range snap {
-		sp := sn.(*securityPolicy)
+	for i, sp := range policies {
 		// set observed status
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
-		sp.preprocesSecurityPolicy()
-		result = append(result, sp)
+		input.PatchCollector.PatchWithMutatingFunc(
+			set_cr_statuses.SetObservedStatus(sp, filterSP),
+			"deckhouse.io/v1alpha1",
+			"securitypolicy",
+			"",
+			sp.Metadata.Name,
+			object_patch.WithSubresource("/status"),
+			object_patch.WithIgnoreHookError(),
+		)
+		preprocesSecurityPolicy(&policies[i])
+
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
 			if keys, ok := refs[v.Reference]; ok {
 				for _, key := range v.PublicKeys {
@@ -66,12 +78,11 @@ func handleSP(input *go_hook.HookInput) error {
 			}
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Metadata.Name < result[j].Metadata.Name
+
+	sort.Slice(policies, func(i, j int) bool {
+		return policies[i].Metadata.Name < policies[j].Metadata.Name
 	})
-
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
-
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policies)
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {
 		imageReferences = append(imageReferences, ratifyReference{
@@ -89,14 +100,13 @@ func handleSP(input *go_hook.HookInput) error {
 }
 
 func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sp securityPolicy
-
+	var sp *securityPolicy
 	err := sdk.FromUnstructured(obj, &sp)
 	if err != nil {
 		return nil, err
 	}
 
-	return &sp, nil
+	return sp, nil
 }
 
 func hasItem(slice []string, value string) bool {
@@ -108,7 +118,7 @@ func hasItem(slice []string, value string) bool {
 	return false
 }
 
-func (sp *securityPolicy) preprocesSecurityPolicy() {
+func preprocesSecurityPolicy(sp *securityPolicy) {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
 	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {

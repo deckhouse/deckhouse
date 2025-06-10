@@ -27,6 +27,10 @@ import (
 	"golang.org/x/mod/semver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const milestone = "v1.55"
@@ -80,12 +84,18 @@ func getDefaultPolicy(input *go_hook.HookInput) string {
 		return policy
 	}
 
-	// no map found - an old cluster
-	if len(input.Snapshots["install_data"]) == 0 {
+	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_data")
+	if err != nil {
+		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
 		return "Privileged"
 	}
 
-	deckhouseVersion := input.Snapshots["install_data"][0].(string)
+	// no map found - an old cluster
+	if len(installDataSlice) == 0 {
+		return "Privileged"
+	}
+
+	deckhouseVersion := installDataSlice[0]
 
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
