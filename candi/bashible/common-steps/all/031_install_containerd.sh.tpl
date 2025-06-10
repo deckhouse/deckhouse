@@ -39,7 +39,8 @@ post-install() {
 
 {{- $containerd := "containerd1727"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd211" }}
+  {{- $containerd = "containerdv2211" }}
+bb-package-install "erofs:{{ .images.registrypackages.erofs }}"
 {{- end }}
 
 bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"

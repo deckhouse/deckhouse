@@ -44,7 +44,8 @@ fi
 
 
 {{- if eq .cri "ContainerdV2" }}
-bb-sync-file /etc/containerd/certs.d/_default/hosts.toml - << EOF
+mkdir -p  /etc/containerd/registry.d/_default
+bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
 [host."https://registry-1.docker.io"]
   capabilities = ["pull", "resolve"]
 
@@ -57,6 +58,9 @@ bb-sync-file /etc/containerd/certs.d/_default/hosts.toml - << EOF
   {{- if eq .registry.scheme "http" }}
   skip_verify = true
   {{- end }}
+
+    [host."{{ .registry.scheme }}://{{ .registry.address }}".auth]
+    auth = {{ .registry.auth | default "" }}
 
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
@@ -105,7 +109,7 @@ oom_score = 0
 
 [plugins]
   [plugins.'io.containerd.cri.v1.images']
-    snapshotter = "overlayfs"
+    snapshotter = "erofs"
     disable_snapshot_annotations = true
     discard_unpacked_layers = true
     max_concurrent_downloads = {{ $max_concurrent_downloads }}
@@ -117,7 +121,7 @@ oom_score = 0
       sandbox = {{ $sandbox_image | quote }}
 
     [plugins.'io.containerd.cri.v1.images'.registry]
-      config_path = '/etc/containerd/certs.d'
+      config_path = "/etc/containerd/registry.d"
 
     [plugins.'io.containerd.cri.v1.images'.image_decryption]
       key_model = ''    
@@ -181,12 +185,15 @@ oom_score = 0
       ip_pref = ''
       use_internal_loopback = false
 
-  [plugins."io.containerd.gc.v1.scheduler"]
+  [plugins.'io.containerd.differ.v1.erofs']
+    mkfs_options = []
+
+  [plugins.'io.containerd.gc.v1.scheduler']
     pause_threshold = 0.02
     deletion_threshold = 0
     mutation_threshold = 100
-    schedule_delay = "0s"
-    startup_delay = "100ms"
+    schedule_delay = '0s'
+    startup_delay = '100ms'
 
   [plugins."io.containerd.grpc.v1.cri"]
     disable_tcp_service = true
@@ -202,8 +209,9 @@ oom_score = 0
   [plugins."io.containerd.internal.v1.opt"]
     path = "/opt/containerd"
 
-  [plugins."io.containerd.metadata.v1.bolt"]
-    content_sharing_policy = "shared"
+  [plugins.'io.containerd.metadata.v1.bolt']
+    content_sharing_policy = 'shared'
+    no_sync = false
 
   [plugins.'io.containerd.monitor.container.v1.restart']
     interval = "10s"
@@ -215,7 +223,7 @@ oom_score = 0
     platforms = ["linux/amd64"]
 
   [plugins.'io.containerd.service.v1.diff-service']
-    default = ['walking']
+    default = ['erofs']
     sync_fs = false
 
   [plugins.'io.containerd.service.v1.tasks-service']
@@ -224,11 +232,25 @@ oom_score = 0
 
   [plugins.'io.containerd.shim.v1.manager']
     env = []
+
+  [plugins.'io.containerd.snapshotter.v1.erofs']
+    root_path = ''
+    ovl_mount_options = []
+
+  [plugins.'io.containerd.transfer.v1.local']
+    max_concurrent_downloads = {{ $max_concurrent_downloads }}
+    concurrent_layer_fetch_buffer = 0
+    max_concurrent_uploaded_layers = 3
+    check_platform_supported = false
+    config_path = ''
     
 [cgroup]
   path = ""
 
 [timeouts]
+  'io.containerd.timeout.bolt.open' = '0s'
+  'io.containerd.timeout.cri.defercleanup' = '1m0s'
+  'io.containerd.timeout.metrics.shimstats' = '2s'
   "io.containerd.timeout.shim.cleanup" = "5s"
   "io.containerd.timeout.shim.load" = "5s"
   "io.containerd.timeout.shim.shutdown" = "3s"
