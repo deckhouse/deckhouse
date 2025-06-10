@@ -240,9 +240,6 @@ properties:
                   type: string
                 headers:
                   type: object
-                  properties:
-                    X-Scope-OrgID:
-                      type: string
                 writeRelabelConfigs:
                   type: array
                   items:
