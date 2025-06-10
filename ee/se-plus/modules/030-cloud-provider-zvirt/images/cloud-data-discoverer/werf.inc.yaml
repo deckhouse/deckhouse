@@ -43,7 +43,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: registry.deckhouse.io/base_images@sha256:aa3ff8b71423672b1c46588fecf2696a5548d978f1d43caf025cc53975f69b22
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src

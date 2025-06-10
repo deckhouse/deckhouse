@@ -16,8 +16,8 @@ fromImage: common/src-artifact
 fromCacheVersion: "2025-02-14.1"
 shell:
   install:
-  - export VERSION="v0.4.0"
-  - export VERSION_COMMON="v0.4.0"
+  - export VERSION="v0.5.0"
+  - export VERSION_COMMON="v0.5.0"
   - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/capd-controller-manager.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
   - cd /src
@@ -28,7 +28,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: registry.deckhouse.io/base_images@sha256:aa3ff8b71423672b1c46588fecf2696a5548d978f1d43caf025cc53975f69b22
 fromCacheVersion: "2025-02-14.2"
 mount:
 - fromPath: ~/go-pkg-cache
