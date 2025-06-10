@@ -6,6 +6,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false
 fromImage: common/src-artifact
+fromCacheVersion: "2025-07-06"
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -21,7 +22,6 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
 fromImage: builder/golang-bullseye
-fromCacheVersion: "2025-07-06"
 mount:
 {{ include "mount points for golang builds" . }}
 import:
