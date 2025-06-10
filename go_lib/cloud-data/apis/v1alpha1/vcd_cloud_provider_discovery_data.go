@@ -26,10 +26,11 @@ type VCDCloudProviderDiscoveryData struct {
 	VCDAPIVersion          string `json:"vcdAPIVersion,omitempty"`
 	VCDInstallationVersion string `json:"vcdInstallationVersion,omitempty"`
 
-	InternalNetworksDetails []VCDInternalNetworkDetails `json:"internalNetworksDetails"`
+	InternalNetworksDetails []VCDInternalNetworkDetails `json:"internalNetworksDetails,omitempty"`
+	SizingPoliciesDetails   []VCDSizingPolicyDetails    `json:"sizingPoliciesDetails,omitempty"`
 	VApps                   []VCDvApp                   `json:"vApps,omitempty"`
+	VAppTemplates           []string                    `json:"vAppTemplates,omitempty"`
 	VDCs                    []string                    `json:"vDCs,omitempty"`
-	SizingPoliciesDetails   []VCDSizingPolicyDetails    `json:"sizingNetworksDetails"`
 }
 
 type VCDStorageProfile struct {
