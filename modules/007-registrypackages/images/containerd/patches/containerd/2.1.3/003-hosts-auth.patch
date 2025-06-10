@@ -11,14 +11,14 @@ index 40d451af0..a59e2233c 100644
  	"net"
  	"net/http"
 @@ -59,9 +60,19 @@ type hostConfig struct {
- 
+
  	rewrites []hostPathRewrite
- 
+
 +	auth authConfig
 +
  	// TODO: Add credential configuration (domain alias, username)
  }
- 
+
 +// authConfig holds authentication-related parameters for interacting with a registry.
 +type authConfig struct {
 +	userName      string
@@ -33,7 +33,7 @@ index 40d451af0..a59e2233c 100644
 @@ -166,19 +177,41 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  			}
  		}
- 
+
 -		authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
 -		if options.Credentials != nil {
 -			authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
@@ -46,7 +46,7 @@ index 40d451af0..a59e2233c 100644
  			// Allow setting for each host as well
  			explicitTLSFromHost := host.caCerts != nil || host.clientPairs != nil || host.skipVerify != nil
  			explicitTLS := tlsConfigured || explicitTLSFromHost
- 
+
 +			authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
 +			hostAuth := host.auth // copy to local variable from loop variable
 +
@@ -86,12 +86,12 @@ index 40d451af0..a59e2233c 100644
 -				rhosts[i].Authorizer = authorizer
 +				rhosts[i].Authorizer = docker.NewDockerAuthorizer(authOpts...)
  			}
- 
+
  			// When TLS has been configured for the operation or host and
 @@ -398,6 +431,19 @@ type hostFileConfig struct {
  		Replacement string `toml:"replace"`
  	} `toml:"rewrite"`
- 
+
 +	Auth struct {
 +		// Username is the username to login the registry.
 +		Username string `toml:"username" json:"username"`
@@ -107,11 +107,11 @@ index 40d451af0..a59e2233c 100644
 +
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
- 
+
 @@ -583,6 +629,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		}
  	}
- 
+
 +	result.auth = authConfig{
 +		userName:      config.Auth.Username,
 +		password:      config.Auth.Password,
@@ -121,7 +121,7 @@ index 40d451af0..a59e2233c 100644
 +
  	return result, nil
  }
- 
+
 @@ -687,3 +740,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
  	}
  	return hosts, nil
@@ -161,7 +161,7 @@ index bfa1dde8c..2faebea32 100644
 @@ -300,6 +300,70 @@ replace = "/other/path2"
  	}
  }
- 
+
 +func TestParseHostFileWithAuth(t *testing.T) {
 +	const testtoml = `
 +server = "https://test-default.registry"
@@ -228,7 +228,7 @@ index bfa1dde8c..2faebea32 100644
 +
  func TestLoadCertFiles(t *testing.T) {
  	dir := t.TempDir()
- 
+
 @@ -656,6 +720,20 @@ func compareHostConfig(j, k hostConfig) bool {
  			return false
  		}
@@ -249,7 +249,7 @@ index bfa1dde8c..2faebea32 100644
 +
  	return true
  }
- 
+
 @@ -680,6 +758,7 @@ func printHostConfig(hc []hostConfig) string {
  		if hc[i].rewrites != nil {
  			fmt.Fprintf(b, "\t\trewrites: %#v\n", hc[i].rewrites)
