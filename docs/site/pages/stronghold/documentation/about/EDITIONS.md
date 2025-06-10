@@ -3,12 +3,12 @@ title: "Platform editions"
 permalink: en/stronghold/documentation/about/editions.html
 ---
 
-Deckhouse Stronghold is licensed separately and available for use in the following commercial editions of the Deckhouse Kubernetes Platform: 
+Deckhouse Stronghold is licensed separately and available for use in the following commercial editions of the Deckhouse Kubernetes Platform:
 
 - Basic Edition (BE);
 - Standard Edition (SE);
 - Standard Edition + (SE+);
-- Enterprise Edition (EE). 
+- Enterprise Edition (EE).
 
 For a detailed comparison of features, see the [Deckhouse Kubernetes Platform editions comparison](../../../kubernetes-platform/documentation/v1/revision-comparison.html) section.
 

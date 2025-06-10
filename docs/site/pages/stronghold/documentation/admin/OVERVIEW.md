@@ -12,7 +12,7 @@ The platform’s Administrator Guide includes the following sections:
   - [Running on Linux OS](./standalone/installation.html) – a quick start with an example of configuring a high-availability cluster.
   - [Configuration](./standalone/configuration.html) – a guide to the Standalone execution configuration parameters.
   - [HSM Support](./standalone/hsm.html) – key encryption using an HSM (Hardware Security Module).
-- Running on Deckhouse Kubernetes Platform 
+- Running on Deckhouse Kubernetes Platform
   - [Platform Installation](./install/steps/prepare.html) - environment preparation, installation, and initial access setup.
   - [Platform Configuration](./platform-management/node-management/node-group.html) – cluster node management, networking, storage systems, virtualization, and access control.
   - [Platform Update](./update/update.html) – configuring update modes and windows, and manual approval of updates.

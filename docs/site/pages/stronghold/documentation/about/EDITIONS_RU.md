@@ -4,13 +4,13 @@ permalink: ru/stronghold/documentation/about/editions.html
 lang: ru
 ---
 
-Deckhouse Stronghold лицензируется отдельно и доступен для использования в следующих коммерческих редакциях Deckhouse Kubernetes Platform: 
+Deckhouse Stronghold лицензируется отдельно и доступен для использования в следующих коммерческих редакциях Deckhouse Kubernetes Platform:
 - Basic Edition (BE);
 - Standard Edition (SE);
 - Standard Edition + (SE+);
 - Enterprise Edition (EE);
 - Certified Security Edition Lite (CSE Lite);
-- Certified Security Edition Pro (CSE Pro). 
+- Certified Security Edition Pro (CSE Pro).
 
 Для подробного сравнения возможностей перейдите к разделу [Сравнение редакций Deckhouse Kubernetes Platform](../../../kubernetes-platform/documentation/v1/revision-comparison.html).
 
