@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/vcd/vcd-layout.html
 lang: ru
 ---
 
-Deckhouse поддерживает одну схему размещения в VMware Cloud Director — Standard. Она обеспечивает изолированную внутреннюю сеть с возможностью назначения статических IP-адресов и подключения Elastic IP (через DNAT).
+Deckhouse Kubernetes Platform поддерживает одну схему размещения в VMware Cloud Director — Standard. Она обеспечивает изолированную внутреннюю сеть с возможностью назначения статических IP-адресов и подключения Elastic IP (через DNAT).
 
 ## Standard
 

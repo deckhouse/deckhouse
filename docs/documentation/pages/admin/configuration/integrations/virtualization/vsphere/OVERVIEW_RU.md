@@ -1,17 +1,24 @@
 ---
 title: Обзор
-permalink: ru/admin/integrations/virtualization/vmware/overview.html
+permalink: ru/admin/integrations/virtualization/vsphere/vsphere-overview.html
 lang: ru
 ---
 
-В этом разделе рассматривается настройка интеграции Deckhouse Kubernetes Platform (DKP) с системами виртуализации на базе [VMware vSphere](https://www.vmware.com/products/cloud-infrastructure/vsphere).
+Интеграция Deckhouse Kubernetes Platform с VMware vSphere позволяет использовать ресурсы виртуализации vSphere для автоматического заказа, настройки и управления узлами кластера Kubernetes. Поддерживается в редакциях EE и SE+.
 
-Интеграция даёт возможность использовать ресурсы vSphere при заказе узлов для заданной [группы узлов](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов).
+Возможности интеграции включают:
 
-Основные возможности:
+- автоматическое создание и удаление виртуальных машин в vSphere;
+- использование Datastore и CNS-дисков для хранения данных;
+- настройку зон и регионов с помощью тегов vSphere;
+- поддержку динамической балансировки нагрузки с помощью MetalLB или внешнего балансировщика;
+- размещение кластеров в схемах с несколькими зонами отказоустойчивости.
 
-- Управление ресурсами vSphere:
-  - создание сетевых маршрутов для сети `PodNetwork` на стороне vSphere;
-  - создание LoadBalancer'ов для Service-объектов Kubernetes с типом `LoadBalancer`;
-  - актуализация метаданных узлов кластера согласно описанным параметрам конфигурации и удаление из кластера узлов, которых уже нет в GCP.
-- Заказ дисков в vSphere на datastore через механизм First-Class Disk (с помощью компонента `CSI storage`).
+Интеграция включает следующие ключевые этапы:
+
+1. [Подключение и авторизация](./vsphere-authorization.html) — настройка пользователя vSphere, ролей и прав доступа, конфигурация сети, Datastore и тэгов.
+1. [Схемы размещения и настройка](./vsphere-layout.html) — выбор схемы, настройка IP-адресов, шаблонов, ресурсов и зон.
+1. [Хранилище и балансировка нагрузки](./vsphere-storage.html) — использование Datastore и CSI, настройка StorageClass, балансировка трафика через MetalLB или NSX-T.
+1. [Интеграция с облаком VMware vSphere](./vsphere-services.html) — описание взаимодействия компонентов Kubernetes с облачными ресурсами vSphere.
+
+В следующих разделах подробно описаны все этапы интеграции с примерами и практическими рекомендациями.

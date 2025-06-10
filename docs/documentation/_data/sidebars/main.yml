@@ -281,54 +281,6 @@ entries:
                             ru: Интеграция с службами Huawei Cloud
                           url: /admin/integrations/public/huaweicloud/huawei-services.html
                     - title:
-                        en: Integration with VMware vSphere
-                        ru: Интеграция с VMware vSphere
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/vsphere/vsphere-overview.html
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/vsphere/vsphere-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/vsphere/vsphere-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/vsphere/vsphere-storage.html
-                        - title:
-                            en: Integration with vSphere
-                            ru: Интеграция с службами vSphere
-                          url: /admin/integrations/public/vsphere/vsphere-services.html
-                    - title:
-                        en: Integration with zVirt
-                        ru: Интеграция с zVirt
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/zvirt/zvirt-overview.html
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/zvirt/zvirt-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/zvirt/zvirt-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/zvirt/zvirt-storage.html
-                        - title:
-                            en: Integration with zVirt
-                            ru: Интеграция с службами zVirt
-                          url: /admin/integrations/public/zvirt/zvirt-services.html
-                    - title:
                         en: Integration with Dynamix
                         ru: Интеграция с Dynamix
                       folders:
@@ -423,15 +375,23 @@ entries:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/vmware/overview.html
+                          url: /admin/integrations/virtualization/vsphere/vsphere-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/vmware/сonnection-and-authorization.html
+                          url: /admin/integrations/virtualization/vsphere/vsphere-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Configuration and layout
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vmware/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/virtualization/vsphere/vsphere-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/vsphere/vsphere-storage.html
+                        - title:
+                            en: Integration with vSphere
+                            ru: Интеграция с службами vSphere
+                          url: /admin/integrations/virtualization/vsphere/vsphere-services.html
                     - title:
                         en: Integration with VMware Cloud Director
                         ru: Интеграция с VMware Cloud Director
@@ -463,15 +423,23 @@ entries:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/zvirt/overview.html
+                          url: /admin/integrations/virtualization/zvirt/zvirt-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/zvirt/сonnection-and-authorization.html
+                          url: /admin/integrations/virtualization/zvirt/zvirt-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Configuration and layout
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/zvirt/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/virtualization/zvirt/zvirt-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/zvirt/zvirt-storage.html
+                        - title:
+                            en: Integration with zVirt
+                            ru: Интеграция с службами zVirt
+                          url: /admin/integrations/virtualization/zvirt/zvirt-services.html
                 - title:
                     en: Hybrid cluster
                     ru: Гибридный кластер

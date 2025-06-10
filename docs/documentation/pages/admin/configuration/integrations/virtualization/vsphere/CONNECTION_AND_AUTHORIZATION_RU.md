@@ -1,12 +1,12 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/vsphere/vsphere-authorization.html
+permalink: ru/admin/integrations/virtualization/vsphere/vsphere-authorization.html
 lang: ru
 ---
 
 ## Требования
 
-Для корректной работы Deckhouse Kubernetes Platform с VMware vSphere необходимо:
+Для корректной работы Deckhouse с VMware vSphere необходимо:
 
 - Доступ к vCenter;
 - Пользователь с необходимым набором прав;
