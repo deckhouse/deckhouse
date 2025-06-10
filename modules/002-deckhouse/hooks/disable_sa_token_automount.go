@@ -100,7 +100,7 @@ func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
 
 	for _, sa := range sas {
 		if sa.AutomountServiceAccountToken {
-			input.PatchCollector.MergePatch(automountPatch, "v1", "ServiceAccount", sa.Namespace, sa.Name)
+			input.PatchCollector.PatchWithMerge(automountPatch, "v1", "ServiceAccount", sa.Namespace, sa.Name)
 		}
 	}
 

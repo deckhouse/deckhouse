@@ -86,6 +86,7 @@ echo "${d8_tags[@]}"
 
 # Scan in loop for provided list of tags
 for d8_tag in "${d8_tags[@]}"; do
+  dd_default_branch_tag=""
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
@@ -103,6 +104,10 @@ for d8_tag in "${d8_tags[@]}"; do
     login_prod_registry
   fi
 
+  # set cpecial tag for DD if images from main
+  if [ "${d8_tag}" == "main" ]; then
+    dd_default_branch_tag="default_branch"
+  fi
   # if d8_tag is for release - we need to take it from prod registry
   if echo "${d8_tag}"|grep -q "^v[0-9]\.[0-9]*\.[0-9]*$"; then
     d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
@@ -221,7 +226,7 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag}" \
+        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag}" \
         -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
         -F "version=${dd_image_version}" \
         -F "build_id=${IMAGE_HASH}" \
