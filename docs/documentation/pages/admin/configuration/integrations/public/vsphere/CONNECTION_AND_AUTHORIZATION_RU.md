@@ -6,7 +6,7 @@ lang: ru
 
 ## Требования
 
-Для корректной работы Deckhouse с VMware vSphere необходимо:
+Для корректной работы Deckhouse Kubernetes Platform с VMware vSphere необходимо:
 
 - Доступ к vCenter;
 - Пользователь с необходимым набором прав;

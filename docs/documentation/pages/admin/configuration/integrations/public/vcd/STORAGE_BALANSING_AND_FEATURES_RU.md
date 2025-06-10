@@ -6,7 +6,7 @@ lang: ru
 
 ## Хранилище
 
-Deckhouse использует CSI-драйвер VMware Cloud Director для заказа и подключения дисков.
+Deckhouse Kubernetes Platform использует CSI-драйвер VMware Cloud Director для заказа и подключения дисков.
 
 - Диски создаются как **VCD Independent Disks**.
 - Для корректной работы требуется, чтобы шаблон виртуальной машины имел включённое guest-свойство `disk.EnableUUID`.

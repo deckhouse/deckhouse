@@ -6,7 +6,7 @@ lang: ru
 
 ## Требования
 
-Для корректной работы Deckhouse с VMware Cloud Director необходимо наличие следующих ресурсов:
+Для корректной работы Deckhouse Kubernetes Platform с VMware Cloud Director необходимо наличие следующих ресурсов:
 
 - Organization
 - VirtualDataCenter  

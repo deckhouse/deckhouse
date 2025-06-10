@@ -6,7 +6,7 @@ lang: ru
 
 ## Хранилище
 
-Deckhouse заказывает диски в Huawei Cloud с помощью CSI-драйвера. Для настройки типа хранилища используются параметры в объекте HuaweiCloudClusterConfiguration, в частности поле `volumeTypeMap`.
+Deckhouse Kubernetes Platform заказывает диски в Huawei Cloud с помощью CSI-драйвера. Для настройки типа хранилища используются параметры в объекте HuaweiCloudClusterConfiguration, в частности поле `volumeTypeMap`.
 
 Пример настройки:
 

@@ -324,4 +324,4 @@ resource "aws_iam_user_policy_attachment" "policy-attachment" {
 
 > Указанная роль должна включать все права, требуемые Deckhouse, иначе узлы не смогут полноценно функционировать. В частности, она обязательно должна включать права роли `<prefix>-node>`, даже если они назначаются вручную.
 
-Подробнее о IAM-ролях для AWS EC2 можно прочитать в [документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
+Подробнее о IAM-ролях для AWS EC2 можно прочитать [в документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
