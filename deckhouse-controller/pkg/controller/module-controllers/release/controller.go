@@ -976,18 +976,34 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 			module := new(v1alpha1.Module)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+				r.log.Error(
+					"get module failed",
+					slog.String("module", release.GetModuleName()),
+					log.Err(err),
+				)
 				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
 			}
 
-			module.SetConditionFalse(
-				v1alpha1.ModuleConditionEnabledByModuleConfig,
-				"",
-				fmt.Sprintf("Initial config for module %s is not valid", release.GetModuleName()),
+			err = utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.SetConditionFalse(
+					v1alpha1.ModuleConditionEnabledByModuleConfig,
+					"",
+					fmt.Sprintf("Initial config for module %s is not valid", release.GetModuleName()),
+				)
+				return true
+			})
+			if err != nil {
+				r.log.Error(
+					"update module conditions failed",
+					slog.String("module", release.GetModuleName()),
+					log.Err(err),
+				)
+				return nil, fmt.Errorf("update '%s' module status: %w", release.GetModuleName(), err)
+			}
+			r.log.Debug(
+				"successfully updated module conditions",
+				slog.String("module", release.GetModuleName()),
 			)
-
-			if err := r.client.Update(ctx, module); err != nil {
-				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
-			}
 		}
 
 		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
