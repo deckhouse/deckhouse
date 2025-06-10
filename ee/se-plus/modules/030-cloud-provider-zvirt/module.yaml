@@ -3,4 +3,4 @@ weight: 30
 subsystems:
   - infrastructure
 namespace: d8-cloud-provider-zvirt
-stage: Preview
+stage: Experimental

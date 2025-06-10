@@ -3,4 +3,4 @@ weight: 30
 subsystems:
   - infrastructure
 namespace: d8-cloud-provider-vcd
-stage: Preview
+stage: Experimental
