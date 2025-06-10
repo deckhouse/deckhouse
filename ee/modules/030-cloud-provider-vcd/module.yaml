@@ -1,4 +1,5 @@
 name: cloud-provider-vcd
+system: true
 weight: 30
 subsystems:
   - infrastructure
