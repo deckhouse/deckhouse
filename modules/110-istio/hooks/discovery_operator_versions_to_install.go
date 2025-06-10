@@ -41,17 +41,8 @@ type IstioOperatorCrdInfo struct {
 	Revision string
 }
 
-type IstioCrdInfo struct {
-	Name     string
-	Revision string
-}
-
 func applyIstioOperatorFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var iop crd.IstioOperator
-
-	if obj == nil {
-		return nil, nil // Skip if CRD isn't available
-	}
 
 	err := sdk.FromUnstructured(obj, &iop)
 	if err != nil {
@@ -64,24 +55,6 @@ func applyIstioOperatorFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func applyIstioFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var istio crd.Istio
-
-	if obj == nil {
-		return nil, nil // Skip if CRD isn't available
-	}
-
-	err := sdk.FromUnstructured(obj, &istio)
-	if err != nil {
-		return nil, err
-	}
-
-	return IstioCrdInfo{
-		Name:     istio.GetName(),
-		Revision: istio.Spec.Revision,
-	}, nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -90,13 +63,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:        "install.istio.io/v1alpha1",
 			Kind:              "IstioOperator",
 			FilterFunc:        applyIstioOperatorFilter,
-			NamespaceSelector: lib.NsSelector(),
-		},
-		{
-			Name:              "istios",
-			ApiVersion:        "sailoperator.io/v1",
-			Kind:              "Istio",
-			FilterFunc:        applyIstioFilter,
 			NamespaceSelector: lib.NsSelector(),
 		},
 	},
@@ -113,11 +79,7 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
 	}
 
-	// Process IstioOperator resources
 	for _, iop := range input.Snapshots["istiooperators"] {
-		if iop == nil {
-			continue
-		}
 		iopInfo := iop.(IstioOperatorCrdInfo)
 		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
 		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
@@ -126,22 +88,6 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		}
 		if !lib.Contains(operatorVersionsToInstall, iopVer) {
 			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
-		}
-	}
-
-	// Process Istio resources
-	for _, istio := range input.Snapshots["istios"] {
-		if istio == nil {
-			continue
-		}
-		istioInfo := istio.(IstioCrdInfo)
-		istioVer := versionMap.GetVersionByRevision(istioInfo.Revision)
-		if !versionMap.IsRevisionSupported(istioInfo.Revision) {
-			unsupportedRevisions = append(unsupportedRevisions, istioInfo.Revision)
-			continue
-		}
-		if !lib.Contains(operatorVersionsToInstall, istioVer) {
-			operatorVersionsToInstall = append(operatorVersionsToInstall, istioVer)
 		}
 	}
 

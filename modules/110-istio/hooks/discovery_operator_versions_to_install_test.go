@@ -27,7 +27,6 @@ import (
 var _ = Describe("Istio hooks :: discovery_operator_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
-	f.RegisterCRD("sailoperator.io", "v1", "Istio", true)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -41,6 +40,7 @@ internal:
   versionsToInstall: ["1.1"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
+
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
@@ -57,7 +57,7 @@ internal:
 		})
 	})
 
-	Context("There are supported IstioOperators and Istios in cluster", func() {
+	Context("There are supported IstioOperators in cluster", func() {
 		BeforeEach(func() {
 			values := `
 internal:
@@ -92,28 +92,21 @@ metadata:
   namespace: d8-istio
 spec:
   revision: v1x2
----
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: v1x1
-  namespace: d8-istio
-spec:
-  revision: v1x1
 `))
+
 			f.RunHook()
 		})
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.1", "1.2", "1.3", "1.4", "1.8"}))
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
 
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.1"))
+			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 
-	Context("There are unsupported IstioOperators and Istios in cluster", func() {
+	Context("There are unsupported IstioOperators in cluster", func() {
 		BeforeEach(func() {
 			values := `
 internal:
@@ -141,8 +134,8 @@ metadata:
 spec:
   revision: v1x9
 ---
-apiVersion: sailoperator.io/v1
-kind: Istio
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
 metadata:
   name: v1x0-bad
   namespace: d8-istio
@@ -156,15 +149,8 @@ metadata:
   namespace: d8-istio
 spec:
   revision: v1x2
----
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: v1x1
-  namespace: d8-istio
-spec:
-  revision: v1x1
 `))
+
 			f.RunHook()
 		})
 
@@ -174,42 +160,7 @@ spec:
 
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.1")) // Changed from 1.2 to 1.1
-		})
-	})
-
-	Context("Only Istio resources in cluster", func() {
-		BeforeEach(func() {
-			values := `
-internal:
-  versionMap:
-    "1.1":
-        revision: "v1x1"
-    "1.8":
-        revision: "v1x8"
-  versionsToInstall: ["1.8"]
-`
-			f.ValuesSetFromYaml("istio", []byte(values))
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: v1x1
-  namespace: d8-istio
-spec:
-  revision: v1x1
-`))
-			f.RunHook()
-		})
-
-		It("Should handle Istio resources correctly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.1", "1.8"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.1"))
+			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 })
