@@ -16,6 +16,10 @@ entries:
             en: Update channels
             ru: Каналы обновлений
           url: /stronghold/documentation/about/update-channels.html
+        - title:
+            en: Requirements
+            ru: Требования
+          url: /stronghold/documentation/about/requirements.html
     - title:
         en: Administration guide
         ru: Руководство администратора
@@ -49,10 +53,6 @@ entries:
                 ru: Установка платформы
               url: /stronghold/documentation/admin/install/steps/install.html
               folders:
-                - title:
-                    en: Requirements
-                    ru: Требования
-                  url: /stronghold/documentation/admin/install/requirements.html
                 - title:
                     en: Installation steps
                     ru: Порядок установки
