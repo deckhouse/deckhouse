@@ -55,6 +55,7 @@
 
 
  - **[admission-policy-engine]** Increased severity of alerts for objects that violate policies. [#13497](https://github.com/deckhouse/deckhouse/pull/13497)
+ - **[candi]** memory.available calculation python2 fix [#13899](https://github.com/deckhouse/deckhouse/pull/13899)
  - **[candi]** bashible bb-discover-node-name use node name from kubelet certificate [#13820](https://github.com/deckhouse/deckhouse/pull/13820)
  - **[candi]** Added retry logic for `401` in bootstrap script. [#13426](https://github.com/deckhouse/deckhouse/pull/13426)
  - **[candi]** Added using `bb-d8-node-name` instead `HOSTNAME` variable for getting current node name in `bashible` step for `GCP`. [#13405](https://github.com/deckhouse/deckhouse/pull/13405)
@@ -99,6 +100,7 @@
  - **[deckhouse]** Added a condition to apply patch releases in the maintenance window, if it exists. [#12935](https://github.com/deckhouse/deckhouse/pull/12935)
  - **[deckhouse]** Removed system-wide proxy from `/etc/systemd/system.conf.d/`. [#12832](https://github.com/deckhouse/deckhouse/pull/12832)
  - **[deckhouse]** Changed the method of connecting deckhouse-controller to API-server. [#12282](https://github.com/deckhouse/deckhouse/pull/12282)
+ - **[deckhouse-controller]** Handle hybrid clusters case in the to_tofu_migrate_metric hook [#13903](https://github.com/deckhouse/deckhouse/pull/13903)
  - **[descheduler]** Fixed bug go mod tidy. [#13447](https://github.com/deckhouse/deckhouse/pull/13447)
  - **[descheduler]** Fixed `descheduler` CVE vulnerabilities. [#13306](https://github.com/deckhouse/deckhouse/pull/13306)
  - **[dhctl]** Fix unexpected behavior with legacy API versions in VCD [#13681](https://github.com/deckhouse/deckhouse/pull/13681)
@@ -124,6 +126,7 @@
  - **[node-manager]** Fixed increased `403` errors from `capi-controller-manager` accessing the `Kubernetes API server` root path ('/'). [#13125](https://github.com/deckhouse/deckhouse/pull/13125)
  - **[node-manager]** Fixed panic in `vSphere` provider during VM creation. [#13083](https://github.com/deckhouse/deckhouse/pull/13083)
  - **[node-manager]** Rewrite static Node adoption for `CAPS`. [#11807](https://github.com/deckhouse/deckhouse/pull/11807)
+ - **[openvpn]** Fixed condition of alert triggering for client certificate. [#13900](https://github.com/deckhouse/deckhouse/pull/13900)
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
  - **[operator-trivy]** Add support anon registry creds for bdu updater. [#13855](https://github.com/deckhouse/deckhouse/pull/13855)
@@ -134,6 +137,7 @@
  - **[registry-packages-proxy]** Fixed `registry-packages-proxy` CVE vulnerabilities. [#13307](https://github.com/deckhouse/deckhouse/pull/13307)
  - **[runtime-audit-engine]** Fixed usage lib in `falco`. [#13475](https://github.com/deckhouse/deckhouse/pull/13475)
  - **[runtime-audit-engine]** Fixed `falco` CVE vulnerabilities. [#13318](https://github.com/deckhouse/deckhouse/pull/13318)
+ - **[service-with-healthchecks]** change port kube-rbac-proxy in agent DaemonSet [#13891](https://github.com/deckhouse/deckhouse/pull/13891)
  - **[upmeter]** Added a hook for replacing old sts, increase storage capacity, and scale down retention to 13 months. [#12809](https://github.com/deckhouse/deckhouse/pull/12809)
  - **[user-authn]** Added the ability to create `DexAuthenticator` with numbers in the name. [#12902](https://github.com/deckhouse/deckhouse/pull/12902)
  - **[user-authz]** fix error with webhook system-roles [#13782](https://github.com/deckhouse/deckhouse/pull/13782)
