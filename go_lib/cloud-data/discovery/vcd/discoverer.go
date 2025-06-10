@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
 )
 
 type Discoverer struct {
@@ -120,10 +121,13 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 	return nil, nil
 }
 
-func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{}
-	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+func (d *Discoverer) DiscoveryData(_ context.Context, options meta.DiscoveryDataOptions) ([]byte, error) {
+	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{
+		Kind:       "VCDCloudProviderDiscoveryData",
+		APIVersion: "deckhouse.io/v1alpha1",
+	}
+	if len(options.CloudProviderDiscoveryData) > 0 {
+		err := json.Unmarshal(options.CloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
@@ -209,11 +213,17 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	}
 	discoveryData.VCDAPIVersion = vcdAPIVersion
 
-	vApps, err := d.getVAPPs(vcdClient)
+	vApps, err := d.getVApps(vcdClient)
 	if err != nil {
 		return nil, fmt.Errorf("could not get vApps: %w", err)
 	}
 	discoveryData.VApps = vApps
+
+	vAppTemplates, err := d.getVAppTemplates(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("cloud not get vAppTemplates: %w", err)
+	}
+	discoveryData.VAppTemplates = vAppTemplates
 
 	vDCs, err := d.getVDCs(vcdClient)
 	if err != nil {
@@ -322,19 +332,21 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 }
 
 func (d *Discoverer) getVDCs(client *govcd.VCDClient) ([]string, error) {
-	vdcAll, err := client.Client.QueryAllVdcs()
+	vdcRecord, err := client.QueryWithNotEncodedParams(nil, map[string]string{
+		"type": "orgVdc",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error getting VDCs: %w", err)
 	}
 
-	vdcs := make([]string, 0, len(vdcAll))
-	for _, v := range vdcAll {
+	vdcs := make([]string, 0, len(vdcRecord.Results.OrgVdcRecord))
+	for _, v := range vdcRecord.Results.OrgVdcRecord {
 		vdcs = append(vdcs, v.Name)
 	}
 	return vdcs, nil
 }
 
-func (d *Discoverer) getVAPPs(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, error) {
+func (d *Discoverer) getVApps(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, error) {
 	vAppAll, err := client.Client.QueryVappList()
 	if err != nil {
 		return nil, fmt.Errorf("error getting vApps: %w", err)
@@ -348,6 +360,27 @@ func (d *Discoverer) getVAPPs(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, erro
 		})
 	}
 	return vApps, nil
+}
+
+func (d *Discoverer) getVAppTemplates(client *govcd.VCDClient) ([]string, error) {
+	templatesRecord, err := client.QueryWithNotEncodedParams(nil, map[string]string{
+		"type": "vAppTemplate",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error getting vAppTemplates: %w", err)
+	}
+
+	templates := make([]string, 0, len(templatesRecord.Results.VappTemplateRecord))
+
+	for _, t := range templatesRecord.Results.VappTemplateRecord {
+		if t.Name == "" || t.CatalogName == "" {
+			d.logger.Debug("got unusable template with empty name or catalog name, skipping", "template_id", t.ID)
+			continue
+		}
+		templates = append(templates, fmt.Sprintf("%s/%s", t.CatalogName, t.Name))
+	}
+
+	return templates, nil
 }
 
 // NotImplemented
