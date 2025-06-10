@@ -25,13 +25,13 @@ fi
 mkdir -p /etc/containerd
 
 cat << EOF > /etc/containerd/config.toml
-version = 2
+version = 3
 [plugins]
-  [plugins."io.containerd.grpc.v1.cri"]
+  [plugins.'io.containerd.cri.v1.runtime']
     enable_selinux = ${enable_selinux}
 EOF
 
-cp -f containerd containerd-shim-runc-v1 containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
+cp -f containerd containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
 
 mkdir -p /lib/systemd/system/
 cp -f containerd.service /lib/systemd/system/containerd-deckhouse.service
