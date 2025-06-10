@@ -40,7 +40,7 @@ import:
   before: setup
 - image: tools/bash
   add: /usr/bin/bash
-  to: /bin/bash
+  to: /usr/bin/bash
   before: setup
 - image: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
