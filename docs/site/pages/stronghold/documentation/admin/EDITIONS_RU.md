@@ -4,8 +4,17 @@ permalink: ru/stronghold/documentation/admin/editions.html
 lang: ru
 ---
 
-Deckhouse Stronghold поставляется в редакциях Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции отличаются набором возможностей и уровнем доступной поддержки.
+Deckhouse Stronghold лицензируется отдельно и доступен для использования в следующих коммерческих редакциях Deckhouse Kubernetes Platform: 
+- Basic Edition (BE);
+- Standard Edition (SE);
+- Standard Edition + (SE+);
+- Enterprise Edition (EE);
+- Certified Security Edition Lite (CSE Lite);
+- Certified Security Edition Pro (CSE Pro). 
 
+Для подробного сравнения возможностей перейдите к разделу [Сравнение редакций Deckhouse Kubernetes Platform](../../../kubernetes-platform/documentation/v1/revision-comparison.html).
+
+<!--
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
 {% capture coming_soon %}<img src="/images/icons/note.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
@@ -26,3 +35,4 @@ Deckhouse Stronghold поставляется в редакциях Standart Edi
 | Сканирование образов в runtime на уязвимости                    | {{ not_supported }} | {{ not_supported }} | {{ supported }} |
 | [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)   | {{ supported }}     | {{ supported }} | {{ supported }} |
 | [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/) | {{ supported }}     | {{ supported }} | {{ supported }} |
+-->
