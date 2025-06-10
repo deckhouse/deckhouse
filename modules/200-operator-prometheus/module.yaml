@@ -1,5 +1,4 @@
 name: operator-prometheus
-weight: 200
 subsystems:
   - observability
 namespace: d8-operator-prometheus
@@ -8,5 +7,3 @@ description: |
 descriptions:
   en: |
     This module installs the prometheus operator for creating Prometheus installations
-requirements:
-  bootstrapped: true

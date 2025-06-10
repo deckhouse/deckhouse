@@ -1,4 +1,5 @@
 name: control-plane-manager
+system: true
 weight: 40
 subsystems:
   - kubernetes

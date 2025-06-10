@@ -1,6 +1,5 @@
 name: istio
 stage: "General Availability"
-weight: 110
 subsystems:
   - infrastructure
   - networking
@@ -9,5 +8,4 @@ description: |
   Service Mesh
 descriptions:
   en: Service Mesh
-requirements:
-  bootstrapped: true
+

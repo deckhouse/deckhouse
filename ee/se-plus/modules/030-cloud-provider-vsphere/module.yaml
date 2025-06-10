@@ -1,4 +1,5 @@
 name: cloud-provider-vsphere
+system: true
 weight: 30
 subsystems:
   - infrastructure

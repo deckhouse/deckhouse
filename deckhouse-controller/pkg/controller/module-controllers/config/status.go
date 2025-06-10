@@ -26,9 +26,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
-	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
+	systemextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/system"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -36,7 +37,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
@@ -190,7 +190,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
-	case kubeconfig.Name:
+	case kubeconfigextender.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
 
@@ -218,9 +218,9 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message += ": " + errMsg.Error()
 		}
 
-	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
-		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+	case systemextender.Name:
+		reason = v1alpha1.ModuleReasonSystemExtender
+		message = v1alpha1.ModuleMessageSystemExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender

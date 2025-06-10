@@ -242,7 +242,7 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
 	modules := []string{}
 	for _, module := range l.modules {
-		if module.GetModuleDefenition().ExclusiveGroup == exclusiveGroup {
+		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
 		}
 	}
