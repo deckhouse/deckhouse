@@ -59,4 +59,6 @@ shell:
   - cd /dhctl
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
+  - chown 64535:64535 /dhctl/bin/dhctl
+  - chmod 755 /dhctl/bin/dhctl
 {{- end }}

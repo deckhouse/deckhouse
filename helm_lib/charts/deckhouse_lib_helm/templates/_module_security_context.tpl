@@ -84,7 +84,7 @@ securityContext:
 {{- /* .ro   – bool, read-only root FS (default true) */ -}}
 {{- /* .caps – []string, capabilities.add (default empty) */ -}}
 {{- /* .uid  – int, runAsUser/runAsGroup (default 64535) */ -}}
-{{- /* Usage: include "helm_lib_module_container_security_context_pss_restricted_flexible" dict */ -}}
+{{- /* Usage: include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001) */ -}}
 {{- define "helm_lib_module_container_security_context_pss_restricted_flexible" -}}
 {{- $ro := true -}}
 {{- if hasKey . "ro" -}}
@@ -177,6 +177,7 @@ securityContext:
 {{- define "helm_lib_module_container_security_context_escalated_sys_admin_privileged" -}}
 securityContext:
   allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: true
   capabilities:
     add:
     - SYS_ADMIN
