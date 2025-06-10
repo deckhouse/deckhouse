@@ -222,6 +222,10 @@ groups:
     description:
       en: "monitoring-ping metrics"
       ru: "Метрики monitoring-ping"
+  - ports: "8768"
+    protocol: TCP
+    en: stale-dns-connections-cleaner port for liveness probe
+    ru: Порт для проверки работоспособности stale-dns-connections-cleaner
 
 - group: ExternalToMaster
   description:
