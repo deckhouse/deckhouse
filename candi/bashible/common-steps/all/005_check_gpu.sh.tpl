@@ -27,42 +27,19 @@ fi
 
 /usr/bin/nvidia-smi -L
 
-required_major="450"
-required_minor="80"
-
-# $1 required version, $2 presented version, $3 name
-function compare_versions() {
-    if (( $2 < $1 ))
-      then
-        echo "$3 version is less then required"
-        exit 1
-    fi
-    if (( $1 == $2))
-      then
-        need_resume=true
-      else
-        need_resume=false
-    fi
-}
-
-# $1 version
+# $1 current version $2 required version
 function compare() {
-    local major=$(echo "$1" | cut -d '.' -f 1)
-    local minor=$(echo "$1" | cut -d '.' -f 2)
-    compare_versions $required_major $major "major"
-    if [[ $need_resume = "true" ]]
-      then
-        compare_versions $required_minor $minor "minor"
-    fi
+  lower_version=$(echo -e "$2\n$1" | sort -V | head -n1)
+  if [[ "$lower_version" != "$2" ]]
+  then
+    bb-log-error "The installed drivers version $1 doesn't meet the requirements. Update it to at least $2."
+    exit 1
+  fi
 }
+required_version="450.80.02"
 
 version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,2}[.][0-9]{1,2}" /proc/driver/nvidia/version)
-compare $version
+compare $version $required_version
 
-    {{ if eq .nodeGroup.gpu.sharing "Mig" }}
-
-nvidia-smi -mig 1
-
-    {{- end }}
   {{- end }}
 {{- end }}
