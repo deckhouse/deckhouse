@@ -1,6 +1,6 @@
-name: cloud-provider-vcd
+name: cloud-provider-dvp
 weight: 30
 subsystems:
   - infrastructure
-namespace: d8-cloud-provider-vcd
+namespace: d8-cloud-provider-dvp
 stage: Experimental

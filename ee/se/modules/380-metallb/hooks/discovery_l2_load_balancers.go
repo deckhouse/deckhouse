@@ -236,7 +236,7 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 				},
 			}
 
-			input.PatchCollector.MergePatch(patch,
+			input.PatchCollector.PatchWithMerge(patch,
 				"v1",
 				"Service",
 				service.Namespace,

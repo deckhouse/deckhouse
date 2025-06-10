@@ -73,7 +73,7 @@ debug: true
       - ALL
     readOnlyRootFilesystem: true
 - args:
-  - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4229
+  - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8383
   - --v=2
   - --logtostderr=true
   - --stale-cache-interval=1h30m
@@ -98,7 +98,7 @@ debug: true
   image: registry.example.com@imageHash-common-kubeRbacProxy
   name: kube-rbac-proxy
   ports:
-  - containerPort: 4229
+  - containerPort: 8383
     name: https-metrics
   resources:
     requests:

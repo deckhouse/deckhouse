@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -172,29 +173,30 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	clusterStates, err := sdkobjectpatch.UnmarshalToStruct[StateClusterResult](input.NewSnapshots, "cluster_state")
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal cluster_state snapshot: %w", err)
-	}
-	if len(clusterStates) == 0 {
-		return fmt.Errorf("no cluster state snapshot found")
+		return err
 	}
 
 	input.MetricsCollector.Expire(metricGroup)
 
 	needMigrate := false
 
-	for _, clusterState := range clusterStates {
-		if !clusterState.ClusterState {
-			input.Logger.Warnf("Secret %s is not terraform state. Probably you located in test env", clusterState.SecretName)
-			continue
-		}
+	if len(clusterStates) != 0 {
+		for _, clusterState := range clusterStates {
+			if !clusterState.ClusterState {
+				input.Logger.Warn("Secret is not terraform state. Probably you located in test env", slog.String("secret_name", clusterState.SecretName))
+				continue
+			}
 
-		if clusterState.TerraformVersion == terraformVersion {
-			needMigrate = true
-			input.Logger.Info("Cluster state has terraform state. Needing to migrate to tofu")
-		}
+			if clusterState.TerraformVersion == terraformVersion {
+				needMigrate = true
+				input.Logger.Info("Cluster state has terraform state. Needing to migrate to tofu")
+			}
 
-		// cluster secret always one. hack for test envs see above
-		break
+			// cluster secret always one. hack for test envs see above
+			break
+		}
+	} else {
+		input.Logger.Info("Cluster state not found. Probably you have hybrid cluster")
 	}
 
 	nodeStates, err := sdkobjectpatch.UnmarshalToStruct[StateNodeResult](input.NewSnapshots, "nodes_state")
@@ -205,12 +207,12 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	if !needMigrate {
 		for _, nodeState := range nodeStates {
 			if nodeState.IsBackup {
-				input.Logger.Infof("Node state %s is backup state. Skip", nodeState.SecretName)
+				input.Logger.Info("Node state is backup state. Skip", slog.String("name", nodeState.SecretName))
 				continue
 			}
 
 			if nodeState.TerraformVersion == terraformVersion {
-				input.Logger.Infof("Node state %s has terraform state. Needing to migrate to tofu", nodeState.SecretName)
+				input.Logger.Info("Node state has terraform state. Needing to migrate to tofu", slog.String("name", nodeState.SecretName))
 				needMigrate = true
 				break
 			}

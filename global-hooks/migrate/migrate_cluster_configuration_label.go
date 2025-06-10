@@ -75,6 +75,6 @@ func handleClusterConfigurationLabel(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(m, "v1", "Secret", "kube-system", "d8-cluster-configuration")
+	input.PatchCollector.PatchWithMerge(m, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 	return nil
 }
