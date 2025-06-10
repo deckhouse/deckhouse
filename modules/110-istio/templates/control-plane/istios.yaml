@@ -92,6 +92,21 @@ spec:
       network: {{ include "istioNetworkName" $ }}
       multiCluster:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
+  {{- if $.Values.istio.multicluster.enabled }}
+      meshNetworks:
+      {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+        {{- if $multicluster.enableIngressGateway }}
+        {{ $multicluster.networkName }}:
+          endpoints:
+          - fromRegistry: {{ $multicluster.name }}
+          gateways:
+          {{- range $ingressGateway := $multicluster.ingressGateways }}
+          - address: {{ $ingressGateway.address }}
+            port: {{ $ingressGateway.port }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+  {{- end }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
       proxy:
@@ -167,22 +182,6 @@ spec:
       - pem: {{ $metadata.rootCA | quote }}
       {{- end }}
     {{- end }}
-
-  {{- if $.Values.istio.multicluster.enabled }}
-      meshNetworks:
-      {{- range $multicluster := $.Values.istio.internal.multiclusters }}
-        {{- if $multicluster.enableIngressGateway }}
-        {{ $multicluster.networkName }}:
-          endpoints:
-          - fromRegistry: {{ $multicluster.name }}
-          gateways:
-          {{- range $ingressGateway := $multicluster.ingressGateways }}
-          - address: {{ $ingressGateway.address }}
-            port: {{ $ingressGateway.port }}
-          {{- end }}
-        {{- end }}
-      {{- end }}
-  {{- end }}
 
     pilot:
       # We're deploying the istio-cni DS with module templates.
