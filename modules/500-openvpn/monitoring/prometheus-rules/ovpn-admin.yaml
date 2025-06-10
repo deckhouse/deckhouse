@@ -22,7 +22,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: OpenVPN client certificate expired for {{ $labels.client }} in less than 30 days.
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
         description: |-
           The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 30 days.
 
@@ -36,7 +36,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: OpenVPN client certificate expired for {{ $labels.client }} in less than 7 days.
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
         description: |-
           The OpenVPN client certificate for **{{ $labels.client }}**  will expire in less than 7 days.
 
