@@ -169,28 +169,29 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 
 func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 	clusterStateSnap := input.Snapshots["cluster_state"]
-	if len(clusterStateSnap) == 0 {
-		return fmt.Errorf("no cluster state snapshot found")
-	}
 
 	input.MetricsCollector.Expire(metricGroup)
 
 	needMigrate := false
 
-	for _, clusterStateRaw := range clusterStateSnap {
-		clusterState := clusterStateRaw.(*StateClusterResult)
-		if !clusterState.ClusterState {
-			input.Logger.Warnf("Secret %s is not terraform state. Probably you located in test env", clusterState.SecretName)
-			continue
-		}
+	if len(clusterStateSnap) != 0 {
+		for _, clusterStateRaw := range clusterStateSnap {
+			clusterState := clusterStateRaw.(*StateClusterResult)
+			if !clusterState.ClusterState {
+				input.Logger.Warnf("Secret %s is not terraform state. Probably you located in test env", clusterState.SecretName)
+				continue
+			}
 
-		if clusterState.TerraformVersion == terraformVersion {
-			needMigrate = true
-			input.Logger.Info("Cluster state has terraform state. Needing to migrate to tofu")
-		}
+			if clusterState.TerraformVersion == terraformVersion {
+				needMigrate = true
+				input.Logger.Info("Cluster state has terraform state. Needing to migrate to tofu")
+			}
 
-		// cluster secret always one. hack for test envs see above
-		break
+			// cluster secret always one. hack for test envs see above
+			break
+		}
+	} else {
+		input.Logger.Info("Cluster state not found. Probably you have hybrid cluster")
 	}
 
 	if !needMigrate {
