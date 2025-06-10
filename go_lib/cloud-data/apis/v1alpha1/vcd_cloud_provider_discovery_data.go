@@ -46,7 +46,7 @@ type VCDvApp struct {
 
 type VCDInternalNetworkDetails struct {
 	Name string `json:"name"`
-	CIDR string `json:"cidr"`
+	CIDR string `json:"v4cidr"`
 }
 
 type VCDSizingPolicyDetails struct {
