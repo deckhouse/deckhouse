@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/alecthomas/kingpin"
@@ -13,6 +14,8 @@ import (
 
 	cloud_data "github.com/deckhouse/deckhouse/go_lib/cloud-data"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/app"
+
+	vcd "github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/vcd"
 )
 
 func main() {
@@ -25,7 +28,11 @@ func main() {
 		logger := app.InitLogger()
 		client := app.InitClient(logger)
 		dynamicClient := app.InitDynamicClient(logger)
-		discoverer := NewDiscoverer(logger)
+		config, err := vcd.ParseEnvToConfig()
+		if err != nil {
+			return fmt.Errorf("error creating discoverer config: %w", err)
+		}
+		discoverer := vcd.NewDiscoverer(logger, config)
 
 		r := cloud_data.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client, dynamicClient)
 		r.Start()
