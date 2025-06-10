@@ -28,11 +28,8 @@ fromImage: builder/alpine
 final: false
 import:
 - image: tools/erofs-utils
-  add: /
-  to: /opt/deckhouse/
-  includePaths:
-  - lib
-  - usr/lib
+  add: /usr/lib
+  to: /opt/deckhouse/ld-musl-x86_64.so.1
   before: setup
 - image: erofs-utils
   add: /
@@ -45,6 +42,5 @@ shell:
   - apk add --no-cache patchelf
   - mkdir -p /opt/deckhouse
   setup:
-  - cd /usr/bin
-  - patchelf --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/erofs*
+  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
   - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
