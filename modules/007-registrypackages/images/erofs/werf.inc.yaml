@@ -1,0 +1,50 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - erofs
+  - opt
+  - dump.erofs
+  - fsck.erofs
+  - mkfs.erofs
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "erofs": "1.8.5" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/alpine
+final: false
+import:
+- image: tools/erofs-utils
+  add: /
+  to: /opt/deckhouse/
+  includePaths:
+  - lib
+  - usr/lib
+  before: setup
+- image: erofs-utils
+  add: /
+  includePaths:
+  - usr/bin/*.erofs
+  before: setup
+shell:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache patchelf
+  - mkdir -p /opt/deckhouse
+  setup:
+  - cd /usr/bin
+  - patchelf --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/erofs*
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
