@@ -111,7 +111,10 @@ common:
     en: Documents found
     ru: Найдено документов
   conversion_action_message:
-    en: "Perform the following actions if you need to convert data from one version of the module parameter schema to another"
+    en: |
+      The module is configured using the ModuleConfig resource created by the user.
+      When changing the version of the module settings, transformations are automatically performed to maintain the functionality of the new version.
+      If you want to update the version in the ModuleConfig manually, then you need to do the following:
     ru: |
       Модуль настраивается с помощью ресурса ModuleConfig, создаваемого пользователем.
       При изменении версии настроек модуля автоматически выполняются преобразования для сохранения работоспособности новой версии.
