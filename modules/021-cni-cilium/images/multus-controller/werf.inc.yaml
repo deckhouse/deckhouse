@@ -1,0 +1,28 @@
+---
+image: {{ .ModuleName }}/multus-controller-binary
+from: quay.io/projectquay/golang:1.22
+final: false
+shell:
+  setup:
+    - mkdir -p /go/src
+    - cd /go/src
+    - git clone --depth 1 --branch v0.3.6 https://github.com/k8snetworkplumbingwg/multus-dynamic-networks-controller.git
+    - cd multus-dynamic-networks-controller
+    - mkdir -p /build-output
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /build-output/dynamic-networks-controller ./cmd/dynamic-networks-controller
+    - cp LICENSE /build-output
+---
+image: {{ .ModuleName }}/multus-controller
+from: registry.access.redhat.com/ubi8/ubi-minimal
+import:
+  - image: {{ .ModuleName }}/multus-controller-binary
+    add: /build-output/dynamic-networks-controller
+    to: /usr/local/bin/dynamic-networks-controller
+    before: install
+  - image: {{ .ModuleName }}/multus-controller-binary
+    add: /build-output/LICENSE
+    to: /usr/share/licenses/multus-dynamic-networks-controller/LICENSE
+    before: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/dynamic-networks-controller"]

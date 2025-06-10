@@ -1,0 +1,183 @@
+---
+{{- define "multus_controller_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: multus-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: multus-controller
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: multus-controller
+      minAllowed:
+        {{- include "multus_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 200Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: multus-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "tier" "node" "name" "multus-controller")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      name: multus-controller
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/multus-controller: "unconfined"
+      labels:
+        tier: node
+        app: multus-controller
+        name: multus-controller
+        module: cni-cilium
+    spec:
+      serviceAccountName: multus-controller
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - name: multus-controller
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                    fieldPath: spec.nodeName
+          image: {{ include "helm_lib_module_image" (list . "multusController") }}
+          command: [ "/usr/local/bin/dynamic-networks-controller" ]
+          args:
+            - "-config=/etc/multus-controller/dynamic-networks-config.json"
+            - "-v=5"
+          livenessProbe:
+            exec:
+                command:
+                - curl
+                - --fail
+                - --unix-socket
+                - /host/run/multus/multus.sock
+                - localhost/healthz
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          volumeMounts:
+            - name: multus-controller-config-dir
+              mountPath: /etc/multus-controller/
+              readOnly: true
+            - name: multus-server-socket
+              mountPath: /host/run/multus/multus.sock
+            - name: cri-socket
+              mountPath: /host/run/containerd/containerd.sock
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: multus-controller-config-dir
+          configMap:
+            name: multus-controller-config
+            items:
+              - key: dynamic-networks-config.json
+                path: dynamic-networks-config.json
+        - name: multus-server-socket
+          hostPath:
+            path: /run/multus/multus.sock
+            type: Socket
+        - name: cri-socket
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: multus-controller
+rules:
+  - apiGroups: ["k8s.cni.cncf.io"]
+    resources:
+      - network-attachment-definitions
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/status
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: multus-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: multus-controller
+subjects:
+  - kind: ServiceAccount
+    name: multus-controller
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multus-controller
+  namespace: d8-{{ .Chart.Name }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: multus-controller-config
+  namespace: d8-{{ .Chart.Name }}
+  labels:
+    tier: node
+    app: multus-controller
+data:
+  dynamic-networks-config.json: |
+    {
+        "criSocketPath": "/host/run/containerd/containerd.sock",
+        "multusSocketPath": "/host/run/multus/multus.sock"
+    }
+---
