@@ -12,6 +12,10 @@ entries:
             en: Platform editions
             ru: Редакции платформы
           url: /stronghold/documentation/about/editions.html
+        - title:
+            en: Update channels
+            ru: Каналы обновлений
+          url: /stronghold/documentation/about/update-channels.html
     - title:
         en: Administration guide
         ru: Руководство администратора
@@ -40,10 +44,6 @@ entries:
             en: Launch in DKP
             ru: Запуск в DKP
           folders:
-            - title:
-                en: Update channels
-                ru: Каналы обновлений
-              url: /stronghold/documentation/admin/update-channels.html
             - title:
                 en: Install
                 ru: Установка платформы

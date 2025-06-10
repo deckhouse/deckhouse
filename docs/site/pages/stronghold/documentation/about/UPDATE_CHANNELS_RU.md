@@ -1,6 +1,6 @@
 ---
 title: "Каналы обновлений"
-permalink: ru/stronghold/documentation/admin/update-channels.html
+permalink: ru/stronghold/documentation/about/update-channels.html
 lang: ru
 ---
 
@@ -18,4 +18,4 @@ Deckhouse Stronghold использует пять каналов обновле
 
 Информацию по версиям, доступным на каналах обновления, можно получить на сайте [releases.deckhouse.ru](https://releases.deckhouse.ru/).
 
-Подробнее о настройке каналов обновлений читайте в  [Обновлении платформы](./update/update.html).
+Подробнее о настройке каналов обновлений читайте в [Обновлении платформы](../admin/update/update.html).
