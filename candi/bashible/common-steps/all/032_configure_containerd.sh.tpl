@@ -13,6 +13,18 @@
 # limitations under the License.
 
 {{- if eq .cri "Containerd" }}
+
+_has_registry_field() {
+  local path="$1"
+  local has_registry_field
+  if ! has_registry_field=$(/opt/deckhouse/bin/yq -ptoml -oy \
+    '.plugins["io.containerd.grpc.v1.cri"] | has("registry")' "$path" 2>/dev/null); then
+    >&2 echo "ERROR: Failed to parse TOML config: $path"
+    exit 1
+  fi
+  echo "$has_registry_field" | grep -q "true"
+}
+
 _on_containerd_config_changed() {
   bb-flag-set containerd-need-restart
 }
@@ -209,6 +221,15 @@ EOF
 
 # Check additional configs
 if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
+  {{- if .registry.registryModuleEnable }}
+  # Check custom registry fields before merge
+  for path in /etc/containerd/conf.d/*.toml; do
+    if _has_registry_field "${path}"; then
+      >&2 echo "Failed to merge $path: config contains custom registry fields"
+      exit 1
+    fi
+  done
+  {{- end }}
   containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/conf.d/*.toml -)"
 else
   containerd_toml="$(cat /etc/containerd/deckhouse.toml)"

@@ -41,18 +41,15 @@
 #           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".tls]
 #             insecure_skip_verify = true
 #
-function contains_custom_registry() {
-  local config_path="$1"
-  local has_custom_registry
-
-  if ! has_custom_registry=$(/opt/deckhouse/bin/yq -ptoml -oy \
-    '.plugins["io.containerd.grpc.v1.cri"].registry | has("mirrors") or has("configs")' \
-    "$config_path" 2>/dev/null); then
-    >&2 echo "ERROR: Failed to parse TOML config: $config_path"
+_has_registry_field() {
+  local path="$1"
+  local has_registry_field
+  if ! has_registry_field=$(/opt/deckhouse/bin/yq -ptoml -oy \
+    '.plugins["io.containerd.grpc.v1.cri"] | has("registry")' "$path" 2>/dev/null); then
+    >&2 echo "ERROR: Failed to parse TOML config: $path"
     exit 1
   fi
-
-  echo "$has_custom_registry" | grep -q "true"
+  echo "$has_registry_field" | grep -q "true"
 }
 
 mkdir -p /var/lib/node_labels
@@ -67,8 +64,8 @@ if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
   config_label_value="custom"
 
   # Check each additional config file for a registry block
-  for config_file in /etc/containerd/conf.d/*.toml; do
-    if contains_custom_registry "${config_file}"; then
+  for path in /etc/containerd/conf.d/*.toml; do
+    if _has_registry_field "${path}"; then
       registry_label_value="custom"
       break
     fi
