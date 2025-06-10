@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -56,12 +60,13 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-	snap := input.Snapshots["ns"]
-	if len(snap) == 1 {
-		if snap[0] != nil {
-			name := snap[0].(string)
-			input.PatchCollector.MergePatch(nsPatch, "v1", "Namespace", "", name)
-		}
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "ns")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
+	}
+	if len(snaps) == 1 {
+		name := snaps[0]
+		input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
 	}
 
 	return nil

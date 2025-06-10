@@ -18,6 +18,8 @@ import (
 	"math"
 	"strconv"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -68,21 +70,21 @@ func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
-	virtualizationLevel := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots["master_nodes"])
+	virtualizationLevel := getVirtualizationLevelFromMasterNodesLabels(input.NewSnapshots.Get("master_nodes"))
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
 	input.Logger.Infof("set DVP nesting level to: %d", virtualizationLevel)
 
 	return nil
 }
 
-func getVirtualizationLevelFromMasterNodesLabels(masterNodeInfoSnaps []go_hook.FilterResult) int {
+func getVirtualizationLevelFromMasterNodesLabels(masterNodeInfoSnaps []sdkpkg.Snapshot) int {
 	minimalVirtualizationLevel := math.MaxInt
-	for _, masterNodeInfoSnap := range masterNodeInfoSnaps {
-		masterNodeInfo, ok := masterNodeInfoSnap.(masterNodeInfo)
-		if ok {
-			if masterNodeInfo.VirtualizationLevel >= 0 && masterNodeInfo.VirtualizationLevel < minimalVirtualizationLevel {
-				minimalVirtualizationLevel = masterNodeInfo.VirtualizationLevel
-			}
+	for masterNodeInfo, err := range sdkobjectpatch.SnapshotIter[masterNodeInfo](masterNodeInfoSnaps) {
+		if err != nil {
+			continue
+		}
+		if masterNodeInfo.VirtualizationLevel >= 0 && masterNodeInfo.VirtualizationLevel < minimalVirtualizationLevel {
+			minimalVirtualizationLevel = masterNodeInfo.VirtualizationLevel
 		}
 	}
 
