@@ -1,17 +1,21 @@
-{{- $version := "0.12.1" }}
-{{- $kubernetesVersion := "1-33-1" }}
+{{- $mig_manager_version := "0.12.1" }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $kubectl_version  := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
-image: {{ .ModuleName }}/nvidia-mig-manager
+image: {{ $.ModuleName }}/nvidia-mig-manager-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/bin/
   includePaths:
     - nvidia-mig-parted
     - nvidia-mig-manager
     - reconfigure-mig.sh
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/lib64
   includePaths:
     - libc.so.6
@@ -22,15 +26,15 @@ import:
     - libdl.so.2
     - libm.so.6
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /
   includePaths:
     - lib64
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /busybox
   before: setup
-- image: {{ .ModuleName }}/nvidia-container-toolkit-build-artifact
+- image: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
   add: /usr/bin/nvidia-ctk
   to: /usr/bin/nvidia-ctk
   before: setup
@@ -38,12 +42,12 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
-- image: common/kubernetes-artifact-{{ $kubernetesVersion }}
+- image: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
 ---
-image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
 final: false
 git:
@@ -57,15 +61,15 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
+  - git clone --depth 1 --branch v{{ $mig_manager_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
   - cd /src/mig-parted
   - rm -rf .git hack test
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
 final: false
 from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   before: install
 mount:
@@ -88,3 +92,4 @@ shell:
   - make PREFIX=/usr/bin/ cmds
   - mv /src/scripts/reconfigure-mig.sh /usr/bin/
   - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager /usr/bin/reconfigure-mig.sh
+{{- end }}
