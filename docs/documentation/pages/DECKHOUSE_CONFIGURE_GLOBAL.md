@@ -14,9 +14,9 @@ If you don't have access to wildcard DNS records, you can use [sslip.io](https:/
 
 The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. We do not recommend changing the `clusterDomain` value unless absolutely necessary.
 
-For the template to work correctly, DNS services must be properly configured both in the networks where the cluster nodes reside and in the networks from which users will access the platform’s web interfaces.
+For the template to work correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which access to the service web interfaces is required.
 
-If the template matches the node network domain, use only A records to assign addresses of node frontends to the platform’s web interfaces. For example, if the zone `company.my` is defined for nodes and the template is `%s.company.my`.
+If the template matches the domain of the node network (for example, if the nodes are in the zone `company.my` and the template is `%s.company.my`), use only the A records of the frontend node addresses to assign the platform's web interfaces.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:
