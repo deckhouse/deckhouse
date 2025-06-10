@@ -101,6 +101,9 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
+    admissionWebhookClient:
+      cert: mock-cert
+      key: mock-key
     effectiveKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
@@ -112,6 +115,9 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const moduleValuesOnlyIssuer = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -123,6 +129,9 @@ apiserver:
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -138,6 +147,9 @@ apiserver:
 
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -152,6 +164,9 @@ apiserver:
 
 	const moduleValuesCombo = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -168,6 +183,9 @@ apiserver:
 
 	const moduleValuesSuperCombo = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -186,6 +204,9 @@ apiserver:
 
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -203,6 +224,9 @@ apiserver:
 `
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -220,6 +244,9 @@ apiserver:
 
 	const emptyApiserverConfig = `
 internal:
+  admissionWebhookClient:
+    cert: mock-cert
+    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379

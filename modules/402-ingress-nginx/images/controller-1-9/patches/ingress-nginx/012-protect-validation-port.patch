@@ -1,0 +1,374 @@
+diff --git a/internal/admission/controller/server.go b/internal/admission/controller/server.go
+index 7fc61bcbb..21ab4ad41 100644
+--- a/internal/admission/controller/server.go
++++ b/internal/admission/controller/server.go
+@@ -17,6 +17,8 @@ limitations under the License.
+ package controller
+
+ import (
++	"crypto/x509"
++	"fmt"
+ 	"io"
+ 	"net/http"
+
+@@ -45,20 +47,68 @@ type AdmissionController interface {
+ // https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook
+ type AdmissionControllerServer struct {
+ 	AdmissionController AdmissionController
++	VerifyOptions       *VerifyOptions
+ }
+
+ // NewAdmissionControllerServer instanciates an admission controller server with
+ // a default codec
+-func NewAdmissionControllerServer(ac AdmissionController) *AdmissionControllerServer {
++func NewAdmissionControllerServer(ac AdmissionController, options *VerifyOptions) *AdmissionControllerServer {
+ 	return &AdmissionControllerServer{
+ 		AdmissionController: ac,
++		VerifyOptions:       options,
+ 	}
+ }
+
++type VerifyOptions struct {
++	Enable                                  bool
++	ValidatingWebhookAllowCn                string
++	ValidatingWebhookAllowCaCertificatePool *x509.CertPool
++}
++
++type VerifyError struct {
++	Code int
++	Err  error
++}
++
++func (e *VerifyError) Error() string {
++	return e.Err.Error()
++}
++
++// verifyClient verifies the client TLS certificate and authenticates it by Common Name (CN).
++// It checks that a client certificate is present, validates it against the configured CA pool,
++// and ensures the certificate's CN matches the allowed CN.
++func verifyClient(req *http.Request, opts *VerifyOptions) *VerifyError {
++	if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
++		return &VerifyError{Code: http.StatusUnauthorized, Err: fmt.Errorf("no client certificate provided")}
++	}
++
++	cert := req.TLS.PeerCertificates[0]
++	if _, err := cert.Verify(x509.VerifyOptions{
++		Roots: opts.ValidatingWebhookAllowCaCertificatePool,
++	}); err != nil {
++		return &VerifyError{Code: http.StatusUnauthorized, Err: fmt.Errorf("certificate verification failed: %w", err)}
++	}
++
++	if cert.Subject.CommonName != opts.ValidatingWebhookAllowCn {
++		return &VerifyError{Code: http.StatusForbidden, Err: fmt.Errorf("unauthorized CN: %s", cert.Subject.CommonName)}
++	}
++
++	return nil
++}
++
+ // ServeHTTP implements http.Server method
+ func (acs *AdmissionControllerServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+ 	defer req.Body.Close()
+
++	// If flag --validating-verify-admission-requests is true
++	if acs.VerifyOptions.Enable {
++		if verr := verifyClient(req, acs.VerifyOptions); verr != nil {
++			klog.Errorf("Failed client TLS certificate verification in validating webhook: %v", verr)
++			http.Error(w, verr.Error(), verr.Code)
++			return
++		}
++	}
++
+ 	data, err := io.ReadAll(req.Body)
+ 	if err != nil {
+ 		klog.ErrorS(err, "Failed to read request body")
+diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
+index 22920ff64..0dc23b1a7 100644
+--- a/internal/ingress/controller/config/config.go
++++ b/internal/ingress/controller/config/config.go
+@@ -769,7 +769,7 @@ func NewDefault() Configuration {
+ 	defGlobalExternalAuth := GlobalExternalAuth{"", "", "", "", "", append(defResponseHeaders, ""), "", "", "", []string{}, map[string]string{}, false}
+
+ 	cfg := Configuration{
+-		AllowSnippetAnnotations:          false,
++		AllowSnippetAnnotations:          true,
+ 		AllowCrossNamespaceResources:     true,
+ 		AllowBackendServerHeader:         false,
+ 		AnnotationValueWordBlocklist:     "",
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index f105b9c71..1fec21115 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package controller
+
+ import (
++	"crypto/x509"
+ 	"fmt"
+ 	"sort"
+ 	"strconv"
+@@ -116,13 +117,15 @@ type Configuration struct {
+
+ 	IngressClassConfiguration *ingressclass.Configuration
+
+-	ValidationWebhook         string
+-	ValidationWebhookCertPath string
+-	ValidationWebhookKeyPath  string
+-	DisableFullValidationTest bool
+-
+-	GlobalExternalAuth  *ngx_config.GlobalExternalAuth
+-	MaxmindEditionFiles *[]string
++	ValidationWebhook                       string
++	ValidationWebhookCertPath               string
++	ValidationWebhookKeyPath                string
++	DisableFullValidationTest               bool
++	ValidatingVerifyAdmissionRequests       bool
++	ValidatingWebhookAllowCn                string
++	ValidatingWebhookAllowCaCertificatePool *x509.CertPool
++	GlobalExternalAuth                      *ngx_config.GlobalExternalAuth
++	MaxmindEditionFiles                     *[]string
+
+ 	MonitorMaxBatchSize int
+
+@@ -332,10 +335,12 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
+ 		return nil
+ 	}
+
+-	if n.cfg.Namespace != "" && ing.ObjectMeta.Namespace != n.cfg.Namespace {
+-		klog.Warningf("ignoring ingress %v in namespace %v different from the namespace watched %s", ing.Name, ing.ObjectMeta.Namespace, n.cfg.Namespace)
+-		return nil
+-	}
++	// Commented out the namespace check in the ingress validation logic to allow usage of the --watch-namespace flag
++	// in a broader or more flexible way.
++	//if n.cfg.Namespace != "" && ing.ObjectMeta.Namespace != n.cfg.Namespace {
++	//	klog.Warningf("ignoring ingress %v in namespace %v different from the namespace watched %s", ing.Name, ing.ObjectMeta.Namespace, n.cfg.Namespace)
++	//	return nil
++	//}
+
+ 	if n.cfg.DisableCatchAll && ing.Spec.DefaultBackend != nil {
+ 		return fmt.Errorf("this deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.defaultBackend' or set DisableCatchAll flag to false")
+diff --git a/internal/ingress/controller/controller.go.orig b/internal/ingress/controller/controller.go.orig
+index cb8d3712c..f105b9c71 100644
+--- a/internal/ingress/controller/controller.go.orig
++++ b/internal/ingress/controller/controller.go.orig
+@@ -772,7 +772,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+ 					continue
+ 				}
+
+-				upsName := upstreamName(ing.Namespace, path.Backend.Service)
++				upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+
+ 				ups := upstreams[upsName]
+
+@@ -937,6 +937,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+ 					nb := upstream.DeepCopy()
+ 					nb.Name = name
+ 					nb.Endpoints = endps
++					nb.Service = location.DefaultBackend
+ 					aUpstreams = append(aUpstreams, nb)
+ 					location.DefaultBackendUpstreamName = name
+
+@@ -1004,10 +1005,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+
+ 		var defBackend string
+ 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+-			defBackend = upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++			defBackend = upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+
+ 			klog.V(3).Infof("Creating upstream %q", defBackend)
+ 			upstreams[defBackend] = newUpstream(defBackend)
++			upstreams[defBackend].Ingress = &ing.Ingress
+
+ 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
+ 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
+@@ -1064,7 +1066,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 					continue
+ 				}
+
+-				name := upstreamName(ing.Namespace, path.Backend.Service)
++				name := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+ 				svcName, svcPort := upstreamServiceNameAndPort(path.Backend.Service)
+ 				if _, ok := upstreams[name]; ok {
+ 					continue
+@@ -1073,6 +1075,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 				klog.V(3).Infof("Creating upstream %q", name)
+ 				upstreams[name] = newUpstream(name)
+ 				upstreams[name].Port = svcPort
++				upstreams[name].Ingress = &ing.Ingress
+
+ 				upstreams[name].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
+ 				upstreams[name].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
+@@ -1305,7 +1308,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
+ 		}
+
+ 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+-			defUpstream := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++			defUpstream := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+
+ 			if backendUpstream, ok := upstreams[defUpstream]; ok {
+ 				// use backend specified in Ingress as the default backend for all its rules
+@@ -1580,7 +1583,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ ) {
+ 	// merge catch-all alternative backends
+ 	if ing.Spec.DefaultBackend != nil {
+-		upsName := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++		upsName := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+
+ 		altUps := upstreams[upsName]
+
+@@ -1627,7 +1630,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ 				continue
+ 			}
+
+-			upsName := upstreamName(ing.Namespace, path.Backend.Service)
++			upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+
+ 			altUps := upstreams[upsName]
+
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 6951275c9..3757f04ce 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -116,12 +116,24 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
+ 	}
+
+ 	if n.cfg.ValidationWebhook != "" {
++
++		verifyOps := adm_controller.VerifyOptions{
++			Enable:                                  config.ValidatingVerifyAdmissionRequests,
++			ValidatingWebhookAllowCn:                config.ValidatingWebhookAllowCn,
++			ValidatingWebhookAllowCaCertificatePool: config.ValidatingWebhookAllowCaCertificatePool,
++		}
++
++		tlsConfig := ssl.NewTLSListener(n.cfg.ValidationWebhookCertPath, n.cfg.ValidationWebhookKeyPath).TLSConfig()
++		if config.ValidatingVerifyAdmissionRequests {
++			tlsConfig.ClientAuth = tls.RequestClientCert
++		}
++
+ 		n.validationWebhookServer = &http.Server{
+ 			Addr: config.ValidationWebhook,
+ 			// G112 (CWE-400): Potential Slowloris Attack
+ 			ReadHeaderTimeout: 10 * time.Second,
+-			Handler:           adm_controller.NewAdmissionControllerServer(&adm_controller.IngressAdmission{Checker: n}),
+-			TLSConfig:         ssl.NewTLSListener(n.cfg.ValidationWebhookCertPath, n.cfg.ValidationWebhookKeyPath).TLSConfig(),
++			Handler:           adm_controller.NewAdmissionControllerServer(&adm_controller.IngressAdmission{Checker: n}, &verifyOps),
++			TLSConfig:         tlsConfig,
+ 			// disable http/2
+ 			// https://github.com/kubernetes/kubernetes/issues/80313
+ 			// https://github.com/kubernetes/ingress-nginx/issues/6323#issuecomment-737239159
+diff --git a/internal/ingress/controller/nginx.go.orig b/internal/ingress/controller/nginx.go.orig
+index 488a029dd..6951275c9 100644
+--- a/internal/ingress/controller/nginx.go.orig
++++ b/internal/ingress/controller/nginx.go.orig
+@@ -73,6 +73,8 @@ const (
+ 	emptyUID         = "-1"
+ )
+
++var tmpDir = os.TempDir() + "/nginx/"
++
+ // NewNGINXController creates a new NGINX Ingress controller.
+ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXController {
+ 	eventBroadcaster := record.NewBroadcaster()
+@@ -636,7 +638,6 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+ 	if len(cfg) == 0 {
+ 		return fmt.Errorf("invalid NGINX configuration (empty)")
+ 	}
+-	tmpDir := os.TempDir() + "/nginx"
+ 	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
+ 	if err != nil {
+ 		return err
+@@ -1043,11 +1044,11 @@ func createOpentelemetryCfg(cfg *ngx_config.Configuration) error {
+ func cleanTempNginxCfg() error {
+ 	var files []string
+
+-	err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
++	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if info.IsDir() && os.TempDir() != path {
++		if info.IsDir() && tmpDir != path {
+ 			return filepath.SkipDir
+ 		}
+
+diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
+index d3bc4ee86..3842fcfd2 100644
+--- a/pkg/flags/flags.go
++++ b/pkg/flags/flags.go
+@@ -17,6 +17,8 @@ limitations under the License.
+ package flags
+
+ import (
++	"crypto/x509"
++	"encoding/pem"
+ 	"flag"
+ 	"fmt"
+ 	"net"
+@@ -200,6 +202,12 @@ Takes the form "<host>:port". If not provided, no admission controller is starte
+ 			`The path of the validating webhook key PEM.`)
+ 		disableFullValidationTest = flags.Bool("disable-full-test", false,
+ 			`Disable full test of all merged ingresses at the admission stage and tests the template of the ingress being created or updated  (full test of all ingresses is enabled by default).`)
++		validatingVerifyAdmissionRequests = flags.Bool("validating-verify-admission-requests", false,
++			`Enable verification and authentication of AdmissionReview requests.`)
++		validatingWebhookAllowCn = flags.String("validating-webhook-allow-cn", "",
++			`The valid Common Name (CN) from the API server certificate used to authenticate AdmissionReview requests.`)
++		validatingWebhookAllowCaFile = flags.String("validating-webhook-allow-ca-file", "",
++			`Path to CA certificate file for authenticating AdmissionReview requests to the validating webhook.`)
+
+ 		statusPort = flags.Int("status-port", 10246, `Port to use for the lua HTTP endpoint configuration.`)
+ 		streamPort = flags.Int("stream-port", 10247, "Port to use for the lua TCP/UDP endpoint configuration.")
+@@ -254,6 +262,44 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
+ 	parser.AnnotationsPrefix = *annotationsPrefix
+ 	parser.EnableAnnotationValidation = *enableAnnotationValidation
+
++	// Perform custom flag validation if --validating-webhook is specified
++	validatingWebhookCaCertPool := x509.NewCertPool()
++	if *validatingVerifyAdmissionRequests {
++
++		if *validatingWebhookAllowCn == "" {
++			return false, nil, fmt.Errorf(
++				"use --validating-webhook-allow-cn to specify the client TLS certificate CN for authenticating AdmissionReview requests from the API server",
++			)
++		}
++
++		if *validatingWebhookAllowCaFile == "" {
++			return false, nil, fmt.Errorf(
++				"use --validating-webhook-allow-ca-file to specify a CA certificate for verifying TLS connections from the API server to the validating webhook",
++			)
++		}
++
++		caFileBytes, err := os.ReadFile(*validatingWebhookAllowCaFile)
++		if err != nil {
++			if os.IsNotExist(err) {
++				return false, nil, fmt.Errorf("failed to load CA file: file does not exist at path %s", *validatingWebhookAllowCaFile)
++			}
++			return false, nil, fmt.Errorf("failed to read CA file: %w", err)
++		}
++
++		block, _ := pem.Decode(caFileBytes)
++		if block == nil {
++			return false, nil, fmt.Errorf("invalid PEM format in CA file: %s", *validatingWebhookAllowCaFile)
++		}
++
++		cert, err := x509.ParseCertificate(block.Bytes)
++		if err != nil {
++			return false, nil, fmt.Errorf("invalid CA certificate format: %w", err)
++
++		}
++
++		validatingWebhookCaCertPool.AddCert(cert)
++	}
++
+ 	// check port collisions
+ 	if !ing_net.IsPortAvailable(*httpPort) {
+ 		return false, nil, fmt.Errorf("port %v is already in use. Please check the flag --http-port", *httpPort)
+@@ -372,6 +418,10 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
+ 		ValidationWebhookKeyPath:  *validationWebhookKey,
+ 		InternalLoggerAddress:     *internalLoggerAddress,
+ 		DisableSyncEvents:         *disableSyncEvents,
++
++		ValidatingVerifyAdmissionRequests:       *validatingVerifyAdmissionRequests,
++		ValidatingWebhookAllowCn:                *validatingWebhookAllowCn,
++		ValidatingWebhookAllowCaCertificatePool: validatingWebhookCaCertPool,
+ 	}
+
+ 	if *apiserverHost != "" {
