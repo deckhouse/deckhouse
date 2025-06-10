@@ -67,30 +67,30 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
   {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $host_name $mirror.scheme $mirror.host }}
 
   [host.{{ $mirror_host_with_scheme | quote }}]
-  capabilities = ["pull", "resolve"]
-  {{- if eq $mirror.scheme "http" }}
-  skip_verify = true
-  {{- end }}
-  {{- if and (eq $mirror.scheme "https") $mirror.ca }}
-  ca = [{{ $mirror_ca_file_path | quote }}]
-  {{- end }}
+    capabilities = ["pull", "resolve"]
+    {{- if eq $mirror.scheme "http" }}
+    skip_verify = true
+    {{- end }}
+    {{- if and (eq $mirror.scheme "https") $mirror.ca }}
+    ca = [{{ $mirror_ca_file_path | quote }}]
+    {{- end }}
 
     {{- with $mirror.auth }}
       {{- if or .auth .username }}
     [host.{{ $mirror_host_with_scheme | quote }}.auth]
         {{- if .auth }}
-    auth = {{ .auth | quote }}
+      auth = {{ .auth | quote }}
         {{- else }}
-    username = {{ .username | quote }}
-    password = {{ .password | default "" | quote }}
+      username = {{ .username | quote }}
+      password = {{ .password | default "" | quote }}
         {{- end }}
       {{- end }}
     {{- end }}
 
     {{- range $mirror.rewrites }}
     [[host.{{ $mirror_host_with_scheme | quote }}.rewrite]]
-    regex = {{ .from | quote }}
-    replace = {{ .to | quote }}
+      regex = {{ .from | quote }}
+      replace = {{ .to | quote }}
     {{- end }}
 {{- end }}
 EOF
@@ -111,6 +111,7 @@ EOF
 bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 server = {{ $host_name | quote }}
 ca = ["/etc/containerd/registry.d/{{ $host_name }}/ca.crt"]
+capabilities = ["pull", "resolve"]
 [host]
 EOF
     {{- end }}
