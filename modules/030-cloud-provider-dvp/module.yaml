@@ -1,0 +1,6 @@
+name: cloud-provider-dvp
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-dvp
+stage: Preview
