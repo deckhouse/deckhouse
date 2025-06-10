@@ -111,6 +111,7 @@
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
+ - **[dashboard]** fix display workload metrics on dashboard [#13604](https://github.com/deckhouse/deckhouse/pull/13604)
  - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
  - **[deckhouse-controller]** Fix runtime handling for the global config. [#12985](https://github.com/deckhouse/deckhouse/pull/12985)
@@ -160,6 +161,7 @@
 ## Chore
 
 
+ - **[candi]** Update Deckhouse CLI to 0.12.1 [#13887](https://github.com/deckhouse/deckhouse/pull/13887)
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
