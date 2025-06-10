@@ -10,6 +10,8 @@ builder/alpine-3.20: "sha256:fe8cca6dbefa839424ba86df6d37787cb2b07781696497aae7e
 builder/alpine-3.21: "sha256:cb259bf96ffd209e66c083888ec4e8e1ea2b163e959b12e5417f81912cfcd9bc" # from: alpine:3.21.3
 builder/alt: "sha256:ee2b848c440ecbbe0e941bcbc1e7c75001ae05662742a015594edf470e4c5465" # from: registry.altlinux.org/p11/alt:20250321
 builder/alt-2025-05-31: "sha256:ee2b848c440ecbbe0e941bcbc1e7c75001ae05662742a015594edf470e4c5465" # from: registry.altlinux.org/p11/alt:20250321
+builder/alt-go-svace: "sha256:a2f0724c489196a19a3d49739c2bd1870e387a89a2d0ba7306fd02a27e97df58" # fromImage: builder/alt
+builder/alt-go-svace-2025-05-31: "sha256:a2f0724c489196a19a3d49739c2bd1870e387a89a2d0ba7306fd02a27e97df58" # fromImage: builder/alt
 builder/golang-alpine: "sha256:701135a20b28fb9ce364e60fcea82e81cefadac38b547f651d079e2613274a36" # from: golang:1.24.3-alpine3.20
 builder/golang-alpine-1.23: "sha256:e423fb6007f30ab0c6e05c0a8c4ff0e6fa60d5cd4dea688e69b5079abfcd5ccb" # from: golang:1.23.9-alpine3.20
 builder/golang-alpine-1.24: "sha256:701135a20b28fb9ce364e60fcea82e81cefadac38b547f651d079e2613274a36" # from: golang:1.24.3-alpine3.20

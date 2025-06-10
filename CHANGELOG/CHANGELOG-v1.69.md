@@ -114,6 +114,7 @@
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
+ - **[dashboard]** fix display workload metrics on dashboard [#13604](https://github.com/deckhouse/deckhouse/pull/13604)
  - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
  - **[deckhouse-controller]** Added validation according to `RFC 1123` for module names added to `ModuleSource`. [#13644](https://github.com/deckhouse/deckhouse/pull/13644)
@@ -132,6 +133,7 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** The `alliance.ingressGateway.advertise` option was fixed up. [#13924](https://github.com/deckhouse/deckhouse/pull/13924)
  - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
@@ -168,13 +170,16 @@
 ## Chore
 
 
+ - **[candi]** Update Deckhouse CLI to 0.12.1 [#13887](https://github.com/deckhouse/deckhouse/pull/13887)
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
  - **[cloud-provider-aws]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-azure]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
+ - **[cloud-provider-dynamix]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)
  - **[cloud-provider-gcp]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-yandex]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
+ - **[cloud-provider-zvirt]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)
  - **[cloud-provider-zvirt]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cni-cilium]** Added an option to enable/disable exclusive management for CNI configuration file (`cni-exclusive`). [#12403](https://github.com/deckhouse/deckhouse/pull/12403)
  - **[control-plane-manager]** fix audit policy rules for virtualization [#13666](https://github.com/deckhouse/deckhouse/pull/13666)
