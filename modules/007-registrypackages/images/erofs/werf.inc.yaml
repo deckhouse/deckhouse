@@ -31,7 +31,7 @@ import:
   add: /usr/lib
   to: /opt/deckhouse/ld-musl-x86_64.so.1
   before: setup
-- image: erofs-utils
+- image: tools/erofs-utils
   add: /
   includePaths:
   - usr/bin/*.erofs
