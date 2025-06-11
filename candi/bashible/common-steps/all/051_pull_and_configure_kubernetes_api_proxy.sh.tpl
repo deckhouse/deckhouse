@@ -35,12 +35,21 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
   securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
-  shareProcessNamespace: true
+    fsGroup: 64535
   containers:
   - name: kubernetes-api-proxy
+    securityContext:
+      allowPrivilegeEscalation: false
+      shareProcessNamespace: true
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 64535
+      runAsNonRoot: true
+      runAsUser: 64535
+      seccompProfile:
+        type: RuntimeDefault
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
@@ -56,6 +65,18 @@ spec:
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      shareProcessNamespace: true
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 64535
+      runAsNonRoot: true
+      runAsUser: 64535
+      seccompProfile:
+        type: RuntimeDefault
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
