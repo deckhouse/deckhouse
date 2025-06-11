@@ -136,12 +136,12 @@ spec:
           livenessProbe:
             httpGet:
               path: /livez
-              port: 8080
+              port: 9404
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /livez
-              port: 8080
+              port: 9404
               scheme: HTTPS
           ports:
           - containerPort: 9404
