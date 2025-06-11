@@ -103,6 +103,16 @@ spec:
       value: "50"
   - name: healthcheck
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+      runAsGroup: 0
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      seccompProfile:
+        type: RuntimeDefault
     resources:
       requests:
         cpu: "{{ div (mul $millicpu 2) 100 }}m"
