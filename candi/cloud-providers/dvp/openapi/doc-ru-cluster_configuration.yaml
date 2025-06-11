@@ -118,7 +118,6 @@ apiVersions:
                         name:
                           description: |
                             Имя образа, который будет использоваться для создания корневого диска.
-
                             > Для установки требуются образы ОС Linux с предустановленным cloud-init.
                 etcdDisk:
                   description: |
