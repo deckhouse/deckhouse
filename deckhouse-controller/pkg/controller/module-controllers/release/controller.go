@@ -963,15 +963,57 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		}
 	}
 
+	configConfigurationErrorMetricsLabels := map[string]string{
+		"version": release.GetVersion().String(),
+		"module":  release.GetModuleName(),
+	}
+
 	if err = def.Validate(values, r.log); err != nil {
 		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
 			Message: "validation failed: " + err.Error(),
 		}
 
-		if valuesByConfig {
+		if valuesByConfig || strings.Contains(err.Error(), "is required") {
+			configConfigurationErrorMetricsLabels["error"] = err.Error()
+			r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+				1,
+				configConfigurationErrorMetricsLabels,
+			)
+
 			status.Phase = v1alpha1.ModuleReleasePhasePending
 			status.Message = "initial module config validation failed: " + err.Error()
+
+			module := new(v1alpha1.Module)
+			if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+				r.log.Error(
+					"get module failed",
+					slog.String("module", release.GetModuleName()),
+					log.Err(err),
+				)
+				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
+			}
+
+			err = utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.SetConditionFalse(
+					v1alpha1.ModuleConditionEnabledByModuleConfig,
+					"",
+					fmt.Sprintf("Initial config for module %s is not valid", release.GetModuleName()),
+				)
+				return true
+			})
+			if err != nil {
+				r.log.Error(
+					"update module conditions failed",
+					slog.String("module", release.GetModuleName()),
+					log.Err(err),
+				)
+				return nil, fmt.Errorf("update '%s' module status: %w", release.GetModuleName(), err)
+			}
+			r.log.Debug(
+				"successfully updated module conditions",
+				slog.String("module", release.GetModuleName()),
+			)
 		}
 
 		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
@@ -982,6 +1024,11 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
+
+	r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+		0,
+		configConfigurationErrorMetricsLabels,
+	)
 
 	moduleVersionPath := path.Join(r.downloadedModulesDir, release.GetModuleName(), "v"+release.GetVersion().String())
 	if err = os.RemoveAll(moduleVersionPath); err != nil {
