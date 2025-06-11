@@ -174,6 +174,13 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
+	// TODO: review this, looks like deadcode
+	storageClassSnapshots := make(map[string]*storage.StorageClass)
+	for _, snapshot := range input.Snapshots["storage_classes"] {
+		s := snapshot.(*storage.StorageClass)
+		storageClassSnapshots[s.Name] = s
+	}
+
 	storageClasses := make([]storageClass, 0, len(dvpStorageClassList))
 	for name, domain := range dvpstorageClass {
 		sc := storageClass{
