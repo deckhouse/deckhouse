@@ -26,6 +26,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/alpine
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
 import:
 - image: tools/erofs-utils
   add: /usr/lib/libc.so
@@ -44,4 +50,5 @@ shell:
   setup:
   - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
   - mv /usr/bin/*.erofs /
+  - mv /scripts/* /
   - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
