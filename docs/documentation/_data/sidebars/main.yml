@@ -961,16 +961,16 @@ entries:
               url: /user/iac.html
               draft: true
             - title:
-                en: WEB-interfaces
-                ru: WEB-интерфейсы
+                en: Web interfaces
+                ru: Веб-интерфейсы
               folders:
                 - title:
                     en: Grafana web interface
                     ru: Веб-интерфейс Grafana
                   url: /user/web/grafana.html
                 - title:
-                    en: Alertmanager-email web interface
-                    ru: Веб-интерфейс Alertmanager-email
+                    en: Alertmanager-email web UI
+                    ru: Веб-интерфейс alertmanager-email
                   url: /user/web/alertmanager.html
                 - title:
                     en: Kubeconfig web interface
