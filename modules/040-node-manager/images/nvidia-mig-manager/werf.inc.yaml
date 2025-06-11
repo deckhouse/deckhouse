@@ -1,4 +1,5 @@
 {{- $mig_manager_version := "0.12.1" }}
+{{- $binaries := "/usr/sbin/chroot" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- $version := $key | toString }}
@@ -45,6 +46,10 @@ import:
 - image: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /relocate
+  to: /
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -93,3 +98,10 @@ shell:
   - mv /src/scripts/reconfigure-mig.sh /usr/bin/
   - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager /usr/bin/reconfigure-mig.sh
 {{- end }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
