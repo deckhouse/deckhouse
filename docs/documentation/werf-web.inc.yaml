@@ -53,9 +53,9 @@ shell:
 {{ if ne .ModuleName "docs" }}
         export MODULES_DIR=/comparison
 {{ end }}
-        _tools/modules_list.sh 1>_data/modules/internal.yaml
+        _tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
         # Creating list of ALL the modules...
-        cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+        cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
         # The list of modules, which documentation should be excluded from the site...
         cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
