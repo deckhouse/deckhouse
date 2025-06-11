@@ -74,4 +74,4 @@ spec:
       - ALL
     readOnlyRootFilesystem: true
     seccompProfile:
-      type: RuntimeDefault
+      type: RuntimeDefault\
