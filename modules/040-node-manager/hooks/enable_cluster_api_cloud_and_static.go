@@ -98,10 +98,14 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	capiControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
 	capsControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
 
-	input.Logger.Infof("Flags before executing: capiControllerManagerEnabled (exists: %v; value %v) capsControllerManagerEnabled (exists: %v; value %v)",
+	input.Logger.Info("Flags before executing.",
+		"capiControllerManagerEnabled_exists",
 		capiControllerManagerEnabledBeforeExecuting.Exists(),
+		"capiControllerManagerEnabled",
 		capiControllerManagerEnabledBeforeExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
 		capsControllerManagerEnabledBeforeExecuting.Exists(),
+		"capsControllerManagerEnabled",
 		capsControllerManagerEnabledBeforeExecuting.Bool(),
 	)
 
@@ -116,12 +120,12 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Logger.Infof("hasStaticInstancesField value %v", hasStaticInstancesField)
+	input.Logger.Info("hasStaticInstancesField", "value", hasStaticInstancesField)
 
 	capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
 	hasCapiProvider := capiClusterName != ""
 
-	input.Logger.Infof("capiClusterName discovered %s: %v", capiClusterName, hasCapiProvider)
+	input.Logger.Info("capiClusterName discovered", "capiClusterName", capiClusterName, "hasCapiProvider", hasCapiProvider)
 
 	var capiEnabled bool
 	var capsEnabled bool
@@ -129,18 +133,18 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	configMapSnapshots := input.Snapshots["config_map"]
 	if len(configMapSnapshots) > 0 {
 		capiEnabledFromCM := configMapSnapshots[0].(bool)
-		input.Logger.Infof("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed: %v", capiEnabledFromCM)
+		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capiEnabledFromCM)
 
 		capiEnabled = hasCapiProvider || capiEnabledFromCM
 		capsEnabled = configMapSnapshots[0].(bool)
 
-		input.Logger.Infof("Calculated flags capiEnabled = %v capsEnabled = %v", capiEnabled, capsEnabled)
+		input.Logger.Info("Calculated flags", "capiEnabled", capiEnabled, "capsEnabled", capsEnabled)
 	} else {
 		input.Logger.Info("ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed not found")
 
 		capiEnabled = hasCapiProvider || hasStaticInstancesField
 
-		input.Logger.Infof("Calculated flags capiEnabled = %v;  capsEnabled not set", capiEnabled)
+		input.Logger.Info("Calculated flags (capsEnabled not set)", "capiEnabled", capiEnabled)
 	}
 
 	if capiEnabled {
@@ -166,10 +170,14 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	capiControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
 	capsControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
 
-	input.Logger.Infof("Flags after executing: capiControllerManagerEnabled (exists: %v; value %v) capsControllerManagerEnabled (exists: %v; value %v)",
+	input.Logger.Info("Flags after executing",
+		"capiControllerManagerEnabled_exists",
 		capiControllerManagerEnabledAfterExecuting.Exists(),
+		"capiControllerManagerEnabled",
 		capiControllerManagerEnabledAfterExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
 		capsControllerManagerEnabledAfterExecuting.Exists(),
+		"capsControllerManagerEnabled",
 		capsControllerManagerEnabledAfterExecuting.Bool(),
 	)
 
