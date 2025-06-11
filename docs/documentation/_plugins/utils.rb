@@ -12,3 +12,8 @@ def getTrueRelativeUrl(path)
     prefix + path.sub(%r!^/!, "./")
 end
 
+def compare_crd_by_name(crd_a, crd_b)
+  return crd_a[0] <=> crd_b[0] if ! (crd_a[1].dig("spec", "names", "kind") && crd_b[1].dig("spec", "names", "kind"))
+  crd_a[1]["spec"]["names"]["kind"] <=> crd_b[1]["spec"]["names"]["kind"]
+end
+

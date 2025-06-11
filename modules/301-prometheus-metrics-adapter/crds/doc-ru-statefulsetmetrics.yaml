@@ -1,0 +1,32 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: statefulsetmetrics.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  scope: Namespaced
+  names:
+    plural: statefulsetmetrics
+    singular: statefulsetmetric
+    kind: StatefulSetMetric
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          description: 'Настройка пользовательских метрик, связанных с StatefulSet в prometheus-metrics-adapter.'
+          properties:
+            spec:
+              properties:
+                query:
+                  description: |
+                    PromQL-запрос должен возвращать однозначное значение для вашей метрики. Используйте операторы группировки, такие как sum() by(), max() by() и другие. Также применяйте ключевые слова: <<.LabelMatchers>> — для выбора меток (укажите их через запятую); <<.GroupBy>> — для группировки по меткам. Пример: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>).
+    - name: v1beta1
+      served: true
+      storage: false
+      schema: *schema
