@@ -1,6 +1,6 @@
 ---
 title: "Требования"
-permalink: ru/stronghold/documentation/admin/install/requirements.html
+permalink: ru/stronghold/documentation/about/requirements.html
 lang: ru
 ---
 
