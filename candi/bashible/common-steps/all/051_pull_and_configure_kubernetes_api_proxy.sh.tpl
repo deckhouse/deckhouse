@@ -44,7 +44,7 @@ spec:
       capabilities:
         drop:
         - ALL
-      readOnlyRootFilesystem: false
+      readOnlyRootFilesystem: true
       runAsGroup: 64535
       runAsNonRoot: true
       runAsUser: 64535
@@ -71,7 +71,7 @@ spec:
       capabilities:
         drop:
         - ALL
-      readOnlyRootFilesystem: false
+      readOnlyRootFilesystem: true
       runAsGroup: 64535
       runAsNonRoot: true
       runAsUser: 64535
