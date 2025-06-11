@@ -1,4 +1,4 @@
-From 7c9c53f8dd69269b947743feb7cf571fe8e8ff94 Mon Sep 17 00:00:00 2001
+From 683aa06d0c401d1b1313111d0174d4aaaf67dae3 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -7,7 +7,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
  bpf/bpf_lxc.c                           |   2 +
  bpf/include/bpf/helpers.h               |   5 +
- bpf/lib/lb.h                            | 263 +++++++++++++++++++++++-
+ bpf/lib/lb.h                            | 270 +++++++++++++++++++++++-
  daemon/cmd/daemon_main.go               |   4 +-
  daemon/cmd/datapath.go                  |   7 +
  daemon/cmd/kube_proxy_replacement.go    |   3 +-
@@ -24,7 +24,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  22 +-
  pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 19 files changed, 509 insertions(+), 18 deletions(-)
+ 19 files changed, 516 insertions(+), 18 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -61,7 +61,7 @@ index 65ba8cf604..5892d1c4f1 100644
  static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
  static int BPF_FUNC(map_update_elem, const void *map, const void *key,
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..83246eb7d8 100644
+index 15dacfa4df..8f0b51f1b8 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
 @@ -3,6 +3,8 @@
@@ -165,7 +165,7 @@ index 15dacfa4df..83246eb7d8 100644
  
  #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
  static __always_inline __u32
-@@ -1457,6 +1510,192 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+@@ -1457,6 +1510,199 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
  }
  #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
  
@@ -245,6 +245,13 @@ index 15dacfa4df..83246eb7d8 100644
 +{
 +	if (svc->is_tmr_active)
 +		return;
++
++	/* after cilium bpf prog update we must always replace callback on new version */
++	/* otherwise old bpf prog will not deleted from system memory and its callback will be executed */
++	if (timer_set_callback(&svc->tmr, lb4_select_least_conn_backend_cb)) {
++		printk("FAILED set timer cb\n");
++		return;
++	}
 +
 +	if (timer_start(&svc->tmr, timeout, 0)) {
 +		printk("FAILED start timer\n");
@@ -358,7 +365,7 @@ index 15dacfa4df..83246eb7d8 100644
  #ifdef LB_SELECTION_PER_SERVICE
  static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
  {
-@@ -1473,6 +1712,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1473,6 +1719,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
  	case LB_SELECTION_RANDOM:
  		return lb4_select_backend_id_random(ctx, key, tuple, svc);
@@ -367,7 +374,7 @@ index 15dacfa4df..83246eb7d8 100644
  	default:
  		return 0;
  	}
-@@ -1481,6 +1722,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1481,6 +1729,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  # define lb4_select_backend_id	lb4_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb4_select_backend_id	lb4_select_backend_id_maglev
@@ -376,7 +383,7 @@ index 15dacfa4df..83246eb7d8 100644
  #elif LB_SELECTION == LB_SELECTION_FIRST
  /* Backend selection for tests that always chooses first slot. */
  static __always_inline __u32
-@@ -1762,6 +2005,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1762,6 +2012,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		if (IS_ERR(ret))
  			goto drop_err;
  
@@ -387,7 +394,7 @@ index 15dacfa4df..83246eb7d8 100644
  #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
  		_lb_act_conn_open(state->rev_nat_index, backend->zone);
  #endif
-@@ -1775,6 +2022,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1775,6 +2029,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		 * session we are likely to get a TCP RST.
  		 */
  		backend = lb4_lookup_backend(ctx, backend_id);
