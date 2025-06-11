@@ -77,6 +77,7 @@ debug: true
   - --v=2
   - --logtostderr=true
   - --stale-cache-interval=1h30m
+  - --livez-path=/livez
   env:
   - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
     valueFrom:
@@ -100,6 +101,16 @@ debug: true
   ports:
   - containerPort: 8383
     name: https-metrics
+  livenessProbe:
+    httpGet:
+      path: /livez
+      port: 8383
+      scheme: HTTPS
+  readinessProbe:
+    httpGet:
+      path: /livez
+      port: 8383
+      scheme: HTTPS
   resources:
     requests:
       ephemeral-storage: 50Mi
