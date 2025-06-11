@@ -4,18 +4,18 @@
 module "network" {
   source                       = "../../../terraform-modules/network"
   providerClusterConfiguration = var.providerClusterConfiguration
-  prefix                       = var.clusterConfiguration.prefix
+  prefix                       = local.prefix
 }
 
 module "vapp" {
   source                       = "../../../terraform-modules/vapp"
-  prefix                       = var.clusterConfiguration.prefix
+  prefix                       = local.prefix
   providerClusterConfiguration = var.providerClusterConfiguration
 }
 
 resource "vcd_vapp_org_network" "vapp_network" {
   org              = var.providerClusterConfiguration.organization
   vdc              = var.providerClusterConfiguration.virtualDataCenter
-  vapp_name        = var.clusterConfiguration.prefix
-  org_network_name = var.clusterConfiguration.prefix
+  vapp_name        = local.prefix
+  org_network_name = local.prefix
 }
