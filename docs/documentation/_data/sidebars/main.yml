@@ -961,8 +961,8 @@ entries:
               url: /user/iac.html
               draft: true
             - title:
-                en: WEB-interfaces
-                ru: WEB-интерфейсы
+                en: Web interfaces
+                ru: Веб-интерфейсы
               folders:
                 - title:
                     en: Grafana web interface
@@ -981,16 +981,16 @@ entries:
                     ru: Веб-интерфейс Console
                   url: /user/web/console.html
                 - title:
-                    en: Deckhouse tools web interface
-                    ru: Веб-интерфейс Deckhouse tools
+                    en: Web interface for downloading Deckhouse utilities
+                    ru: Веб-интерфейс загрузки утилит Deckhouse
                   url: /user/web/deckhouse-tools.html
                 - title:
                     en: Stronghold web interface
                     ru: Веб-интерфейс Stronghold
                   url: /user/web/stronghold.html
                 - title:
-                    en: Hubble web interface
-                    ru: Веб-интерфейс Hubble
+                    en: Web interface for visualizing the cluster network stack
+                    ru: Веб-интерфейс визуализации сетевого стека кластера
                   url: /user/web/hubble.html
         - title:
             en: Multitenancy
