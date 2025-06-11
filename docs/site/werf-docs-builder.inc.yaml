@@ -10,6 +10,10 @@ import:
   add: /src/docs-builder
   to: /app/server
   before: setup
+- image: d8-docs-artifacts
+  add: /export/embedded_modules.json
+  to: /app/hugo/data/dkp/embedded_modules.json
+  before: setup
 imageSpec:
   config:
     workingDir: "/app"
@@ -23,6 +27,32 @@ git:
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo/config/production/hugo.yaml
 {{ end }}
+---
+image: d8-docs-artifacts
+from: {{ .Images.BASE_ALPINE }}
+final: false
+shell:
+  setup:
+  - |
+    mkdir -p /export
+    #for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
+    for name in $(find /rawdata/embedded-modules/ -regex '.*/docs/README.md'); do
+      moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --arg module "$moduleName" '.module=$module | .embedded="true"'
+    done | jq -s  'unique_by(.module) | {entries: .}' > /export/embedded_modules.json
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+git:
+- add: /{{ .ModulePath }}
+  to: /rawdata/embedded-modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/{README,readme}.md
+  - ee/**/docs/{README,readme}.md
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
