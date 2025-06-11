@@ -155,12 +155,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8080
+            port: 10354
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8080
+            port: 10354
             scheme: HTTPS
         ports:
           - containerPort: 10354
