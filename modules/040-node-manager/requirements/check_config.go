@@ -52,6 +52,7 @@ func init() {
 				}
 				return true, nil
 			}
+			return true, nil
 		}
 
 		return false, errors.New("Not checked all configurations in dhctl secrets")
