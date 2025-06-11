@@ -74,6 +74,16 @@ metadata:
 spec:
   containers:
   - name: kube-apiserver
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+      runAsGroup: 0
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      seccompProfile:
+        type: RuntimeDefault
     readinessProbe:
       httpGet:
     {{- if hasKey . "nodeIP" }}
@@ -191,20 +201,3 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-apiserver
-  namespace: kube-system
-spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
-    capabilities:
-      drop:
-      - ALL
-    readOnlyRootFilesystem: true
-    seccompProfile:
-      type: RuntimeDefault
