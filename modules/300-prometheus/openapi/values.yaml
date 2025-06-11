@@ -238,6 +238,9 @@ properties:
                   type: string
                 customAuthToken:
                   type: string
+                headers:
+                  type: object
+                  additionalProperties: true
                 writeRelabelConfigs:
                   type: array
                   items:
