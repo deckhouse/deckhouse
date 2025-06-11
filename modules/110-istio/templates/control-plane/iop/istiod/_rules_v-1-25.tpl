@@ -67,6 +67,18 @@
   - watch
   - list
 - apiGroups:
+  - networking.istio.io
+  resources:
+  - serviceentries/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
   - telemetry.istio.io
   resources:
   - telemetries
