@@ -28,8 +28,8 @@ fromImage: builder/alpine
 final: false
 import:
 - image: tools/erofs-utils
-  add: /usr/lib
-  to: /opt/deckhouse/ld-musl-x86_64.so.1
+  add: /usr/lib/libc.so
+  to: /ld-musl-x86_64.so.1
   before: setup
 - image: tools/erofs-utils
   add: /
@@ -43,4 +43,5 @@ shell:
   - mkdir -p /opt/deckhouse
   setup:
   - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
+  - mv /usr/bin/*.erofs /
   - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall

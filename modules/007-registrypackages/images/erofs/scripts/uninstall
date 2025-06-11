@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/lsblk
+rm -f dump.erofs /opt/deckhouse/*.erofs

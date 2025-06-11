@@ -1,10 +1,10 @@
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:f3a572a4b43579eed3152da8bf62fe4646a49f7fdf7d9b435519ff084a830b72" # fromImage: builder/scratch
-base/nginx: "sha256:0c255c9f90a113bb5261bd399742c064090ca8b7ebd33d6d79a832168b977370" # fromImage: builder/scratch
-base/nginx-release-1.28.0: "sha256:0c255c9f90a113bb5261bd399742c064090ca8b7ebd33d6d79a832168b977370" # fromImage: builder/scratch
-base/python: "sha256:04307105a07b6caa35a4336c9089eb0353394af63b53724a3a29bc06bc99afbc" # fromImage: builder/scratch
-base/python-v3.12.10: "sha256:04307105a07b6caa35a4336c9089eb0353394af63b53724a3a29bc06bc99afbc" # fromImage: builder/scratch
+base/nginx: "sha256:45f69580de8be873422201a7ff574308626dc33799b8cbac1e1b48e1cd6ef41a" # fromImage: builder/scratch
+base/nginx-release-1.28.0: "sha256:45f69580de8be873422201a7ff574308626dc33799b8cbac1e1b48e1cd6ef41a" # fromImage: builder/scratch
+base/python: "sha256:c452da34a62c9e0f72b6deaa34150844c26d54759c3425f607ab92fd64be213e" # fromImage: builder/scratch
+base/python-v3.12.10: "sha256:c452da34a62c9e0f72b6deaa34150844c26d54759c3425f607ab92fd64be213e" # fromImage: builder/scratch
 builder/alpine: "sha256:aecc3f2942cc2e2d0ae0648b76e943f0f1ece49a73bb41a49aaf4d08a54a757c" # from: alpine:3.21.3
 builder/alpine-3.20: "sha256:c57112bd2caafc3dab2b4839f2dee011f6993ffdbc30d148da3d21a5e1bfd2ec" # from: alpine:3.20.6
 builder/alpine-3.21: "sha256:aecc3f2942cc2e2d0ae0648b76e943f0f1ece49a73bb41a49aaf4d08a54a757c" # from: alpine:3.21.3
@@ -28,8 +28,8 @@ builder/scratch: "sha256:3541513fb5ec0ec1d7fa7e034a33a8180313da4ce8e83a7ced77c08
 builder/src: "sha256:d32f2ae55ad39c25c725200b39923bd41f964eb9d6c1065388e9dd0abdecf035" # fromImage: builder/alt
 libs/bzip2: "sha256:b98f9d320febc003d98fff0712b4083c7aa8e7cfa9bfe2a67a64ad3630f6dcd6" # fromImage: builder/scratch
 libs/bzip2-bzip2-1.0.8: "sha256:b98f9d320febc003d98fff0712b4083c7aa8e7cfa9bfe2a67a64ad3630f6dcd6" # fromImage: builder/scratch
-libs/gdbm: "sha256:706f5858c0eea0e3123b6acc5d1a10189838b9432630cafb8340272d050fc687" # fromImage: builder/scratch
-libs/gdbm-v1.24: "sha256:706f5858c0eea0e3123b6acc5d1a10189838b9432630cafb8340272d050fc687" # fromImage: builder/scratch
+libs/gdbm: "sha256:8be3205590c58686a27824a025814003115e4b27fba99a8a9ffe7637019e51e8" # fromImage: builder/scratch
+libs/gdbm-v1.24: "sha256:8be3205590c58686a27824a025814003115e4b27fba99a8a9ffe7637019e51e8" # fromImage: builder/scratch
 libs/glibc: "sha256:b44387b9a1cee0e010bc9beec3f9646ebcccab6da7603388cea9839e32251ad9" # fromImage: builder/scratch
 libs/glibc-v2.41: "sha256:b44387b9a1cee0e010bc9beec3f9646ebcccab6da7603388cea9839e32251ad9" # fromImage: builder/scratch
 libs/json-c: "sha256:458060f3573aebff74f3148d486c0e912c7e6494fbab313e2bc4e610411f8163" # fromImage: builder/scratch
@@ -42,8 +42,8 @@ libs/libaio: "sha256:b73dc28383dc2e8ae17391c144c6254d763b53fbcce1154b2a4b040a39a
 libs/libaio-libaio-0.3.113: "sha256:b73dc28383dc2e8ae17391c144c6254d763b53fbcce1154b2a4b040a39abfe87" # fromImage: builder/scratch
 libs/libev: "sha256:2bc690555e64e048ab43ff22a5259f3d2b127f6bb187d84cc44a3f7c076d317e" # fromImage: builder/scratch
 libs/libev-v4.33: "sha256:2bc690555e64e048ab43ff22a5259f3d2b127f6bb187d84cc44a3f7c076d317e" # fromImage: builder/scratch
-libs/libevent: "sha256:b19e3f4de5efb5f059598fb12bba968ff6d86ee2b378aee5bf73b9a5797dc947" # fromImage: builder/scratch
-libs/libevent-release-2.2.1-alpha: "sha256:b19e3f4de5efb5f059598fb12bba968ff6d86ee2b378aee5bf73b9a5797dc947" # fromImage: builder/scratch
+libs/libevent: "sha256:628afa773a5f642df1aa61a8e96cec0991490c1aaa510c3a89d5d3644bfc059a" # fromImage: builder/scratch
+libs/libevent-release-2.2.1-alpha: "sha256:628afa773a5f642df1aa61a8e96cec0991490c1aaa510c3a89d5d3644bfc059a" # fromImage: builder/scratch
 libs/libffi: "sha256:4413b467e56a32f3bc610a49e7761a6c59ad86a973e4af6ed12dc5bfb2f24947" # fromImage: builder/scratch
 libs/libffi-v3.4.8: "sha256:4413b467e56a32f3bc610a49e7761a6c59ad86a973e4af6ed12dc5bfb2f24947" # fromImage: builder/scratch
 libs/libinih: "sha256:8b8f9244fe0c2c3cab9251ba2abd7f89080f9b9f8972e78643f3c4e8e0e40ab6" # fromImage: builder/scratch
@@ -56,8 +56,8 @@ libs/libxml2: "sha256:cca058485cebd1de8740374cfacef0890c5fdd4f5d1bc3da939b8bd5d9
 libs/libxml2-v2.14.3: "sha256:cca058485cebd1de8740374cfacef0890c5fdd4f5d1bc3da939b8bd5d9f4d901" # fromImage: builder/scratch
 libs/musl: "sha256:764a11ab750b8996e18f8c39876ef64c977eea1a96a87b7b9f0e6b0ab61ba83c" # fromImage: builder/scratch
 libs/musl-v1.2.5: "sha256:764a11ab750b8996e18f8c39876ef64c977eea1a96a87b7b9f0e6b0ab61ba83c" # fromImage: builder/scratch
-libs/ncurses: "sha256:4b21770190461a741205996943bb69244033214565135d36b818cdeb97b40752" # fromImage: builder/scratch
-libs/ncurses-v6.5: "sha256:4b21770190461a741205996943bb69244033214565135d36b818cdeb97b40752" # fromImage: builder/scratch
+libs/ncurses: "sha256:9af826d4323efb575c957b03d9b531d396db3a64a95a6e85334d74f6d556be72" # fromImage: builder/scratch
+libs/ncurses-v6.5: "sha256:9af826d4323efb575c957b03d9b531d396db3a64a95a6e85334d74f6d556be72" # fromImage: builder/scratch
 libs/oniguruma: "sha256:1394de0f67d2d644503b32be8727c40b313c8c4a0a9055bfb069d1575fb4885e" # fromImage: builder/scratch
 libs/oniguruma-v6.9.10: "sha256:1394de0f67d2d644503b32be8727c40b313c8c4a0a9055bfb069d1575fb4885e" # fromImage: builder/scratch
 libs/pcre2: "sha256:a61004ae9608b07e4caa0ffd15bc38eaf17cd8de462e862229644e05f153907d" # fromImage: builder/scratch
@@ -84,12 +84,12 @@ tools/coreutils: "sha256:dc304b2b99f5197b40ab5204c87e9ef20fd17223e4f4c774b23e1e9
 tools/coreutils-v9.7: "sha256:dc304b2b99f5197b40ab5204c87e9ef20fd17223e4f4c774b23e1e9180b14d69" # fromImage: builder/scratch
 tools/cosign: "sha256:764beea2f92fc6a1ad53d4c82c5b57a67a4bb0941cf3cc57f0667b51f098454a" # fromImage: builder/scratch
 tools/cosign-v2.4.3: "sha256:764beea2f92fc6a1ad53d4c82c5b57a67a4bb0941cf3cc57f0667b51f098454a" # fromImage: builder/scratch
-tools/cryptsetup: "sha256:bbe3f25d285f0cbe8350e7d073b8ddbcda81651c655ba2c2b65cd582eedebd4c" # fromImage: builder/scratch
-tools/cryptsetup-v2.7.5: "sha256:bbe3f25d285f0cbe8350e7d073b8ddbcda81651c655ba2c2b65cd582eedebd4c" # fromImage: builder/scratch
+tools/cryptsetup: "sha256:4e63a30db6f0e9d5a65d31d7ef53f824818bebf8b564d1f5805c714420649dba" # fromImage: builder/scratch
+tools/cryptsetup-v2.7.5: "sha256:4e63a30db6f0e9d5a65d31d7ef53f824818bebf8b564d1f5805c714420649dba" # fromImage: builder/scratch
 tools/e2fsprogs: "sha256:f5a5fcd1bb0a84f39044c2f746ebe006f49632b1deb03cc73ac535b383af304b" # fromImage: builder/scratch
 tools/e2fsprogs-v1.47.2: "sha256:f5a5fcd1bb0a84f39044c2f746ebe006f49632b1deb03cc73ac535b383af304b" # fromImage: builder/scratch
-tools/erofs-utils: "sha256:97d50f27b288bf9f3c8ae1d4777b268c1f643cda632d0a344b4fefc0f69648e2" # fromImage: builder/scratch
-tools/erofs-utils-v1.8.5: "sha256:97d50f27b288bf9f3c8ae1d4777b268c1f643cda632d0a344b4fefc0f69648e2" # fromImage: builder/scratch
+tools/erofs-utils: "sha256:3740a2cc02fa64b7f6bbb1645d89fff0aca6e0b3974d3c939f8e85096d82939f" # fromImage: builder/scratch
+tools/erofs-utils-v1.8.5: "sha256:3740a2cc02fa64b7f6bbb1645d89fff0aca6e0b3974d3c939f8e85096d82939f" # fromImage: builder/scratch
 tools/findutils: "sha256:d00710e10d63c5d41e83c0cb5a06032c72454b17cf54bcea5220cfc5c7636fb6" # fromImage: builder/scratch
 tools/findutils-v4.10.0: "sha256:d00710e10d63c5d41e83c0cb5a06032c72454b17cf54bcea5220cfc5c7636fb6" # fromImage: builder/scratch
 tools/gawk: "sha256:96d1818480eca4f3924ff81fbe681de6457658f2731e6cca88f7d55b5c96d8d4" # fromImage: builder/scratch
@@ -106,8 +106,8 @@ tools/lvm2: "sha256:7ce91b1fafbac6390372beefac9152d50f9904d524ed8f90e36d31bfbcc8
 tools/lvm2-v2_03_31: "sha256:7ce91b1fafbac6390372beefac9152d50f9904d524ed8f90e36d31bfbcc8fc5b" # fromImage: builder/scratch
 tools/nfs-utils: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa9d1dcb147" # fromImage: builder/scratch
 tools/nfs-utils-nfs-utils-2-8-2: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa9d1dcb147" # fromImage: builder/scratch
-tools/openssl: "sha256:1e188e26ed9edeb8944f39b5ef855bb1c175c8429d488771b83698d8338cadf9" # fromImage: builder/scratch
-tools/openssl-openssl-3.5.0: "sha256:1e188e26ed9edeb8944f39b5ef855bb1c175c8429d488771b83698d8338cadf9" # fromImage: builder/scratch
+tools/openssl: "sha256:49b4d4134046e66057d8aee8070cb53608bb0ce09ddd065dea0c618dfbf583c2" # fromImage: builder/scratch
+tools/openssl-openssl-3.5.0: "sha256:49b4d4134046e66057d8aee8070cb53608bb0ce09ddd065dea0c618dfbf583c2" # fromImage: builder/scratch
 tools/sed: "sha256:634e5ba9fb711a2ee89e8502a8260f6a76515525bcccd102ee7b145aa7e03a9a" # fromImage: builder/scratch
 tools/sed-v4.9: "sha256:634e5ba9fb711a2ee89e8502a8260f6a76515525bcccd102ee7b145aa7e03a9a" # fromImage: builder/scratch
 tools/semver: "sha256:2f6f36dc40ad42e1a3cef0aafcc8dd9a16cb4bb0fd719818101cbd99b3a46c11" # fromImage: builder/scratch
@@ -118,8 +118,8 @@ tools/tini: "sha256:6b35151c36f8f8b5acec13730d5c587059037038912a7e47ff0728ec018b
 tools/tini-v0.19.0: "sha256:6b35151c36f8f8b5acec13730d5c587059037038912a7e47ff0728ec018b0fe5" # fromImage: builder/scratch
 tools/util-linux: "sha256:8890ee465bb70ac1a59c330819b5d3e32d63870dd7055b61bca756c636269ea8" # fromImage: builder/scratch
 tools/util-linux-v2.41: "sha256:8890ee465bb70ac1a59c330819b5d3e32d63870dd7055b61bca756c636269ea8" # fromImage: builder/scratch
-tools/vim: "sha256:1879737be295f30a96d7071c538e11f6dcda20f60532f92204ae4a93c7b61b20" # fromImage: builder/scratch
-tools/vim-v9.1.1236: "sha256:1879737be295f30a96d7071c538e11f6dcda20f60532f92204ae4a93c7b61b20" # fromImage: builder/scratch
+tools/vim: "sha256:992b976b4e5f25fe458cb86d42f3f8b864683ac92e3154c3d0526bcfd7acc429" # fromImage: builder/scratch
+tools/vim-v9.1.1236: "sha256:992b976b4e5f25fe458cb86d42f3f8b864683ac92e3154c3d0526bcfd7acc429" # fromImage: builder/scratch
 tools/xfsprogs: "sha256:d210128b00ee43b75a8a0d7e0b4a805a8aaa109210b88240e2851877bcb6f448" # fromImage: builder/scratch
 tools/xfsprogs-v6.14.0: "sha256:d210128b00ee43b75a8a0d7e0b4a805a8aaa109210b88240e2851877bcb6f448" # fromImage: builder/scratch
 tools/yq: "sha256:adb6d7800d8e092e4175f85086f047ed74071227a27643ebbac261149bab856c" # fromImage: builder/scratch
