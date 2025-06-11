@@ -425,13 +425,34 @@ spec:
                         pattern: '^(.+)\:\d{1,5}$'
                     encoding:
                       type: object
-                      description: |
-                        How to encode the message.
                       properties:
                         codec:
                           type: string
                           enum: ["JSON", "CEF"]
-                          default: "JSON"
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["JSON"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     keyField:
                       type: string
                       description: |
@@ -590,12 +611,34 @@ spec:
                       description: "Address of the socket."
                     encoding:
                       type: object
-                      description: "How to encode the message."
                       properties:
                         codec:
                           type: string
                           enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
-                          default: "JSON"
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["Text", "JSON", "Syslog", "GELF"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     mode:
                       type: string
                       enum: ["TCP", "UDP"]
