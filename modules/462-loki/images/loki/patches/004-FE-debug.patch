@@ -22,7 +22,7 @@ index a3ba20ea8540e645a8a365991d53443b434f2a18..39ce81c624d366b3c1f03b23278c5dfd
 
  func schemaPeriodForTable(cfg config.SchemaConfig, tableName string) (config.PeriodConfig, bool) {
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..7faee517ea94c3c1faeb50d563d93ae40caad4e3 100644
+index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..2d5e3fcb6942031b5aa2a3cab615411d914e19dc 100644
 --- a/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 @@ -8,6 +8,7 @@ import (
@@ -53,15 +53,16 @@ index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..7faee517ea94c3c1faeb50d563d93ae4
  	exceeded, bytesToDelete := h.isDirUsageThresholdExceeded()
  	if !exceeded {
  		return
-@@ -88,6 +95,7 @@ func (h *forceExpirationHook) apply(ctx context.Context) {
+@@ -88,6 +95,8 @@ func (h *forceExpirationHook) apply(ctx context.Context) {
  			)
  			continue
  		}
++		tables = excludeNewest(tables)
 +		h.m.lastIndexRange.WithLabelValues(tables[0], tables[len(tables)-1]).SetToCurrentTime()
  		_ = level.Info(util_log.Logger).Log(
  			"msg", "found stored tables",
  			"tables", strings.Join(tables, ","),
-@@ -165,7 +173,7 @@ func (h *forceExpirationHook) listTables(ctx context.Context, indexStorageClient
+@@ -165,10 +174,17 @@ func (h *forceExpirationHook) listTables(ctx context.Context, indexStorageClient
  		}
  		filteredTables = append(filteredTables, tableName)
  	}
@@ -70,7 +71,17 @@ index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..7faee517ea94c3c1faeb50d563d93ae4
  	return filteredTables, nil
  }
 
-@@ -257,7 +265,27 @@ func (h *forceExpirationHook) evaluateExpiredChunks(ctx context.Context, tableCo
++func excludeNewest(tables []string) []string {
++	if len(tables) == 1 {
++		return tables
++	}
++	return tables[:len(tables)-1]
++}
++
+ func (h *forceExpirationHook) loadTableCompactedIndex(ctx context.Context, tableName string) (CompactedIndex, error) {
+ 	schemaCfg, ok := schemaPeriodForTable(h.c.schemaConfig, tableName)
+ 	if !ok {
+@@ -257,7 +273,27 @@ func (h *forceExpirationHook) evaluateExpiredChunks(ctx context.Context, tableCo
  			return false, nil
  		}
 
@@ -99,7 +110,7 @@ index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..7faee517ea94c3c1faeb50d563d93ae4
 
  		chunksToDelete = append(chunksToDelete, chunkID)
  		bytesDeleted = bytesDeleted + chkSize
-@@ -350,17 +378,29 @@ var base64Encoder = func(key string) string {
+@@ -350,17 +386,29 @@ var base64Encoder = func(key string) string {
  // metrics
 
  type forceExpirationHookMetrics struct {
