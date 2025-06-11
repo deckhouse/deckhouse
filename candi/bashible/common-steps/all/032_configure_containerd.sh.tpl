@@ -53,7 +53,7 @@ bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
   {{- end }}
 
     [host."{{ .registry.scheme }}://{{ .registry.address }}".auth]
-    auth = "{{ .registry.auth | default "" }}"
+    auth = {{ .registry.auth | default "" }}
 
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
