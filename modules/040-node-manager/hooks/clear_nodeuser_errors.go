@@ -27,6 +27,7 @@ import (
 
 	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -103,15 +104,20 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 func discoverNodeUsersForClear(input *go_hook.HookInput) error {
-	nodeUserSnap := input.Snapshots[nodeUserForClearSnapName]
+	nodeUserSnap := input.NewSnapshots.Get(nodeUserForClearSnapName)
 	if len(nodeUserSnap) == 0 {
 		return nil
 	}
 
 	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
-
 	for _, item := range nodeUserSnap {
-		nuForClear := item.(nodeUsersForClear)
+		var nuForClear nodeUsersForClear
+		err := item.UnmarshalTo(nuForClear)
+		if err != nil {
+			input.Logger.Error("failed to iterate over node_users_for_clear snapshot", log.Err(err))
+			return err
+		}
+
 		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,

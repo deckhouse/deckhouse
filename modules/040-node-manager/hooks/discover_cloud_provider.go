@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverCloudProviderHandler)
 
 func discoverCloudProviderHandler(input *go_hook.HookInput) error {
-	secret := input.Snapshots["cloud_provider_secret"]
+	secret := input.NewSnapshots.Get("cloud_provider_secret")
 	if len(secret) == 0 {
 		if input.Values.Exists("nodeManager.internal.cloudProvider") {
 			input.Values.Remove("nodeManager.internal.cloudProvider")

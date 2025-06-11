@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -129,24 +131,31 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	}
 
 	// Lock deckhouse main queue while the control-plane is updating.
-	snap := input.Snapshots["cpm_ds"]
-	if len(snap) == 0 || snap[0] == nil {
+	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[int64](input.NewSnapshots, "cpm_ds")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
+	}
+	if len(dsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: no control-plane-manager DaemonSet found")
 	}
 
-	dsGeneration := snap[0].(int64)
+	dsGeneration := dsSnaps[0]
 	dsGenerationStr := strconv.FormatInt(dsGeneration, 10)
 
-	snap = input.Snapshots["cpm_pods"]
+	podsSnaps := input.NewSnapshots.Get("cpm_pods")
 
-	if len(snap) == 0 {
+	if len(podsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}
 
 	expectedReadyPodsCount := 0
 	readyCount := 0
-	for _, spod := range snap {
-		pod := spod.(controlPlaneManagerPod)
+	for pod, err := range sdkobjectpatch.SnapshotIter[controlPlaneManagerPod](podsSnaps) {
+		if err != nil {
+			input.Logger.Error("failed to iterate over 'cpm_pods' snapshots", log.Err(err))
+			continue
+		}
+
 		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
 			continue
 		}

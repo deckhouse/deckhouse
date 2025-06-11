@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -69,16 +70,19 @@ type recicleMastersNode struct {
 }
 
 func handleRecicleMastersNode(input *go_hook.HookInput) error {
-	snap := input.Snapshots["master_nodes"]
+	snaps := input.NewSnapshots.Get("master_nodes")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
-	mastersName := make([]string, 0, len(snap))
-	for _, s := range snap {
-		node := s.(recicleMastersNode)
+	mastersName := make([]string, 0, len(snaps))
+	for node, err := range sdkobjectpatch.SnapshotIter[recicleMastersNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'master_nodes' snapshots: %v", err)
+		}
+
 		if node.Name == "" {
 			return fmt.Errorf("node_name should not be empty")
 		}

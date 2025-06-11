@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -94,9 +97,12 @@ func capsConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var hasStaticInstancesField bool
 
-	nodeGroupSnapshots := input.Snapshots["node_group"]
-	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
-		hasStaticInstancesField = nodeGroupSnapshot.(bool)
+	nodeGroupSnapshots := input.NewSnapshots.Get("node_group")
+	for hasStaticInstancesField, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
+		}
+
 		if hasStaticInstancesField {
 			break // we need at least one NodeGroup with staticInstances field
 		}
@@ -108,10 +114,14 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var capiEnabled bool
 	var capsEnabled bool
 
-	configMapSnapshots := input.Snapshots["config_map"]
+	configMapSnapshots, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "config_map")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'pki_checksum' snapshot: %w", err)
+	}
+
 	if len(configMapSnapshots) > 0 {
-		capiEnabled = hasCapiProvider || configMapSnapshots[0].(bool)
-		capsEnabled = configMapSnapshots[0].(bool)
+		capiEnabled = hasCapiProvider || configMapSnapshots[0]
+		capsEnabled = configMapSnapshots[0]
 	} else {
 		capiEnabled = hasCapiProvider || hasStaticInstancesField
 	}

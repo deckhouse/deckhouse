@@ -22,6 +22,7 @@ import (
 	"net"
 	"strconv"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -122,8 +123,11 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func handleAPIEndpoints(input *go_hook.HookInput) error {
 	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("kube_apiserver"))
 
-	for _, ep := range input.Snapshots["apiserver_endpoints"] {
-		endpointsSet.Add(ep.([]string)...)
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.NewSnapshots.Get("apiserver_endpoints")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'apiserver_endpoints' snapshot: %w", err)
+		}
+		endpointsSet.Add(ep...)
 	}
 	endpointsSet.Delete("") // clean faulty pods
 

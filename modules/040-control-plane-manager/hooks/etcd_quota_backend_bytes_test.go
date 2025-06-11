@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"github.com/deckhouse/module-sdk/pkg"
 )
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backend-bytes ::", func() {
@@ -161,16 +162,19 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 	Context("getNodeWithMinimalMemory", func() {
 		cases := []struct {
 			title        string
-			nodes        []go_hook.FilterResult
+			nodes        []pkg.Snapshot
 			expectedNode *etcdNode
 		}{
 			{
 				title: "For single node always return this node",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
-					}},
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
+					},
+				},
 				expectedNode: &etcdNode{
 					Memory:      gb(8),
 					IsDedicated: true,
@@ -179,37 +183,18 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 			{
 				title: "For all different nodes return with minimal memory",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: true,
-					},
-				},
-
-				expectedNode: &etcdNode{
-					Memory:      gb(8),
-					IsDedicated: true,
-				},
-			},
-
-			{
-				title: "For all different nodes return with minimal memory",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(16),
-						IsDedicated: true,
-					},
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
-					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: true,
+						},
 					},
 				},
 
@@ -221,18 +206,24 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 			{
 				title: "For all different nodes return with minimal memory",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(16),
-						IsDedicated: true,
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(16),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: true,
+						},
 					},
 				},
 
@@ -244,18 +235,53 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 			{
 				title: "For all different nodes return with minimal memory",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(16),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(16),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
+					},
+				},
+
+				expectedNode: &etcdNode{
+					Memory:      gb(8),
+					IsDedicated: true,
+				},
+			},
+
+			{
+				title: "For all different nodes return with minimal memory",
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
+					},
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: true,
+						},
+					},
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(16),
+							IsDedicated: true,
+						},
 					},
 				},
 
@@ -267,18 +293,24 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 			{
 				title: "If have dedicated node, return dedicated node",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: false,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: false,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(16),
-						IsDedicated: true,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(16),
+							IsDedicated: true,
+						},
 					},
 				},
 
@@ -290,18 +322,24 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 			{
 				title: "If have two dedicated nodes, return first dedicated node",
-				nodes: []go_hook.FilterResult{
-					&etcdNode{
-						Memory:      gb(8),
-						IsDedicated: true,
+				nodes: []pkg.Snapshot{
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(8),
+							IsDedicated: true,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(12),
-						IsDedicated: false,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(12),
+							IsDedicated: false,
+						},
 					},
-					&etcdNode{
-						Memory:      gb(16),
-						IsDedicated: false,
+					&go_hook.Wrapped{
+						Wrapped: &etcdNode{
+							Memory:      gb(16),
+							IsDedicated: false,
+						},
 					},
 				},
 
@@ -314,8 +352,9 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 
 		for _, c := range cases {
 			It(c.title, func() {
-				node := getNodeWithMinimalMemory(c.nodes)
+				node, err := getNodeWithMinimalMemory(c.nodes)
 
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(node).To(Equal(c.expectedNode))
 			})
 		}

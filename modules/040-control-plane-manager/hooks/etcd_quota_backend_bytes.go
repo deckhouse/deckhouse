@@ -184,23 +184,23 @@ func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
 	if len(snapshots) == 0 {
 		return nil, fmt.Errorf("'master_nodes' snapshot is empty")
 	}
-	firstElement := true
 	var nodeWithMinimalMemory *etcdNode
-	for node, err := range sdkobjectpatch.SnapshotIter[*etcdNode](snapshots) {
+	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](snapshots) {
 		if err != nil {
 			return nil, fmt.Errorf("cannot iterate over 'master_nodes' snapshot: %w", err)
 		}
-		if firstElement {
-			nodeWithMinimalMemory = node
-			firstElement = false
+
+		if nodeWithMinimalMemory == nil {
+			nodeWithMinimalMemory = &node
 		}
+
 		// for not dedicated nodes we will not set new quota
 		if !node.IsDedicated {
-			return node, nil
+			return &node, nil
 		}
 
 		if node.Memory < nodeWithMinimalMemory.Memory {
-			nodeWithMinimalMemory = node
+			*nodeWithMinimalMemory = node
 		}
 	}
 

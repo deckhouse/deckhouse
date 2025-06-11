@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,7 +90,7 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.Snapshots[nodesSnapshot]) == 0 {
+	if len(input.NewSnapshots.Get(nodesSnapshot)) == 0 {
 		// No nodes with enabled fencing -> nothing to do
 		return nil
 	}
@@ -103,12 +104,11 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 
 	// make map with nodes to kill
 	nodesToKill := set.New()
-	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
-		if nodeRaw == nil {
+	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.NewSnapshots.Get(nodesSnapshot)) {
+		if err != nil {
 			continue
 		}
 
-		node := nodeRaw.(fencingControllerNodeResult)
 		nodeLease, err := kubeClient.CoordinationV1().Leases("kube-node-lease").Get(context.TODO(), node.Name, metav1.GetOptions{})
 		if err != nil {
 			input.Logger.Error("Can't get node lease", log.Err(err))

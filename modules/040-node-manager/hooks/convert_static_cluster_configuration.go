@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -58,15 +59,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, convertStaticClusterConfigurationHandler)
 
 func convertStaticClusterConfigurationHandler(input *go_hook.HookInput) error {
-	secret := input.Snapshots["static_cluster_configuration"]
+	secret, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "static_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'static_cluster_configuration' snapshot: %w", err)
+	}
 	if len(secret) == 0 {
 		return nil
 	}
 
-	staticConfiguration, ok := secret[0].([]byte)
-	if !ok {
-		return fmt.Errorf("static_cluster_configuration filterFunc problem: expect []byte, got %T", staticConfiguration)
-	}
+	staticConfiguration := secret[0]
 
 	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)
 	if err != nil {

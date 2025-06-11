@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/pkg/errors"
@@ -93,17 +94,20 @@ type recicleEtcdNode struct {
 }
 
 func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
-	snap := input.Snapshots["master_nodes"]
+	snaps := input.NewSnapshots.Get("master_nodes")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
-	etcdServersEndpoints := make([]string, 0, len(snap))
-	discoveredMasterMap := make(map[string]string, len(snap))
-	for _, s := range snap {
-		node := s.(recicleEtcdNode)
+	etcdServersEndpoints := make([]string, 0, len(snaps))
+	discoveredMasterMap := make(map[string]string, len(snaps))
+	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'master_nodes' snapshots: %v", err)
+		}
+
 		if node.Name == "" {
 			return fmt.Errorf("node_name should not be empty")
 		}

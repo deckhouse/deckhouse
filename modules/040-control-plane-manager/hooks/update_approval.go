@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -148,16 +150,22 @@ type approvedPod struct {
 
 func handleUpdateApproval(input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snap := input.Snapshots["nodes"]
-	for _, s := range snap {
-		node := s.(approvedNode)
+	snaps := input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+
 		nodeMap[node.Name] = node
 	}
 
 	// Remove approved annotations if pod is ready and node has annotation
-	snap = input.Snapshots["control_plane_manager"]
-	for _, s := range snap {
-		pod := s.(approvedPod)
+	snaps = input.NewSnapshots.Get("control_plane_manager")
+	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)
+		}
+
 		if !pod.IsReady {
 			continue
 		}
@@ -168,7 +176,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 			continue
 		}
 		if node.IsApproved {
-			input.PatchCollector.MergePatch(removeApprovedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(removeApprovedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
@@ -183,7 +191,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, node := range nodeMap {
 		// Approve one node
 		if node.IsWaitingForApproval && node.IsReady && !node.IsUnschedulable {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
