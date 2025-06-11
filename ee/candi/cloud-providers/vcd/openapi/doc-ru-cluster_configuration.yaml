@@ -139,6 +139,9 @@ apiVersions:
         virtualApplicationName:
           description: |
             Имя VMware Cloud Director Virtual Application (принадлежащее Virtual Data Center).
+        edgeGatewayName:
+          description: |
+            Имя VMware Cloud Director Edge Gateway (принадлежащее Virtual Data Center).
         mainNetwork:
           description: |
             Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
