@@ -3,16 +3,20 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
 - image: {{ $.ModuleName }}/falco-artifact
-  add: /falco-package
+  add: /out
   to: /
   includePaths:
-  - usr/bin/
-  - usr/share/
-  - lib64/
+  - usr/bin/falco
+  - usr/share/falco/plugins/libcontainer.so
+  - lib64
   before: install
 - image: {{ $.ModuleName }}/falco-falcoctl-artifact
-  add: /src/falcoctl
+  add: /out/falcoctl
   to: /usr/bin/falcoctl
+  before: install
+- image: {{ $.ModuleName }}/falco-plugins-artifact
+  add: /out/usr/share/falco/plugins
+  to: /usr/share/falco/plugins
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
