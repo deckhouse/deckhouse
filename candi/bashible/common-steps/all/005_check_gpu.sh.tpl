@@ -38,7 +38,7 @@ function compare() {
 }
 required_version="450.80.02"
 
-version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,2}[.][0-9]{1,2}" /proc/driver/nvidia/version)
+version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,3}[.][0-9]{1,3}" /proc/driver/nvidia/version)
 compare $version $required_version
 
   {{- end }}
