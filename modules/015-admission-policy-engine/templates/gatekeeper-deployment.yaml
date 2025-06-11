@@ -133,6 +133,7 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:
@@ -151,6 +152,16 @@ spec:
                     resource: deployments
                     subresource: prometheus-metrics
                     name: gatekeeper-controller-manager
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
         ports:
           - containerPort: 10354
             name: https-metrics
