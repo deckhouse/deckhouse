@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ const initValues = `
   },
   "controlPlaneManager": {
     "internal": {
-      "admissionWebhookClient": {
+      "admissionWebhookClientCertificateData": {
         "cert": "",
         "key": ""
       }
@@ -79,8 +79,8 @@ var _ = Describe("control-plane-manager :: hooks :: generate_admission_webhook_c
 		})
 
 		It("Must be executed successfully", func() {
-			cert := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClient.cert").String()
-			key := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClient.key").String()
+			cert := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClientCertificateData.cert").String()
+			key := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClientCertificateData.key").String()
 
 			result, err := validateCertificate([]byte(cert), []byte(key), expectedCertCN, expectedIssuerCN)
 			if err != nil {
@@ -99,8 +99,8 @@ var _ = Describe("control-plane-manager :: hooks :: generate_admission_webhook_c
 		})
 
 		It("Must be executed successfully", func() {
-			cert := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClient.cert").String()
-			key := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClient.key").String()
+			cert := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClientCertificateData.cert").String()
+			key := executor.ValuesGet("controlPlaneManager.internal.admissionWebhookClientCertificateData.key").String()
 
 			result, err := validateCertificate([]byte(cert), []byte(key), expectedCertCN, expectedIssuerCN)
 			if err != nil {

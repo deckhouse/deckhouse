@@ -119,7 +119,7 @@
 
 ### helm_lib_admission_webhook_client_ca_certificate
 
-Renders configmap with admission client CA certificate which uses to verify the AdmissionReview requests.
+Renders a ConfigMap with the public CA certificate used to verify client TLS certificates for AdmissionReview requests, ensuring secure mTLS authentication
 
 #### Usage
 

@@ -81,19 +81,6 @@ index 7fc61bcbb..21ab4ad41 100644
  	data, err := io.ReadAll(req.Body)
  	if err != nil {
  		klog.ErrorS(err, "Failed to read request body")
-diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
-index 7b6ed4ff8..c5016ec2d 100644
---- a/internal/ingress/controller/config/config.go
-+++ b/internal/ingress/controller/config/config.go
-@@ -770,7 +770,7 @@ func NewDefault() Configuration {
- 	defGlobalExternalAuth := GlobalExternalAuth{"", "", "", "", "", append(defResponseHeaders, ""), "", "", "", []string{}, map[string]string{}, false}
-
- 	cfg := Configuration{
--		AllowSnippetAnnotations:          false,
-+		AllowSnippetAnnotations:          true,
- 		AllowCrossNamespaceResources:     true,
- 		AllowBackendServerHeader:         false,
- 		AnnotationValueWordBlocklist:     "",
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
 index e55d58682..e850ba16a 100644
 --- a/internal/ingress/controller/controller.go

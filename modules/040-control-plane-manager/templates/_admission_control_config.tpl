@@ -27,6 +27,6 @@ kind: Config
 users:
 - name: "*"
   user:
-    client-certificate-data: {{ .Values.controlPlaneManager.internal.admissionWebhookClient.cert | b64enc }}
-    client-key-data: {{ .Values.controlPlaneManager.internal.admissionWebhookClient.key | b64enc }}
+    client-certificate-data: {{ .Values.controlPlaneManager.internal.admissionWebhookClientCertificateData.cert | b64enc }}
+    client-key-data: {{ .Values.controlPlaneManager.internal.admissionWebhookClientCertificateData.key | b64enc }}
 {{- end }}

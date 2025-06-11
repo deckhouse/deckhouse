@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -80,8 +80,8 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 			input.Logger.Error(fmt.Sprintf("Failed to unmarshal certificate: %v", err))
 			return err
 		}
-		input.Values.Set("controlPlaneManager.internal.admissionWebhookClient.cert", secret.Cert)
-		input.Values.Set("controlPlaneManager.internal.admissionWebhookClient.key", secret.Key)
+		input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.cert", secret.Cert)
+		input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.key", secret.Key)
 		return nil
 	}
 	input.Logger.Debug(fmt.Sprintf("Certificate not found in secret %s/%s and will be generated", secretNamespace, secretName))
@@ -111,8 +111,8 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed generate validate webhook client certificate: %s", err)
 	}
 
-	input.Values.Set("controlPlaneManager.internal.admissionWebhookClient.cert", tls.Cert)
-	input.Values.Set("controlPlaneManager.internal.admissionWebhookClient.key", tls.Key)
+	input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.cert", tls.Cert)
+	input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.key", tls.Key)
 
 	return nil
 }

@@ -45,7 +45,7 @@ metadata:
   namespace: d8-ingress-nginx
   {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
 spec:
-  maxUnavailable: 1
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ctx 1 0) }}
   selector:
     matchLabels:
       app: validator
@@ -58,8 +58,7 @@ metadata:
   namespace: d8-ingress-nginx
   {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
   annotations:
-    ingress-nginx-controller.deckhouse.io/controller-version: {{ $version | quote }}
-    ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
+    ingress-nginx-controller.deckhouse.io/validator-version: {{ $version | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $checksum }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ctx | nindent 2 }}
@@ -83,9 +82,9 @@ spec:
       tolerations:
         {{- toYaml $crd.spec.tolerations | nindent 6 }}
       {{- else }}
-      {{- include "helm_lib_tolerations" (tuple $ctx "frontend") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ctx "system") | nindent 6 }}
       {{- end }}
-      {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ctx "production-high") | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
@@ -122,6 +121,7 @@ spec:
             timeoutSeconds: 5
           args:
             - /nginx-ingress-controller
+            - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
             - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
             - --healthz-port=10254
             - --healthz-host=0.0.0.0
@@ -175,5 +175,7 @@ spec:
 
 {{- $ctx := . }}
 {{- range $crd := $ctx.Values.ingressNginx.internal.ingressControllers }}
+  {{- if $crd.spec.validationEnabled }}
   {{ include "ingress-validator" (list $ctx $crd $crd.name) }}
+  {{- end }}
 {{- end }}

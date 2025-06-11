@@ -101,7 +101,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    admissionWebhookClient:
+    admissionWebhookClientCertificateData:
       cert: mock-cert
       key: mock-key
     effectiveKubernetesVersion: "1.32"
@@ -115,7 +115,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const moduleValuesOnlyIssuer = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -129,7 +129,7 @@ apiserver:
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -147,7 +147,7 @@ apiserver:
 
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -164,7 +164,7 @@ apiserver:
 
 	const moduleValuesCombo = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -183,7 +183,7 @@ apiserver:
 
 	const moduleValuesSuperCombo = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -204,7 +204,7 @@ apiserver:
 
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -224,7 +224,7 @@ apiserver:
 `
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"
@@ -244,7 +244,7 @@ apiserver:
 
 	const emptyApiserverConfig = `
 internal:
-  admissionWebhookClient:
+  admissionWebhookClientCertificateData:
     cert: mock-cert
     key: mock-key
   effectiveKubernetesVersion: "1.32"

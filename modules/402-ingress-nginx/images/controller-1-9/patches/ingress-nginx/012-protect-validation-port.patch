@@ -81,19 +81,6 @@ index 7fc61bcbb..21ab4ad41 100644
  	data, err := io.ReadAll(req.Body)
  	if err != nil {
  		klog.ErrorS(err, "Failed to read request body")
-diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
-index 22920ff64..0dc23b1a7 100644
---- a/internal/ingress/controller/config/config.go
-+++ b/internal/ingress/controller/config/config.go
-@@ -769,7 +769,7 @@ func NewDefault() Configuration {
- 	defGlobalExternalAuth := GlobalExternalAuth{"", "", "", "", "", append(defResponseHeaders, ""), "", "", "", []string{}, map[string]string{}, false}
-
- 	cfg := Configuration{
--		AllowSnippetAnnotations:          false,
-+		AllowSnippetAnnotations:          true,
- 		AllowCrossNamespaceResources:     true,
- 		AllowBackendServerHeader:         false,
- 		AnnotationValueWordBlocklist:     "",
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
 index f105b9c71..1fec21115 100644
 --- a/internal/ingress/controller/controller.go
@@ -146,84 +133,6 @@ index f105b9c71..1fec21115 100644
 
  	if n.cfg.DisableCatchAll && ing.Spec.DefaultBackend != nil {
  		return fmt.Errorf("this deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.defaultBackend' or set DisableCatchAll flag to false")
-diff --git a/internal/ingress/controller/controller.go.orig b/internal/ingress/controller/controller.go.orig
-index cb8d3712c..f105b9c71 100644
---- a/internal/ingress/controller/controller.go.orig
-+++ b/internal/ingress/controller/controller.go.orig
-@@ -772,7 +772,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
- 					continue
- 				}
-
--				upsName := upstreamName(ing.Namespace, path.Backend.Service)
-+				upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
-
- 				ups := upstreams[upsName]
-
-@@ -937,6 +937,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
- 					nb := upstream.DeepCopy()
- 					nb.Name = name
- 					nb.Endpoints = endps
-+					nb.Service = location.DefaultBackend
- 					aUpstreams = append(aUpstreams, nb)
- 					location.DefaultBackendUpstreamName = name
-
-@@ -1004,10 +1005,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
-
- 		var defBackend string
- 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
--			defBackend = upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
-+			defBackend = upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
- 			klog.V(3).Infof("Creating upstream %q", defBackend)
- 			upstreams[defBackend] = newUpstream(defBackend)
-+			upstreams[defBackend].Ingress = &ing.Ingress
-
- 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
- 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
-@@ -1064,7 +1066,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
- 					continue
- 				}
-
--				name := upstreamName(ing.Namespace, path.Backend.Service)
-+				name := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
- 				svcName, svcPort := upstreamServiceNameAndPort(path.Backend.Service)
- 				if _, ok := upstreams[name]; ok {
- 					continue
-@@ -1073,6 +1075,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
- 				klog.V(3).Infof("Creating upstream %q", name)
- 				upstreams[name] = newUpstream(name)
- 				upstreams[name].Port = svcPort
-+				upstreams[name].Ingress = &ing.Ingress
-
- 				upstreams[name].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
- 				upstreams[name].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
-@@ -1305,7 +1308,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
- 		}
-
- 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
--			defUpstream := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
-+			defUpstream := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
- 			if backendUpstream, ok := upstreams[defUpstream]; ok {
- 				// use backend specified in Ingress as the default backend for all its rules
-@@ -1580,7 +1583,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
- ) {
- 	// merge catch-all alternative backends
- 	if ing.Spec.DefaultBackend != nil {
--		upsName := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
-+		upsName := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
- 		altUps := upstreams[upsName]
-
-@@ -1627,7 +1630,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
- 				continue
- 			}
-
--			upsName := upstreamName(ing.Namespace, path.Backend.Service)
-+			upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
-
- 			altUps := upstreams[upsName]
-
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
 index 6951275c9..3757f04ce 100644
 --- a/internal/ingress/controller/nginx.go
@@ -255,41 +164,6 @@ index 6951275c9..3757f04ce 100644
  			// disable http/2
  			// https://github.com/kubernetes/kubernetes/issues/80313
  			// https://github.com/kubernetes/ingress-nginx/issues/6323#issuecomment-737239159
-diff --git a/internal/ingress/controller/nginx.go.orig b/internal/ingress/controller/nginx.go.orig
-index 488a029dd..6951275c9 100644
---- a/internal/ingress/controller/nginx.go.orig
-+++ b/internal/ingress/controller/nginx.go.orig
-@@ -73,6 +73,8 @@ const (
- 	emptyUID         = "-1"
- )
-
-+var tmpDir = os.TempDir() + "/nginx/"
-+
- // NewNGINXController creates a new NGINX Ingress controller.
- func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXController {
- 	eventBroadcaster := record.NewBroadcaster()
-@@ -636,7 +638,6 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
- 	if len(cfg) == 0 {
- 		return fmt.Errorf("invalid NGINX configuration (empty)")
- 	}
--	tmpDir := os.TempDir() + "/nginx"
- 	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
- 	if err != nil {
- 		return err
-@@ -1043,11 +1044,11 @@ func createOpentelemetryCfg(cfg *ngx_config.Configuration) error {
- func cleanTempNginxCfg() error {
- 	var files []string
-
--	err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
-+	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
- 		if err != nil {
- 			return err
- 		}
--		if info.IsDir() && os.TempDir() != path {
-+		if info.IsDir() && tmpDir != path {
- 			return filepath.SkipDir
- 		}
-
 diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
 index d3bc4ee86..3842fcfd2 100644
 --- a/pkg/flags/flags.go
