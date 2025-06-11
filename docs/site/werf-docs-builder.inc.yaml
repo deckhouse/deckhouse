@@ -36,14 +36,27 @@ shell:
   - |
     mkdir -p /export
     #for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
-    for name in $(find /rawdata/embedded-modules/ -regex '.*/docs/README.md'); do
+    for name in $(find /rawdata/embedded-modules/ -regex '^.\+/modules/[^/]\+/docs/README.md$'); do
       moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
       awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --arg module "$moduleName" '.module=$module | .embedded="true"'
     done | jq -s  'unique_by(.module) | {entries: .}' > /export/embedded_modules.json
+    MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
+    if [ "$MODULES_COUNT" -le 10 ]; then
+      echo "Got only $MODULES_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got ${MODULES_COUNT} DKP embedded modules."
+      echo
+    fi
 import:
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
   before: setup
 git:
 - add: /{{ .ModulePath }}
