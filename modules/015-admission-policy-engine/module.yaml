@@ -1,5 +1,4 @@
 name: admission-policy-engine
-weight: 15
 stage: "General Availability"
 subsystems:
   - security
@@ -8,5 +7,3 @@ description: |
   Admission policy engine module
 descriptions:
   en: Admission policy engine module
-requirements:
-  bootstrapped: true

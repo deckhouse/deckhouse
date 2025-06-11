@@ -1,4 +1,5 @@
 name: cloud-provider-gcp
+system: true
 weight: 30
 subsystems:
   - infrastructure

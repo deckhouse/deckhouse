@@ -1,4 +1,5 @@
 name: deckhouse
+system: true
 weight: 2
 stage: "General Availability"
 subsystems:

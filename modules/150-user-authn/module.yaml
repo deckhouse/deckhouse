@@ -1,5 +1,4 @@
 name: user-authn
-weight: 150
 stage: "General Availability"
 subsystems:
   - security

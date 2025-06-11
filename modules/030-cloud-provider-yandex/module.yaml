@@ -1,4 +1,5 @@
 name: cloud-provider-yandex
+system: true
 weight: 30
 subsystems:
   - infrastructure
