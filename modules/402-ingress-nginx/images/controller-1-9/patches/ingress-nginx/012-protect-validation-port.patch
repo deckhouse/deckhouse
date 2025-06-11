@@ -82,7 +82,7 @@ index 7fc61bcbb..21ab4ad41 100644
  	if err != nil {
  		klog.ErrorS(err, "Failed to read request body")
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index f105b9c71..1fec21115 100644
+index e55d58682..8930eef92 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -116,9 +116,21 @@ index f105b9c71..1fec21115 100644
 
  	MonitorMaxBatchSize int
 
-@@ -332,10 +335,12 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
- 		return nil
+@@ -325,16 +328,19 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
+ 		}
  	}
+
+-	// Do not attempt to validate an ingress that's not meant to be controlled by the current instance of the controller.
+-	if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
+-		klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
+-		return nil
+-	}
++	// Commented out the ingress class check in the ingress validation logic to allow usage of the --watch-namespace flag
++	// in a broader or more flexible way.
++	//if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
++	//	klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
++	//	return nil
++	//}
 
 -	if n.cfg.Namespace != "" && ing.ObjectMeta.Namespace != n.cfg.Namespace {
 -		klog.Warningf("ignoring ingress %v in namespace %v different from the namespace watched %s", ing.Name, ing.ObjectMeta.Namespace, n.cfg.Namespace)
@@ -134,7 +146,7 @@ index f105b9c71..1fec21115 100644
  	if n.cfg.DisableCatchAll && ing.Spec.DefaultBackend != nil {
  		return fmt.Errorf("this deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.defaultBackend' or set DisableCatchAll flag to false")
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 6951275c9..3757f04ce 100644
+index 89530abc0..42a1c00a0 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
 @@ -116,12 +116,24 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
