@@ -31,7 +31,6 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
-  - chown 64535:64535 kube-apiserver-healthcheck
   - chmod 0700 kube-apiserver-healthcheck
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
