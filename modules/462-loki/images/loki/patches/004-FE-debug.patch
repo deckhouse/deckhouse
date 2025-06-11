@@ -1,5 +1,28 @@
+diff --git a/pkg/storage/stores/indexshipper/compactor/compactor.go b/pkg/storage/stores/indexshipper/compactor/compactor.go
+index a3ba20ea8540e645a8a365991d53443b434f2a18..39ce81c624d366b3c1f03b23278c5dfde85fa503 100644
+--- a/pkg/storage/stores/indexshipper/compactor/compactor.go
++++ b/pkg/storage/stores/indexshipper/compactor/compactor.go
+@@ -834,7 +834,18 @@ func sortTablesByRange(tables []string) {
+ 		// less than if start time is after produces a most recent first sort order
+ 		return tableRanges[tables[i]].Start.After(tableRanges[tables[j]].Start)
+ 	})
++}
++
++func sortTablesByRangeOldestFirst(tables []string) {
++	tableRanges := make(map[string]model.Interval)
++	for _, table := range tables {
++		tableRanges[table] = retention.ExtractIntervalFromTableName(table)
++	}
+
++	sort.Slice(tables, func(i, j int) bool {
++		// less than if end time is before produces oldest first sort order
++		return tableRanges[tables[i]].End.Before(tableRanges[tables[j]].End)
++	})
+ }
+
+ func schemaPeriodForTable(cfg config.SchemaConfig, tableName string) (config.PeriodConfig, bool) {
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..feed03c1233e6eabddcd4d511ed03bb20a3d2422 100644
+index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..7faee517ea94c3c1faeb50d563d93ae40caad4e3 100644
 --- a/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 @@ -8,6 +8,7 @@ import (
@@ -38,6 +61,15 @@ index c9aa63acd33a7c8ed4f718f04d82fadd8516d2db..feed03c1233e6eabddcd4d511ed03bb2
  		_ = level.Info(util_log.Logger).Log(
  			"msg", "found stored tables",
  			"tables", strings.Join(tables, ","),
+@@ -165,7 +173,7 @@ func (h *forceExpirationHook) listTables(ctx context.Context, indexStorageClient
+ 		}
+ 		filteredTables = append(filteredTables, tableName)
+ 	}
+-	sortTablesByRange(filteredTables)
++	sortTablesByRangeOldestFirst(filteredTables)
+ 	return filteredTables, nil
+ }
+
 @@ -257,7 +265,27 @@ func (h *forceExpirationHook) evaluateExpiredChunks(ctx context.Context, tableCo
  			return false, nil
  		}
