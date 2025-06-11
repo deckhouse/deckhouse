@@ -37,6 +37,7 @@ fi
 
 
 {{- if eq .cri "ContainerdV2" }}
+mkdir -p  /etc/containerd/registry.d/_default
 bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
 [host."https://registry-1.docker.io"]
   capabilities = ["pull", "resolve"]
@@ -176,13 +177,6 @@ oom_score = 0
       conf_template = ''
       ip_pref = ''
       use_internal_loopback = false
-
-  [plugins."io.containerd.gc.v1.scheduler"]
-    pause_threshold = 0.02
-    deletion_threshold = 0
-    mutation_threshold = 100
-    schedule_delay = "0s"
-    startup_delay = "100ms"
 
   [plugins.'io.containerd.differ.v1.erofs']
     mkfs_options = []
