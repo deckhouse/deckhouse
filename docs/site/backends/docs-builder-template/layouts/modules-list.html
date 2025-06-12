@@ -14,6 +14,7 @@
 
 <script type="text/javascript" src='/assets/js/tile.js'></script>
 
+{{ $lang := .Site.Language.Lang }}
 {{ $modulesChannelsData := .Site.Data.modules.channels }}
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
@@ -54,14 +55,14 @@
 
 {{/* hugo.Store.SetInMap "modulesList" (sort (hugo.Store.Get "modulesList") "title" "asc") */}}
 
-
+<p><strong>{{ T "found" | humanize }} {{ T "modules2" }}: {{ hugo.Store.Get "modulesList" | len }}</strong></p>
 <hr />
 
       <div class="block__tile">
       {{- range hugo.Store.Get "modulesList" }}
         <a class="button-tile" href="{{ .url }}">
         <h2 class="button-tile__title">{{ .module }}</h2>
-        <p class="button-tile__descr">{{ .description }}</p>
+        <p class="button-tile__descr">{{ if and (index . $lang) (index (index . $lang) "description") }}{{ (index (index . $lang) "description") }}{{ else }}{{ .description }}{{ end }}</p>
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
               {{range .tags}}
