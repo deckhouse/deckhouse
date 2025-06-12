@@ -508,7 +508,7 @@ kubectl wait --for=delete pod \
 	--timeout=5m \
 	--field-selector "spec.nodeName=${NODE_NAME}" \
 	-n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
-	-l app=nvidia-device-plugin-daemonset
+	-l app=nvidia-device-plugin
 
 echo "Waiting for gpu-feature-discovery to shutdown"
 kubectl wait --for=delete pod \
