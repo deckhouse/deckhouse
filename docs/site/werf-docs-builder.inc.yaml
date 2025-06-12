@@ -38,7 +38,8 @@ shell:
     #for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
     for name in $(find /rawdata/embedded-modules/ -regex '^.\+/modules/[^/]\+/docs/README.md$'); do
       moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
-      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --arg module "$moduleName" '.module=$module | .embedded="true"'
+      DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' )
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" 'select(. != null) | .module=$module | .embedded="true" | if $data_ru != null then . + {ru: $data_ru} end '
     done | jq -s  'unique_by(.module) | {entries: .}' > /export/embedded_modules.json
     MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
     if [ "$MODULES_COUNT" -le 10 ]; then
@@ -64,8 +65,8 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths:
-  - modules/**/docs/{README,readme}.md
-  - ee/**/docs/{README,readme}.md
+  - modules/**/docs/{README,readme}*.md
+  - ee/**/docs/{README,readme}*.md
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
