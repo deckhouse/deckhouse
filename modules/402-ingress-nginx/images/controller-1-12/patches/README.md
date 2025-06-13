@@ -75,3 +75,13 @@ Without always option toggled, ingress-nginx does not set the cookie in case if 
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 <https://github.com/kubernetes/ingress-nginx/pull/8213>
+
+### 012-restore-validation.patch
+
+Re-enables configuration validation for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
+
+### 013-protect-validation-port.patch
+
+Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
+which the validator server trusts (CA and Common Name verification).  
+Without a valid client certificate, access to the validation service will be denied.

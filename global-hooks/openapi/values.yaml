@@ -19,10 +19,18 @@ properties:
             default: {}
             properties:
               cert:
-                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
               key:
-                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+                type: string
+          admissionWebhookClientCA:
+            type: object
+            default: {}
+            description: |
+              The Certificate Authority (CA) certificate used to sign and validate the ValidatingAdmissionWebhook client certificate
+            properties:
+              cert:
+                type: string
+              key:
                 type: string
           resourcesRequests:
             type: object

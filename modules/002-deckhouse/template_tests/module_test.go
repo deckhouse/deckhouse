@@ -51,6 +51,11 @@ discovery:
     system: 1
 modules:
   placement: {}
+internal:
+  modules:
+    admissionWebhookClientCA:
+      cert: mock-cert
+      key: mock-key
 `
 
 	globalValues2 = `
@@ -73,6 +78,11 @@ discovery:
     system: 1
 modules:
   placement: {}
+internal:
+  modules:
+    admissionWebhookClientCA:
+      cert: mock-cert
+      key: mock-key
 `
 
 	clusterIsBootstrapped = `
