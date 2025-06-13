@@ -1,4 +1,5 @@
-# Copyright 2025 Flant JSC
+#!/bin/bash
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .runType "Normal" }}
-  {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
-mkdir -p /var/lib/node_labels
-label_path="/var/lib/node_labels/containerd-conf"
-
-# Check additional configs containerd
-if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  label_value="custom"
-else
-  label_value="default"
-fi
-
-echo "node.deckhouse.io/containerd-config=${label_value}" > "${label_path}"
-  {{- else -}}
-rm -f "${label_path}"
-  {{- end  }}
-{{- end  }}
+set -Eeo pipefail
+apt-mark unhold containerd.io
+dpkg -r containerd.io
