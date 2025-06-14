@@ -445,9 +445,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
-	"staticRoutingManager": map[string]interface{}{
-		"agent": "imageHash-staticRoutingManager-agent",
-	},
 	"terraformManager": map[string]interface{}{
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
