@@ -78,7 +78,8 @@ const labels = {
   'e2e/use/cis': { type: 'e2e-use', cis: true },
 
   // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' }
+  'security/rootless': { type: 'security', security: 'rootless' },
+  'security/cve': { type: 'security', security: 'cve' }
 };
 module.exports.knownLabels = labels;
 
