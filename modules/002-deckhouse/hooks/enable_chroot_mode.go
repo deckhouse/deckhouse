@@ -53,7 +53,7 @@ func applyConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 func detectChrootMode(input *go_hook.HookInput) error {
 	var enabled bool
-	if len(input.Snapshots["chroot-configmap"]) != 0 {
+	if len(input.NewSnapshots.Get("chroot-configmap")) != 0 {
 		enabled = true
 	}
 

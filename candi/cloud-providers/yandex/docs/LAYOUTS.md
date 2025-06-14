@@ -12,7 +12,7 @@ In this placement strategy, nodes do not have public IP addresses allocated to t
 {% endalert %}
 
 ![Yandex Cloud Standard Layout scheme](../../images/cloud-provider-yandex/yandex-standard.png)
-<!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10422&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
 
@@ -89,7 +89,7 @@ In this layout, NAT (of any kind) is not used, and each node is assigned a publi
 > **Caution!** The cloud-provider-yandex module does not support Security Groups, so all cluster nodes will be available without connection restrictions.
 
 ![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/yandex-withoutnat.png)
-<!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10557&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
 
@@ -167,7 +167,7 @@ Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR
 If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
 ![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/yandex-withnatinstance.png)
-<!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10034&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
 

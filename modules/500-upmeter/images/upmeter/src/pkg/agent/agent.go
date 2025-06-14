@@ -61,6 +61,13 @@ type DynamicProbesConfig struct {
 	NodeGroups         []string
 	Zones              []string
 	ZonePrefix         string
+	Converge           ConvergeProbeConfig
+}
+
+type ConvergeProbeConfig struct {
+	WindowSize                  int
+	FreezeThreshold             time.Duration
+	AllowedTasksPerTimeInterval float64
 }
 
 func NewConfig() *Config {
@@ -93,6 +100,12 @@ func (a *Agent) Start(ctx context.Context) error {
 		NodeGroups:              a.config.DynamicProbes.NodeGroups,
 		Zones:                   a.config.DynamicProbes.Zones,
 		ZonePrefix:              a.config.DynamicProbes.ZonePrefix,
+
+		Converge: probe.ConvergeConfig{
+			WindowSize:                  a.config.DynamicProbes.Converge.WindowSize,
+			FreezeThreshold:             a.config.DynamicProbes.Converge.FreezeThreshold,
+			AllowedTasksPerTimeInterval: a.config.DynamicProbes.Converge.AllowedTasksPerTimeInterval,
+		},
 	}
 
 	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))

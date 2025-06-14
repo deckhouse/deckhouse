@@ -19,10 +19,10 @@ properties:
             default: {}
             properties:
               cert:
-                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
               key:
-                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
           resourcesRequests:
             type: object
@@ -55,7 +55,7 @@ properties:
     x-examples: [ dev ]
   deckhouseEdition:
     type: string
-    enum: [Unknown, CE, FE, EE, CSE, BE, SE, SE-plus ]
+    enum: [ Unknown, CE, FE, EE, CSE, BE, SE, SE-plus ]
     x-examples: [ FE ]
   enabledModules:
     type: array
@@ -63,8 +63,8 @@ properties:
       type: string
     x-examples:
     # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
-    - ["cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "priority-class", "prometheus-crd", "operator-prometheus", "operator-prometheus"]
-    - ["cert-manager", "prometheus", "priority-class"]
+    - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "priority-class", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
+    - [ "cert-manager", "prometheus", "priority-class" ]
   discovery:
     additionalProperties: true
     type: object
@@ -111,7 +111,7 @@ properties:
           Kubernetes apiserver CA certificate.
           It gets from /var/run/secrets/kubernetes.io/serviceaccount/ca.crt file
         x-examples:
-          - "K8S\nCA\nMultilne"
+        - "K8S\nCA\nMultilne"
       prometheusScrapeInterval:
         type: integer
         default: 30
@@ -171,7 +171,14 @@ properties:
         description: |
           List of GVKs installed from the modules' crds directories.
         x-examples:
-        - ["deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule"]
+        - [ "deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule" ]
+      dvpNestingLevel:
+        type: integer
+        default: 0
+        minimum: 0
+        description: |
+          Nested level of virtualization.
+        x-examples: [ 1 ]
   modulesImages:
     additionalProperties: true
     type: object
@@ -198,7 +205,7 @@ properties:
             x-examples: [ "registry\nCA\nMultiline" ]
           scheme:
             type: string
-            enum: ["http", "https"]
+            enum: [ "http", "https" ]
             description: |
               Scheme for registry
             x-examples: [ "https" ]

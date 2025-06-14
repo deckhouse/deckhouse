@@ -6,10 +6,14 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
@@ -51,15 +55,19 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 func handleEgressGatewayPolicies(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_egress_gateway_policy")
-	input.Values.Set("cniCilium.internal.egressGatewayPolicies", input.Snapshots["egressgatewaypolicies"])
+	egressGatewayPoliciesSnaps, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayPolicyInfo](input.NewSnapshots, "egressgatewaypolicies")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal egressgatewaypolicies snapshot: %w", err)
+	}
+	input.Values.Set("cniCilium.internal.egressGatewayPolicies", egressGatewayPoliciesSnaps)
 
 	egressGatewayMap := input.Values.Get("cniCilium.internal.egressGatewaysMap").Map()
 
-	for _, policySnap := range input.Snapshots["egressgatewaypolicies"] {
-		policy, ok := policySnap.(EgressGatewayPolicyInfo)
-		if !ok {
+	for policy, err := range sdkobjectpatch.SnapshotIter[EgressGatewayPolicyInfo](input.NewSnapshots.Get("egressgatewaypolicies")) {
+		if err != nil {
 			continue
 		}
+
 		if _, exists := egressGatewayMap[policy.EgressGatewayName]; !exists {
 			input.MetricsCollector.Set("d8_cni_cilium_orphan_egress_gateway_policy", 1, map[string]string{"name": policy.Name, "egressgateway": policy.EgressGatewayName}, metrics.WithGroup("d8_cni_cilium_egress_gateway_policy"))
 		}

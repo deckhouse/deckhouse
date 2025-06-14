@@ -6,3 +6,6 @@ linters-settings:
     exclude-rules:
       enum:
         - properties.addressPools.items.properties.protocol
+  templates:
+    grafana-dashboards:
+      disable: true

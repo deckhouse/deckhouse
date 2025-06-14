@@ -19,7 +19,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       deprecated: true
       schema:
         openAPIV3Schema:
@@ -78,7 +78,7 @@ spec:
           description: 'Detailed description.'
     - name: v1alpha2
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           type: object

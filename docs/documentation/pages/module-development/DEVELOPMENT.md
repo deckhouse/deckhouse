@@ -29,6 +29,31 @@ To force scan you can change the interval or set the `renew=""` annotation on Mo
 
 The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the `ModulePullOverride`.
 
+Deckhouse provides the ability to temporarily change a module's behavior using the `ModulePullOverride` object. This object is created separately from `module.yaml` and can override certain aspects of module management:
+
+- `unmanaged` — *boolean*. Disables Deckhouse's control over the module (no updates or deletions will occur).
+- `disable` — *boolean*. Temporarily disables the module and removes all of its resources.
+- `terminating` — *boolean*. Transitions the module to a deletion state, causing all module resources and the `Module` object itself to be removed.
+- `rollback` — *boolean*. If set to `true`, when the `ModulePullOverride` object is deleted, Deckhouse will:
+  - remove the module's artifacts;
+  - restart itself;
+  - revert to the previous stable version of the module.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePullOverride
+metadata:
+  name: example
+spec:
+  version: v1.2.3
+  unmanaged: false
+  disable: false
+  terminating: false
+  rollback: true
+```
+
 You can get the result of applying ModulePullOverride in the message (column `MESSAGE`) when retrieving ModulePullOverride information. The value `Ready` indicates the successful application of ModulePullOverride parameters. Any other value indicates conflict.
 
 Example of absence of conflicts when using ModulePullOverride:
@@ -95,6 +120,33 @@ To update the module without waiting for the next update cycle to begin, you can
 ```sh
 kubectl annotate mpo <name> renew=""
 ```
+
+## Module auto-update logic
+
+![Module auto-update logic](../../images/module-development/module_update_flow.svg)
+
+> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+
+1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
+
+1. **Module disabling**. When a module is disabled (`disable module <module name>`):
+   - The module stops receiving new releases.
+   - The currently deployed version remains in the cluster with the `Deployed` status.
+
+1. **Behavior on re-enabling**.
+
+   If the module is re-enabled within 72 hours:
+   - The previously deployed version (ModuleRelease v1.0.0) is used.
+   - New releases are checked.
+   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
+   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+
+   If the module is re-enabled after 72 hours:
+   - The old version is deleted (`delete ModuleRelease v1.0.0`).
+   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
+   - The cycle starts again as if the module was enabled for the first time (see step 1).
+
+1. **Behavior of a disabled module**. If a module is disabled, no new releases are downloaded. The previously deployed version (the last one that was enabled) is removed after 72 hours if the module is not re-enabled within that time.
 
 ## How it works
 

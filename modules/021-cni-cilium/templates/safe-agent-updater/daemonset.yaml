@@ -53,7 +53,7 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: safe-agent-updater
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple . ">= 5.8") | nindent 6 }}
       - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
