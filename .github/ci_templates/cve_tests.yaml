@@ -1,3 +1,33 @@
+{!{ define "remove_labels_job" }!}
+{!{- $ctx := . -}!}
+# <template: remove_labels_job>
+remove_labels:
+  name: Remove labels
+  runs-on: ubuntu-latest
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Remove labels
+      id: remove
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const label = "security/cve'"
+          const ci = require('./.github/scripts/js/ci');
+          return await ci.removeLabel({github, context, core, github.event.inputs.issue_number, label});
+# </template: remove_labels_job>
+{!{- end -}!}
+
+{!{ define "exctract_pr_number" }!}
+# <template: exctract_pr_number>
+- name: Extract PR number from ref
+  id: extract_pr
+  run: |
+    echo "REF=${{ github.event.inputs.pull_request_ref }}"  # для отладки
+    PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
+    echo "PR_NUMBER=$PR_NUMBER"
+    echo "TAG=$PR_NUMBER" >> $GITHUB_ENV
+# </template: exctract_pr_number>
+{!{- end -}!}
 {!{ define "cve_scan_deckhouse_images" }!}
 # <template: cve_scan_deckhouse_images>
 - name: Set scan target type
