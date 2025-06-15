@@ -300,6 +300,19 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
+  "snapshot-controller": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/snapshot-controller/alpha/"
+  },
   "stronghold": {
     "editions": [
       "be",
