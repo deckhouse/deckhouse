@@ -43,24 +43,6 @@ import:
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup
-- image: tools/jq
-  add: /usr/bin/jq
-  before: setup
-- image: tools/sed
-  add: /usr/bin/sed
-  before: setup
-- image: tools/grep
-  add: /usr/bin/grep
-  before: setup
-- image: tools/gawk
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/*awk*
-  before: setup
-- image: tools/findutils
-  add: /usr/bin/find
-  before: setup
 - image: tools/coreutils
   add: /
   to: /
