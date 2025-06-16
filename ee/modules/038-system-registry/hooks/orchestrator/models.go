@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	"crypto/x509"
+
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
@@ -31,7 +33,7 @@ type Params struct {
 type Inputs struct {
 	Params          Params
 	RegistrySecret  deckhouse_registry.Config
-	IngressClientCA string
+	IngressClientCA *x509.Certificate
 
 	PKI             pki.Inputs
 	Secrets         secrets.Inputs

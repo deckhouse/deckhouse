@@ -197,11 +197,10 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}
 
-	ingressClientCA, exists := helpers.GetIngressClientCAFromGlobalValues(input)
-	if !exists {
-		return fmt.Errorf("get Ingress client CA value error: CA is empty")
+	inputs.IngressClientCA, err = helpers.GetIngressClientCA(input)
+	if err != nil {
+		return fmt.Errorf("get Ingress client CA value error: %w", err)
 	}
-	inputs.IngressClientCA = ingressClientCA
 
 	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
