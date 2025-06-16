@@ -71,6 +71,11 @@ spec:
                     operator: In
                     values:
                       - "true"
+              - matchExpressions:
+                  - key: nvidia.com/gpu.deploy.gpu-feature-discovery
+                    operator: In
+                    values:
+                      - "true"
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists

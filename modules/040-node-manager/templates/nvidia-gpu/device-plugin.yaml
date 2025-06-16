@@ -66,6 +66,11 @@ spec:
                     operator: In
                     values:
                     - {{ $ng.name | quote }}
+              - matchExpressions:
+                  - key: nvidia.com/gpu.deploy.device-plugin
+                    operator: In
+                    values:
+                      - "true"
       priorityClassName: system-node-critical
       imagePullSecrets:
         - name: deckhouse-registry
