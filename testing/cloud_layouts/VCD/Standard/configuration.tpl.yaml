@@ -29,7 +29,7 @@ spec:
       placement:
         customTolerationKeys:
           - node
-  version: 1
+  version: 2
 
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -85,6 +85,6 @@ kind: ModuleConfig
 metadata:
   name: istio
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
