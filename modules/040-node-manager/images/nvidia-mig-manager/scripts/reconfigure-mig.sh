@@ -183,7 +183,7 @@ HOST_GPU_CLIENT_SERVICES_STOPPED=()
 
 if [ "${WITH_SHUTDOWN_HOST_GPU_CLIENTS}" = "true" ]; then
 	mkdir -p "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/"
-	cp "$(which nvidia-mig-parted)" "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/"
+	cp "/usr/bin/nvidia-mig-parted" "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/"
 	cp "${MIG_CONFIG_FILE}" "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/config.yaml"
 	shopt -s expand_aliases
 	alias nvidia-mig-parted="chroot ${HOST_ROOT_MOUNT} ${HOST_NVIDIA_DIR}/mig-manager/nvidia-mig-parted"
