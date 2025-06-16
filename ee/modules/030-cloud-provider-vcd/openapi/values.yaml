@@ -250,6 +250,10 @@ properties:
             type: string
             description: |
               vCloud Director Virtual Application name (belongs to Virtual Data Center).
+          edgeGatewayName:
+            type: string
+            description: |
+              VMware Cloud Director Edge Gateway name (belongs to Virtual Data Center).
           mainNetwork:
             description: |
               Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
