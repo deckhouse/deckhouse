@@ -169,29 +169,14 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		},
 	}
 
-	nodeServicesResult, err := state.NodeServices.Process(log, nodeservicesParams, inputs.NodeServices)
+	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process NodeServices: %w", err)
+		return err
 	}
-
-	if !nodeServicesResult.IsReady() {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeNodeServices,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            nodeServicesResult.GetConditionMessage(),
-		})
-
+	if !processedNodeServices {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeNodeServices,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
 
 	// TODO: check images in local registry
 
@@ -311,30 +296,14 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		},
 	}
 
-	nodeServicesResult, err := state.NodeServices.Process(log, nodeservicesParams, inputs.NodeServices)
+	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process NodeServices: %w", err)
+		return err
 	}
-
-	nodeServicesMessage := nodeServicesResult.GetConditionMessage()
-	if nodeServicesMessage != "" {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeNodeServices,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            nodeServicesMessage,
-		})
-
+	if !processedNodeServices {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeNodeServices,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
 
 	// TODO: check images in remote registry via proxy
 
@@ -453,29 +422,14 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		},
 	}
 
-	inClusterProxyProcessResult, err := state.InClusterProxy.Process(log, inClusterProxyParams, inputs.InClusterProxy)
+	processedInClusterProxy, err := state.processInClusterProxy(log, inClusterProxyParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process InClusterProxy: %w", err)
+		return err
 	}
-
-	if !inClusterProxyProcessResult.Ready {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeInClusterProxy,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            inClusterProxyProcessResult.Message,
-		})
-
+	if !processedInClusterProxy {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeInClusterProxy,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
 
 	// TODO: check images in remote registry
 
@@ -761,6 +715,31 @@ func (state *State) processBashibleUnmanagedFinalize(registrySecret deckhouse_re
 	return true, nil
 }
 
+func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.Params, inputs Inputs) (bool, error) {
+	nodeServicesResult, err := state.NodeServices.Process(log, params, inputs.NodeServices)
+	if err != nil {
+		return false, fmt.Errorf("cannot process NodeServices: %w", err)
+	}
+
+	if !nodeServicesResult.IsReady() {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeNodeServices,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            nodeServicesResult.GetConditionMessage(),
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeNodeServices,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+	return true, nil
+}
+
 func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
 	nodes, err := state.NodeServices.Stop(inputs.NodeServices)
 	if err != nil {
@@ -794,6 +773,31 @@ func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
 		ObservedGeneration: inputs.Params.Generation,
 	})
 
+	return true, nil
+}
+
+func (state *State) processInClusterProxy(log go_hook.Logger, params inclusterproxy.Params, inputs Inputs) (bool, error) {
+	inClusterProxyProcessResult, err := state.InClusterProxy.Process(log, params, inputs.InClusterProxy)
+	if err != nil {
+		return false, fmt.Errorf("cannot process InClusterProxy: %w", err)
+	}
+
+	if !inClusterProxyProcessResult.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeInClusterProxy,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            inClusterProxyProcessResult.Message,
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeInClusterProxy,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
 	return true, nil
 }
 
