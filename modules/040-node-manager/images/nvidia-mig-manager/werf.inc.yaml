@@ -63,7 +63,7 @@ git:
     - '**/*'
 secrets:
 - id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - git clone --depth 1 --branch v{{ $mig_manager_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
