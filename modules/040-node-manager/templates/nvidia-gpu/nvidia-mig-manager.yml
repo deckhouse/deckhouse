@@ -102,7 +102,9 @@ spec:
           - mountPath: /gpu-clients
             name: gpu-clients
           - mountPath: /mig-parted-config
-            name: mig-parted-config        
+            name: mig-parted-config
+          - mountPath: /usr/bin/
+            name: mig-parted-reconfigure-script
       volumes:
       - name: host-root
         hostPath:
@@ -118,3 +120,6 @@ spec:
       - name: mig-parted-config
         configMap:
           name: mig-parted-config
+      - name: mig-parted-reconfigure-script
+        configMap:
+          name: mig-parted-reconfigure-script
