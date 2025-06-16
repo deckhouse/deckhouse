@@ -440,16 +440,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		},
 	}
 
-	// Configure in-cluster proxy
-	processedInClusterProxy, err := state.processInClusterProxy(log, inClusterProxyParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedInClusterProxy {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
 	// TODO: check images in remote registry
 
 	// Bashible with actual params
@@ -458,6 +448,21 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		return err
 	}
 	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Configure in-cluster proxy
+
+	// When switching from Direct to Direct mode, we must wait until the new configuration
+	// is fully applied on the nodes (i.e., Bashible has finished running).
+	// This is necessary because during a Direct → Direct transition, the RPP still uses
+	// the old InclusterProxy, which must not be overwritten prematurely.
+	processedInClusterProxy, err := state.processInClusterProxy(log, inClusterProxyParams, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedInClusterProxy {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
