@@ -147,6 +147,7 @@
  - **[metallb]** Fixed deprecated CRD addresspools.metallb.io deletion. [#13553](https://github.com/deckhouse/deckhouse/pull/13553)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
  - **[network-gateway]** Fix python path [#13574](https://github.com/deckhouse/deckhouse/pull/13574)
+ - **[node-manager]** fixed update for static clusters [#13962](https://github.com/deckhouse/deckhouse/pull/13962)
  - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
  - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
