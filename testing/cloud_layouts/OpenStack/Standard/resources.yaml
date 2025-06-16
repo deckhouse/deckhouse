@@ -29,6 +29,8 @@ spec:
   rootDiskSize: 30
   flavorName: e2e
   imageName: "debian-12-genericcloud-amd64"
+  additionalSecurityGroups:
+    - default
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
