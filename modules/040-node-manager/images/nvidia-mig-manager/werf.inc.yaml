@@ -43,7 +43,7 @@ import:
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup
-- image: tools/util-linux
+- image: tools/coreutils
   add: /usr/bin/chroot
   to: /usr/sbin/chroot
   before: setup
