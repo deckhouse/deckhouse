@@ -5,7 +5,7 @@
       "description": "Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.",
       "module": "admission-policy-engine",
       "embedded": "true",
-      "url": "module/admission-policy-engine/",
+      "url": "admission-policy-engine/",
       "ru": {
         "title": "Модуль admission-policy-engine",
         "description": "Модуль admission-policy-engine Deckhouse позволяет использовать в кластере Kubernetes политики безопасности согласно Kubernetes Pod Security Standards."
@@ -15,7 +15,7 @@
       "title": "The basic-auth module",
       "module": "basic-auth",
       "embedded": "true",
-      "url": "module/basic-auth/",
+      "url": "basic-auth/",
       "ru": {
         "title": "Модуль basic-auth"
       }
@@ -24,7 +24,7 @@
       "title": "The cert-manager module",
       "module": "cert-manager",
       "embedded": "true",
-      "url": "module/cert-manager/",
+      "url": "cert-manager/",
       "ru": {
         "title": "Модуль cert-manager"
       }
@@ -33,7 +33,7 @@
       "title": "The chrony module",
       "module": "chrony",
       "embedded": "true",
-      "url": "module/chrony/",
+      "url": "chrony/",
       "ru": {
         "title": "Модуль chrony"
       }
@@ -47,7 +47,7 @@
       ],
       "module": "cilium-hubble",
       "embedded": "true",
-      "url": "module/cilium-hubble/",
+      "url": "cilium-hubble/",
       "ru": {
         "title": "Модуль cilium-hubble",
         "webIfaces": [
@@ -61,7 +61,7 @@
       "title": "Cloud provider — AWS",
       "module": "cloud-provider-aws",
       "embedded": "true",
-      "url": "module/cloud-provider-aws/",
+      "url": "cloud-provider-aws/",
       "ru": {
         "title": "Cloud provider — AWS"
       }
@@ -70,7 +70,7 @@
       "title": "Cloud provider — Azure",
       "module": "cloud-provider-azure",
       "embedded": "true",
-      "url": "module/cloud-provider-azure/",
+      "url": "cloud-provider-azure/",
       "ru": {
         "title": "Cloud provider — Azure"
       }
@@ -80,7 +80,7 @@
       "description": "Management of virtual servers and containers in the Deckhouse Kubernetes Platform using Dynamix.",
       "module": "cloud-provider-dynamix",
       "embedded": "true",
-      "url": "module/cloud-provider-dynamix/",
+      "url": "cloud-provider-dynamix/",
       "ru": {
         "title": "Cloud provider — Базис.DynamiX",
         "description": "Управление виртуальными серверами и контейнерами в Deckhouse Kubernetes Platform с помощью Базис.DynamiX."
@@ -90,7 +90,7 @@
       "title": "Cloud provider — GCP",
       "module": "cloud-provider-gcp",
       "embedded": "true",
-      "url": "module/cloud-provider-gcp/",
+      "url": "cloud-provider-gcp/",
       "ru": {
         "title": "Cloud provider — GCP"
       }
@@ -99,7 +99,7 @@
       "title": "Cloud provider — Huawei Cloud",
       "module": "cloud-provider-huaweicloud",
       "embedded": "true",
-      "url": "module/cloud-provider-huaweicloud/",
+      "url": "cloud-provider-huaweicloud/",
       "ru": {
         "title": "Cloud provider — Huawei Cloud"
       }
@@ -108,7 +108,7 @@
       "title": "Cloud provider — OpenStack",
       "module": "cloud-provider-openstack",
       "embedded": "true",
-      "url": "module/cloud-provider-openstack/",
+      "url": "cloud-provider-openstack/",
       "ru": {
         "title": "Cloud provider — OpenStack"
       }
@@ -117,7 +117,7 @@
       "title": "Cloud provider — VMware Cloud Director",
       "module": "cloud-provider-vcd",
       "embedded": "true",
-      "url": "module/cloud-provider-vcd/",
+      "url": "cloud-provider-vcd/",
       "ru": {
         "title": "Cloud provider — VMware Cloud Director"
       }
@@ -126,7 +126,7 @@
       "title": "Cloud provider — VMware vSphere",
       "module": "cloud-provider-vsphere",
       "embedded": "true",
-      "url": "module/cloud-provider-vsphere/",
+      "url": "cloud-provider-vsphere/",
       "ru": {
         "title": "Cloud provider — VMware vSphere"
       }
@@ -135,7 +135,7 @@
       "title": "Cloud provider — Yandex Cloud",
       "module": "cloud-provider-yandex",
       "embedded": "true",
-      "url": "module/cloud-provider-yandex/",
+      "url": "cloud-provider-yandex/",
       "ru": {
         "title": "Cloud provider — Yandex Cloud"
       }
@@ -144,7 +144,7 @@
       "title": "Cloud provider — zVirt",
       "module": "cloud-provider-zvirt",
       "embedded": "true",
-      "url": "module/cloud-provider-zvirt/",
+      "url": "cloud-provider-zvirt/",
       "ru": {
         "title": "Cloud provider — zVirt"
       }
@@ -154,7 +154,7 @@
       "description": "The cni-cilium module provides networking in a cluster using the Cilium module.",
       "module": "cni-cilium",
       "embedded": "true",
-      "url": "module/cni-cilium/",
+      "url": "cni-cilium/",
       "ru": {
         "title": "Модуль cni-cilium",
         "description": "Модуль cni-cilium Deckhouse обеспечивает работу сети в кластере Kubernetes с помощью Cilium."
@@ -164,7 +164,7 @@
       "title": "The cni-flannel module",
       "module": "cni-flannel",
       "embedded": "true",
-      "url": "module/cni-flannel/",
+      "url": "cni-flannel/",
       "ru": {
         "title": "Модуль cni-flannel"
       }
@@ -173,7 +173,7 @@
       "title": "The cni-simple-bridge module",
       "module": "cni-simple-bridge",
       "embedded": "true",
-      "url": "module/cni-simple-bridge/",
+      "url": "cni-simple-bridge/",
       "ru": {
         "title": "Модуль cni-simple-bridge"
       }
@@ -183,7 +183,7 @@
       "description": "Deckhouse manages a Kubernetes cluster control plane components — certificates, manifests, versions. Manages the configuration of the etcd cluster and maintains an up-to-date kubectl configuration.",
       "module": "control-plane-manager",
       "embedded": "true",
-      "url": "module/control-plane-manager/",
+      "url": "control-plane-manager/",
       "ru": {
         "title": "Управление control plane",
         "description": "Deckhouse управляет компонентами control plane Kubernetes — сертификатами, манифестами, версиями. Управляет конфигурацией etcd-кластера и следит за актуальностью конфигурации для kubectl."
@@ -198,7 +198,7 @@
       ],
       "module": "dashboard",
       "embedded": "true",
-      "url": "module/dashboard/",
+      "url": "dashboard/",
       "ru": {
         "title": "Модуль dashboard",
         "webIfaces": [
@@ -213,7 +213,7 @@
       "search": "releaseChannel, release channel stabilization, auto-switching the release channel",
       "module": "deckhouse",
       "embedded": "true",
-      "url": "module/deckhouse/",
+      "url": "deckhouse/",
       "ru": {
         "title": "Модуль deckhouse",
         "search": "releaseChannel, стабилизация релизного канала, автосмена канала обновлений"
@@ -229,7 +229,7 @@
       "description": "The deckhouse-tools Deckhouse module provides a web interface in the cluster for downloading Deckhouse utilities (Deckhouse CLI)",
       "module": "deckhouse-tools",
       "embedded": "true",
-      "url": "module/deckhouse-tools/",
+      "url": "deckhouse-tools/",
       "ru": {
         "title": "Модуль deckhouse-tools",
         "webIfaces": [
@@ -245,7 +245,7 @@
       "description": "Deckhouse Kubernetes Platform, the descheduler module. Every 15 minutes, analyzes the cluster state and performs pod eviction according to the conditions described in the active strategies.",
       "module": "descheduler",
       "embedded": "true",
-      "url": "module/descheduler/",
+      "url": "descheduler/",
       "ru": {
         "title": "Модуль descheduler",
         "description": "Модуль descheduler Deckhouse Kubernetes Platform. Каждые 15 минут анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных стратегиях."
@@ -260,7 +260,7 @@
       ],
       "module": "documentation",
       "embedded": "true",
-      "url": "module/documentation/",
+      "url": "documentation/",
       "ru": {
         "title": "Модуль documentation",
         "webIfaces": [
@@ -274,7 +274,7 @@
       "title": "The extended-monitoring module",
       "module": "extended-monitoring",
       "embedded": "true",
-      "url": "module/extended-monitoring/",
+      "url": "extended-monitoring/",
       "ru": {
         "title": "Модуль extended-monitoring"
       }
@@ -283,7 +283,7 @@
       "title": "The ingress-nginx module",
       "module": "ingress-nginx",
       "embedded": "true",
-      "url": "module/ingress-nginx/",
+      "url": "ingress-nginx/",
       "ru": {
         "title": "Модуль ingress-nginx"
       }
@@ -301,7 +301,7 @@
       ],
       "module": "istio",
       "embedded": "true",
-      "url": "module/istio/",
+      "url": "istio/",
       "ru": {
         "title": "Модуль istio",
         "description": "Описание модуля istio Deckhouse Kubernetes Platform, включая задачи, которые он решает, архитектуру, а также особенности настройки и управления.",
@@ -316,7 +316,7 @@
       "title": "The keepalived module",
       "module": "keepalived",
       "embedded": "true",
-      "url": "module/keepalived/",
+      "url": "keepalived/",
       "ru": {
         "title": "Модуль keepalived"
       }
@@ -325,7 +325,7 @@
       "title": "The kube-dns module",
       "module": "kube-dns",
       "embedded": "true",
-      "url": "module/kube-dns/",
+      "url": "kube-dns/",
       "ru": {
         "title": "Модуль kube-dns"
       }
@@ -334,7 +334,7 @@
       "title": "The kube-proxy module",
       "module": "kube-proxy",
       "embedded": "true",
-      "url": "module/kube-proxy/",
+      "url": "kube-proxy/",
       "ru": {
         "title": "Модуль kube-proxy"
       }
@@ -343,7 +343,7 @@
       "title": "The local-path-provisioner module",
       "module": "local-path-provisioner",
       "embedded": "true",
-      "url": "module/local-path-provisioner/",
+      "url": "local-path-provisioner/",
       "ru": {
         "title": "Модуль local-path-provisioner"
       }
@@ -353,7 +353,7 @@
       "description": "Collecting logs in the Kubernetes cluster using the log-shipper Deckhouse module. Log sending topologies, log filtering, and log metadata enrichment.",
       "module": "log-shipper",
       "embedded": "true",
-      "url": "module/log-shipper/",
+      "url": "log-shipper/",
       "ru": {
         "title": "Модуль log-shipper",
         "description": "Описание возможностей сбора логов в кластере Kubernetes с помощью модуля log-shipper Deckhouse. Описание топологий отправки логов, возможностей фильтрации логов и обогащения логов метаданными."
@@ -363,7 +363,7 @@
       "title": "The loki module",
       "module": "loki",
       "embedded": "true",
-      "url": "module/loki/",
+      "url": "loki/",
       "ru": {
         "title": "Модуль loki"
       }
@@ -372,7 +372,7 @@
       "title": "The metallb module",
       "module": "metallb",
       "embedded": "true",
-      "url": "module/metallb/",
+      "url": "metallb/",
       "ru": {
         "title": "Модуль metallb"
       }
@@ -381,7 +381,7 @@
       "title": "The monitoring-applications module",
       "module": "monitoring-applications",
       "embedded": "true",
-      "url": "module/monitoring-applications/",
+      "url": "monitoring-applications/",
       "ru": {
         "title": "Модуль monitoring-applications"
       }
@@ -394,7 +394,7 @@
       "search": "prometheus",
       "module": "monitoring-custom",
       "embedded": "true",
-      "url": "module/monitoring-custom/",
+      "url": "monitoring-custom/",
       "ru": {
         "title": "Модуль monitoring-custom",
         "type": [
@@ -407,7 +407,7 @@
       "title": "The monitoring-kubernetes module",
       "module": "monitoring-kubernetes",
       "embedded": "true",
-      "url": "module/monitoring-kubernetes/",
+      "url": "monitoring-kubernetes/",
       "ru": {
         "title": "Модуль monitoring-kubernetes"
       }
@@ -416,7 +416,7 @@
       "title": "Monitoring the control plane",
       "module": "monitoring-kubernetes-control-plane",
       "embedded": "true",
-      "url": "module/monitoring-kubernetes-control-plane/",
+      "url": "monitoring-kubernetes-control-plane/",
       "ru": {
         "title": "Мониторинг control plane"
       }
@@ -425,7 +425,7 @@
       "title": "The monitoring-ping module",
       "module": "monitoring-ping",
       "embedded": "true",
-      "url": "module/monitoring-ping/",
+      "url": "monitoring-ping/",
       "ru": {
         "title": "Модуль monitoring-ping"
       }
@@ -436,7 +436,7 @@
       "description": "Multitenancy and Projects in Kubernetes. The multitenancy-manager module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.",
       "module": "multitenancy-manager",
       "embedded": "true",
-      "url": "module/multitenancy-manager/",
+      "url": "multitenancy-manager/",
       "ru": {
         "title": "Модуль multitenancy-manager",
         "search": "multitenancy",
@@ -447,7 +447,7 @@
       "title": "The namespace-configurator module",
       "module": "namespace-configurator",
       "embedded": "true",
-      "url": "module/namespace-configurator/",
+      "url": "namespace-configurator/",
       "ru": {
         "title": "Модуль namespace-configurator"
       }
@@ -456,7 +456,7 @@
       "title": "The network-gateway module",
       "module": "network-gateway",
       "embedded": "true",
-      "url": "module/network-gateway/",
+      "url": "network-gateway/",
       "ru": {
         "title": "Модуль network-gateway"
       }
@@ -465,7 +465,7 @@
       "title": "The network-policy-engine module",
       "module": "network-policy-engine",
       "embedded": "true",
-      "url": "module/network-policy-engine/",
+      "url": "network-policy-engine/",
       "ru": {
         "title": "Модуль network-policy-engine"
       }
@@ -474,7 +474,7 @@
       "title": "The node-local-dns module",
       "module": "node-local-dns",
       "embedded": "true",
-      "url": "module/node-local-dns/",
+      "url": "node-local-dns/",
       "ru": {
         "title": "Модуль node-local-dns"
       }
@@ -484,7 +484,7 @@
       "description": "Deckhouse manages nodes of a Kubernetes cluster as a related group, configures and updates Kubernetes cluster node components, manages cluster scaling in the cloud, and manages Linux users on nodes.",
       "module": "node-manager",
       "embedded": "true",
-      "url": "module/node-manager/",
+      "url": "node-manager/",
       "ru": {
         "title": "Управление узлами",
         "description": "Deckhouse управляет узлами кластера Kubernetes как связанной группой, настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет Linux-пользователями на узлах."
@@ -494,7 +494,7 @@
       "title": "The okmeter module",
       "module": "okmeter",
       "embedded": "true",
-      "url": "module/okmeter/",
+      "url": "okmeter/",
       "ru": {
         "title": "Модуль okmeter"
       }
@@ -509,7 +509,7 @@
       ],
       "module": "openvpn",
       "embedded": "true",
-      "url": "module/openvpn/",
+      "url": "openvpn/",
       "ru": {
         "title": "Модуль openvpn",
         "description": "Описание модуля openvpn Deckhouse Kubernetes Platform: функции, веб-интерфейс, варианты публикации VPN-сервиса, доступные ресурсы кластера после подключения и аудит пользовательских соединений.",
@@ -524,7 +524,7 @@
       "title": "The operator-prometheus module",
       "module": "operator-prometheus",
       "embedded": "true",
-      "url": "module/operator-prometheus/",
+      "url": "operator-prometheus/",
       "ru": {
         "title": "Модуль operator-prometheus"
       }
@@ -534,7 +534,7 @@
       "description": "operator-trivy is a Deckhouse module for periodic scanning for vulnerabilities in a Kubernetes cluster.",
       "module": "operator-trivy",
       "embedded": "true",
-      "url": "module/operator-trivy/",
+      "url": "operator-trivy/",
       "ru": {
         "title": "Модуль operator-trivy",
         "description": "operator-trivy — модуль Deckhouse для периодического сканирования на уязвимости в кластере Kubernetes."
@@ -544,7 +544,7 @@
       "title": "The pod-reloader module",
       "module": "pod-reloader",
       "embedded": "true",
-      "url": "module/pod-reloader/",
+      "url": "pod-reloader/",
       "ru": {
         "title": "Модуль pod-reloader"
       }
@@ -562,7 +562,7 @@
       ],
       "module": "prometheus",
       "embedded": "true",
-      "url": "module/prometheus/",
+      "url": "prometheus/",
       "ru": {
         "title": "Prometheus-мониторинг",
         "type": [
@@ -581,7 +581,7 @@
       "search": "autoscaler, HorizontalPodAutoscaler",
       "module": "prometheus-metrics-adapter",
       "embedded": "true",
-      "url": "module/prometheus-metrics-adapter/",
+      "url": "prometheus-metrics-adapter/",
       "ru": {
         "title": "Модуль prometheus-metrics-adapter",
         "search": "autoscaler, HorizontalPodAutoscaler"
@@ -591,7 +591,7 @@
       "title": "The Prometheus Pushgateway module",
       "module": "prometheus-pushgateway",
       "embedded": "true",
-      "url": "module/prometheus-pushgateway/",
+      "url": "prometheus-pushgateway/",
       "ru": {
         "title": "Модуль Prometheus Pushgateway"
       }
@@ -601,7 +601,7 @@
       "description": "Overview of the runtime-audit-engine Deckhouse module, which implements a runtime threats detection engine in the Kubernetes cluster.",
       "module": "runtime-audit-engine",
       "embedded": "true",
-      "url": "module/runtime-audit-engine/",
+      "url": "runtime-audit-engine/",
       "ru": {
         "title": "Модуль runtime-audit-engine",
         "description": "Описание модуля runtime-audit-engine Deckhouse, предназначенного для поиска угроз безопасности в кластере Kubernetes."
@@ -611,7 +611,7 @@
       "title": "The secret-copier module",
       "module": "secret-copier",
       "embedded": "true",
-      "url": "module/secret-copier/",
+      "url": "secret-copier/",
       "ru": {
         "title": "Модуль secret-copier"
       }
@@ -621,7 +621,7 @@
       "description": "Readiness Probes with the service-with-healthchecks Module in Deckhouse Kubernetes Platform",
       "module": "service-with-healthchecks",
       "embedded": "true",
-      "url": "module/service-with-healthchecks/",
+      "url": "service-with-healthchecks/",
       "ru": {
         "title": "Модуль service-with-healthchecks",
         "description": "Readiness-пробы с модулем service-with-healthchecks в Deckhouse Kubernetes Platform"
@@ -631,7 +631,7 @@
       "title": "The snapshot-controller module",
       "module": "snapshot-controller",
       "embedded": "true",
-      "url": "module/snapshot-controller/",
+      "url": "snapshot-controller/",
       "ru": {
         "title": "Модуль snapshot-controller"
       }
@@ -641,7 +641,7 @@
       "description": "Description of the Deckhouse terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.",
       "module": "terraform-manager",
       "embedded": "true",
-      "url": "module/terraform-manager/",
+      "url": "terraform-manager/",
       "ru": {
         "title": "Модуль terraform-manager",
         "description": "Описание модуля terraform-manager Deckhouse. Модуль следит за приведением объектов в кластере к состоянию, описанному в Terraform state."
@@ -659,7 +659,7 @@
       ],
       "module": "upmeter",
       "embedded": "true",
-      "url": "module/upmeter/",
+      "url": "upmeter/",
       "ru": {
         "title": "Модуль upmeter",
         "webIfaces": [
@@ -683,7 +683,7 @@
       ],
       "module": "user-authn",
       "embedded": "true",
-      "url": "module/user-authn/",
+      "url": "user-authn/",
       "ru": {
         "title": "Модуль user-authn",
         "search": "kube config generator",
@@ -699,7 +699,7 @@
       "title": "The user-authz module",
       "module": "user-authz",
       "embedded": "true",
-      "url": "module/user-authz/",
+      "url": "user-authz/",
       "ru": {
         "title": "Модуль user-authz"
       }
@@ -709,7 +709,7 @@
       "search": "autoscaler",
       "module": "vertical-pod-autoscaler",
       "embedded": "true",
-      "url": "module/vertical-pod-autoscaler/",
+      "url": "vertical-pod-autoscaler/",
       "ru": {
         "title": "Модуль vertical-pod-autoscaler",
         "search": "autoscaler"
