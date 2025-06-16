@@ -4,4 +4,5 @@
 resource "vcd_vapp" "vapp" {
   name = var.providerClusterConfiguration.virtualApplicationName
   org  = var.providerClusterConfiguration.organization
+  
 }
