@@ -50,7 +50,14 @@
   {{ $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
 {{ end}}
 
-{{ $modulesList = $modulesList | append .Site.Data.dkp.embedded_modules.entries }}
+{{ warnf "Found %d modules from sources." ($modulesList | len) }}
+{{ if .Site.Data.dkp.embedded_modules.entries }}
+  {{ warnf "Found %d embedded modules." ( .Site.Data.dkp.embedded_modules.entries | len) }}
+  {{ $modulesList = $modulesList | append .Site.Data.dkp.embedded_modules.entries }}
+{{ else }}
+  {{ warnf "No embedded modules found!" }}
+{{ end }}
+
 {{ hugo.Store.Set "modulesList" (sort $modulesList "module" "asc" ) }}
 
 {{/* hugo.Store.SetInMap "modulesList" (sort (hugo.Store.Get "modulesList") "title" "asc") */}}
