@@ -31,7 +31,7 @@ spec:
                             key:
                               description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                             name:
-                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                         type:
@@ -45,7 +45,7 @@ spec:
                             key:
                               description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                             name:
-                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                         username:
@@ -54,7 +54,7 @@ spec:
                             key:
                               description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                             name:
-                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                     bearerTokenFile:
@@ -65,7 +65,7 @@ spec:
                         key:
                           description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                         name:
-                          description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                          description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                         optional:
                           description: Укажите, должен ли быть определён Secret или его ключ.
                     enableHttp2:
@@ -113,7 +113,7 @@ spec:
                                 key:
                                   description: Ключ для выбора.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён ConfigMap или его ключ.
                             secret:
@@ -122,7 +122,7 @@ spec:
                                 key:
                                   description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён Secret или его ключ.
                         clientSecret:
@@ -131,7 +131,7 @@ spec:
                             key:
                               description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                             name:
-                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                         endpointParams:
@@ -187,7 +187,7 @@ spec:
                                 key:
                                   description: Ключ для выбора.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён ConfigMap или его ключ.
                             secret:
@@ -196,7 +196,7 @@ spec:
                                 key:
                                   description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён Secret или его ключ.
                         caFile:
@@ -210,7 +210,7 @@ spec:
                                 key:
                                   description: Ключ для выбора.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён ConfigMap или его ключ.
                             secret:
@@ -219,7 +219,7 @@ spec:
                                 key:
                                   description: Ключ секрета для выбора. Должен быть допустимым ключом секрета.
                                 name:
-                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 optional:
                                   description: Укажите, должен ли быть определён Secret или его ключ.
                         certFile:
@@ -234,7 +234,7 @@ spec:
                             key:
                               description: Ключ секрета для выбора. Должен быть допустимым ключом секрета.
                             name:
-                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Добавить другие полезные поля. apiVersion, kind, uid?'
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             optional:
                               description: Укажите, должен ли быть определён Secret или его ключ.
                         serverName:

@@ -1036,9 +1036,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1069,9 +1067,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1091,9 +1087,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1115,9 +1109,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1148,9 +1140,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -1170,9 +1160,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1193,9 +1181,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1243,9 +1229,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -1265,9 +1249,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1291,9 +1273,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -1313,9 +1293,7 @@ spec:
                                         type: string
                                       name:
                                         description: 'Name of the referent. More info:
-                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion,
-                                          kind, uid?'
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1339,9 +1317,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1364,8 +1340,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1383,8 +1358,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1413,8 +1387,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1438,9 +1411,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1458,9 +1429,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1528,8 +1497,7 @@ spec:
                               description: The key to select.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                             optional:
                               description: Specify whether the ConfigMap or its key
@@ -1547,8 +1515,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -1685,9 +1652,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the ConfigMap or
@@ -1752,9 +1717,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1785,9 +1748,7 @@ spec:
                             description: The ConfigMap to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap must be
@@ -1803,9 +1764,7 @@ spec:
                             description: The Secret to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret must be defined
@@ -2959,8 +2918,7 @@ spec:
                     let you locate the referenced object inside the same namespace.
                   properties:
                     name:
-                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        TODO: Add other useful fields. apiVersion, kind, uid?'
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
@@ -3043,9 +3001,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the ConfigMap or
@@ -3110,9 +3066,7 @@ spec:
                                     type: string
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3143,9 +3097,7 @@ spec:
                             description: The ConfigMap to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap must be
@@ -3161,9 +3113,7 @@ spec:
                             description: The Secret to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret must be defined
@@ -5570,9 +5520,7 @@ spec:
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
+                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
                           type: string
                         partition:
                           description: 'partition is the partition in the volume that
@@ -5678,8 +5626,7 @@ spec:
                             More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -5710,8 +5657,7 @@ spec:
                             object containing parameters used to connect to OpenStack.'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -5778,8 +5724,7 @@ spec:
                             type: object
                           type: array
                         name:
-                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                           type: string
                         optional:
                           description: optional specify whether the ConfigMap or its
@@ -5813,8 +5758,7 @@ spec:
                             are passed.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6238,8 +6182,7 @@ spec:
                           description: 'fsType is the filesystem type to mount. Must
                             be a filesystem type supported by the host operating system.
                             Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. TODO: how do we prevent errors in the
-                            filesystem from compromising the machine'
+                            if unspecified.'
                           type: string
                         lun:
                           description: 'lun is Optional: FC target lun number'
@@ -6296,8 +6239,7 @@ spec:
                             scripts.'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6329,9 +6271,7 @@ spec:
                             you want to mount. Tip: Ensure that the filesystem type
                             is supported by the host operating system. Examples: "ext4",
                             "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
+                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
                           type: string
                         partition:
                           description: 'partition is the partition in the volume that
@@ -6403,9 +6343,7 @@ spec:
                         on the host machine that is directly exposed to the container.
                         This is generally used for system agents or other privileged
                         things that are allowed to see the host machine. Most containers
-                        will NOT need this. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
-                        --- TODO(jonesdl) We need to restrict who can use host directory
-                        mounts and who can/can not mount host directories as read/write.'
+                        will NOT need this. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
                       properties:
                         path:
                           description: 'path of the directory on the host. If the
@@ -6437,9 +6375,7 @@ spec:
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
+                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi'
                           type: string
                         initiatorName:
                           description: initiatorName is the custom iSCSI Initiator
@@ -6474,8 +6410,7 @@ spec:
                             and initiator authentication
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6640,9 +6575,7 @@ spec:
                                     type: array
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: optional specify whether the ConfigMap
@@ -6785,9 +6718,7 @@ spec:
                                     type: array
                                   name:
                                     description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                     type: string
                                   optional:
                                     description: optional field specify whether the
@@ -6875,9 +6806,7 @@ spec:
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
+                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd'
                           type: string
                         image:
                           description: 'image is the rados image name. More info:
@@ -6907,8 +6836,7 @@ spec:
                             nil. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6947,8 +6875,7 @@ spec:
                             Login operation will fail.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7063,8 +6990,7 @@ spec:
                             values will be attempted.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7188,9 +7114,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -7208,9 +7132,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -7241,9 +7163,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -7261,9 +7181,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -7294,8 +7212,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
