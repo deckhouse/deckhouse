@@ -17,6 +17,8 @@ limitations under the License.
 package destination
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -115,6 +117,21 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 				"container": "container",
 				"podowner":  "pod_owner",
 			},
+		}
+		var dataField string
+		keys := make([]string, 0, len(cspec.ExtraLabels))
+		for key := range cspec.ExtraLabels {
+			keys = append(keys, key)
+		}
+
+		sort.Strings(keys)
+		for _, k := range keys {
+			if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
+				dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
+				encoding.CEF.Extensions[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
+			} else {
+				encoding.CEF.Extensions[k] = cspec.ExtraLabels[k]
+			}
 		}
 	case v1alpha1.EncodingCodecGELF:
 		encoding.Codec = "gelf"
