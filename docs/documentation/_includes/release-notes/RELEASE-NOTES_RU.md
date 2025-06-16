@@ -4,7 +4,7 @@
 
 - Модуль `ceph-csi` удален. Вместо него используйте `csi-ceph`. Deckhouse не будет обновляться, если в кластере включен `ceph-csi`. Шаги по миграции с модуля ceph-csi приведены [в документации модуля csi-ceph](https://deckhouse.ru/products/kubernetes-platform/modules/csi-ceph/stable/).
 
-- Добавлена версия 1.12 `контроллера Ingress NGINX`. Версия контроллера используемая по умолчанию изменена на 1.10. Все Ingress-контроллеры, версия которых не задана явно (параметр [controllerVersion](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) ресурса IngressNginxController или параметр [defaultControllerVersion](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) модуля `ingress-nginx`), будут перезапущены.
+- Добавлена версия 1.12 `контроллера Ingress NGINX`. Версия контроллера используемая по умолчанию изменена на 1.10. Все Ingress-контроллеры, версия которых не задана явно (параметр [`controllerVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) ресурса IngressNginxController или параметр [`defaultControllerVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) модуля `ingress-nginx`), будут перезапущены.
 
 - Удалена метрика `falco_events` (модуль `runtime-audit-engine`). Начиная с DKP 1.68, метрика `falco_events` считалась устаревшей. Используйте метрику [falcosecurity_falcosidekick_falco_events_total](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/runtime-audit-engine/faq.html#%D0%BA%D0%B0%D0%BA-%D0%BE%D0%BF%D0%BE%D0%B2%D0%B5%D1%89%D0%B0%D1%82%D1%8C-%D0%BE-%D0%BA%D1%80%D0%B8%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D1%85-%D1%81%D0%BE%D0%B1%D1%8B%D1%82%D0%B8%D1%8F%D1%85). Дашборды и оповещения, основанные на метрике `falco_events`, могут не работать.
 
@@ -22,9 +22,10 @@
   - удаленный кластер находится в автономном режиме;
   - удаленная конечная точка API недоступна;
   - токен удаленного `ServiceAccount` недействителен или истек;
-  - между кластерами существует проблема с `TLS` или сертификатом.
-  - Команда `deckhouse-controller collect-debug-info` теперь собирает и [отладочную информацию](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/faq.html#%D0%BA%D0%B0%D0%BA-%D1%81%D0%BE%D0%B1%D1%80%D0%B0%D1%82%D1%8C-%D0%B8%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8E-%D0%B4%D0%BB%D1%8F-%D0%BE%D1%82%D0%BB%D0%B0%D0%B4%D0%BA%D0%B8) про `Istio:`
-  - ресурсы в пространстве имен d8-istio;
+  - между кластерами существует проблема с TLS или сертификатом.
+
+- Команда `deckhouse-controller collect-debug-info` теперь собирает и [отладочную информацию](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/faq.html#%D0%BA%D0%B0%D0%BA-%D1%81%D0%BE%D0%B1%D1%80%D0%B0%D1%82%D1%8C-%D0%B8%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8E-%D0%B4%D0%BB%D1%8F-%D0%BE%D1%82%D0%BB%D0%B0%D0%B4%D0%BA%D0%B8) про `Istio:`
+  - ресурсы в пространстве имен `d8-istio`;
   - CRD групп `istio.io` и `gateway.networking.k8s.io`;
   - журналы `Istio`;
   - журналы `Sidecar` одного случайно выбранного пользовательского приложения.
@@ -47,11 +48,11 @@
 
 - В статусе ресурса [Module](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/cr.html#module) добавлен вывод информации о стадии жизненного цикла модуля. Модуль в процессе своего жизненного цикла может проходить следующие стадии: `Experimental` (экспериментальная версия), `Preview` (предварительная версия), `General Availability` (общедоступная версия) и `Deprecated` (модуль устарел). Подробнее о жизненном цикле модуля и о том, как понять насколько модуль стабилен, можно узнать [в документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/module-development/versioning/#%D0%B6%D0%B8%D0%B7%D0%BD%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9-%D1%86%D0%B8%D0%BA%D0%BB-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8F).
 
-- Теперь можно выбирать более сильные или современные алгоритмы шифрования (такие как `RSA-3072, RSA-4096` или `ECDSA-P256`)  для сертификатов control plane кластера вместо стандартного `RSA-2048`. Для выбора алгоритма используется параметр [encryptionAlgorithm](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/installing/configuration.html#clusterconfiguration-encryptionalgorithm) ресурса ClusterConfiguration.
+- Теперь можно выбирать более сильные или современные алгоритмы шифрования (такие как `RSA-3072`, `RSA-4096` или `ECDSA-P256`)  для сертификатов control plane кластера вместо стандартного `RSA-2048`. Для выбора алгоритма используется параметр [`encryptionAlgorithm`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/installing/configuration.html#clusterconfiguration-encryptionalgorithm) ресурса ClusterConfiguration.
 
-- Для модуля `descheduler` теперь можно настроить вытеснение подов, использующих локальное хранилище. Для этого используется параметр [evictLocalStoragePods](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/descheduler/cr.html#descheduler-v1alpha2-spec-evictlocalstoragepods) конфигурации модуля.
+- Для модуля `descheduler` теперь можно настроить вытеснение подов, использующих локальное хранилище. Для этого используется параметр [`evictLocalStoragePods`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/descheduler/cr.html#descheduler-v1alpha2-spec-evictlocalstoragepods) конфигурации модуля.
 
-- Добавлена возможность управлять уровнем логирования Ingress-контроллера (параметр [controllerLogLevel](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerloglevel) ресурса  IngressNginxController). По умолчанию установлен уровень логирования `Info`. Управление уровнем логирования позволяет, например, предотвратить переполнение сборщика логов при перезапуске Ingress-контроллера.
+- Добавлена возможность управлять уровнем логирования Ingress-контроллера (параметр [`controllerLogLevel`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerloglevel) ресурса  IngressNginxController). По умолчанию установлен уровень логирования `Info`. Управление уровнем логирования позволяет, например, предотвратить переполнение сборщика логов при перезапуске Ingress-контроллера.
 
 ### Безопасность
 

@@ -4,7 +4,7 @@
 
 - The `ceph-csi` module has been removed. Use the `csi-ceph` module instead. Deckhouse will not be updated as long as `ceph-csi` is enabled in the cluster. For `csi-ceph` migration instructions, refer to the [module documentation](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/).
 
-- Version 1.12 of the NGINX Ingress Controller has been added. The default controller version has been changed to 1.10. All Ingress controllers that do not have an explicitly specified version (via the [controllerVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) parameter in the IngressNginxController resource or the [defaultControllerVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) parameter in the `ingress-nginx` module) will be restarted.
+- Version 1.12 of the NGINX Ingress Controller has been added. The default controller version has been changed to 1.10. All Ingress controllers that do not have an explicitly specified version (via the [`controllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) parameter in the IngressNginxController resource or the [`defaultControllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) parameter in the `ingress-nginx` module) will be restarted.
 
 - The `falco_events` metric (from the `runtime-audit-engine` module) has been removed. The `falco_events` metric was considered deprecated since DKP 1.68. Use the [`falcosecurity_falcosidekick_falco_events_total`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/runtime-audit-engine/faq.html#how-to-create-an-alert) metric instead. Dashboards and alerts based on the `falco_events` metric may stop working.
 
@@ -21,7 +21,7 @@
   - The remote `ServiceAccount` token is invalid or expired.
   - There is a TLS or certificate issue between the clusters.
 
-- The `deckhouse-controller collect-debug-info` command now also collects [debug information](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/faq.html#how-to-collect-debug-info) for Istio, including:
+- The `deckhouse-controller collect-debug-info` command now also collects [debug information](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/faq.html#how-to-collect-debug-info) for `Istio`, including:
   - Resources in the `d8-istio` namespace.
   - CRDs from the `istio.io` and `gateway.networking.k8s.io` groups.
   - `Istio` logs.
@@ -45,11 +45,11 @@
 
 - The [Module](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/cr.html#module) resource status now includes information about the module’s lifecycle stage. A module can move through the following stages in its lifecycle: Experimental, Preview, General Availability, and Deprecated. For details on module lifecycle stages and how to evaluate its stability, refer to the [corresponding section in the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/module-development/versioning/#how-do-i-figure-out-how-stable-a-module-is).
 
-- It is now possible to use stronger or more modern encryption algorithms (such as `RSA-3072`, `RSA-4096`, or `ECDSA-P256`) for control plane cluster certificates instead of the default `RSA-2048`. You can use the [encryptionAlgorithm](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/installing/configuration.html#clusterconfiguration-encryptionalgorithm) parameter in the ClusterConfiguration resource to configure this.
+- It is now possible to use stronger or more modern encryption algorithms (such as `RSA-3072`, `RSA-4096`, or `ECDSA-P256`) for control plane cluster certificates instead of the default `RSA-2048`. You can use the [`encryptionAlgorithm`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/installing/configuration.html#clusterconfiguration-encryptionalgorithm) parameter in the ClusterConfiguration resource to configure this.
 
-- The `descheduler` module can now be configured to evict pods that are using local storage. Use the [evictLocalStoragePods](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/descheduler/cr.html#descheduler-v1alpha2-spec-evictlocalstoragepods) parameter in the module configuration to adjust this.
+- The `descheduler` module can now be configured to evict pods that are using local storage. Use the [`evictLocalStoragePods`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/descheduler/cr.html#descheduler-v1alpha2-spec-evictlocalstoragepods) parameter in the module configuration to adjust this.
 
-- You can now adjust the logging level of the Ingress controller using the [controllerLogLevel](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerloglevel) parameter in the IngressNginxController resource. The default log level is `Info`. Controlling the logging level can help prevent log collector overload during Ingress controller restarts.
+- You can now adjust the logging level of the Ingress controller using the [`controllerLogLevel`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerloglevel) parameter in the IngressNginxController resource. The default log level is `Info`. Controlling the logging level can help prevent log collector overload during Ingress controller restarts.
 
 ### Security
 
