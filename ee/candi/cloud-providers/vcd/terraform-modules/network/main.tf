@@ -10,7 +10,7 @@ resource "vcd_network_routed_v2" "network" {
   org  = var.providerClusterConfiguration.organization
   name = var.providerClusterConfiguration.mainNetwork
 
-  edge_gateway_id = data.vcd_nsxt_edgegateway.edge.id
+  edge_gateway_id = data.vcd_nsxt_edgegateway.gateway.id
 
   gateway            = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length      = 24
