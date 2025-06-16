@@ -83,7 +83,7 @@ EOF
 
 if [ -z "$passwordHash" ] || [ "$passwordHash" = "null" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed": true, "warnings": ["Password hash is empty. The user might not be able to log in."] }
+{"allowed": true, "warnings": ["Password hash is empty. This may not be secure and it may be prohibited by PAM settings."] }
 EOF
       return 0
   fi
