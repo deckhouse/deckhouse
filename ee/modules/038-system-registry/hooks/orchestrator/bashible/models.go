@@ -55,6 +55,12 @@ type State struct {
 	Config          *Config              `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
+type ConfigBuilder struct {
+	ModeParams     ModeParams
+	ActualParams   []ModeParams
+	MasterNodesIPs []string
+}
+
 type Config bashible.Config
 
 type ModeParams struct {
@@ -90,8 +96,6 @@ type Result struct {
 	Ready   bool
 	Message string
 }
-
-type bashibleHosts map[string]bashible.Hosts
 
 func PreflightCheck(input Inputs) Result {
 	var msg strings.Builder
@@ -144,7 +148,7 @@ func (state *State) ProcessTransition(params Params, inputs Inputs) (Result, err
 }
 
 // FinalizeTransition replaces the existing config with the new one.
-// Should be called after successful first stage.
+// Should be called after successful Transition Stage.
 func (state *State) FinalizeTransition(params Params, inputs Inputs) (Result, error) {
 	return state.process(params, inputs, false)
 }
@@ -160,7 +164,7 @@ func (state *State) FinalizeUnmanagedTransition(registrySecret deckhouse_registr
 
 	modeParams := ModeParams{}
 	if err := modeParams.fromRegistrySecret(registrySecret); err != nil {
-		return failedResult, err
+		return failedResult, fmt.Errorf("failed to initialize params from secret: %w", err)
 	}
 
 	params := Params{
@@ -175,137 +179,139 @@ func (state *State) IsRunning() bool {
 	return state != nil && state.Config != nil
 }
 
-// process applies the Bashible configuration, based on the provided
-// mode parameters and node input state. It operates in two possible stages:
+// process applies the Bashible configuration based on the given mode parameters
+// and node input state. It operates in two stages:
 //
-// Transition Stage (isFirstStage == true):
-//   - Used when switching the registry mode (e.g., from proxy to direct).
-//   - Supports dual-configuration:
-//     1. The current configuration (loaded from state or secret).
-//     2. The new configuration (provided via params).
-//   - Ensures safe transition by keeping current config in place while preparing the new one.
-//   - After successful execution, the system is ready to continue to the second stage.
+// Transition Stage (isTransitionStage == true):
+//   - Prepares a dual configuration: current (previous) + intended (new).
+//   - Used when switching the registry mode (e.g., proxy → direct).
+//   - Keeps current config active until transition succeeds.
 //
-// Final Stage (isFirstStage == false):
-//   - Used after the first stage has completed successfully.
-//   - Replaces the current configuration with the new one entirely.
-//
-// Usage Rules:
-//   - When the registry mode or mode-specific parameters change:
-//     ==> always run First Stage.
-//   - Else:
-//     ==> run Second Stage.
+// Final Stage (isTransitionStage == false):
+//   - Applies the new configuration immediately, replacing the previous one.
 //
 // Returns:
-//   - Result: status of configuration (ready or not, message for logging/display).
-//   - error: encountered if parameter validation or processing fails.
+//   - Result: status of config preparation (success or pending).
+//   - error: any validation, loading, or build error that occurred.
 func (state *State) process(params Params, inputs Inputs, isTransitionStage bool) (Result, error) {
 	if params.ModeParams.isEmpty() {
 		return failedResult, fmt.Errorf("mode params are empty")
 	}
 
-	mode, err := params.ModeParams.mode()
-	if err != nil {
-		return failedResult, fmt.Errorf("failed to resolve mode: %w", err)
-	}
-
-	imagesBase := registry_const.HostWithPath
-	if params.ModeParams.Unmanaged != nil {
-		imagesBase = params.ModeParams.Unmanaged.ImagesRepo
-	}
-
-	// First stage + params already contained -> skip (stage already done)
+	// Transition stage + params already contained -> skip (stage already done)
 	if isTransitionStage &&
-		state.ActualParams != nil &&
-		state.ActualParams.isEqual(params.ModeParams) {
+		state.ActualParams != nil && state.ActualParams.isEqual(params.ModeParams) {
 		return successResult, nil
 	}
 
 	// Init actual params from secret, if empty
-	if state.ActualParams == nil ||
-		state.ActualParams.isEmpty() {
+	if state.ActualParams == nil || state.ActualParams.isEmpty() {
 		state.ActualParams = &ModeParams{}
 		if err := state.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
 			return failedResult, fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
 
-	config := Config{
+	builder := ConfigBuilder{
+		ModeParams:     params.ModeParams,
+		MasterNodesIPs: inputs.MasterNodesIPs,
+	}
+	actualParams := &params.ModeParams
+
+	// In transition stage, use actual params
+	if isTransitionStage {
+		builder.ActualParams = []ModeParams{*state.ActualParams}
+		actualParams = state.ActualParams
+	}
+
+	config, err := builder.build()
+	if err != nil {
+		return failedResult, fmt.Errorf("failed to build config: %w", err)
+	}
+
+	state.ActualParams = actualParams
+	state.Config = config
+
+	return buildResult(inputs, false, config.Version), nil
+}
+
+func (b *ConfigBuilder) build() (*Config, error) {
+	mode, err := b.ModeParams.mode()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve mode: %w", err)
+	}
+
+	imagesBase := registry_const.HostWithPath
+	if b.ModeParams.Unmanaged != nil {
+		imagesBase = b.ModeParams.Unmanaged.ImagesRepo
+	}
+
+	ret := Config{
 		Mode:           mode,
 		ImagesBase:     imagesBase,
-		Version:        "",                          // by processHash
-		ProxyEndpoints: []string{},                  // by processEndpoints
-		Hosts:          map[string]bashible.Hosts{}, // by processHosts
-	}
-	if isTransitionStage {
-		// Current
-		config.processHosts(*state.ActualParams)
-		// New
-		config.processHosts(params.ModeParams)
-		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams, params.ModeParams)
-	} else {
-		// Replace Current by new and process only new hosts
-		state.ActualParams = &params.ModeParams
-		config.processHosts(*state.ActualParams)
-		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams)
+		ProxyEndpoints: b.proxyEndpoints(),
+		Hosts:          b.hosts(),
 	}
 
-	if err := config.processHash(); err != nil {
-		return failedResult, err
+	version, err := helpers.ComputeHash(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
-	state.Config = &config
-	return buildResult(inputs, false, state.Config.Version), nil
+	ret.Version = version
+	return &ret, nil
 }
 
-func (cfg *Config) processEndpoints(masterNodesIPs []string, params ...ModeParams) {
-	cfg.ProxyEndpoints = []string{}
-
-	for _, p := range params {
+func (b *ConfigBuilder) proxyEndpoints() []string {
+	for _, p := range append(b.ActualParams, b.ModeParams) {
 		if p.Proxy != nil || p.Local != nil {
-			cfg.ProxyEndpoints = registry_const.GenerateProxyEndpoints(masterNodesIPs)
-			break
+			return registry_const.GenerateProxyEndpoints(b.MasterNodesIPs)
 		}
 	}
+	return []string{}
 }
 
-func (cfg *Config) processHash() error {
-	cfg.Version = ""
-	hash, err := helpers.ComputeHash(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to compute config hash: %w", err)
-	}
-	cfg.Version = hash
-	return nil
-}
+func (b *ConfigBuilder) hosts() map[string]bashible.Hosts {
+	ret := make(map[string]bashible.Hosts)
 
-func (cfg *Config) processHosts(modeParams ModeParams) {
-	switch {
-	case modeParams.Proxy != nil:
-		h := processProxyLocal(*modeParams.Proxy)
-		cfg.mergeHosts(h)
-	case modeParams.Local != nil:
-		h := processProxyLocal(*modeParams.Local)
-		cfg.mergeHosts(h)
-	case modeParams.Direct != nil:
-		h := processDirect(*modeParams.Direct)
-		cfg.mergeHosts(h)
-	case modeParams.Unmanaged != nil:
-		h := processUnmanaged(*modeParams.Unmanaged)
-		cfg.mergeHosts(h)
-	}
-}
+	for _, params := range append(b.ActualParams, b.ModeParams) {
+		var (
+			host    string
+			mirrors []bashible.MirrorHost
+		)
 
-func (cfg *Config) mergeHosts(hosts bashibleHosts) {
-	if cfg.Hosts == nil {
-		cfg.Hosts = make(bashibleHosts)
+		switch {
+		case params.Proxy != nil:
+			host, mirrors = params.Proxy.hostMirrors()
+		case params.Local != nil:
+			host, mirrors = params.Local.hostMirrors()
+		case params.Direct != nil:
+			host, mirrors = params.Direct.hostMirrors()
+		case params.Unmanaged != nil:
+			host, mirrors = params.Unmanaged.hostMirrors()
+		default:
+			continue
+		}
+
+		existingHost := ret[host]
+		for _, mirror := range mirrors {
+			key := mirror.UniqueKey()
+			found := false
+
+			// Replace existing mirror with the same UniqueKey (if found)
+			for i, existing := range existingHost.Mirrors {
+				if existing.UniqueKey() == key {
+					existingHost.Mirrors[i] = mirror
+					found = true
+					break
+				}
+			}
+			if !found {
+				existingHost.Mirrors = append(existingHost.Mirrors, mirror)
+			}
+		}
+		ret[host] = existingHost
 	}
-	for name, h := range hosts {
-		old := cfg.Hosts[name]
-		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
-		cfg.Hosts[name] = old
-	}
+	return ret
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
@@ -406,58 +412,46 @@ func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
 	return false
 }
 
-func processUnmanaged(params UnmanagedModeParams) bashibleHosts {
-	host, _ := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
-	return bashibleHosts{
-		host: {
-			Mirrors: []bashible.MirrorHost{{
-				Host:   host,
-				CA:     params.CA,
-				Scheme: strings.ToLower(params.Scheme),
-				Auth: bashible.Auth{
-					Username: params.Username,
-					Password: params.Password,
-				},
-			}},
+func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.MirrorHost) {
+	host, _ := getRegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	return host, []bashible.MirrorHost{{
+		Host:   host,
+		CA:     p.CA,
+		Scheme: strings.ToLower(p.Scheme),
+		Auth: bashible.Auth{
+			Username: p.Username,
+			Password: p.Password,
 		},
-	}
+	}}
 }
 
-func processDirect(params DirectModeParams) bashibleHosts {
-	host, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
-	return bashibleHosts{
-		registry_const.Host: {
-			Mirrors: []bashible.MirrorHost{{
-				Host:   host,
-				CA:     params.CA,
-				Scheme: strings.ToLower(params.Scheme),
-				Auth: bashible.Auth{
-					Username: params.Username,
-					Password: params.Password,
-				},
-				Rewrites: []bashible.Rewrite{{
-					From: registry_const.PathRegexp,
-					To:   strings.TrimLeft(path, "/"),
-				}},
-			}},
+func (p *DirectModeParams) hostMirrors() (string, []bashible.MirrorHost) {
+	host, path := getRegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	return registry_const.Host, []bashible.MirrorHost{{
+		Host:   host,
+		CA:     p.CA,
+		Scheme: strings.ToLower(p.Scheme),
+		Auth: bashible.Auth{
+			Username: p.Username,
+			Password: p.Password,
 		},
-	}
+		Rewrites: []bashible.Rewrite{{
+			From: registry_const.PathRegexp,
+			To:   strings.TrimLeft(path, "/"),
+		}},
+	}}
 }
 
-func processProxyLocal(params ProxyLocalModeParams) bashibleHosts {
-	return bashibleHosts{
-		registry_const.Host: {
-			Mirrors: []bashible.MirrorHost{{
-				Host:   registry_const.ProxyHost,
-				CA:     params.CA,
-				Scheme: registry_const.Scheme,
-				Auth: bashible.Auth{
-					Username: params.Username,
-					Password: params.Password,
-				},
-			}},
+func (p *ProxyLocalModeParams) hostMirrors() (string, []bashible.MirrorHost) {
+	return registry_const.Host, []bashible.MirrorHost{{
+		Host:   registry_const.ProxyHost,
+		CA:     p.CA,
+		Scheme: registry_const.Scheme,
+		Auth: bashible.Auth{
+			Username: p.Username,
+			Password: p.Password,
 		},
-	}
+	}}
 }
 
 func buildResult(inputs Inputs, isStop bool, version string) Result {
@@ -510,24 +504,6 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 	}
 
 	return Result{Ready: false, Message: msg.String()}
-}
-
-func deduplicateMirrors(values []bashible.MirrorHost) []bashible.MirrorHost {
-	ret := []bashible.MirrorHost{}
-
-	for _, newMirror := range values {
-		duplicate := false
-		for _, existingMirror := range ret {
-			if existingMirror.IsEqual(newMirror) {
-				duplicate = true
-				break
-			}
-		}
-		if !duplicate {
-			ret = append(ret, newMirror)
-		}
-	}
-	return ret
 }
 
 func trimWithEllipsis(value string) string {
