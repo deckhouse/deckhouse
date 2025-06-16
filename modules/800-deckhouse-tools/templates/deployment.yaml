@@ -20,12 +20,15 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: web
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "web") }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
         ports:
           - containerPort: 8080
             name: http
@@ -48,6 +51,7 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
-        securityContext:
-          allowPrivilegeEscalation: false
+      volumes:
+        - name: tmp
+          emptyDir: {}
 {{- end }}
