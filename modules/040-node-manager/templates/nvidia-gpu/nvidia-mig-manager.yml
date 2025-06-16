@@ -124,3 +124,4 @@ spec:
       - name: mig-parted-reconfigure-script
         configMap:
           name: mig-parted-reconfigure-script
+          defaultMode: 0755
