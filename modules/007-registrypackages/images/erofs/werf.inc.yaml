@@ -7,7 +7,7 @@ import:
   to: /
   includePaths:
   - erofs
-  - opt
+  - ld-musl-x86_64.so.1
   - dump.erofs
   - fsck.erofs
   - mkfs.erofs
@@ -50,4 +50,4 @@ shell:
   setup:
   - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
   - mv /usr/bin/*.erofs /
-  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /ld-musl-x86_64.so.1 /install /uninstall
