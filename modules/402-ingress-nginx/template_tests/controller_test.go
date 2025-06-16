@@ -33,10 +33,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-var (
-	// generate golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
-	golden bool
-)
+// generate golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
+var golden bool
 
 func init() {
 	if os.Getenv("GOLDEN") == "" {
@@ -54,7 +52,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.26.0")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.29.14")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -124,7 +122,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 				if golden {
 					Expect(os.MkdirAll(filepath.Dir(filePath), os.ModePerm)).To(Succeed())
 					By("writing golden file " + filePath)
-					Expect(os.WriteFile(filePath, []byte(content), 0644)).To(Succeed())
+					Expect(os.WriteFile(filePath, []byte(content), 0o644)).To(Succeed())
 				} else {
 					By("reading golden file " + filePath)
 					goldenContent, err := os.ReadFile(filePath)
