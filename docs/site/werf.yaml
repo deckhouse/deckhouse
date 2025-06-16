@@ -355,6 +355,10 @@ import:
     - en/includes/
     - ru/includes/
 ---
+{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ImageName" "web" }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-static.inc.yaml" .ModulePath)) $context }}
+---
 image: web-frontend
 imageSpec:
   config:
@@ -369,6 +373,14 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/en/modules
+  to: /app/en/embedded-modules
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/ru/modules
+  to: /app/ru/embedded-modules
+  before: setup
 - image: web-static
   add: /app/_site
   to: /app
@@ -413,3 +425,4 @@ import:
     add: /go/src/app/registry-modules-watcher
     to: /app/registry-modules-watcher
     before: setup
+---
