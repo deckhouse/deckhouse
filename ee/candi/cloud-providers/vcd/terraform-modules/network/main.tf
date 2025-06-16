@@ -7,8 +7,8 @@ data "vcd_nsxt_edgegateway" "gateway" {
 }
 
 resource "vcd_network_routed_v2" "network" {
-  org  = var.providerClusterConfiguration.virtualApplicationName
-  name = var.prefix
+  org  = var.providerClusterConfiguration.organization
+  name = var.providerClusterConfiguration.mainNetwork
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.edge.id
 
