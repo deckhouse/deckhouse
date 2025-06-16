@@ -43,13 +43,13 @@ import:
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup
+- image: tools/util-linux
+  add: /usr/bin/chroot
+  to: /usr/sbin/chroot
+  before: setup
 - image: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /relocate
-  to: /
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -98,10 +98,3 @@ shell:
   - mv /src/scripts/reconfigure-mig.sh /usr/bin/
   - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager /usr/bin/reconfigure-mig.sh
 {{- end }}
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/relocate-artifact
-final: false
-shell:
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
