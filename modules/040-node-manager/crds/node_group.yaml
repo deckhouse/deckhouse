@@ -1509,6 +1509,7 @@ spec:
                   type: object
                   description: |
                     Container runtime parameters.
+                  default: ContainerdV2
                   properties:
                     type:
                       type: string
