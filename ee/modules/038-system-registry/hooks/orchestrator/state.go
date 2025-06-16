@@ -153,9 +153,6 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
-	state.IngressEnabled = true
-
-	// NodeServices
 	nodeservicesParams := nodeservices.Params{
 		CA:         pkiResult.CA,
 		Token:      pkiResult.Token,
@@ -168,18 +165,6 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 			IngressClientCA: inputs.IngressClientCA,
 		},
 	}
-
-	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedNodeServices {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// TODO: check images in local registry
-
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
@@ -198,6 +183,21 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 			Password: state.Users.RO.Password,
 		},
 	}
+
+	// Ingress
+	state.IngressEnabled = true
+
+	// NodeServices
+	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedNodeServices {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// TODO: check images in local registry
 
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
@@ -280,7 +280,6 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
-	// NodeServices
 	nodeservicesParams := nodeservices.Params{
 		CA:         pkiResult.CA,
 		Token:      pkiResult.Token,
@@ -295,18 +294,6 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 			UpstreamCA: inputs.Params.CA,
 		},
 	}
-
-	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedNodeServices {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// TODO: check images in remote registry via proxy
-
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
@@ -325,6 +312,18 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 			Password: state.Users.RO.Password,
 		},
 	}
+
+	// NodeServices
+	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedNodeServices {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// TODO: check images in remote registry via proxy
 
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
@@ -408,7 +407,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		return fmt.Errorf("cannot process Secrets: %w", err)
 	}
 
-	// Configure in-cluster proxy
 	inClusterProxyParams := inclusterproxy.Params{
 		CA:         pkiResult.CA,
 		Token:      pkiResult.Token,
@@ -421,18 +419,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			CA:         inputs.Params.CA,
 		},
 	}
-
-	processedInClusterProxy, err := state.processInClusterProxy(log, inClusterProxyParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedInClusterProxy {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// TODO: check images in remote registry
-
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
@@ -453,6 +439,18 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			Password: inputs.Params.Password,
 		},
 	}
+
+	// Configure in-cluster proxy
+	processedInClusterProxy, err := state.processInClusterProxy(log, inClusterProxyParams, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedInClusterProxy {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// TODO: check images in remote registry
 
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
@@ -618,15 +616,15 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 }
 
 func (state *State) bashiblePreflightCheck(inputs Inputs) bool {
-	bashiblePreflightCheck := bashible.PreflightCheck(inputs.Bashible)
+	result := bashible.PreflightCheck(inputs.Bashible)
 
-	if !bashiblePreflightCheck.Ready {
+	if !result.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeBashiblePreflightCheck,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            bashiblePreflightCheck.Message,
+			Message:            result.Message,
 		})
 		return false
 	}
@@ -641,18 +639,18 @@ func (state *State) bashiblePreflightCheck(inputs Inputs) bool {
 }
 
 func (state *State) processBashibleTransition(params bashible.Params, inputs Inputs) (bool, error) {
-	processResult, err := state.Bashible.ProcessTransition(params, inputs.Bashible)
+	result, err := state.Bashible.ProcessTransition(params, inputs.Bashible)
 	if err != nil {
 		return false, fmt.Errorf("cannot process Bashible: %w", err)
 	}
 
-	if !processResult.Ready {
+	if !result.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeBashibleTransitionStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            processResult.Message,
+			Message:            result.Message,
 		})
 		return false, nil
 	}
@@ -666,18 +664,18 @@ func (state *State) processBashibleTransition(params bashible.Params, inputs Inp
 }
 
 func (state *State) processBashibleFinalize(params bashible.Params, inputs Inputs) (bool, error) {
-	processResult, err := state.Bashible.FinalizeTransition(params, inputs.Bashible)
+	result, err := state.Bashible.FinalizeTransition(params, inputs.Bashible)
 	if err != nil {
 		return false, fmt.Errorf("cannot process Bashible: %w", err)
 	}
 
-	if !processResult.Ready {
+	if !result.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeBashibleFinalStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            processResult.Message,
+			Message:            result.Message,
 		})
 		return false, nil
 	}
@@ -716,18 +714,18 @@ func (state *State) processBashibleUnmanagedFinalize(registrySecret deckhouse_re
 }
 
 func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.Params, inputs Inputs) (bool, error) {
-	nodeServicesResult, err := state.NodeServices.Process(log, params, inputs.NodeServices)
+	result, err := state.NodeServices.Process(log, params, inputs.NodeServices)
 	if err != nil {
 		return false, fmt.Errorf("cannot process NodeServices: %w", err)
 	}
 
-	if !nodeServicesResult.IsReady() {
+	if !result.IsReady() {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeNodeServices,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            nodeServicesResult.GetConditionMessage(),
+			Message:            result.GetConditionMessage(),
 		})
 		return false, nil
 	}
@@ -777,18 +775,18 @@ func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
 }
 
 func (state *State) processInClusterProxy(log go_hook.Logger, params inclusterproxy.Params, inputs Inputs) (bool, error) {
-	inClusterProxyProcessResult, err := state.InClusterProxy.Process(log, params, inputs.InClusterProxy)
+	result, err := state.InClusterProxy.Process(log, params, inputs.InClusterProxy)
 	if err != nil {
 		return false, fmt.Errorf("cannot process InClusterProxy: %w", err)
 	}
 
-	if !inClusterProxyProcessResult.Ready {
+	if !result.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeInClusterProxy,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            inClusterProxyProcessResult.Message,
+			Message:            result.Message,
 		})
 		return false, nil
 	}
@@ -802,15 +800,15 @@ func (state *State) processInClusterProxy(log go_hook.Logger, params inclusterpr
 }
 
 func (state *State) cleanupInClusterProxy(inputs Inputs) bool {
-	inClusterProxyStopResult := state.InClusterProxy.Stop(inputs.InClusterProxy)
+	result := state.InClusterProxy.Stop(inputs.InClusterProxy)
 
-	if !inClusterProxyStopResult.Ready {
+	if !result.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeInClusterProxyCleanup,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            inClusterProxyStopResult.Message,
+			Message:            result.Message,
 		})
 		return false
 	}
