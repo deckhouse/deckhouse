@@ -1,6 +1,6 @@
 ---
 title: "Requirements"
-permalink: en/stronghold/documentation/admin/install/requirements.html
+permalink: en/stronghold/documentation/about/requirements.html
 ---
 
 ## Preparing the infrastructure

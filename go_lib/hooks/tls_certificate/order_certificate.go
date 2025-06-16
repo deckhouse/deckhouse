@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	csrutil "k8s.io/client-go/util/certificate/csr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -174,18 +176,21 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		}
 
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-		if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
-			var secret *CertificateSecret
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.NewSnapshots, "certificateSecrets")
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal certificateSecrets snapshot: %w", err)
+		}
+		if len(secrets) != 0 {
+			var secret CertificateSecret
 
-			for _, snap := range snaps {
-				snapSecret := snap.(*CertificateSecret)
-				if snapSecret.Name == request.SecretName {
-					secret = snapSecret
+			for _, secretSnap := range secrets {
+				if secretSnap.Name == request.SecretName {
+					secret = secretSnap
 					break
 				}
 			}
 
-			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
+			if len(secret.Crt) > 0 && len(secret.Key) > 0 {
 				// Check that certificate is not expired and has the same order request
 				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*15)
 				if err != nil {

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"log/slog"
 	"math"
 	"strconv"
 
@@ -70,7 +71,7 @@ func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
 	virtualizationLevel := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots["master_nodes"])
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
-	input.Logger.Infof("set DVP nesting level to: %d", virtualizationLevel)
+	input.Logger.Info("set DVP nesting level", slog.Int("level", virtualizationLevel))
 
 	return nil
 }

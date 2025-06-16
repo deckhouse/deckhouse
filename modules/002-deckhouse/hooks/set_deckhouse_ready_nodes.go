@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -28,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/kubectl/pkg/util/podutils"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const deckhouseReadyLabel = "node.deckhouse.io/deckhouse-ready"
@@ -121,21 +124,27 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
-	pods := input.Snapshots["control-plane-pods"]
-	nodes := input.Snapshots["control-plane-nodes"]
+	pods, err := sdkobjectpatch.UnmarshalToStruct[statusPod](input.NewSnapshots, "control-plane-pods")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal control-plane-pods snapshot: %w", err)
+	}
+
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[statusNode](input.NewSnapshots, "control-plane-nodes")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal control-plane-nodes snapshot: %w", err)
+	}
+
 	if len(nodes) == 0 {
 		return nil
 	}
 
 	podPerNode := make(map[string]bool, len(pods))
-	for _, pod := range pods {
-		p := pod.(statusPod)
+	for _, p := range pods {
 		podPerNode[p.Node] = p.IsReady
 	}
 
 	deckhouseReadyNodes := make(map[string]bool, 0)
-	for _, node := range nodes {
-		n := node.(statusNode)
+	for _, n := range nodes {
 		if !n.IsReady {
 			deckhouseReadyNodes[n.Name] = false
 			continue
@@ -145,7 +154,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 	}
 
 	for nodeName, nodeStatus := range deckhouseReadyNodes {
-		input.Logger.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
+		input.Logger.Info("Labeling node with label", slog.String("label_key", nodeName), slog.String("label_value", deckhouseReadyLabel), slog.Bool("status", nodeStatus))
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
@@ -153,7 +162,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(metadata, "v1", "Node", "", nodeName)
+		input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", nodeName)
 	}
 
 	return nil

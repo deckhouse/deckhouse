@@ -131,7 +131,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
+		input.PatchCollector.PatchWithMerge(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
 
 		input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
 	}

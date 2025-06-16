@@ -1,10 +1,18 @@
 ---
 title: "Platform editions"
-permalink: en/stronghold/documentation/admin/editions.html
+permalink: en/stronghold/documentation/about/editions.html
 ---
 
-The Deckhouse Stronghold is available in Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold editions differ in their set of features and the level of available support.
+Deckhouse Stronghold is licensed separately and available for use in the following commercial editions of the Deckhouse Kubernetes Platform:
 
+- Basic Edition (BE);
+- Standard Edition (SE);
+- Standard Edition + (SE+);
+- Enterprise Edition (EE).
+
+For a detailed comparison of features, see the [Deckhouse Kubernetes Platform editions comparison](../../../kubernetes-platform/documentation/v1/revision-comparison.html) section.
+
+<!--
 The table below provides brief a comparison of editions listing its main features and functions:
 
 {% capture coming_soon %}<img src="/images/icons/note.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
@@ -24,3 +32,4 @@ The table below provides brief a comparison of editions listing its main feature
 | Runtime audit engine                                             | {{ not_supported }} | {{ supported }} | {{ supported }} |
 | [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
 | [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
+-->
