@@ -143,22 +143,22 @@ func PreflightCheck(input Inputs) Result {
 
 // ProcessTransition applies the new configuration alongside the existing one.
 // Should be used when registry mode or its parameters change (transition phase).
-func (state *State) ProcessTransition(params Params, inputs Inputs) (Result, error) {
-	return state.process(params, inputs, true)
+func (s *State) ProcessTransition(params Params, inputs Inputs) (Result, error) {
+	return s.process(params, inputs, true)
 }
 
 // FinalizeTransition replaces the existing config with the new one.
 // Should be called after successful Transition Stage.
-func (state *State) FinalizeTransition(params Params, inputs Inputs) (Result, error) {
-	return state.process(params, inputs, false)
+func (s *State) FinalizeTransition(params Params, inputs Inputs) (Result, error) {
+	return s.process(params, inputs, false)
 }
 
 // FinalizeUnmanagedTransition handles the transition away from managed configuration mode.
 // If the registry secret is not present, the internal state is cleared and the transition is considered complete.
 // If the secret is present – we preserve and support its configuration instead of using Deckhouse registry secret.
-func (state *State) FinalizeUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (Result, error) {
+func (s *State) FinalizeUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (Result, error) {
 	if !inputs.IsSecretExist {
-		*state = State{}
+		*s = State{}
 		return buildResult(inputs, true, registry_const.UnknownVersion), nil
 	}
 
@@ -171,12 +171,7 @@ func (state *State) FinalizeUnmanagedTransition(registrySecret deckhouse_registr
 		RegistrySecret: registrySecret,
 		ModeParams:     modeParams,
 	}
-	return state.process(params, inputs, false)
-}
-
-// IsRunning returns true if there is an active configuration managed by this state.
-func (state *State) IsRunning() bool {
-	return state != nil && state.Config != nil
+	return s.process(params, inputs, false)
 }
 
 // process applies the Bashible configuration based on the given mode parameters
@@ -193,21 +188,21 @@ func (state *State) IsRunning() bool {
 // Returns:
 //   - Result: status of config preparation (success or pending).
 //   - error: any validation, loading, or build error that occurred.
-func (state *State) process(params Params, inputs Inputs, isTransitionStage bool) (Result, error) {
+func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (Result, error) {
 	if params.ModeParams.isEmpty() {
 		return failedResult, fmt.Errorf("mode params are empty")
 	}
 
 	// Transition stage + params already contained -> skip (stage already done)
 	if isTransitionStage &&
-		state.ActualParams != nil && state.ActualParams.isEqual(params.ModeParams) {
+		s.ActualParams != nil && s.ActualParams.isEqual(params.ModeParams) {
 		return successResult, nil
 	}
 
 	// Init actual params from secret, if empty
-	if state.ActualParams == nil || state.ActualParams.isEmpty() {
-		state.ActualParams = &ModeParams{}
-		if err := state.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
+	if s.ActualParams == nil || s.ActualParams.isEmpty() {
+		s.ActualParams = &ModeParams{}
+		if err := s.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
 			return failedResult, fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
@@ -220,8 +215,8 @@ func (state *State) process(params Params, inputs Inputs, isTransitionStage bool
 
 	// In transition stage, use actual params
 	if isTransitionStage {
-		builder.ActualParams = []ModeParams{*state.ActualParams}
-		actualParams = state.ActualParams
+		builder.ActualParams = []ModeParams{*s.ActualParams}
+		actualParams = s.ActualParams
 	}
 
 	config, err := builder.build()
@@ -229,8 +224,8 @@ func (state *State) process(params Params, inputs Inputs, isTransitionStage bool
 		return failedResult, fmt.Errorf("failed to build config: %w", err)
 	}
 
-	state.ActualParams = actualParams
-	state.Config = config
+	s.ActualParams = actualParams
+	s.Config = config
 
 	return buildResult(inputs, false, config.Version), nil
 }
