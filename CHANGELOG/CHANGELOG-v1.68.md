@@ -3,6 +3,7 @@
 ## [MALFORMED]
 
 
+ - #11711 unknown section "static-routing-manager"
  - #12058 unknown section "ceph-csi"
 
 ## Know before update
@@ -79,6 +80,8 @@
  - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
  - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
  - **[deckhouse]** Return `helm_lib_envs_for_proxy` template to deckhouse deployment. [#11921](https://github.com/deckhouse/deckhouse/pull/11921)
+ - **[deckhouse-controller]** Added validation according to `RFC 1123` for module names added to `ModuleSource`. [#13643](https://github.com/deckhouse/deckhouse/pull/13643)
+ - **[deckhouse-controller]** Added validation according to `RFC 1123` for module names added to `ModuleSource`. [#13543](https://github.com/deckhouse/deckhouse/pull/13543)
  - **[deckhouse-controller]** Fix DeckhouseRelease approval in the Manual update mode. [#12527](https://github.com/deckhouse/deckhouse/pull/12527)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
  - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
@@ -277,8 +280,6 @@
  - **[service-with-healthchecks]** Updated dependencies and fixed security vulnerabilities. [#11713](https://github.com/deckhouse/deckhouse/pull/11713)
     The `service-with-healthchecks` pods will be restarted.
  - **[snapshot-controller]** Updated the build and bumped the version to `8.2.0`. [#11279](https://github.com/deckhouse/deckhouse/pull/11279)
- - **[static-routing-manager]** Updated dependencies and fixed security vulnerabilities. [#11711](https://github.com/deckhouse/deckhouse/pull/11711)
-    The `static-routing-manager` pods will be restarted.
  - **[terraform-manager]** Fix terraform CVEs. [#12096](https://github.com/deckhouse/deckhouse/pull/12096)
  - **[vertical-pod-autoscaler]** Updated the build and fixed security vulnerabilities. [#11219](https://github.com/deckhouse/deckhouse/pull/11219)
 

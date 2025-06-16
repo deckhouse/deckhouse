@@ -1,0 +1,11 @@
+deckhouse-controller:
+  fixes:
+    - summary: Added validation according to `RFC 1123` for module names added to `ModuleSource`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13643
+    - summary: Added validation according to `RFC 1123` for module names added to `ModuleSource`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13543
+docs:
+  fixes:
+    - summary: Fixed new providers layouts at documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13624
+
