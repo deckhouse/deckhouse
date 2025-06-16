@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 const (
@@ -64,19 +65,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 				if err != nil {
 					return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
 				}
-
-				config := Params{
-					Mode:       string(secret.Data["mode"]),
-					ImagesRepo: string(secret.Data["imagesRepo"]),
-					UserName:   string(secret.Data["username"]),
-					Password:   string(secret.Data["password"]),
-					TTL:        string(secret.Data["ttl"]),
-					Scheme:     string(secret.Data["scheme"]),
-					CA:         string(secret.Data["ca"]),
-					Generation: secret.Generation,
-				}
-
-				return config, nil
+				return secret, nil
 			},
 		},
 		{
@@ -182,14 +171,16 @@ func handle(input *go_hook.HookInput) error {
 		)
 	}
 
-	inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
+	configSecret, err := helpers.SnapshotToSingle[v1core.Secret](input, configSnapName)
 	if err != nil {
 		if errors.Is(err, helpers.ErrNoSnapshot) {
 			moduleValues.Clear()
 			return nil
 		}
-
 		return fmt.Errorf("get Config snapshot error: %w", err)
+	}
+	if inputs.Params, err = configFromSecret(configSecret); err != nil {
+		return fmt.Errorf("failed to process config from secret %q: %w", configSecret.Name, err)
 	}
 
 	inputs.RegistrySecret, err = helpers.SnapshotToSingle[deckhouse_registry.Config](input, registrySecretSnapName)
@@ -255,4 +246,25 @@ func handle(input *go_hook.HookInput) error {
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 	return nil
+}
+
+func configFromSecret(secret v1core.Secret) (Params, error) {
+	ret := Params{
+		Mode:       string(secret.Data["mode"]),
+		ImagesRepo: string(secret.Data["imagesRepo"]),
+		UserName:   string(secret.Data["username"]),
+		Password:   string(secret.Data["password"]),
+		TTL:        string(secret.Data["ttl"]),
+		Scheme:     string(secret.Data["scheme"]),
+		Generation: secret.Generation,
+	}
+
+	if rawCA := secret.Data["ca"]; len(rawCA) > 0 {
+		cert, err := registry_pki.DecodeCertificate(rawCA)
+		if err != nil {
+			return Params{}, fmt.Errorf("failed to decode CA certificate: %w", err)
+		}
+		ret.CA = cert
+	}
+	return ret, nil
 }

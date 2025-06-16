@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	"crypto/x509"
 	"fmt"
 	"sort"
 	"strings"
@@ -306,27 +307,8 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 			UserName:   inputs.Params.UserName,
 			Password:   inputs.Params.Password,
 			TTL:        inputs.Params.TTL,
+			UpstreamCA: inputs.Params.CA,
 		},
-	}
-
-	if inputs.Params.CA != "" {
-		cert, err := registry_pki.DecodeCertificate([]byte(inputs.Params.CA))
-		if err != nil {
-			log.Error("Cannot decode upstream CA", "error", err)
-
-			state.setCondition(metav1.Condition{
-				Type:               ConditionTypeNodeServices,
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: inputs.Params.Generation,
-				Reason:             ConditionReasonError,
-				Message:            fmt.Sprintf("Cannot decode upstream CA: %v", err),
-			})
-
-			state.setReadyCondition(false, inputs)
-			return nil
-		}
-
-		nodeservicesParams.Proxy.UpstreamCA = cert
 	}
 
 	nodeServicesResult, err := state.NodeServices.Process(log, nodeservicesParams, inputs.NodeServices)
@@ -431,7 +413,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	state.Bashible.UnmanagedParams = &bashible.UnmanagedModeParams{
 		ImagesRepo: inputs.Params.ImagesRepo,
 		Scheme:     inputs.Params.Scheme,
-		CA:         inputs.Params.CA,
+		CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
 		Username:   inputs.Params.UserName,
 		Password:   inputs.Params.Password,
 	}
@@ -467,27 +449,8 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			ImagesRepo: inputs.Params.ImagesRepo,
 			UserName:   inputs.Params.UserName,
 			Password:   inputs.Params.Password,
+			CA:         inputs.Params.CA,
 		},
-	}
-
-	if inputs.Params.CA != "" {
-		cert, err := registry_pki.DecodeCertificate([]byte(inputs.Params.CA))
-		if err != nil {
-			log.Error("Cannot decode upstream CA", "error", err)
-
-			state.setCondition(metav1.Condition{
-				Type:               ConditionTypeInClusterProxy,
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: inputs.Params.Generation,
-				Reason:             ConditionReasonError,
-				Message:            fmt.Sprintf("Cannot decode upstream CA: %v", err),
-			})
-
-			state.setReadyCondition(false, inputs)
-			return nil
-		}
-
-		inClusterProxyParams.Upstream.CA = cert
 	}
 
 	inClusterProxyProcessResult, err := state.InClusterProxy.Process(log, inClusterProxyParams, inputs.InClusterProxy)
@@ -522,7 +485,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			Direct: &bashible.DirectModeParams{
 				ImagesRepo: inputs.Params.ImagesRepo,
 				Scheme:     inputs.Params.Scheme,
-				CA:         inputs.Params.CA,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
 				Username:   inputs.Params.UserName,
 				Password:   inputs.Params.Password,
 			},
@@ -590,7 +553,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	state.Bashible.UnmanagedParams = &bashible.UnmanagedModeParams{
 		ImagesRepo: inputs.Params.ImagesRepo,
 		Scheme:     inputs.Params.Scheme,
-		CA:         inputs.Params.CA,
+		CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
 		Username:   inputs.Params.UserName,
 		Password:   inputs.Params.Password,
 	}
@@ -887,4 +850,11 @@ func (state *State) setReadyCondition(ready bool, inputs Inputs) {
 			Message:            fmt.Sprintf("Transitioning to %v", state.TargetMode),
 		})
 	}
+}
+
+func encodeCertificateIfExist(cert *x509.Certificate) []byte {
+	if cert != nil {
+		return registry_pki.EncodeCertificate(cert)
+	}
+	return []byte{}
 }

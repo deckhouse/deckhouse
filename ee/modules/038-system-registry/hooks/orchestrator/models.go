@@ -20,20 +20,20 @@ import (
 )
 
 type Params struct {
-	Generation int64                   `json:"generation,omitempty"`
-	Mode       registry_const.ModeType `json:"mode,omitempty"`
-	ImagesRepo string                  `json:"images_repo,omitempty"`
-	UserName   string                  `json:"username,omitempty"`
-	Password   string                  `json:"password,omitempty"`
-	TTL        string                  `json:"ttl,omitempty"`
-	Scheme     string                  `json:"scheme,omitempty"`
-	CA         string                  `json:"ca,omitempty"`
+	Generation int64
+	Mode       registry_const.ModeType
+	ImagesRepo string
+	UserName   string
+	Password   string
+	TTL        string
+	Scheme     string
+	CA         *x509.Certificate // optional
 }
 
 type Inputs struct {
 	Params          Params
 	RegistrySecret  deckhouse_registry.Config
-	IngressClientCA *x509.Certificate
+	IngressClientCA *x509.Certificate // optional
 
 	PKI             pki.Inputs
 	Secrets         secrets.Inputs
