@@ -731,16 +731,11 @@ data:
     fi
 
     echo "Cordon node"
-    kubectl cordon "${NODE_NAME}"
+    kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule
 
     echo "Waiting for the device-plugin to shutdown"
     kubectl delete pod \
-      --timeout=5m \
-      --field-selector "spec.nodeName=${NODE_NAME}" \
-      -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
-      -l app=nvidia-device-plugin
-
-    kubectl wait --for=delete pod \
+      --wait=true \
       --timeout=5m \
       --field-selector "spec.nodeName=${NODE_NAME}" \
       -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
@@ -748,12 +743,7 @@ data:
 
     echo "Waiting for gpu-feature-discovery to shutdown"
     kubectl delete pod \
-      --timeout=5m \
-      --field-selector "spec.nodeName=${NODE_NAME}" \
-      -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
-      -l app=gpu-feature-discovery
-
-    kubectl wait --for=delete pod \
+      --wait=true \
       --timeout=5m \
       --field-selector "spec.nodeName=${NODE_NAME}" \
       -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
@@ -896,6 +886,6 @@ data:
     fi
 
     echo "Uncordon node"
-    kubectl uncordon "${NODE_NAME}"
+    kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
 
     exit_success
