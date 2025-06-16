@@ -44,8 +44,10 @@ import:
   to: /usr/bin/bash
   before: setup
 - image: tools/coreutils
-  add: /usr/bin/chroot
-  to: /usr/sbin/chroot
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
   before: setup
 - image: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
