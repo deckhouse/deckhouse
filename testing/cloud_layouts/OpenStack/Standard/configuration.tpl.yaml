@@ -74,7 +74,7 @@ kind: ModuleConfig
 metadata:
   name: istio
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
 ---
@@ -97,4 +97,4 @@ spec:
       placement:
         customTolerationKeys:
           - node
-  version: 1
+  version: 2
