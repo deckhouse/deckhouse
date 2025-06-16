@@ -1509,7 +1509,6 @@ spec:
                   type: object
                   description: |
                     Container runtime parameters.
-                  default: ContainerdV2
                   properties:
                     type:
                       type: string
@@ -1519,6 +1518,7 @@ spec:
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
 
                         > **Note!** The `Docker` is deprecated.
+                      default: ContainerdV2
                       enum:
                         - Docker
                         - Containerd
