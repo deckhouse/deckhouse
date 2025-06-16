@@ -3,6 +3,7 @@ module Comparator
     safe true
 
     def generate(site)
+        return
         comparingPages = []
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         site.pages.each do |page|

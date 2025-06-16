@@ -33,44 +33,50 @@ shell:
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
         bash _tools/modules_prepare.sh
 
-        echo '[] Adding permalinks...'
-        for i in $(find . -regex '.*.md' -print); do
-          if ! grep -q "^---" "$i"; then continue; fi
-          if cat $i | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
-            # permalink is absent, add permalink
-            PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
-            sed -i "1apermalink: $PERMALINK" $i
+        echo '[] Adding permalinks for modules...'
+        for file in $(find . -regex '.*modules_\(ru\|en\)/\([0-9]\+-\)\?[^/]\+/docs/[^/]\+\.\(md\|MD\)' -print | grep -i '\.md$'); do
+          ## Has frontmatter in the file
+          if $(awk 'BEGIN { in_fm = 0; has_fm = 0 }
+                    NR == 1 && /^---$/ { in_fm = 1; next }
+                    in_fm == 1 && /^---$/ { if (NR > 2) { has_fm = 1 } ; exit }
+                    END { exit !has_fm }' "${file}"); then
+          #  #if cat $file | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
+          # Remove existing permalink if it exists
+          sed -i '0,/^permalink: .*$/ {/^permalink: .*$/d;}' "${file}"
+          # Add permalink
+          PERMALINK="/$(echo "${file}" | sed -E 's#(.*/)?modules_(en|ru)/([0-9]+-)?([^/]+)/docs/(.+)\.md#\2/modules/\4/\5.html#I' | tr '[:upper:]' '[:lower:]' | sed 's#readme\.html$##I')"
+          sed -i "1apermalink: ${PERMALINK}" "${file}"
           fi
         done
 
-        echo '[] Generating configuration schemas...'
-        export MODULES_DIR=/src/modules
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash _tools/modules_generate_configuration.sh
+        #echo '[] Generating configuration schemas...'
+        #export MODULES_DIR=/src/modules
+        #export MODULES_DIR=modules_en
+        #bash _tools/modules_generate_configuration.sh
+        #export MODULES_DIR=modules_ru MODULES_LANG=ru
+        #bash _tools/modules_generate_configuration.sh
 
-        echo
-        echo '[] Generating cluster configuration schemas...'
-        export MODULES_DIR=modules_en
-        bash _tools/generate_cluster_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash _tools/generate_cluster_configuration.sh
+        #echo
+        #echo '[] Generating cluster configuration schemas...'
+        #export MODULES_DIR=modules_en
+        #bash _tools/generate_cluster_configuration.sh
+        #export MODULES_DIR=modules_ru MODULES_LANG=ru
+        #bash _tools/generate_cluster_configuration.sh
 
-        echo
-        echo "[] Generating CR schemas..."
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_cr.sh
-        export MODULES_DIR=modules_ru
-        bash _tools/modules_generate_cr.sh
+        #echo
+        #echo "[] Generating CR schemas..."
+        #export MODULES_DIR=modules_en
+        #bash _tools/modules_generate_cr.sh
+        #export MODULES_DIR=modules_ru
+        #bash _tools/modules_generate_cr.sh
 
-        mkdir -p _data/schemas/crds/
-        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
+        #mkdir -p _data/schemas/crds/
+        #find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
-        echo
-        echo '[] Preparing OSS license info...'
-        export MODULES_DIR=/src/modules
-        bash _tools/modules_generate_ossinfo.sh
+        #echo
+        #echo '[] Preparing OSS license info...'
+        #export MODULES_DIR=/src/modules
+        #bash _tools/modules_generate_ossinfo.sh
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -86,7 +92,7 @@ shell:
 
 {{ if ne .ModuleName "docs" }}
         # Syncing file from the documentation to the main site...
-        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,custom_sidebar.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."

@@ -5,6 +5,18 @@ module ResourceGenerator
     safe true
 
     def generate(site)
+
+    #site.pages.each do |page|
+    #    puts "GENERATORProcessing page: #{page.name} with URL: #{page.url} and dir: #{page.dir}"
+#   #      page.data['permalink'] = page.dir.sub(%r{.*/modules_(en|ru)/([0-9]+-)?([^/]+)/docs/$},'\1/JOPA/modules/\3/') + page.name.sub(%r{(.+)(_RU|_ru|\.ru|\.en)?\.(md|MD)$},'\1.html').downcase
+    #    custom_path = "/custom/re.html"
+    #    page.dir  = File.dirname(custom_path)
+    #    page.name = File.basename(custom_path)
+    #    #page.data['permalink'] = "/joooopa/#{page.name}"
+    #end
+
+
+      return
       languages = ['ru', 'en']
       productCode = 'kubernetes-platform'
       sidebar = 'kubernetes-platform'

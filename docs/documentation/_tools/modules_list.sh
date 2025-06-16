@@ -28,6 +28,8 @@
 #     edition: ce
 #
 
+# TODO: Refactor this! And the weird modules_menu_skip logic...
+
 check_module_docs_exist() {
     moduleToCheck=$1
 
