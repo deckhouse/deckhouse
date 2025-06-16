@@ -14,7 +14,3 @@ variable "providerClusterConfiguration" {
     error_message = "Address in mainNetworkIPAddresses not in internalNetworkCIDR."
   }
 }
-
-variable "prefix" {
-  type = string
-}
