@@ -90,6 +90,15 @@ func (h *Hosts) Validate() error {
 			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
 		}
 	}
+
+	seen := make(map[string]struct{})
+	for i, mirror := range h.Mirrors {
+		key := mirror.UniqueKey()
+		if _, ok := seen[key]; ok {
+			return fmt.Errorf("mirror[%d] validation failed: has duplicate", i)
+		}
+		seen[key] = struct{}{}
+	}
 	return nil
 }
 
@@ -100,26 +109,6 @@ func (m *MirrorHost) Validate() error {
 	)
 }
 
-func (m *MirrorHost) IsEqual(other MirrorHost) bool {
-	if m.Host != other.Host || m.Scheme != other.Scheme || m.CA != other.CA {
-		return false
-	}
-	if !m.Auth.IsEqual(other.Auth) {
-		return false
-	}
-	if len(m.Rewrites) != len(other.Rewrites) {
-		return false
-	}
-	for i := range m.Rewrites {
-		if m.Rewrites[i] != other.Rewrites[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func (a *Auth) IsEqual(b Auth) bool {
-	return a.Username == b.Username &&
-		a.Password == b.Password &&
-		a.Auth == b.Auth
+func (m *MirrorHost) UniqueKey() string {
+	return m.Host + "|" + m.Scheme
 }

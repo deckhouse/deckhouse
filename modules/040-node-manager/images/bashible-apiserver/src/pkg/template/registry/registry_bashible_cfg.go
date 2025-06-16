@@ -101,6 +101,15 @@ func (h *bashibleConfigHosts) Validate() error {
 			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
 		}
 	}
+
+	seen := make(map[string]struct{})
+	for i, mirror := range h.Mirrors {
+		key := mirror.UniqueKey()
+		if _, ok := seen[key]; ok {
+			return fmt.Errorf("mirror[%d] validation failed: has duplicate", i)
+		}
+		seen[key] = struct{}{}
+	}
 	return nil
 }
 
@@ -109,6 +118,10 @@ func (m *bashibleConfigMirrorHost) Validate() error {
 		validation.Field(&m.Host, validation.Required),
 		validation.Field(&m.Scheme, validation.Required),
 	)
+}
+
+func (m *bashibleConfigMirrorHost) UniqueKey() string {
+	return m.Host + "|" + m.Scheme
 }
 
 func (c bashibleConfigSecret) toRegistryData() *RegistryData {

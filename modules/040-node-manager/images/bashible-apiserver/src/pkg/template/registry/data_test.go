@@ -123,7 +123,7 @@ func TestRegistryDataValidate(t *testing.T) {
 				host := validRegistryHost()
 				mirror := validRegistryMirrorHost()
 				mirror.Host = ""
-				host.Mirrors = append(host.Mirrors, mirror)
+				host.Mirrors = []registryMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
@@ -136,7 +136,19 @@ func TestRegistryDataValidate(t *testing.T) {
 				host := validRegistryHost()
 				mirror := validRegistryMirrorHost()
 				mirror.Scheme = ""
-				host.Mirrors = append(host.Mirrors, mirror)
+				host.Mirrors = []registryMirrorHost{mirror}
+				cfg.Hosts["host1"] = host
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Duplicate Mirrors",
+			input: func() *RegistryData {
+				cfg := validRegistryData()
+				host := validRegistryHost()
+				mirror := validRegistryMirrorHost()
+				host.Mirrors = []registryMirrorHost{mirror, mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),

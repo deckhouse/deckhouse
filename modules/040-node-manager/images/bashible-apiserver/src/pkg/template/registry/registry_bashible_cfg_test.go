@@ -29,12 +29,12 @@ func validBashibleConfigSecret() *bashibleConfigSecret {
 		ImagesBase: "example.com/base",
 		Version:    "1.0",
 		Hosts: map[string]bashibleConfigHosts{
-			"host1": validSecretHost(),
+			"host1": validbashibleConfigHost(),
 		},
 	}
 }
 
-func validSecretHost() bashibleConfigHosts {
+func validbashibleConfigHost() bashibleConfigHosts {
 	return bashibleConfigHosts{
 		Mirrors: []bashibleConfigMirrorHost{
 			validbashibleConfigMirrorHost(),
@@ -120,10 +120,10 @@ func TestBashibleConfigSecretValidate(t *testing.T) {
 			name: "Mirror with empty Host is invalid",
 			input: func() *bashibleConfigSecret {
 				cfg := validBashibleConfigSecret()
-				host := validSecretHost()
+				host := validbashibleConfigHost()
 				mirror := validbashibleConfigMirrorHost()
 				mirror.Host = ""
-				host.Mirrors = append(host.Mirrors, mirror)
+				host.Mirrors = []bashibleConfigMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
@@ -133,10 +133,22 @@ func TestBashibleConfigSecretValidate(t *testing.T) {
 			name: "Mirror with empty Scheme is invalid",
 			input: func() *bashibleConfigSecret {
 				cfg := validBashibleConfigSecret()
-				host := validSecretHost()
+				host := validbashibleConfigHost()
 				mirror := validbashibleConfigMirrorHost()
 				mirror.Scheme = ""
-				host.Mirrors = append(host.Mirrors, mirror)
+				host.Mirrors = []bashibleConfigMirrorHost{mirror}
+				cfg.Hosts["host1"] = host
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Duplicate Mirrors",
+			input: func() *bashibleConfigSecret {
+				cfg := validBashibleConfigSecret()
+				host := validbashibleConfigHost()
+				mirror := validbashibleConfigMirrorHost()
+				host.Mirrors = []bashibleConfigMirrorHost{mirror, mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
