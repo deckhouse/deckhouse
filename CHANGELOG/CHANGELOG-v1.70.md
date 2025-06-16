@@ -88,7 +88,9 @@
  - **[cloud-provider-vcd]** Add support for searching `vAppTemplates` by an organization name in the `VCDInstanceClass` resource. [#13079](https://github.com/deckhouse/deckhouse/pull/13079)
  - **[cloud-provider-vsphere]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-vsphere]** Added condition that values for `settings.storageClass.compatibilityFlag` must be capitalized. [#13434](https://github.com/deckhouse/deckhouse/pull/13434)
+ - **[cloud-provider-yandex]** Handle hybrid clusters case in the to_tofu_migrate_metric hook [#13911](https://github.com/deckhouse/deckhouse/pull/13911)
  - **[cloud-provider-yandex]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-zvirt]** fix UUID validation regex [#13955](https://github.com/deckhouse/deckhouse/pull/13955)
  - **[cloud-provider-zvirt]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
@@ -117,7 +119,9 @@
  - **[metallb]** Dashboards are aligned with user experience expectations. [#12666](https://github.com/deckhouse/deckhouse/pull/12666)
  - **[monitoring-deckhouse]** Fixed many to many error in `ModuleReleaseIsWaitingManualApproval` alert. [#13429](https://github.com/deckhouse/deckhouse/pull/13429)
  - **[monitoring-ping]** Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289 [#13684](https://github.com/deckhouse/deckhouse/pull/13684)
+ - **[node-local-dns]** Changed container liveness port. [#13922](https://github.com/deckhouse/deckhouse/pull/13922)
  - **[node-local-dns]** Fixing of the stale-dns-connections-cleaner pods [#13615](https://github.com/deckhouse/deckhouse/pull/13615)
+ - **[node-manager]** fixed update for static clusters [#13963](https://github.com/deckhouse/deckhouse/pull/13963)
  - **[node-manager]** Added `appendApprovalConditionfunc` filter csr status condition. [#13461](https://github.com/deckhouse/deckhouse/pull/13461)
  - **[node-manager]** Fixed `bashible apiserver` CVE vulnerabilities. [#13314](https://github.com/deckhouse/deckhouse/pull/13314)
  - **[node-manager]** Changed `mcm` version to use `node manager token` instead `mcm`. [#13305](https://github.com/deckhouse/deckhouse/pull/13305)
@@ -144,6 +148,7 @@
 ## Chore
 
 
+ - **[candi]** Update Deckhouse CLI to 0.13.1 [#13968](https://github.com/deckhouse/deckhouse/pull/13968)
  - **[candi]** update go generate forgotten in k8s update versions PR [#13869](https://github.com/deckhouse/deckhouse/pull/13869)
  - **[candi]** update k8s patch versions [#13862](https://github.com/deckhouse/deckhouse/pull/13862)
  - **[candi]** Bump patch versions of Kubernetes images. [#13608](https://github.com/deckhouse/deckhouse/pull/13608)
