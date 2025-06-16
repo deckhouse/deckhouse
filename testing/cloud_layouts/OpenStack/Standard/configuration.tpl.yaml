@@ -30,6 +30,11 @@ standard:
   internalNetworkCIDR: 192.168.195.0/24
   internalNetworkSecurity: true
   externalNetworkName: "external-network"
+  bastion:
+    instanceClass:
+      rootDiskSize: 50
+      flavorName: m1.medium
+      imageName: "redos-STD-MINIMAL-8.0.0"
 provider:
   authURL: 'https://api.selvpc.ru/identity/v3'
   domainName: '48348'
