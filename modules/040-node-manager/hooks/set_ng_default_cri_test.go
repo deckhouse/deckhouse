@@ -25,6 +25,7 @@ import (
 
 var _ = Describe("Modules :: node-manager :: hooks :: set_cri ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	const (
 		stateEmpty = ``
@@ -59,7 +60,7 @@ metadata:
   name: ng-2
 spec:
   cri:
-    type: containerdV2
+    type: ContainerdV2
   disruptions:
     approvalMode: Manual
   nodeTemplate:
@@ -84,9 +85,7 @@ spec:
 
 		It("should set spec.cri.type to Containerd", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(
-				f.KubernetesGlobalResource("NodeGroup", "ng-1").Field("spec.cri.type").String(),
-			).To(MatchJSON(`"Containerd"`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-1").Field("spec.cri.type").String() == "Containerd")
 		})
 	})
 
@@ -98,9 +97,7 @@ spec:
 
 		It("should preserve the existing spec.cri.type", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(
-				f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("spec.cri.type").String(),
-			).To(MatchJSON(`"containerdV2"`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-1").Field("spec.cri.type").String() == "ContainerdV2")
 		})
 	})
 })
