@@ -35,7 +35,20 @@ apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng-1
-spec: {}
+spec:
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    annotations:
+      test-annot: test-annot
+    labels:
+      test-label: "test-label"
+  nodeType: CloudStatic
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: Auto
 `
 
 		stateNG2 = `
@@ -47,6 +60,19 @@ metadata:
 spec:
   cri:
     type: containerdV2
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    annotations:
+      test-annot: test-annot
+    labels:
+      test-label: "test-label2"
+  nodeType: CloudStatic
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: Auto
 `
 	)
 
