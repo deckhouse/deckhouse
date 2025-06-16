@@ -14,6 +14,6 @@ module "vapp" {
 resource "vcd_vapp_org_network" "vapp_network" {
   org              = var.providerClusterConfiguration.organization
   vdc              = var.providerClusterConfiguration.virtualDataCenter
-  vapp_name        = var.providerClusterConfiguration.virtualApplicationName
-  org_network_name = var.providerClusterConfiguration.mainNetwork
+  vapp_name        = module.vapp.name
+  org_network_name = module.network.name
 }
