@@ -33,16 +33,13 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-var (
-	// generate golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
-	golden bool
-)
+// Set to true to update golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
+var golden bool
 
 func init() {
-	if os.Getenv("GOLDEN") == "" {
-		return
+	if env := os.Getenv("GOLDEN"); env != "" {
+		golden, _ = strconv.ParseBool(env)
 	}
-	golden, _ = strconv.ParseBool(os.Getenv("GOLDEN"))
 }
 
 func Test(t *testing.T) {
@@ -50,7 +47,7 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", func() {
+var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func() {
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
@@ -59,11 +56,12 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.deckhouse.io/deckhouse/fe")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus", "control-plane-manager"})
+		hec.ValuesSet("global.internal.modules.admissionWebhookClientCA.cert", "mock-cert")
+		hec.ValuesSet("global.internal.modules.admissionWebhookClientCA.key", "mock-key")
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.9")
-
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
@@ -75,14 +73,16 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		func(fileName string) {
 			var ctrl ingressNginxController
 
-			data, err := os.ReadFile("testdata/" + fileName)
+			// Load YAML definition
+			data, err := os.ReadFile(filepath.Join("testdata", fileName))
 			Expect(err).ShouldNot(HaveOccurred())
-			// read yaml from fileName
+
 			err = yaml.Unmarshal(data, &ctrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			controllerSpec, _ := yaml.Marshal(ctrl)
+			controllerSpecYAML, _ := yaml.Marshal(ctrl)
 
+			// Set TLS certs
 			cert := fmt.Sprintf(`
 - controllerName: %s
   ingressClass: nginx
@@ -90,50 +90,58 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     cert: teststring
     key: teststring
 `, ctrl.Name)
-
 			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", cert)
-			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers.0", string(controllerSpec))
-			out := make(map[string]string)
-			hec.HelmRender(WithFilteredRenderOutput(out, []string{"ingress-nginx/templates/controller/", "ingress-nginx/templates/failover/"}))
-			testD := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
-			Expect(testD.Exists()).To(BeTrue())
+			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers.0", string(controllerSpecYAML))
+
+			// Render templates
+			rendered := make(map[string]string)
+			hec.HelmRender(WithFilteredRenderOutput(rendered, []string{
+				"ingress-nginx/templates/controller/",
+				"ingress-nginx/templates/failover/",
+			}))
+
+			// Assert DaemonSet exists
+			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
+			Expect(daemonSet.Exists()).To(BeTrue())
+
+			// Compare with golden files
 			goldenDir := filepath.Join("testdata", "golden", strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+			for path, content := range rendered {
+				var renderedFile string
 
-			for fn, content := range out {
-				renderedFile := filepath.Base(fn)
-				if strings.HasPrefix(fn, "ingress-nginx/templates/failover/") {
-					// skip pod monitors
-					if strings.HasSuffix(fn, "podmonitor.yaml") {
+				switch {
+				case strings.HasPrefix(path, "ingress-nginx/templates/failover/"):
+					if strings.HasSuffix(path, "podmonitor.yaml") || len(content) == 0 {
 						continue
 					}
-					if len(content) == 0 {
-						continue
-					}
+					renderedFile = filepath.Join("failover", filepath.Base(path))
 
-					renderedFile = filepath.Join("failover", renderedFile)
-				} else if strings.HasPrefix(fn, "ingress-nginx/templates/controller/") {
-					if strings.HasSuffix(fn, "fake-ingress.yaml") {
+				case strings.HasPrefix(path, "ingress-nginx/templates/controller/"):
+					if strings.HasSuffix(path, "fake-ingress.yaml") {
 						continue
 					}
-					renderedFile = filepath.Join("controller", renderedFile)
-				} else {
+					renderedFile = filepath.Join("controller", filepath.Base(path))
+
+				default:
 					continue
 				}
+
 				filePath := filepath.Join(goldenDir, renderedFile)
 
 				if golden {
 					Expect(os.MkdirAll(filepath.Dir(filePath), os.ModePerm)).To(Succeed())
-					By("writing golden file " + filePath)
-					Expect(os.WriteFile(filePath, []byte(content), 0644)).To(Succeed())
+					By("Writing golden file: " + filePath)
+					Expect(os.WriteFile(filePath, []byte(content), 0o644)).To(Succeed())
 				} else {
-					By("reading golden file " + filePath)
-					goldenContent, err := os.ReadFile(filePath)
+					By("Reading golden file: " + filePath)
+					expectedContent, err := os.ReadFile(filePath)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(content).Should(MatchYAML(string(goldenContent)))
+					Expect(content).Should(MatchYAML(expectedContent))
 				}
 			}
 		},
 
+		// Test cases
 		table.Entry("HostPortWithProxyProtocol inlet", "host-port-with-pp.yaml"),
 		table.Entry("HostWithFailover inlet with custom resources and filter IP with acceptRequestsFrom", "host-with-failover.yaml"),
 		table.Entry("LoadBalancer inlet", "lb.yaml"),
@@ -143,24 +151,25 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	)
 })
 
+// ingressNginxController holds simplified structure to extract controller spec
 type ingressNginxController struct {
 	Name string          `json:"name"`
 	Spec json.RawMessage `json:"spec"`
 }
 
-// need to adopt IngressNginxController object to the internal values structure
 func (ing *ingressNginxController) UnmarshalJSON(data []byte) error {
-	s := struct {
+	aux := struct {
 		Metadata struct {
 			Name string `json:"name"`
 		} `json:"metadata"`
 		Spec json.RawMessage `json:"spec"`
 	}{}
 
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	ing.Name = s.Metadata.Name
-	ing.Spec = s.Spec
+
+	ing.Name = aux.Metadata.Name
+	ing.Spec = aux.Spec
 	return nil
 }
