@@ -486,6 +486,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	return nil
 }
 
+//nolint:unparam
 func createEvent(input *go_hook.HookInput, nodeGroup statusNodeGroup, msg string) error {
 	eventType := corev1.EventTypeWarning
 	reason := "MachineFailed"

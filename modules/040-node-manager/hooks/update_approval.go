@@ -173,6 +173,8 @@ func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
 // Approve updates
 //   - Only one node from node group can be approved for update
 //   - If there are not ready nodes in the group, they'll be updated first
+//
+//nolint:unparam
 func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 	for _, ng := range ar.nodeGroups {
 		nodeGroupNodes := make([]updateApprovalNode, 0)
@@ -293,6 +295,8 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
 // We don't limit number of Nodes here, because it's already limited
+//
+//nolint:unparam
 func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	now := time.Now()
 
@@ -387,6 +391,8 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 // Process updated nodes: remove approved and disruption-approved annotations, if:
 //   - Node is ready
 //   - Node checksum is equal to NodeGroup checksum
+//
+//nolint:unparam
 func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 	for _, node := range ar.nodes {
 		if !node.IsApproved {
