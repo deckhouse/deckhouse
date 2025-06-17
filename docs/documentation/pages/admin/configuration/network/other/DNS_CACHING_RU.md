@@ -6,7 +6,7 @@ lang: ru
 
 <!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-local-dns/ -->
 
-В Deckhouse Kubernetes Platform можно развернуть локальный кэширующий DNS-сервер на каждом узле кластера и экспортировать метрики в `Prometheus` для визуализации в [дашборде Grafana](#grafana-dashboard).
+В Deckhouse Kubernetes Platform можно развернуть локальный кэширующий DNS-сервер на каждом узле кластера и экспортировать метрики в `Prometheus` для визуализации в [дашборде Grafana](#дашборд-grafana).
 
 Данная функция реализуется модулем `node-local-dns`. Модуль состоит из оригинального `CoreDNS`, разворачиваемого в DaemonSet на всех узлах кластера, с добавлением алгоритма настройки сети и правил iptables.
 
@@ -33,9 +33,9 @@ lang: ru
 - Запускает кэширующий CoreDNS, который слушает на этом адресе.
 - Добавляет правило в iptables: если сокет открыт, трафик перенаправляется на него, если не открыт — работает обычная Kubernetes-маршрутизация через ClusterIP:
 
-    ```bash
-    -A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j NOTRACK
-    ```
+  ```bash
+  -A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j NOTRACK
+  ```
 
 ### Особенности конфигурации CoreDNS
 
@@ -44,7 +44,7 @@ lang: ru
 - кэширование всех запросов;
 - forward всех DNS-запросов в ClusterIP кластерного DNS.
 
-## Grafana dashboard
+## Дашборд Grafana
 
 Дашборд `Kubernetes / DNS (node local)` отображает:
 
@@ -71,4 +71,4 @@ spec:
       image: nginx
 ```
 
-[Подробнее](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config) про настройку DNS.
+Подробную информацию о настройке DNS можно найти [в документации Kubernetes](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config).
