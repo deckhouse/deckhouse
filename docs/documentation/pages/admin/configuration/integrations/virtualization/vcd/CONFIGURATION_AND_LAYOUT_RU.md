@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-DKP поддерживает одну схему размещения ресурсов в VCD.
+Deckhouse Kubernetes Platform поддерживает одну схему размещения ресурсов в VCD.
 
 ## Standard
 
@@ -43,15 +43,17 @@ masterNodeGroup:
 
 ## Конфигурация
 
-Интеграции с vSphere осуществляется с помощью ресурса VCDClusterConfiguration, который описывает конфигурацию облачного кластера в VCD и используется системой виртаулизации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграция осуществляется с помощью ресурса VCDClusterConfiguration, который описывает конфигурацию облачного кластера в VCD и используется системой виртаулизации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
 
-Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
+Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
 ```shell
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
-> После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% alert level="info" %}
+После изменения параметров узлов необходимо выполнить команду [dhctl converge](./admin/integrations/deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% endalert %}
 
 Пример конфигурации:
 
@@ -87,7 +89,7 @@ provider:
   insecure: true
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это custom resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это кастомный ресурс [VsphereInstanceClass](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Ниже представлен пример конфигурации [VCDInstanceClass](cr.html#vcdinstanceclass) для эфемерных узлов cloud-провайдера VMware Cloud Director.
 
@@ -113,42 +115,49 @@ spec:
 
 #### CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение настраивается параметром [compatibilityFlag](#parameters-storageclass-compatibilityflag).
+Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью параметра [compatibilityFlag](#parameters-storageclass-compatibilityflag).
 
 #### Важная информация об увеличении размера PVC
 
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API после увеличения размера PVC нужно сделать следующее:
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
 
-1. На узле, где находится под, выполнить команду `kubectl cordon <имя_узла>`.
-2. Удалить под.
-3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
+1. На узле, где находится под, выполните команду `kubectl cordon <имя_узла>`.
+2. Удалите под.
+3. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
    > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполнить команду `kubectl uncordon <имя_узла>`.
+4. На узле, где находится под, выполните команду `kubectl uncordon <имя_узла>`.
 
 ### Требования к окружению
 
-* Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
-* vCenter, до которого есть доступ изнутри кластера с master-узлов.
-* Создать Datacenter, в котором создать:
+* Версия vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
+* vCenter: доступен изнутри кластера с master-узлов.
+* Созданный Datacenter, в котором:
   1. VirtualMachine template.
      * Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
-     * В образе должны быть установлены следующие пакеты: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3).
-  2. Network, доступную на всех ESXi, на которых будут создаваться виртуальные машины.
-  3. Datastore (или несколько), подключенный ко всем ESXi, на которых будут создаваться виртуальные машины.
-     * На Datastore'ы **необходимо** «повесить» тег из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
-  4. Cluster, в который добавить необходимые используемые ESXi.
-     * На Cluster **необходимо** «повесить» тег из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
+     * Необходимо наличие пакетов: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (при использовании версии `cloud-init` ниже 21.3).
+  2. Network.
+     * Должна быть доступна на всех ESXi, на которых будут создаваться виртуальные машины.
+  3. Datastore (один или несколько).
+     * Подключен ко всем ESXi, на которых будут создаваться виртуальные машины.
+     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
+  4. Cluster.
+     * Добавлены используемые ESXi.
+     * **Необходимо** назначие тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
   5. Folder для создаваемых виртуальных машин.
-     * Опциональный. По умолчанию будет использоваться root vm-каталог.
-  6. Роль с необходимым [набором](#список-необходимых-привилегий) прав.
-  7. Пользователя, привязав к нему роль из п. 6.
-* На созданный Datacenter **необходимо** «повесить» тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
+     * Опциональный (по умолчанию используется root vm-каталог).
+  6. Роль.
+     * Должна содержать необходимый [набор](#список-необходимых-привилегий) прав.
+  7. Пользователь.
+     * Привязывается роль из п. 6.
+* На созданный Datacenter **необходимо** назначить тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
 
 ### Список необходимых привилегий
 
-> О том, как создать и назначить роль пользователю, читайте [в документации](environment.html#создание-и-назначение-роли).
+{% alert level="info" %}
+О том, как создать и назначить роль пользователю, читайте [в документации](environment.html#создание-и-назначение-роли).
+{% endalert %}
 
-Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:
+**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
 
 <table>
   <thead>

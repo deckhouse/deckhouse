@@ -6,36 +6,36 @@ lang: ru
 
 ## Работа с Amazon Elastic Container Registry (ECR)
 
-Чтобы узлы кластера имели доступ к частным репозиториям Amazon ECR, необходимо:
+Чтобы узлы кластера имели доступ к частным репозиториям Amazon ECR:
 
-1. Определить права на чтение образов в политиках репозитория. Важно, чтобы в `Principal` был указан существующий IAM-Role (IAM-роль), привязанная к узлам Deckhouse.
+1. Определите права на чтение образов в политиках репозитория. Важно, чтобы в `Principal` был указан существующий IAM-Role (IAM-роль), привязанная к узлам Deckhouse Kubernetes Platform (DKP).
 
-Пример политики:
+    Пример политики:
 
-```yaml
-{
-  "Version": "2012-10-17",
-  "Statement": [
+    ```yaml
     {
-      "Sid": "RepositoryRead",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::xxx:role/xxx-node"
-      },
-      "Action": [
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:BatchGetImage",
-        "ecr:DescribeImages",
-        "ecr:DescribeRepositories",
-        "ecr:GetAuthorizationToken",
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:ListImages",
-        "ecr:ListTagsForResource"
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "RepositoryRead",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::xxx:role/xxx-node"
+          },
+          "Action": [
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:BatchGetImage",
+            "ecr:DescribeImages",
+            "ecr:DescribeRepositories",
+            "ecr:GetAuthorizationToken",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:ListImages",
+            "ecr:ListTagsForResource"
+          ]
+        }
       ]
     }
-  ]
-}
-```
+    ```
 
 1. Настройте эту политику в AWS Console: Amazon ECR → Private registry → Repositories → требуемый репозиторий → Permissions.
 
@@ -48,7 +48,7 @@ lang: ru
      - ecr:DescribeRepositories
    ```
 
-Параметр `additionalRolePolicies` позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым Deckhouse. Это особенно полезно, если требуется доступ к:
+Параметр `additionalRolePolicies` позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DKP. Это особенно полезно, если требуется доступ к:
 
 - Amazon ECR;
 - Amazon S3;

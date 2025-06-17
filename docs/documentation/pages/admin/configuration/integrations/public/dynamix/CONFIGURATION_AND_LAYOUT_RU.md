@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/dynamix/dynamix-layout.html
 lang: ru
 ---
 
-Платформа Deckhouse поддерживает две схемы размещения в облаке Dynamix:
+Deckhouse Kubernetes Platform поддерживает две схемы размещения в облаке Dynamix:
 
 - Standard — схема с использованием только внешней сети;
 - StandardWithInternalNetwork — схема с внутренней (приватной) сетью и DNS-серверами.
@@ -77,13 +77,13 @@ masterNodeGroup:
 
 ## Обязательные параметры
 
-`sshPublicKey`— публичный ключ для доступа к узлам;
-`location` — имя расположения облака (например, dynamix);
-`account` — имя аккаунта в облаке;
-`provider.controllerUrl`, `oAuth2Url`, `appId`, `appSecret` — параметры доступа к API;
-`imageName` — название образа ОС;
-`externalNetwork` — имя внешней сети;
-`storageEndpoint`, `pool` — параметры хранилища;
-`nodeNetworkCIDR` и `nameservers` — параметры внутренней сети (только для схемы StandardWithInternalNetwork).
+- `sshPublicKey`— публичный ключ для доступа к узлам;
+- `location` — имя расположения облака (например, dynamix);
+- `account` — имя аккаунта в облаке;
+- `provider.controllerUrl`, `oAuth2Url`, `appId`, `appSecret` — параметры доступа к API;
+- `imageName` — название образа ОС;
+- `externalNetwork` — имя внешней сети;
+- `storageEndpoint`, `pool` — параметры хранилища;
+- `nodeNetworkCIDR` и `nameservers` — параметры внутренней сети (только для схемы StandardWithInternalNetwork).
 
 После изменения параметров необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.

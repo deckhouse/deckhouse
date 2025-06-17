@@ -6,7 +6,7 @@ lang: ru
 
 ## Требования
 
-Для корректной работы Deckhouse с VMware vSphere необходимо:
+Для корректной работы Deckhouse Kubernetes Platform с VMware vSphere необходимы:
 
 - Доступ к vCenter;
 - Пользователь с необходимым набором прав;
@@ -83,4 +83,6 @@ govc role.create deckhouse \
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
-> Для более детальной настройки прав обратитесь к [официальной документации](https://vmware.github.io/govmomi/).
+{% alert level="info" %}
+Для более детальной настройки прав обратитесь к [официальной документации](https://vmware.github.io/govmomi/).
+{% endalert %}
