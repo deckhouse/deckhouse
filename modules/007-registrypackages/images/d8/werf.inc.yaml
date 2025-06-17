@@ -68,7 +68,7 @@ secrets:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libbtrfs-dev -y
+  - apt-get update && apt-get install libbtrfs-dev libsofthsm2-dev -y
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
