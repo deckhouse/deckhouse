@@ -14,7 +14,7 @@ Deckhouse Kubernetes Platform поддерживает автоматическ�
 
 | Аннотация | Применяется к | Назначение | Примеры значений |
 |----------|----------------|------------|------------------|
-| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Автоматический перезапуск подов при изменении всех связанных `ConfigMap` и `Secret` (используемых как volume или переменные окружения) | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Автоматический перезапуск подов при изменении всех связанных ConfigMap и Secret (используемых как volume или переменные окружения) | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Перезапуск только при изменении ресурсов с аннотацией `match: "true"` | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `ConfigMap`, при изменении которых должен выполняться перезапуск | `"some-cm"`, `"some-cm1,some-cm2"` |
 | `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `Secret`, при изменении которых должен выполняться перезапуск | `"some-secret"`, `"some-secret1,some-secret2"` |

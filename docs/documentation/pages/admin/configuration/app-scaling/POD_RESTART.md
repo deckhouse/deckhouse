@@ -13,7 +13,7 @@ The following annotations allow you to control pod restarts.
 
 | Annotation | Applied to | Description | Example values |
 |------------|------------|-------------|----------------|
-| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Automatically restarts pods when any related `ConfigMap` or `Secret` (used as a volume or environment variable) is changed | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Automatically restarts pods when any related ConfigMap or Secret (used as a volume or environment variable) is changed | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Triggers restart only when a related resource is annotated with `match: "true"` | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `ConfigMap` objects that trigger a restart when changed | `"some-cm"`, `"some-cm1,some-cm2"` |
 | `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `Secret` objects that trigger a restart when changed | `"some-secret"`, `"some-secret1,some-secret2"` |
