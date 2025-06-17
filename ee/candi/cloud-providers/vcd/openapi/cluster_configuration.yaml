@@ -347,7 +347,6 @@ apiVersions:
               enum:
                 - Standard
               type: string
-      - oneOf:
         - required: [layout, internalNetworkDNSServers, edgeGatewayName]
           properties:
             layout:
