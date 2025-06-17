@@ -27,14 +27,18 @@ import (
 )
 
 const (
-	serverNameSecret = "openvpn-pki-server"
-	serverNameLabel  = "name"
-	serverLabelValue = "server"
+	serverCertSecretName = "openvpn-pki-server"
+	serverCertNameLabel  = "name"
+	serverCertLabelValue = "server"
 	namespace        = "d8-openvpn"
 )
 
+type serverCert struct {
+	nameLabelExists bool
+}
+
 var (
-	hasLabel bool
+	sc serverCert
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{serverNameSecret},
+				MatchNames: []string{serverCertSecretName},
 			},
 			FilterFunc: applyServerCertSecretFilter,
 		},
@@ -63,9 +67,9 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert secret to structured object: %v", err)
 	}
-	_, hasLabel = secret.Labels[serverNameLabel]
-
-	return hasLabel, nil
+	_, labelExist := secret.Labels[serverCertNameLabel]
+	sc.nameLabelExists = labelExist
+	return sc, err
 }
 
 func addMissingLabels(input *go_hook.HookInput) error {
@@ -75,14 +79,14 @@ func addMissingLabels(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if hasLabel {
+	if sc.nameLabelExists {
 		return nil
 	}
 
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]interface{}{
-				serverNameLabel: serverLabelValue,
+				serverCertNameLabel: serverCertLabelValue,
 			},
 		},
 	}
@@ -92,9 +96,9 @@ func addMissingLabels(input *go_hook.HookInput) error {
 		"v1",
 		"Secret",
 		namespace,
-		serverNameSecret,
+		serverCertSecretName,
 	)
 
-	input.Logger.Info("Patched secret %s/%s with label %s=%s", namespace, serverNameSecret, serverNameLabel, serverLabelValue)
+	input.Logger.Info("Patched secret %s/%s with label %s=%s", namespace, serverCertSecretName, serverCertNameLabel, serverCertLabelValue)
 	return nil
 }

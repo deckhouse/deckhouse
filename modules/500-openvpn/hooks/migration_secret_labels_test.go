@@ -90,7 +90,7 @@ data: {}
 			f.RunGoHook()
 		})
 
-		It("should exists label name 'server'", func() {
+		It("should appear label name 'server'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			labels := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server").Field("metadata.labels")
 			Expect(labels.Get("name").String()).To(Equal("server"))
@@ -103,7 +103,7 @@ data: {}
 			f.RunGoHook()
 		})
 
-		It("should exists label name 'server'", func() {
+		It("should exist label name 'server'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			labels := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server").Field("metadata.labels")
 			Expect(labels.Get("name").String()).To(Equal("server"))
