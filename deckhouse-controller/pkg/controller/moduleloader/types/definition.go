@@ -47,6 +47,8 @@ type Definition struct {
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 	Path           string                         `yaml:"-"`
+
+	Accessibility Accessibility `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
 }
 
 type ModuleDescriptions struct {

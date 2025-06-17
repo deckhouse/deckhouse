@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -139,6 +140,21 @@ func entrypoint(logger *log.Logger) error {
 				return fmt.Errorf("stat tmp directory symlink: %w", err)
 			}
 		}
+	}
+
+	rawFeatureFlag := os.Getenv("DKPFF_NEW_EDITIONS")
+	featureFlag := false
+	if rawFeatureFlag != "" {
+		var err error
+
+		featureFlag, err = strconv.ParseBool(rawFeatureFlag)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("DKPFF_NEW_EDITIONS env has an invalid value: %s. Defaulting to false", rawFeatureFlag))
+		}
+	}
+
+	if featureFlag {
+		return nil
 	}
 
 	modulesDirEnvValue, found := os.LookupEnv(modulesDirEnv)
