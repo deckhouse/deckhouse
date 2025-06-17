@@ -340,7 +340,16 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
-	log.Info("", slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")), slog.String("releasechannel", releaseChannel))
+	log.Info("fetching module release",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("releasechannel", releaseChannel),
+	)
+
+	log.Debug("module metadata",
+		slog.String("module", moduleName),
+		slog.String("old_checksum", moduleChecksum),
+	)
+
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
