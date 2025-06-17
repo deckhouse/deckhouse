@@ -196,7 +196,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
 
-	l.logger.Info("module loaded", slog.String("edition_info", module.GetModuleDefenition().Accessibility.HasAccess()))
+	l.logger.Info("module loaded", slog.String("module", module.GetBasicModule().Name), slog.String("edition_info", module.GetModuleDefenition().Accessibility.HasAccess()))
 
 	// load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
