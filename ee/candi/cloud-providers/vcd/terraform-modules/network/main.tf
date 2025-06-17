@@ -13,8 +13,8 @@ resource "vcd_network_routed_v2" "network" {
   edge_gateway_id = data.vcd_nsxt_edgegateway.gateway.id
 
   gateway            = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
-  prefix_length      = 24
+  prefix_length      = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
   guest_vlan_allowed = false
-  dns1               = "8.8.8.8"
-  dns2               = "1.1.1.1"
+  dns1               = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 0 ? var.providerClusterConfiguration.internalNetworkDNSServers[0] : null
+  dns2               = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 1 ? var.providerClusterConfiguration.internalNetworkDNSServers[1] : null
 }
