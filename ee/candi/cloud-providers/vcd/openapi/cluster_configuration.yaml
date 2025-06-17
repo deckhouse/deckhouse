@@ -303,7 +303,6 @@ apiVersions:
             The way resources are located in the cloud.
 
             Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
-          enum: [Standard, StandardWithNetwork]
         provider:
           type: object
           additionalProperties: false
