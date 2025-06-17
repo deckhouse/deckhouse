@@ -78,51 +78,53 @@ func (a *Accessibility) HasAccess() string {
 
 	res := &strings.Builder{}
 
-	editions := make(map[string]*Edition, 1)
+	if a.Editions != nil {
+		editions := make(map[string]*Edition, 1)
 
-	if a.Editions.Default != nil {
-		editions["ee"] = a.Editions.Default
-		editions["se"] = a.Editions.Default
-		editions["be"] = a.Editions.Default
-	}
-
-	if a.Editions.Ee != nil {
-		editions["ee"] = a.Editions.Ee
-	}
-
-	if a.Editions.Se != nil {
-		editions["se"] = a.Editions.Se
-	}
-
-	if a.Editions.Be != nil {
-		editions["be"] = a.Editions.Be
-	}
-
-	for edition, e := range editions {
-		if e != nil && e.Available {
-			res.WriteString("available in " + edition + " edition, ")
+		if a.Editions.Default != nil {
+			editions["ee"] = a.Editions.Default
+			editions["se"] = a.Editions.Default
+			editions["be"] = a.Editions.Default
 		}
 
-		bundles := make([]string, len(e.EnabledInBundles))
-		for _, ff := range e.EnabledInBundles {
-			if ff != "" {
-				bundles = append(bundles, ff.String())
+		if a.Editions.Ee != nil {
+			editions["ee"] = a.Editions.Ee
+		}
+
+		if a.Editions.Se != nil {
+			editions["se"] = a.Editions.Se
+		}
+
+		if a.Editions.Be != nil {
+			editions["be"] = a.Editions.Be
+		}
+
+		for edition, e := range editions {
+			if e != nil && e.Available {
+				res.WriteString("available in " + edition + " edition, ")
 			}
-		}
 
-		if len(bundles) > 0 {
-			res.WriteString("enabled in " + strings.Join(bundles, ",") + " bundles, ")
-		}
-
-		ff := make([]string, len(e.FeatureFlags))
-		for _, f := range e.FeatureFlags {
-			if f != "" {
-				ff = append(ff, f.String())
+			bundles := make([]string, len(e.EnabledInBundles))
+			for _, ff := range e.EnabledInBundles {
+				if ff != "" {
+					bundles = append(bundles, ff.String())
+				}
 			}
-		}
 
-		if len(ff) > 0 {
-			res.WriteString("requires feature flags: " + strings.Join(ff, ",") + ".\n")
+			if len(bundles) > 0 {
+				res.WriteString("enabled in " + strings.Join(bundles, ",") + " bundles, ")
+			}
+
+			ff := make([]string, len(e.FeatureFlags))
+			for _, f := range e.FeatureFlags {
+				if f != "" {
+					ff = append(ff, f.String())
+				}
+			}
+
+			if len(ff) > 0 {
+				res.WriteString("requires feature flags: " + strings.Join(ff, ",") + ".\n")
+			}
 		}
 	}
 
