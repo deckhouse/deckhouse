@@ -1,5 +1,5 @@
 ---
-title: "Kubeconfig"
+title: Kubeconfig generator web UI
 permalink: en/user/web/kubeconfig.html
 ---
 

@@ -973,8 +973,8 @@ entries:
                     ru: Веб-интерфейс Alertmanager-email
                   url: /user/web/alertmanager.html
                 - title:
-                    en: Kubeconfig web UI
-                    ru: Веб-интерфейс kubeconfig
+                    en: Kubeconfig generator web UI
+                    ru: Веб-интерфейс генератора kubeconfig
                   url: /user/web/kubeconfig.html
                 - title:
                     en: Console web interface
