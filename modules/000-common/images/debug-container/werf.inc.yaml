@@ -44,7 +44,7 @@ import:
   add: /usr
   to: /vim
   before: install
-- image: libs/openssl
+- image: tools/openssl
   add: /usr
   to: /openssl
   before: install
