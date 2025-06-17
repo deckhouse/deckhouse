@@ -15,12 +15,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {
@@ -124,11 +125,11 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 	}
 
 	flavorNames := make([]string, 0, len(flavors))
-	flavorsDetails := make([]v1alpha1.OpenstackFlavorDetails, 0, len(flavors))
+	flavorsDetails := make([]v1alpha1.OpenStackCloudProviderDiscoveryDataFlavorDetails, 0, len(flavors))
 
 	for _, flavor := range flavors {
 		flavorNames = append(flavorNames, flavor.Name)
-		flavorsDetails = append(flavorsDetails, v1alpha1.OpenstackFlavorDetails{
+		flavorsDetails = append(flavorsDetails, v1alpha1.OpenStackCloudProviderDiscoveryDataFlavorDetails{
 			Name:  flavor.Name,
 			VCPUs: flavor.VCPUs,
 			RAM:   flavor.RAM,
@@ -152,9 +153,19 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 		return nil, fmt.Errorf("failed to get images: %v", err)
 	}
 
+	imageNames := make([]string, 0, len(images))
+	for _, image := range images {
+		imageNames = append(imageNames, image.Name)
+	}
+
 	volumeTypes, err := d.getVolumeTypes(ctx, provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get volume types: %v", err)
+	}
+
+	serverGroups, err := d.getServerGroups(ctx, provider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get server groups: %w", err)
 	}
 
 	var zones []string
@@ -168,17 +179,20 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 	}
 
 	discoveryDataJson, err := json.Marshal(v1alpha1.OpenStackCloudProviderDiscoveryData{
-		APIVersion:               "deckhouse.io/v1alpha1",
-		Kind:                     "OpenStackCloudProviderDiscoveryData",
+		APIVersion: "deckhouse.io/v1alpha1",
+		Kind:       "OpenStackCloudProviderDiscoveryData",
+
 		Flavors:                  flavorNames,
 		FlavorsDetails:           flavorsDetails,
 		AdditionalNetworks:       additionalNetworks,
 		AdditionalSecurityGroups: additionalSecurityGroups,
 		DefaultImageName:         discoveryData.Instances.ImageName,
-		Images:                   images,
+		Images:                   imageNames,
+		ImagesDetails:            images,
 		MainNetwork:              discoveryData.Instances.MainNetwork,
 		Zones:                    zones,
 		VolumeTypes:              volumeTypes,
+		ServerGroups:             serverGroups,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
@@ -258,6 +272,34 @@ func (d *Discoverer) getFlavors(ctx context.Context, provider *gophercloud.Provi
 	return flavors, nil
 }
 
+func (d *Discoverer) getServerGroups(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
+	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ComputeV2 client: %v", err)
+	}
+
+	client.Context = ctx
+
+	allPages, err := servergroups.List(client, servergroups.ListOpts{}).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list server groups: %w", err)
+	}
+
+	groups, err := servergroups.ExtractServerGroups(allPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract server groups: %w", err)
+	}
+
+	groupNames := make([]string, 0, len(groups))
+	for _, group := range groups {
+		groupNames = append(groupNames, group.Name)
+	}
+
+	return groupNames, nil
+}
+
 func (d *Discoverer) getZones(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
 		Region: d.region,
@@ -329,6 +371,11 @@ func (d *Discoverer) getVolumeTypes(ctx context.Context, provider *gophercloud.P
 
 	client.Context = ctx
 
+	defaultVolumeTypeID, err := getDefaultVolumeType(client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default volume type: %w", err)
+	}
+
 	allPages, err := volumetypes.List(client, volumetypes.ListOpts{}).AllPages()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list volume types: %v", err)
@@ -352,10 +399,29 @@ func (d *Discoverer) getVolumeTypes(ctx context.Context, provider *gophercloud.P
 			ExtraSpecs:  volumeType.ExtraSpecs,
 			IsPublic:    volumeType.IsPublic,
 			QosSpecID:   volumeType.QosSpecID,
+			IsDefault:   volumeType.ID == defaultVolumeTypeID,
 		})
 	}
 
 	return volumeTypesList, nil
+}
+
+func getDefaultVolumeType(client *gophercloud.ServiceClient) (string, error) {
+	var response volumetypes.GetResult
+
+	resp, err := client.Get(client.ServiceURL("types", "default"), &response.Body, nil)
+
+	_, response.Header, response.Err = gophercloud.ParseResponse(resp, err)
+	if err != nil {
+		return "", fmt.Errorf("failed to get default volume type: %w", err)
+	}
+
+	volumeType, err := response.Extract()
+	if err != nil {
+		return "", fmt.Errorf("failed to extract volume type from respsonse: %w", err)
+	}
+
+	return volumeType.ID, nil
 }
 
 func (d *Discoverer) getAdditionalNetworks(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
@@ -421,7 +487,11 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 	return removeDuplicates(groupNames), nil
 }
 
-func (d *Discoverer) getImages(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
+func (d *Discoverer) getImages(
+	ctx context.Context,
+	provider *gophercloud.ProviderClient,
+) ([]v1alpha1.OpenStackCloudProviderDiscoveryDataImageDetails, error) {
+
 	client, err := openstack.NewImageServiceV2(provider, gophercloud.EndpointOpts{
 		Region: d.region,
 	})
@@ -441,13 +511,36 @@ func (d *Discoverer) getImages(ctx context.Context, provider *gophercloud.Provid
 		return nil, fmt.Errorf("failed to extract images: %v", err)
 	}
 
-	imageNames := make([]string, 0, len(images))
+	imageDetails := make([]v1alpha1.OpenStackCloudProviderDiscoveryDataImageDetails, 0, len(images))
 
+	names := make(map[string]struct{})
 	for _, image := range images {
-		imageNames = append(imageNames, image.Name)
+		if image.Name == "" {
+			continue
+		}
+
+		if _, found := names[image.Name]; found {
+			continue
+		}
+		names[image.Name] = struct{}{}
+
+		imageDetails = append(imageDetails, v1alpha1.OpenStackCloudProviderDiscoveryDataImageDetails{
+			ID:                  image.ID,
+			Name:                image.Name,
+			CreatedAt:           image.CreatedAt,
+			DefaultVolumeTypeID: extractImageDefaultVolumeTypeID(image.Properties),
+		})
 	}
 
-	return removeDuplicates(imageNames), nil
+	return imageDetails, nil
+}
+
+func extractImageDefaultVolumeTypeID(properties map[string]interface{}) string {
+	id, ok := properties["cinder_img_volume_type"].(string)
+	if !ok {
+		return ""
+	}
+	return id
 }
 
 type OpenstackCloudDiscoveryData struct {

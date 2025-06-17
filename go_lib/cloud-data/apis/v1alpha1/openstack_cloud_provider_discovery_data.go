@@ -14,6 +14,8 @@
 
 package v1alpha1
 
+import "time"
+
 type OpenStackCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
@@ -26,7 +28,10 @@ type OpenStackCloudProviderDiscoveryData struct {
 	MainNetwork              string                                          `json:"mainNetwork"`
 	Zones                    []string                                        `json:"zones"`
 	VolumeTypes              []OpenStackCloudProviderDiscoveryDataVolumeType `json:"volumeTypes"`
-	FlavorsDetails           []OpenstackFlavorDetails                        `json:"flavorsDetails"`
+	ServerGroups             []string                                        `json:"serverGroups"`
+
+	FlavorsDetails []OpenStackCloudProviderDiscoveryDataFlavorDetails `json:"flavorsDetails"`
+	ImagesDetails  []OpenStackCloudProviderDiscoveryDataImageDetails  `json:"imagesDetails"`
 }
 
 type OpenStackCloudProviderDiscoveryDataVolumeType struct {
@@ -35,10 +40,18 @@ type OpenStackCloudProviderDiscoveryDataVolumeType struct {
 	Description string            `json:"description,omitempty"`
 	ExtraSpecs  map[string]string `json:"extraSpecs,omitempty"`
 	IsPublic    bool              `json:"isPublic,omitempty"`
+	IsDefault   bool              `json:"isDefault,omitempty"`
 	QosSpecID   string            `json:"qosSpecID,omitempty"`
 }
 
-type OpenstackFlavorDetails struct {
+type OpenStackCloudProviderDiscoveryDataImageDetails struct {
+	ID                  string    `json:"id,omitempty"`
+	Name                string    `json:"name,omitempty"`
+	DefaultVolumeTypeID string    `json:"defaultVolumeTypeId,omitempty"`
+	CreatedAt           time.Time `json:"createdAt,omitempty"`
+}
+
+type OpenStackCloudProviderDiscoveryDataFlavorDetails struct {
 	Name  string `json:"name"`
 	RAM   int    `json:"ram"`
 	VCPUs int    `json:"vcpus"`
