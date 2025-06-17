@@ -525,17 +525,17 @@ func (d *Discoverer) getImages(
 		names[image.Name] = struct{}{}
 
 		imageDetails = append(imageDetails, v1alpha1.OpenStackCloudProviderDiscoveryDataImageDetails{
-			ID:                  image.ID,
-			Name:                image.Name,
-			CreatedAt:           image.CreatedAt,
-			DefaultVolumeTypeID: extractImageDefaultVolumeTypeID(image.Properties),
+			ID:                image.ID,
+			Name:              image.Name,
+			CreatedAt:         image.CreatedAt,
+			DefaultVolumeType: extractImageDefaultVolumeType(image.Properties),
 		})
 	}
 
 	return imageDetails, nil
 }
 
-func extractImageDefaultVolumeTypeID(properties map[string]interface{}) string {
+func extractImageDefaultVolumeType(properties map[string]interface{}) string {
 	id, ok := properties["cinder_img_volume_type"].(string)
 	if !ok {
 		return ""
