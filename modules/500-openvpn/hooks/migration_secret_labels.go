@@ -30,16 +30,12 @@ const (
 	serverCertSecretName = "openvpn-pki-server"
 	serverCertNameLabel  = "name"
 	serverCertLabelValue = "server"
-	namespace        = "d8-openvpn"
+	namespace            = "d8-openvpn"
 )
 
 type serverCert struct {
-	nameLabelExists bool
+	NameLabelExists bool
 }
-
-var (
-	sc serverCert
-)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
@@ -68,8 +64,9 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, fmt.Errorf("cannot convert secret to structured object: %v", err)
 	}
 	_, labelExist := secret.Labels[serverCertNameLabel]
-	sc.nameLabelExists = labelExist
-	return sc, err
+	return serverCert{
+		NameLabelExists: labelExist,
+	}, err
 }
 
 func addMissingLabels(input *go_hook.HookInput) error {
@@ -79,7 +76,12 @@ func addMissingLabels(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if sc.nameLabelExists {
+	sc, ok := snapshots[0].(serverCert)
+	if !ok {
+		return fmt.Errorf("cannot convert snapshot to structured object")
+	}
+
+	if sc.NameLabelExists {
 		return nil
 	}
 
