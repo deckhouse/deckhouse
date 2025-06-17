@@ -352,33 +352,17 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		var cachedChecksum = availableModule.Checksum
-
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
-		if err != nil {
-			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
-		}
-
-		// if release does not exist or the version is unset, clear checksum to trigger meta downloading
-		if !exists || availableModule.Version == "" {
-			cachedChecksum = ""
-		}
-
 		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
 		r.logger.Debug(
-			"download meta from release channel for module from module source",
+			"download module meta from release channel",
 			slog.String("release channel", policy.Spec.ReleaseChannel),
 			slog.String("name", moduleName),
 			slog.String("source_name", source.Name),
 		)
 
-		// download module metadata from the specified release channel
-		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
-
-		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
@@ -398,6 +382,15 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModules = append(availableModules, availableModule)
 
 			continue
+		}
+
+		availableModule.Checksum = meta.Checksum
+		availableModule.Version = meta.ModuleVersion
+
+		// check if release exists
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		if err != nil {
+			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
 
 		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
@@ -420,14 +413,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				// wipe checksum to trigger meta downloading
 				meta.Checksum = ""
 			}
-		}
-
-		if meta.Checksum != "" {
-			availableModule.Checksum = meta.Checksum
-		}
-
-		if meta.ModuleVersion != "" {
-			availableModule.Version = meta.ModuleVersion
 		}
 
 		availableModules = append(availableModules, availableModule)
