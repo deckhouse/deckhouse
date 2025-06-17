@@ -15,6 +15,7 @@
  - For new clusters in Yandex Cloud with the `withNATInstance` layout, `internalSubnetCIDR` or `internalSubnetID` must be specified.
  - In L2 mode, the Public IP address will not be marked as free in the pool after deleting the LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
  - Ingress-nginx controller pods of v1.9 will be restated.
+ - Prevent important data loss when using wide retention intervals.
  - The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
  - Time-based retention in `loki` is no longer available. See the changelog for details.
  - release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
@@ -140,6 +141,8 @@
  - **[keepalived]** fix python [#13617](https://github.com/deckhouse/deckhouse/pull/13617)
  - **[kube-dns]** Fixed release upgrade issue with removed d8-kube-dns-redirect service. [#13487](https://github.com/deckhouse/deckhouse/pull/13487)
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
+ - **[loki]** Fix incorrect indices sort function used in disk-based retention. [#13861](https://github.com/deckhouse/deckhouse/pull/13861)
+    Prevent important data loss when using wide retention intervals.
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
  - **[metallb]** Reverted the fix for handling deleted Services and revising the IP pools in L2 mode. The correct fix is under construction. [#13836](https://github.com/deckhouse/deckhouse/pull/13836)
