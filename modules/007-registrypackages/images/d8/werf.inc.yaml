@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
+fromCacheVersion: "2025-06-17.01" # TODO: delete
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -13,11 +14,13 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  # - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli # TODO: uncomment
+  - git clone --depth 1 --branch debug-command-wrapper https://github.com/deckhouse/deckhouse-cli.git /src/deckhouse-cli # TODO: delete
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
+fromCacheVersion: "2025-06-17.01" # TODO: delete
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -38,6 +41,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
+fromCacheVersion: "2025-06-17.01" # TODO: delete
 fromImage: builder/golang-bullseye
 mount:
 {{ include "mount points for golang builds" . }}
@@ -72,6 +76,7 @@ shell:
   - export GOPRIVATE="flant.internal"
   - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
   - git config --global --add safe.directory '*'
+  - git tag -s v.0.13.1 -m 'Signed v.0.13.1 release' # TODO: delete
   - mkdir -p ~/.ssh
   - touch ~/.ssh/known_hosts
   - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
