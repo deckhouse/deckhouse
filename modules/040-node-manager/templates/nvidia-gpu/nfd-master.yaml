@@ -1,3 +1,4 @@
+{{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -134,4 +135,4 @@ spec:
         operator: "Equal"
         value: ""
         effect: "NoSchedule"
-
+{{- end }}

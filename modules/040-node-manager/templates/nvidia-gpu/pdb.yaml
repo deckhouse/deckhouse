@@ -1,3 +1,4 @@
+{{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -10,3 +11,4 @@ spec:
   selector:
     matchLabels:
       component: "nvidia-device-plugin"
+{{- end }}

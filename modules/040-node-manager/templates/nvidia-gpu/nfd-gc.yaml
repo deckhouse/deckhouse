@@ -1,4 +1,5 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if include "nvidia_gpu_enabled" . }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -22,7 +23,7 @@ spec:
       maxAllowed:
         cpu: 100m
         memory: 128Mi
-{{- end }}
+  {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -86,3 +87,4 @@ spec:
         ports:
           - name: metrics
             containerPort: 8081
+{{- end }}

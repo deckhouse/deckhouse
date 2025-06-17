@@ -1,7 +1,8 @@
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $nmmImageName := join "" (list "nvidiaMigManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $nmmImage := include "helm_lib_module_image_no_fail" (list . $nmmImageName) }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if include "nvidia_gpu_enabled" . }}
+  {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+  {{- $nmmImageName := join "" (list "nvidiaMigManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+  {{- $nmmImage := include "helm_lib_module_image_no_fail" (list . $nmmImageName) }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -25,7 +26,7 @@ spec:
       maxAllowed:
         cpu: 100m
         memory: 128Mi
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -130,3 +131,4 @@ spec:
         configMap:
           name: mig-parted-reconfigure-script
           defaultMode: 0755
+{{- end }}

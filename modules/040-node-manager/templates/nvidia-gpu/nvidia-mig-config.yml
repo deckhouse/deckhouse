@@ -1,3 +1,4 @@
+{{- if include "nvidia_gpu_enabled" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -889,3 +890,4 @@ data:
     kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
 
     exit_success
+{{- end }}

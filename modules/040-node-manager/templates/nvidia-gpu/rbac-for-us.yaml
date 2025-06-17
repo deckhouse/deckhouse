@@ -1,3 +1,4 @@
+{{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -289,4 +290,4 @@ subjects:
 - kind: ServiceAccount
   name: node-feature-discovery-worker
   namespace: d8-nvidia-gpu
-
+{{- end }}
