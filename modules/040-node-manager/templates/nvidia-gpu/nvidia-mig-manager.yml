@@ -52,6 +52,11 @@ spec:
                     operator: In
                     values:
                     - "true"
+      tolerations:
+      - key: mig-reconfigure
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
       priorityClassName: cluster-medium
       serviceAccountName: nvidia-mig-manager
       automountServiceAccountToken: true
