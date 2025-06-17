@@ -14,7 +14,6 @@ import:
   includePaths:
     - nvidia-mig-parted
     - nvidia-mig-manager
-    - reconfigure-mig.sh
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/lib64
@@ -57,12 +56,6 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
@@ -97,6 +90,5 @@ shell:
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/mig-parted/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/usr/bin/ cmds
-  - mv /src/scripts/reconfigure-mig.sh /usr/bin/
-  - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager /usr/bin/reconfigure-mig.sh
+  - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager
 {{- end }}

@@ -180,6 +180,10 @@ spec:
             value: all
           - name: NVIDIA_DRIVER_CAPABILITIES
             value: all
+        {{- if eq ($ng).gpu.sharing "Mig" }}
+          - name: NVIDIA_MIG_MONITOR_DEVICES
+            value: all
+        {{- end }}
         securityContext:
           privileged: true
         volumeMounts:
