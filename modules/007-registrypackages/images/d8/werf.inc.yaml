@@ -76,12 +76,12 @@ shell:
   - export GOPRIVATE="flant.internal"
   - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
   - git config --global --add safe.directory '*'
-  - git tag -s v.0.13.1 -m 'Signed v.0.13.1 release' # TODO: delete
   - mkdir -p ~/.ssh
   - touch ~/.ssh/known_hosts
   - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
   - cd /src/deckhouse-cli
+  - git tag -s v.0.13.1 -m 'Signed v.0.13.1 release' # TODO: delete
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
