@@ -341,6 +341,20 @@ apiVersions:
           x-doc-default: false
       allOf:
       - oneOf:
+        - required: [layout]
+          properties:
+            layout:
+              enum:
+                - Standard
+              type: string
+      - oneOf:
+        - required: [layout, internalNetworkDNSServers, edgeGatewayName]
+          properties:
+            layout:
+              enum:
+                - StandardWithNetwork
+              type: string
+      - oneOf:
         - properties:
             provider:
               required: [apiToken]
