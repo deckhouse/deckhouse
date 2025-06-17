@@ -71,7 +71,11 @@ type Accessibility struct {
 	Editions *Editions `json:"editions,omitempty" yaml:"editions,omitempty"`
 }
 
-func (a Accessibility) HasAccess() string {
+func (a *Accessibility) HasAccess() string {
+	if a == nil {
+		return ""
+	}
+
 	res := &strings.Builder{}
 
 	editions := make(map[string]*Edition, 1)
