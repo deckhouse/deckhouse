@@ -17,3 +17,11 @@ modprobe overlay
 
 bb-sync-file /etc/modules-load.d/d8_br_netfilter.conf - <<< "br_netfilter"
 bb-sync-file /etc/modules-load.d/d8_overlay.conf - <<< "overlay"
+
+{{- if eq .cri "ContainerdV2" }}
+if ! modprobe erofs; then
+    bb-log-error "Error: failed to load erofs kernel module"
+    exit 1
+fi
+bb-sync-file /etc/modules-load.d/d8_erofs.conf - <<< "erofs"
+{{- end }}

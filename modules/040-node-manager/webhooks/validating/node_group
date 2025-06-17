@@ -90,7 +90,7 @@ kubernetes:
     keepFullObjectsInMemory: false
     labelSelector:
       matchLabels:
-        node.deckhouse.io/containerd: custom-config
+        node.deckhouse.io/containerd: custom
     jqFilter: |
       {
         "nodeName": .metadata.name,
