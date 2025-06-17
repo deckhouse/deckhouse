@@ -1,4 +1,4 @@
-Subject: [PATCH] hosts auth
+Subject: [PATCH] add hosts auth
 ---
 Index: cmd/ctr/commands/resolver.go
 IDEA additional info:
@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/cmd/ctr/commands/resolver.go b/cmd/ctr/commands/resolver.go
 --- a/cmd/ctr/commands/resolver.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/cmd/ctr/commands/resolver.go	(revision a272b0317438f44a0f469ff49c6c2669e4879c98)
++++ b/cmd/ctr/commands/resolver.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
 @@ -28,12 +28,13 @@
  	"strings"
 
@@ -47,7 +47,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
 --- a/core/remotes/docker/config/hosts.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/core/remotes/docker/config/hosts.go	(revision a272b0317438f44a0f469ff49c6c2669e4879c98)
++++ b/core/remotes/docker/config/hosts.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
 @@ -20,6 +20,7 @@
  import (
  	"context"
@@ -76,7 +76,7 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  // HostPathRewrite is used to confirure rewrite paths in the mirror hosts
  type hostPathRewrite struct {
  	regexp      *regexp.Regexp
-@@ -166,19 +177,23 @@
+@@ -166,19 +177,35 @@
  			}
  		}
 
@@ -94,20 +94,32 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  			explicitTLS := tlsConfigured || explicitTLSFromHost
 
 +			authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
++			hostAuth := host.auth // copy to local variable from loop variable
++
++			// use creds from registry config options as fallback in the case
++			// of credentials from puller is empty
++			creds := docker.WithAuthCreds(func(s string) (string, string, error) {
++				return parseAuth(&hostAuth)
++			})
++
 +			if options.Credentials != nil {
-+				authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
-+			} else {
-+				hostAuth := host.auth // copy to local variable from loop variable
-+				authOpts = append(authOpts, docker.WithAuthCreds(func(s string) (string, string, error) {
-+					return parseAuth(&hostAuth)
-+				}))
++				// check if credentials contains some information
++				username, password, err := options.Credentials(host.host)
++				if err != nil {
++					return nil, err
++				}
++				// if creds aren't empty, use it
++				if username != "" || password != "" {
++					creds = docker.WithAuthCreds(options.Credentials)
++				}
 +			}
++			authOpts = append(authOpts, creds)
 +			authOpts = append(authOpts, options.AuthorizerOpts...)
 +
  			if explicitTLSFromHost || host.dialTimeout != nil || len(host.header) != 0 {
  				c := *client
  				if explicitTLSFromHost || host.dialTimeout != nil {
-@@ -217,7 +232,7 @@
+@@ -217,7 +244,7 @@
  				rhosts[i].Authorizer = docker.NewDockerAuthorizer(append(authOpts, docker.WithAuthClient(&c))...)
  			} else {
  				rhosts[i].Client = client
@@ -116,7 +128,7 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  			}
 
  			// When TLS has been configured for the operation or host and
-@@ -398,6 +413,19 @@
+@@ -398,6 +425,19 @@
  		Replacement string `toml:"replace"`
  	} `toml:"rewrite"`
 
@@ -136,7 +148,7 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
 
-@@ -583,6 +611,13 @@
+@@ -583,6 +623,13 @@
  		}
  	}
 
@@ -150,7 +162,7 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  	return result, nil
  }
 
-@@ -687,3 +722,31 @@
+@@ -687,3 +734,31 @@
  	}
  	return hosts, nil
  }
@@ -189,7 +201,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
 --- a/core/remotes/docker/config/hosts_test.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/core/remotes/docker/config/hosts_test.go	(revision a272b0317438f44a0f469ff49c6c2669e4879c98)
++++ b/core/remotes/docker/config/hosts_test.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
 @@ -300,6 +300,70 @@
  	}
  }
@@ -290,34 +302,3 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
  		fmt.Fprintf(b, "\n")
  	}
  	return b.String()
-Index: internal/cri/server/images/image_pull.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/cri/server/images/image_pull.go b/internal/cri/server/images/image_pull.go
---- a/internal/cri/server/images/image_pull.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/internal/cri/server/images/image_pull.go	(revision a272b0317438f44a0f469ff49c6c2669e4879c98)
-@@ -101,16 +101,12 @@
- func (c *GRPCCRIImageService) PullImage(ctx context.Context, r *runtime.PullImageRequest) (_ *runtime.PullImageResponse, err error) {
-
- 	imageRef := r.GetImage().GetImage()
--
--	credentials := func(host string) (string, string, error) {
--		hostauth := r.GetAuth()
--		if hostauth == nil {
--			config := c.config.Registry.Configs[host]
--			if config.Auth != nil {
--				hostauth = toRuntimeAuthConfig(*config.Auth)
--			}
--		}
--		return ParseAuth(hostauth, host)
-+	hostauth := r.GetAuth()
-+	var credentials func(host string) (string, string, error)
-+	if hostauth != nil {
-+		credentials = func(host string) (string, string, error) {
-+			return ParseAuth(hostauth, host)
-+		}
- 	}
-
- 	ref, err := c.CRIImageService.PullImage(ctx, imageRef, credentials, r.SandboxConfig, r.GetImage().GetRuntimeHandler())
