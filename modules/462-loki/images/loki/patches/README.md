@@ -16,3 +16,8 @@ TODO
 ## 003-Force-expiration.patch
 
 TODO
+
+## 004-Force-expiration-index-sort.patch
+
+Fix incorrect indices sort function used in disk-based retention.
+Use `sortTablesByRangeOldestFirst` sort function to mark the oldest chunks as expired.
