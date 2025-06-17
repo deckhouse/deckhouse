@@ -2,6 +2,11 @@ deckhouse-controller:
   fixes:
     - summary: fixes default maintenance value which prevents stuck metric
       pull_request: https://github.com/deckhouse/deckhouse/pull/13951
+loki:
+  fixes:
+    - summary: Fix incorrect indices sort function used in disk-based retention.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13861
+      impact: Prevent important data loss when using wide retention intervals.
 node-manager:
   fixes:
     - summary: fixed update for static clusters
