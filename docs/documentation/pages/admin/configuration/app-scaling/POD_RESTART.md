@@ -14,14 +14,14 @@ The following annotations allow you to control pod restarts.
 | Annotation | Applied to | Description | Example values |
 |------------|------------|-------------|----------------|
 | `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Automatically restarts pods when any related ConfigMap or Secret (used as a volume or environment variable) is changed | `"true"`, `"false"` |
-| `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Triggers restart only when a related resource is annotated with `match: "true"` | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Triggers restart only when a related resource is annotated with `pod-reloader.deckhouse.io/match: "true"` | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `ConfigMap` objects that trigger a restart when changed | `"some-cm"`, `"some-cm1,some-cm2"` |
 | `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `Secret` objects that trigger a restart when changed | `"some-secret"`, `"some-secret1,some-secret2"` |
-| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Marks a resource as relevant for `search: "true"` mode so its changes are tracked | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Marks a resource as relevant for `pod-reloader.deckhouse.io/search: "true"` mode so its changes are tracked | `"true"`, `"false"` |
 
-> The `search` annotation must not be used together with `auto: "true"`. In this case, both `search` and `match` annotations will be ignored. To ensure proper operation, either set `auto` to `"false"` or remove it.
+> The `pod-reloader.deckhouse.io/search` annotation must not be used together with `pod-reloader.deckhouse.io/auto: "true"`. In this case, both `pod-reloader.deckhouse.io/search` and `pod-reloader.deckhouse.io/match` annotations will be ignored. To ensure proper operation, either set `pod-reloader.deckhouse.io/auto` to `"false"` or remove it.
 >
-> Likewise, `configmap-reload` and `secret-reload` will be ignored if `auto: "true"` is set. Disable `auto` to make them effective.
+> Likewise, `configmap-reload` and `secret-reload` will be ignored if `pod-reloader.deckhouse.io/auto: "true"` is set. Disable `auto` to make them effective.
 
 ## Usage examples
 
