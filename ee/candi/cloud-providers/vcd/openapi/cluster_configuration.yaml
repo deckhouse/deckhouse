@@ -348,6 +348,10 @@ apiVersions:
               enum:
                 - Standard
               type: string
+            internalNetworkDNSServers:
+              not: {}
+            edgeGatewayName:
+              not: {}
         - required: [layout, internalNetworkDNSServers, edgeGatewayName]
           properties:
             layout:
