@@ -17,9 +17,11 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -173,28 +175,39 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func instanceController(input *go_hook.HookInput) error {
-	instances := make(map[string]*instance, len(input.Snapshots["instances"]))
-	machines := make(map[string]*machineForInstance, len(input.Snapshots["machines"]))
-	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots["cluster_api_machines"]))
-	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots["ngs"]))
+	instances := make(map[string]*instance, len(input.NewSnapshots.Get("instances")))
+	machines := make(map[string]*machineForInstance, len(input.NewSnapshots.Get("machines")))
+	clusterAPIMachines := make(map[string]*machineForInstance, len(input.NewSnapshots.Get("cluster_api_machines")))
+	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.NewSnapshots.Get("ngs")))
+	for ins, err := range sdkobjectpatch.SnapshotIter[*instance](input.NewSnapshots.Get("instances")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'instances' snapshots: %w", err)
+		}
 
-	for _, i := range input.Snapshots["instances"] {
-		ins := i.(*instance)
 		instances[ins.Name] = ins
 	}
 
-	for _, m := range input.Snapshots["machines"] {
-		mc := m.(*machineForInstance)
+	for mc, err := range sdkobjectpatch.SnapshotIter[*machineForInstance](input.NewSnapshots.Get("machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machines' snapshots: %w", err)
+		}
+
 		machines[mc.Name] = mc
 	}
 
-	for _, m := range input.Snapshots["cluster_api_machines"] {
-		mc := m.(*machineForInstance)
+	for mc, err := range sdkobjectpatch.SnapshotIter[*machineForInstance](input.NewSnapshots.Get("cluster_api_machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'cluster_api_machines' snapshots: %w", err)
+		}
+
 		clusterAPIMachines[mc.Name] = mc
 	}
 
-	for _, m := range input.Snapshots["ngs"] {
-		ng := m.(*nodeGroupForInstance)
+	for ng, err := range sdkobjectpatch.SnapshotIter[*nodeGroupForInstance](input.NewSnapshots.Get("ngs")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		nodeGroups[ng.Name] = ng
 	}
 

@@ -112,7 +112,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
 	for _, item := range nodeUserSnap {
 		var nuForClear nodeUsersForClear
-		err := item.UnmarshalTo(nuForClear)
+		err := item.UnmarshalTo(&nuForClear)
 		if err != nil {
 			input.Logger.Error("failed to iterate over node_users_for_clear snapshot", log.Err(err))
 			return err

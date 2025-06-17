@@ -27,6 +27,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	cljson "github.com/clarketm/json"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -254,15 +255,23 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
-	// Default zones. Take them from input.Snapshots["machine_deployments"]
-	// and from input.Snapshots["cloud_provider_secret"].zones
+	// Default zones. Take them from input.NewSnapshots.Get("machine_deployments")
+	// and from input.NewSnapshots.Get("cloud_provider_secret").zones
 	defaultZones := set.New()
-	for _, machineInfoItem := range input.Snapshots["machine_deployments"] {
-		machineInfo := machineInfoItem.(MachineDeploymentCrdInfo)
+	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.NewSnapshots.Get("machine_deployments")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machine_deployments' snapshots: %w", err)
+		}
+
 		defaultZones.Add(machineInfo.Zone)
 	}
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		secretInfo := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{})
+
+	cloudProviderSecrets, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.NewSnapshots, "cloud_provider_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
+	}
+	if len(cloudProviderSecrets) > 0 {
+		secretInfo := cloudProviderSecrets[0]
 		zonesUntyped := secretInfo["zones"]
 
 		switch v := zonesUntyped.(type) {
@@ -287,20 +296,26 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
-	iCatalogRaw := input.Snapshots["instance_types_catalog"]
 	var instanceTypeCatalog *capacity.InstanceTypesCatalog
+	iCatalogRaws, err := sdkobjectpatch.UnmarshalToStruct[*capacity.InstanceTypesCatalog](input.NewSnapshots, "instance_types_catalog")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
+	}
 
-	if len(iCatalogRaw) == 1 {
-		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
+	if len(iCatalogRaws) == 1 {
+		instanceTypeCatalog = iCatalogRaws[0]
 	} else {
 		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
 	}
 
-	for _, v := range input.Snapshots["ngs"] {
-		nodeGroup := v.(NodeGroupCrdInfo)
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.NewSnapshots.Get("ngs")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(nodeGroup, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -315,9 +330,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
+			for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.NewSnapshots.Get("ics")) {
+				if err != nil {
+					return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+				}
 
-			for _, icsItem := range input.Snapshots["ics"] {
-				ic := icsItem.(InstanceClassCrdInfo)
 				instanceClasses[ic.Name] = ic.Spec
 			}
 
@@ -509,9 +526,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
 
-	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+	if len(input.NewSnapshots.Get("ngs")) != len(finalNodeGroups) {
 		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
-			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+			len(finalNodeGroups), len(input.NewSnapshots.Get("ngs")))
 	}
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
@@ -561,12 +578,17 @@ var epochTimestampAccessor = func() int64 {
 
 var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
 	var fromSecret string
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		if secretInfo, ok := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{}); ok {
-			if kind, ok := secretInfo["instanceClassKind"].(string); ok {
-				fromSecret = kind
-			}
+	secretInfoSnapshots := input.NewSnapshots.Get("cloud_provider_secret")
+
+	if len(secretInfoSnapshots) > 0 {
+		var secretInfo map[string]string
+		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
+
+		if err != nil {
+			return config.Kubernetes[0].Kind, fromSecret
 		}
+		fromSecret = secretInfo["instanceClassKind"]
+
 	}
 
 	return config.Kubernetes[0].Kind, fromSecret

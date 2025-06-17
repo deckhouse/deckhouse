@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -131,12 +132,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
-	snap := input.Snapshots["nodes_for_draining"]
-	for _, s := range snap {
-		if s == nil {
+	dNodes := input.NewSnapshots.Get("nodes_for_draining")
+	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
+		if err != nil {
 			continue
 		}
-		dNode := s.(drainingNode)
 
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
 		if !exists {
@@ -149,14 +149,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		if !dNode.isDraining() {
 			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
 			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
-				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+				input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 			}
 			continue
 		}
 
 		// If the node is marked for draining while is has been drained, remove the 'drained' annotation
 		if dNode.DrainedSource == "user" {
-			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+			input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 		}
 
 		cordonNode := &corev1.Node{

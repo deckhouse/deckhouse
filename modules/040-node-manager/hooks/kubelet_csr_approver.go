@@ -30,6 +30,7 @@ import (
 	"reflect"
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	cv1 "k8s.io/api/certificates/v1"
@@ -121,14 +122,11 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
-	snap := input.Snapshots["csr"]
-	for _, s := range snap {
-		if s == nil {
+	for csrInfo, err := range sdkobjectpatch.SnapshotIter[*CsrInfo](input.NewSnapshots.Get("csr")) {
+		if err != nil {
 			continue
 		}
 
-		csrInfo := s.(*CsrInfo)
 		if !csrInfo.Valid {
 			input.Logger.Warn("csr info not valid", slog.String(csrInfo.Name, csrInfo.ErrMsg))
 			continue

@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -115,16 +118,17 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 func handleMachineDeploymentStatus(input *go_hook.HookInput) error {
-	mdStatusSnapshots := input.Snapshots["machinedeployment_status"]
+	mdStatusSnapshots := input.NewSnapshots.Get("machinedeployment_status")
 
 	input.MetricsCollector.Expire(capsMachineDeploymentMetricsGroup)
 
 	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(capsMachineDeploymentMetricsGroup),
 	}
-
-	for _, mdStatusSnapshot := range mdStatusSnapshots {
-		mdStatus := mdStatusSnapshot.(machineDeploymentStatus)
+	for mdStatus, err := range sdkobjectpatch.SnapshotIter[machineDeploymentStatus](mdStatusSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machinedeployment_status' snapshots: %w", err)
+		}
 
 		labels := map[string]string{"machine_deployment_name": mdStatus.Name}
 

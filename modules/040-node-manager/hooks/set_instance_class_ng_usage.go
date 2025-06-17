@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -130,22 +132,22 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 	icNodeConsumers := make(map[usedInstanceClass][]string)
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		if sn == nil {
+	snaps := input.NewSnapshots.Get("ngs")
+	for usedIC, err := range sdkobjectpatch.SnapshotIter[ngUsedInstanceClass](snaps) {
+		if err != nil {
 			// not ephemeral
 			continue
 		}
-
-		usedIC := sn.(ngUsedInstanceClass)
 
 		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
-	snap = input.Snapshots["ics"]
-	for _, sn := range snap {
-		icm := sn.(usedInstanceClassWithConsumers)
+	snaps = input.NewSnapshots.Get("ics")
+	for icm, err := range sdkobjectpatch.SnapshotIter[usedInstanceClassWithConsumers](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+		}
 
 		// if not found in NGs - remove consumers
 		if _, ok := icNodeConsumers[icm.UsedInstanceClass]; !ok {
@@ -166,7 +168,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 			apiVersion = v
 		}
 
-		input.PatchCollector.MergePatch(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
+		input.PatchCollector.PatchWithMerge(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil

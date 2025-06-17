@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -140,9 +141,12 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 	tokensByNg := make(map[string]bootstrapTokenSecret)
 	expiredTokens := make([]bootstrapTokenSecret, 0)
 
-	snap := input.Snapshots["bootstrap_tokens"]
-	for _, sn := range snap {
-		token := sn.(bootstrapTokenSecret)
+	snaps := input.NewSnapshots.Get("bootstrap_tokens")
+	for token, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenSecret](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'bootstrap_tokens' snapshots: %w", err)
+		}
+
 		if token.ValidFor < 0 {
 			expiredTokens = append(expiredTokens, token)
 			continue
@@ -166,9 +170,12 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 	// we don't want to keep tokens for deleted NodeGroups
 	input.Values.Set("nodeManager.internal.bootstrapTokens", json.RawMessage("{}"))
 
-	snap = input.Snapshots["ngs"]
-	for _, sn := range snap {
-		ng := sn.(bootstrapTokenNG)
+	snaps = input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenNG](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		if !ng.NeedToken {
 			continue
 		}

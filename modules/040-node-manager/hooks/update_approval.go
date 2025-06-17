@@ -17,12 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -81,30 +83,39 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		nodeGroups: make(map[string]updateNodeGroup),
 	}
 
-	snap := input.Snapshots["configuration_checksums_secret"]
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get("configuration_checksums_secret")
+	if len(snaps) == 0 {
 		input.Logger.Warn("no configuration_checksums_secret snapshot found. Skipping run")
 		return nil
 	}
-	approver.ngChecksums = snap[0].(shared.ConfigurationChecksum)
+	err := snaps[0].UnmarshalTo(&approver.ngChecksums)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal start 'configuration_checksums_secret' snapshot: %w", err)
+	}
 
-	snap = input.Snapshots["ngs"]
-	for _, s := range snap {
-		ng := s.(updateNodeGroup)
+	snaps = input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[updateNodeGroup](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		approver.nodeGroups[ng.Name] = ng
 	}
 
-	snap = input.Snapshots["nodes"]
-	for _, s := range snap {
-		n := s.(updateApprovalNode)
-		approver.nodes[n.Name] = n
+	snaps = input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[updateApprovalNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
 
-		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
+		approver.nodes[node.Name] = node
+
+		setNodeMetric(input, node, approver.nodeGroups[node.NodeGroup], approver.ngChecksums[node.NodeGroup])
 	}
 
 	approver.deckhouseNodeName = os.Getenv("DECKHOUSE_NODE_NAME")
 
-	err := approver.processUpdatedNodes(input)
+	err = approver.processUpdatedNodes(input)
 	if err != nil {
 		return err
 	}

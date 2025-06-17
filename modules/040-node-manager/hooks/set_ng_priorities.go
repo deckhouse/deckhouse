@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -73,12 +74,12 @@ func handleSetPriorities(input *go_hook.HookInput) error {
 		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
 	}
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		if sn == nil {
+	snaps := input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[setPriorityNodeGroup](snaps) {
+		if err != nil {
 			continue
 		}
-		ng := sn.(setPriorityNodeGroup)
+
 		if ng.Priority != nil {
 			key := fmt.Sprintf("^%s-%s-[0-9a-zA-Z]+$", prefix, ng.Name)
 			priorities[*ng.Priority] = append(priorities[*ng.Priority], key)

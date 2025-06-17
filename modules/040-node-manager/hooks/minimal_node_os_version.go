@@ -15,9 +15,11 @@
 package hooks
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,25 +66,28 @@ func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.F
 }
 
 func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_os_version"]
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get("nodes_os_version")
+	if len(snaps) == 0 {
 		return nil
 	}
 
 	var minUbuntuVersion, minDebianVersion *semver.Version
+	for snap, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_os_version' snapshots: %w", err)
+		}
 
-	for _, s := range snap {
 		switch {
-		case osImageUbuntuRegex.MatchString(s.(string)):
-			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(s.(string))[1])
+		case osImageUbuntuRegex.MatchString(snap):
+			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(snap)[1])
 			if err != nil {
 				return err
 			}
 			if minUbuntuVersion == nil || ctrlUbuntuVersion.LessThan(minUbuntuVersion) {
 				minUbuntuVersion = ctrlUbuntuVersion
 			}
-		case osImageDebianRegex.MatchString(s.(string)):
-			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(s.(string))[1])
+		case osImageDebianRegex.MatchString(snap):
+			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(snap)[1])
 			if err != nil {
 				return err
 			}
