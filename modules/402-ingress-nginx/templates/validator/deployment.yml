@@ -154,6 +154,8 @@ spec:
               containerPort: 8443
               protocol: TCP
           volumeMounts:
+            - name: secret-nginx-auth-tls
+              mountPath: /chroot/etc/nginx/ssl/
             - name: webhook-cert
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
@@ -163,6 +165,9 @@ spec:
               readOnly: true
             {{- end}}
       volumes:
+        - name: secret-nginx-auth-tls
+          secret:
+            secretName: ingress-nginx-{{ $crd.name }}-auth-tls
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
