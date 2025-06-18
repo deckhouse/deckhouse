@@ -716,7 +716,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_28
@@ -1247,7 +1247,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_29
@@ -1778,7 +1778,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_30
@@ -2309,7 +2309,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_31
@@ -2840,7 +2840,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_32
@@ -3371,7 +3371,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_33
@@ -3902,7 +3902,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_Automatic

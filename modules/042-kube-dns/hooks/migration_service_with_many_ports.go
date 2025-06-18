@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func patchServiceWithManyPorts(input *go_hook.HookInput) error {
 	for _, service := range patchServiceData {
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			service.patch,
 			"v1",
 			"Service",

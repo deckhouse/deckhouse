@@ -59,7 +59,7 @@ func applyBothNodeRoles(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(roleLabelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(roleLabelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil
