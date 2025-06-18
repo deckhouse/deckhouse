@@ -19,7 +19,22 @@ spec:
   scanInterval: <image digest check interval. Default: 15s>
 ```
 
+The `maintenance mode` can also be used for development purposes. In this mode, Deckhouse disables resource management for the module and does not apply changes automatically. This mode is not intended for use in production clusters.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+...
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  settings: 
+```
+
 Requirements for the resource parameters:
+
 * The module name (`metadata.name`) must match the module name in the ModuleSource (`.status.modules.[].name`).
 
 * The container image tag (`spec.imageTag`) can be anything, e.g., `pr333`, `my-branch`.
@@ -40,6 +55,7 @@ example1  10s       Ready     false
 ```
 
 Requirements for the module:
+
 * The module must exist; otherwise the message for ModulePullOverride will be *The module not found*.
 
   An example:

@@ -20,7 +20,22 @@ spec:
   scanInterval: <image digest check interval. Default: 15s>
 ```
 
+Также для целей разработки может использоваться режим обслуживания модуля (`maintenance mode`). В этом режиме Deckhouse отключает управление ресурсами модуля и не применяет изменения автоматически. Этот режим не предназначен для эксплуатации в продуктивных кластерах.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+...
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  settings: 
+```
+
 Требования к параметрам ресурса:
+
 * Имя модуля (`metadata.name`) должно соответствовать имени модуля в ModuleSource (`.status.modules.[].name`).
 
 * Тег образа контейнера (`spec.imageTag`) может быть любым. Например, `pr333`, `my-branch`.
@@ -40,6 +55,7 @@ example1  10s       Ready     false
 ```
 
 Требования к модулю:
+
 * Модуль должен существовать, иначе сообщение у ModulePullOverride будет *The module not found*.
 
   Пример:
@@ -88,6 +104,20 @@ example1  10s       Ready     false
   $ kubectl get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                 ROLLBACK
   example    12s       The source not found    false
+  ```
+
+* Модуль не должен находиться в режиме обслуживания (`maintenance: NoResourceReconciliation`), иначе ModulePullOverride не будет применён. Режим обслуживания (`maintenance mode`) используется для временного отключения управления ресурсами модуля со стороны Deckhouse. В этом режиме изменения не применяются автоматически.
+
+  Пример:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  ...
+  spec:
+    enabled: true
+    maintenance: NoResourceReconciliation
+    settings: 
   ```
 
 Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
