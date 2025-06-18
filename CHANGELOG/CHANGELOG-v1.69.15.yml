@@ -1,5 +1,8 @@
 loki:
   fixes:
+    - summary: Fix several bugs introduced while implementing loki disk based retention
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14025
+      impact: loki statefulset will be rollout restarted
     - summary: Fix incorrect indices sort function used in disk-based retention.
       pull_request: https://github.com/deckhouse/deckhouse/pull/13861
       impact: Prevent important data loss when using wide retention intervals.

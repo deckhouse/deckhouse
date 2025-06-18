@@ -141,6 +141,8 @@
  - **[keepalived]** fix python [#13617](https://github.com/deckhouse/deckhouse/pull/13617)
  - **[kube-dns]** Fixed release upgrade issue with removed d8-kube-dns-redirect service. [#13487](https://github.com/deckhouse/deckhouse/pull/13487)
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
+ - **[loki]** Fix several bugs introduced while implementing loki disk based retention [#14025](https://github.com/deckhouse/deckhouse/pull/14025)
+    loki statefulset will be rollout restarted
  - **[loki]** Fix incorrect indices sort function used in disk-based retention. [#13861](https://github.com/deckhouse/deckhouse/pull/13861)
     Prevent important data loss when using wide retention intervals.
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
