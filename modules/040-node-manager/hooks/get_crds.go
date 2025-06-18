@@ -297,13 +297,13 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
 	var instanceTypeCatalog *capacity.InstanceTypesCatalog
-	iCatalogRaws, err := sdkobjectpatch.UnmarshalToStruct[*capacity.InstanceTypesCatalog](input.NewSnapshots, "instance_types_catalog")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
-	}
+	iCatalogRaws := input.NewSnapshots.Get("instance_types_catalog")
 
 	if len(iCatalogRaws) == 1 {
-		instanceTypeCatalog = iCatalogRaws[0]
+		err := iCatalogRaws[0].UnmarshalTo(&instanceTypeCatalog)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
+		}
 	} else {
 		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
 	}
