@@ -6,6 +6,11 @@
       "module": "admission-policy-engine",
       "embedded": "true",
       "url": "admission-policy-engine/",
+      "tags": [
+        "embedded",
+        "security",
+        "policy"
+      ],
       "ru": {
         "title": "Модуль admission-policy-engine",
         "description": "Модуль admission-policy-engine Deckhouse позволяет использовать в кластере Kubernetes политики безопасности согласно Kubernetes Pod Security Standards."
