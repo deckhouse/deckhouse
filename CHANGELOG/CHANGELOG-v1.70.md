@@ -114,11 +114,14 @@
  - **[dhctl]** Added waiting for `kubeadm` command completion result. [#12826](https://github.com/deckhouse/deckhouse/pull/12826)
  - **[dhctl]** Fixed a bug that prevented `PersistentVolumes` from being properly deleted by the `dhctl destroy` command in `Stronghold`. [#12814](https://github.com/deckhouse/deckhouse/pull/12814)
  - **[docs]** Update docs about Keycloak configuration for IP [#13766](https://github.com/deckhouse/deckhouse/pull/13766)
+ - **[ingress-nginx]** Resolve conflicts to successfully merge [ingress-nginx] Restore validation [#13993](https://github.com/deckhouse/deckhouse/pull/13993)
  - **[ingress-nginx]** Ingress resource validation in ingress-nginx controller re-enabled. [#13648](https://github.com/deckhouse/deckhouse/pull/13648)
  - **[ingress-nginx]** Implemented iptables cleanup when `HostWithFailover` Inlet was reconfigured to another nodes or deleted. [#13106](https://github.com/deckhouse/deckhouse/pull/13106)
  - **[ingress-nginx]** Forbidden to enable `enableIstioSidecar` when `HostWithFailover` is enabled. [#12789](https://github.com/deckhouse/deckhouse/pull/12789)
  - **[istio]** Added condition if the `cloud-provider-huaweicloud` module is enabled, define `RBAC` permissions granting the `cloud-controller-manager` access to list pods in the `d8-istio` namespace. [#13270](https://github.com/deckhouse/deckhouse/pull/13270)
  - **[istio]** Added `RBAC` rules to grant the HuaweiCloud `cloud-controller-manager` permission to view pods in the `d8-istio` namespace. [#12951](https://github.com/deckhouse/deckhouse/pull/12951)
+ - **[loki]** Fix several bugs introduced while implementing loki disk based retention [#14026](https://github.com/deckhouse/deckhouse/pull/14026)
+    loki statefulset will be rollout restarted
  - **[metallb]** Dashboards are aligned with user experience expectations. [#12666](https://github.com/deckhouse/deckhouse/pull/12666)
  - **[monitoring-deckhouse]** Fixed many to many error in `ModuleReleaseIsWaitingManualApproval` alert. [#13429](https://github.com/deckhouse/deckhouse/pull/13429)
  - **[monitoring-ping]** Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289 [#13684](https://github.com/deckhouse/deckhouse/pull/13684)
@@ -135,6 +138,7 @@
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
  - **[operator-trivy]** Add support anon registry creds for bdu updater. [#13855](https://github.com/deckhouse/deckhouse/pull/13855)
+ - **[prometheus]** Add headers field to values spec [#13823](https://github.com/deckhouse/deckhouse/pull/13823)
  - **[prometheus]** Improved caching of the long-range requests. [#13436](https://github.com/deckhouse/deckhouse/pull/13436)
     Aggregating-proxy will be rollout restarted with no disruption.
  - **[prometheus]** Kube-rbac-proxy stale cache request timeout has been set. [#11986](https://github.com/deckhouse/deckhouse/pull/11986)
