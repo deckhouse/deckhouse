@@ -1,6 +1,7 @@
 allowed_values: allowed values
 search-placeholder: Search...
 modules: modules
+modules2: modules
 module: module
 deckhouse: deckhouse
 documentation: documentation
@@ -20,6 +21,7 @@ platform: platform
 pattern: pattern
 example: example
 examples: examples
+found: found
 length: length
 min_length: minimal length
 max_length: maximum length

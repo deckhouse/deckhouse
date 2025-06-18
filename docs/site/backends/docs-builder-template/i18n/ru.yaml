@@ -1,6 +1,7 @@
 allowed_values: допустимые значения
 search-placeholder: Поиск...
 modules: модули
+modules2: модулей
 module: модуль
 deckhouse: deckhouse
 documentation: документация
@@ -19,6 +20,7 @@ default_value: по умолчанию
 platform: платформа
 example: пример
 examples: примеры
+found: найдено
 pattern: шаблон
 length: длина
 min_length: минимальная длина
