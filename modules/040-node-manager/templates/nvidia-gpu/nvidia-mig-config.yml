@@ -262,6 +262,8 @@ data:
     NVIDIA_SMI_PATH=""
     NVIDIA_CDI_HOOK_PATH=""
 
+    MAX_RETRIES=20
+
     export SYSTEMD_LOG_LEVEL="info"
 
     function usage() {
@@ -623,6 +625,79 @@ data:
       return 0
     }
 
+    function disruptive-update-approval-and-drain() {
+      attempt=0
+      until
+        node_data="$(
+          kubectl get node ${NODE_NAME} -o json | jq '
+          {
+            "resourceVersion": .metadata.resourceVersion,
+            "isDisruptionApproved": (.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")),
+            "isDisruptionRequired": (.metadata.annotations | has("update.node.deckhouse.io/disruption-required"))
+          }
+        ')" &&
+        jq -ne --argjson n "$node_data" '(($n.isDisruptionApproved | not) and ($n.isDisruptionRequired)) or ($n.isDisruptionApproved)' >/dev/null
+      do
+        attempt=$(( attempt + 1 ))
+        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "ERROR: Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
+            exit_failed
+        fi
+          echo "Disruption required, asking for approval."
+          echo "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
+          kubectl \
+            --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+            annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= || { echo "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
+      done
+
+      echo "Disruption required, waiting for approval"
+
+      attempt=0
+      until
+        kubectl get node ${NODE_NAME} -o json | \
+        jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
+      do
+        attempt=$(( attempt + 1 ))
+        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "ERROR: Failed to get annotation 'update.node.deckhouse.io/disruption-approved' from Node."
+            exit_failed
+        fi
+        echo "Step needs to make some disruptive action. It will continue upon approval:"
+        echo "kubectl annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-approved="
+        echo "Retry in 10sec..."
+        sleep 10
+      done
+
+      echo "Disruption approved!"
+      # Drain the node after confirming approval
+      attempt=0
+      until
+        kubectl --request-timeout 60s annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
+      do
+        attempt=$(( attempt + 1 ))
+        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "ERROR: Failed to annotate node ${NODE_NAME}"
+            exit_failed
+        fi
+        echo "Retry in 10sec..."
+        sleep 10
+      done
+
+      attempt=0
+      until
+        kubectl get node ${NODE_NAME} -o json | \
+        jq -e '.metadata.annotations | has("update.node.deckhouse.io/drained")' >/dev/null
+      do
+        attempt=$(( attempt + 1 ))
+        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "ERROR: Failed to get annotation 'update.node.deckhouse.io/drained' from ${NODE_NAME}"
+            exit_failed
+        fi
+        echo "Retry in 10sec..."
+        sleep 30
+      done
+    }
+
     echo "Getting current value of the 'nvidia.com/gpu.deploy.device-plugin' node label"
     PLUGIN_DEPLOYED=$(kubectl get nodes ${NODE_NAME} -o=jsonpath='{$.metadata.labels.nvidia\.com/gpu\.deploy\.device-plugin}')
     if [ "${?}" != "0" ]; then
@@ -733,6 +808,8 @@ data:
 
     echo "Cordon node"
     kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule
+
+    disruptive-update-approval-and-drain
 
     echo "Waiting for the device-plugin to shutdown"
     kubectl delete pod \

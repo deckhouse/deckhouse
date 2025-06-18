@@ -52,6 +52,10 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact

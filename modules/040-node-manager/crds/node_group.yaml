@@ -1520,6 +1520,7 @@ spec:
                       properties:
                         partedConfig:
                           type: string
+                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
                           description: |
                             Selected parted-config for MIG.
                           x-doc-default: all-1g.5gb
