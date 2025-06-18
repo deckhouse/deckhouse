@@ -120,7 +120,7 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 		var capsFromStartSnap bool
 		err := configMapSnapshots[0].UnmarshalTo(capsFromStartSnap)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal start 'pki_checksum' snapshot: %w", err)
+			return fmt.Errorf("failed to unmarshal start 'config_map' snapshot: %w", err)
 		}
 
 		capiEnabled = hasCapiProvider || capsFromStartSnap
