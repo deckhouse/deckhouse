@@ -98,11 +98,12 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var hasStaticInstancesField bool
 
 	nodeGroupSnapshots := input.NewSnapshots.Get("node_group")
-	for hasStaticInstancesField, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
+	for hasStaticInstancesFieldSnapshot, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
 		}
 
+		hasStaticInstancesField = hasStaticInstancesFieldSnapshot
 		if hasStaticInstancesField {
 			break // we need at least one NodeGroup with staticInstances field
 		}
