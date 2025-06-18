@@ -229,46 +229,6 @@ entries:
                             ru: Интеграция с службами Microsoft Azure
                           url: /admin/integrations/public/azure/azure-services.html
                     - title:
-                        en: Integration with Huawei Cloud
-                        ru: Интеграция с Huawei Cloud
-                      folders:
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/huaweicloud/huawei-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/huaweicloud/huawei-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/huaweicloud/huawei-storage.html
-                        - title:
-                            en: Integration with Huawei Cloud
-                            ru: Интеграция с службами Huawei Cloud
-                          url: /admin/integrations/public/huaweicloud/huawei-services.html
-                    - title:
-                        en: Integration with Dynamix
-                        ru: Интеграция с Dynamix
-                      folders:
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/dynamix/dynamix-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/dynamix/dynamix-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/dynamix/dynamix-storage.html
-                        - title:
-                            en: Integration with Dynamix
-                            ru: Интеграция с службами Dynamix
-                          url: /admin/integrations/public/dynamix/dynamix-services.html
-                    - title:
                         en: Integration with Google Cloud Platform (GCP)
                         ru: Интеграция с Google Cloud Platform (GCP)
                       folders:
@@ -312,6 +272,46 @@ entries:
                             en: Configuration and layout scheme
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Huawei Cloud
+                        ru: Интеграция с Huawei Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/huaweicloud/huawei-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/huaweicloud/huawei-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/huaweicloud/huawei-storage.html
+                        - title:
+                            en: Integration with Huawei Cloud
+                            ru: Интеграция с службами Huawei Cloud
+                          url: /admin/integrations/public/huaweicloud/huawei-services.html
+                    - title:
+                        en: Integration with Dynamix
+                        ru: Интеграция с Dynamix
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/dynamix/dynamix-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/dynamix/dynamix-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/dynamix/dynamix-storage.html
+                        - title:
+                            en: Integration with Dynamix
+                            ru: Интеграция с службами Dynamix
+                          url: /admin/integrations/public/dynamix/dynamix-services.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации

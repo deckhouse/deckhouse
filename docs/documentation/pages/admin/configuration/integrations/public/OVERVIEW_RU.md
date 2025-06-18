@@ -12,10 +12,8 @@ Deckhouse Kubernetes Platform (DKP) может быть развёрнута в 
 - [Selectel Cloud](./selectel/сonnection-and-authorization.html);
 - [OVH Cloud](./ovh/сonnection-and-authorization.html);
 - [OpenStack](./openstack/сonnection-and-authorization.html);
-- [Amazon Web Services (AWS)](amazon/amazon-authorization.html);
+- [Amazon Web Services (AWS)](./amazon/amazon-authorization.html);
 - [Microsoft Azure](./azure/azure-authorization.html);
-- [Huawei Cloud](./huaweicloud/huawei-authorization.html);
-- [Dynamix](./dynamix/dynamix-authorization.html);
 - [Google Cloud Platform (GCP)](./gcp/сonnection-and-authorization.html).
 
 Это упрощает выбор среды для развёртывания и делает возможным использование единых подходов к управлению Kubernetes-кластерами в разных облачных экосистемах.
