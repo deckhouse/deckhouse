@@ -32,7 +32,7 @@ import:
   includePaths:
   - etcd
   - etcdctl
-  - etcdutil
+  - etcdutl
   before: setup
 imageSpec:
   config:
@@ -58,4 +58,4 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
-    - cd etcdutil && go build -ldflags="-s -w" -o /etcdutil . && cd ..
+    - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
