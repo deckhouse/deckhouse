@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	Host      = fmt.Sprintf("embedded-registry.d8-system.svc:%d", Port)
+	Host      = fmt.Sprintf("registry.d8-system.svc:%d", Port)
 	ProxyHost = fmt.Sprintf("127.0.0.1:%d", Port)
 
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
