@@ -67,6 +67,7 @@ spec:
         - --logtostderr=true
         - --alsologtostderr=true
         - --register-webhook=false
+        - --feature-gates=InPlaceOrRecreate=true
         - --v=4
         env:
         - name: NAMESPACE

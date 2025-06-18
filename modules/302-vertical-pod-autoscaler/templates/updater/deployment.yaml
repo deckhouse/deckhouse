@@ -66,6 +66,7 @@ spec:
         {{- end -}}
         - --stderrthreshold=0
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
+        - --feature-gates=InPlaceOrRecreate=true
         - --v=4
         ports:
         - containerPort: 8080
