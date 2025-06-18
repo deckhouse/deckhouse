@@ -342,7 +342,7 @@ func TestExtractIngressGatewaysFromCM(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := extractIngressGatewaysFromCM(tt.configMap)
+			_, err := extractIngressGatewaysFromCM(&tt.configMap)
 			if (err != nil) != tt.expectedError {
 				t.Errorf("expected error: %v, got: %v", tt.expectedError, err)
 			}

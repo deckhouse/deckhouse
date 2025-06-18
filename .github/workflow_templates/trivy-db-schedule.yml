@@ -37,7 +37,7 @@ jobs:
 {!{ tmpl.Exec "login_rw_cse_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_cse_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_git_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "add_ssh_keys" . | strings.Indent 6 }!}
       - name: Download custom trivy-db binary and copy image
         env:
           TRIVY_VERSION: v0.60.0

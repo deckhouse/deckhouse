@@ -1,4 +1,5 @@
 name: node-local-dns
+stage: "General Availability"
 weight: 350
 subsystems:
   - networking

@@ -1,4 +1,5 @@
 name: network-gateway
+stage: "General Availability"
 weight: 450
 subsystems:
   - networking

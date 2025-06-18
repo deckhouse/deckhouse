@@ -41,6 +41,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type nodeConstraint struct {
@@ -106,7 +107,7 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	node, err := defineMinimalLinuxKernelVersionNode(nodes)
 	if err != nil {
-		input.Logger.Errorf("failed to define minimal kernel version node: %v", err)
+		input.Logger.Error("failed to define minimal kernel version node", log.Err(err))
 		return nil
 	}
 
@@ -134,7 +135,7 @@ func handleNodes(input *go_hook.HookInput) error {
 			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
 			nodeSemverVersion, err := semver.NewVersion(kernelVerStr)
 			if err != nil {
-				input.Logger.Errorf("failed to parse kernel version %q: %v", node.KernelVersion, err)
+				input.Logger.Error("failed to parse kernel version", slog.String("version", node.KernelVersion), log.Err(err))
 				continue
 			}
 

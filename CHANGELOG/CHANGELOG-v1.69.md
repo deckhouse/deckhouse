@@ -3,6 +3,8 @@
 ## [MALFORMED]
 
 
+ - #12318 unknown section "static-routing-manager"
+ - #12510 unknown section "static-routing-manager"
  - #12723 unknown section "ceph-csi"
  - #13174 unknown section "ceph-csi"
  - #13409 unknown section "ceph-csi"
@@ -11,7 +13,9 @@
 
 
  - For new clusters in Yandex Cloud with the `withNATInstance` layout, `internalSubnetCIDR` or `internalSubnetID` must be specified.
+ - In L2 mode, the Public IP address will not be marked as free in the pool after deleting the LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
  - Ingress-nginx controller pods of v1.9 will be restated.
+ - Prevent important data loss when using wide retention intervals.
  - The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
  - Time-based retention in `loki` is no longer available. See the changelog for details.
  - release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
@@ -111,6 +115,7 @@
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
+ - **[dashboard]** fix display workload metrics on dashboard [#13604](https://github.com/deckhouse/deckhouse/pull/13604)
  - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
  - **[deckhouse-controller]** Added validation according to `RFC 1123` for module names added to `ModuleSource`. [#13644](https://github.com/deckhouse/deckhouse/pull/13644)
@@ -129,15 +134,23 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** The `alliance.ingressGateway.advertise` option was fixed up. [#13924](https://github.com/deckhouse/deckhouse/pull/13924)
+ - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
+ - **[keepalived]** fix python [#13617](https://github.com/deckhouse/deckhouse/pull/13617)
  - **[kube-dns]** Fixed release upgrade issue with removed d8-kube-dns-redirect service. [#13487](https://github.com/deckhouse/deckhouse/pull/13487)
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
+ - **[loki]** Fix incorrect indices sort function used in disk-based retention. [#13861](https://github.com/deckhouse/deckhouse/pull/13861)
+    Prevent important data loss when using wide retention intervals.
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
+ - **[metallb]** Reverted the fix for handling deleted Services and revising the IP pools in L2 mode. The correct fix is under construction. [#13836](https://github.com/deckhouse/deckhouse/pull/13836)
+    In L2 mode, the Public IP address will not be marked as free in the pool after deleting the LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
  - **[metallb]** Fixed deprecated CRD addresspools.metallb.io deletion. [#13553](https://github.com/deckhouse/deckhouse/pull/13553)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
  - **[network-gateway]** Fix python path [#13574](https://github.com/deckhouse/deckhouse/pull/13574)
+ - **[node-manager]** fixed update for static clusters [#13962](https://github.com/deckhouse/deckhouse/pull/13962)
  - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
  - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
@@ -152,8 +165,6 @@
  - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
  - **[runtime-audit-engine]** Added support for customization of a built-in rule list of the `runtime-audit-engine` module. [#12185](https://github.com/deckhouse/deckhouse/pull/12185)
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
- - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
- - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
  - **[upmeter]** upmeter sa token rotation [#13201](https://github.com/deckhouse/deckhouse/pull/13201)
  - **[user-authn]** Add separate ServiceAccount to basic-auth-proxy. [#13214](https://github.com/deckhouse/deckhouse/pull/13214)
  - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
@@ -163,15 +174,19 @@
 ## Chore
 
 
+ - **[candi]** Update Deckhouse CLI to 0.12.1 [#13887](https://github.com/deckhouse/deckhouse/pull/13887)
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
  - **[cloud-provider-aws]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-azure]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
+ - **[cloud-provider-dynamix]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)
  - **[cloud-provider-gcp]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-yandex]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
+ - **[cloud-provider-zvirt]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)
  - **[cloud-provider-zvirt]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cni-cilium]** Added an option to enable/disable exclusive management for CNI configuration file (`cni-exclusive`). [#12403](https://github.com/deckhouse/deckhouse/pull/12403)
+ - **[control-plane-manager]** fix audit policy rules for virtualization [#13666](https://github.com/deckhouse/deckhouse/pull/13666)
  - **[control-plane-manager]** add audit policy rules for virtualization [#13086](https://github.com/deckhouse/deckhouse/pull/13086)
  - **[dashboard]** Set Grafana dashboard JSON files to render into the new `ClusterObservabilityDashboard` and `ClusterObservabilityPropagatedDashboard` CRs if `observability` module is enabled. [#12614](https://github.com/deckhouse/deckhouse/pull/12614)
  - **[deckhouse]** Removed Alpine image. [#12726](https://github.com/deckhouse/deckhouse/pull/12726)

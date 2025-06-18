@@ -36,11 +36,15 @@ on:
         description: 'Comma-separated list of editions to build'
         required: false
         type: string
+      svace_enabled:
+        description: 'Enable svace build and analyze'
+        type: boolean
+        required: false
 
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.0"
+  WERF_VERSION: "v2.36.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -341,6 +345,9 @@ jobs:
       - workflow_render
     env:
       WERF_ENV: "FE"
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -439,12 +446,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -462,7 +470,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -530,7 +555,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -543,7 +568,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -612,7 +637,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure()
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -731,12 +756,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -754,7 +780,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -822,7 +865,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -835,7 +878,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -904,7 +947,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure()
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -1023,12 +1066,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -1046,7 +1090,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -1114,7 +1175,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1127,7 +1188,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1303,12 +1364,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -1326,7 +1388,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -1394,7 +1473,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1407,7 +1486,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1583,12 +1662,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -1606,7 +1686,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -1674,7 +1771,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1687,7 +1784,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1863,12 +1960,13 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      # <template: login_git_step>
+      # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -1886,7 +1984,24 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
-      # </template: login_git_step>
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
 
       - name: Build and push deckhouse images
         id: build
@@ -1954,7 +2069,7 @@ jobs:
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
@@ -1967,7 +2082,7 @@ jobs:
             export WERF_DISABLE_META_TAGS=true
           else
             # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -2033,6 +2148,25 @@ jobs:
 
     # </template: build_template>
 
+
+  analyze_deckhouse:
+    if: ${{ github.event.inputs.svace_enabled == 'true' }}
+    name: Deckhouse static analysis
+    needs:
+      - build_fe
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+        with:
+          project_group: ${{ github.event.repository.name }}
+          ci_commit_ref_name: ${{ github.ref_name }}
+          ci_commit_hash: ${{ github.sha }}
+          svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          svace_analyze_ssh_user: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          svacer_url: "${{ secrets.SVACER_URL }}"
+          svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
+          svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
+          svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
   doc_web_build:
     name: Doc web build
@@ -2286,7 +2420,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:56b70215b98ad0ffd33c01a12b1712dac7334cfbef584cae3415398dc18d9ee5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:737a858312525d525f3d04e6c4282d1eedc0b9767cbc5a7918d8b53c3ddad22d"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

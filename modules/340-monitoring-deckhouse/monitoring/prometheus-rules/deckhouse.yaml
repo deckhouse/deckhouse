@@ -566,4 +566,4 @@
         kubectl get mr -l module={{ $labels.module }}
         ```
 
-        Provided  error: {{ $labels.error }}
+        Provided error: {{ $labels.error }}

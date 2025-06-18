@@ -23,6 +23,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -82,11 +84,14 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 //   if there are no more ClusterIP services with same label in namespace
 
 func discoveryDNSAddress(input *go_hook.HookInput) error {
+	services, err := sdkobjectpatch.UnmarshalToStruct[ServiceAddr](input.NewSnapshots, "dns_cluster_ip")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal dns_cluster_ip snapshot: %w", err)
+	}
+
 	dnsAddress := ""
 
-	for _, sRaw := range input.Snapshots["dns_cluster_ip"] {
-		s := sRaw.(ServiceAddr)
-
+	for _, s := range services {
 		if s.ClusterIP == "None" || s.ClusterIP == "" {
 			continue
 		}
