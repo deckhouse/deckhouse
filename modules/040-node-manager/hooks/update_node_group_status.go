@@ -273,7 +273,6 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 	snaps := input.NewSnapshots.Get("zones_count")
 	if len(snaps) > 0 {
-		var defaultZonesNum int32
 		err := snaps[0].UnmarshalTo(&defaultZonesNum)
 		if err != nil {
 			input.Logger.Error("failed to unmarshal start 'zones_count' snapshot", log.Err(err))
