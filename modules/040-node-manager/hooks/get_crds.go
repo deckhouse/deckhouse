@@ -296,7 +296,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
-	var instanceTypeCatalog *capacity.InstanceTypesCatalog
+	var instanceTypeCatalog capacity.InstanceTypesCatalog
 	iCatalogRaws := input.NewSnapshots.Get("instance_types_catalog")
 
 	if len(iCatalogRaws) == 1 {
@@ -305,7 +305,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
 		}
 	} else {
-		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
+		instanceTypeCatalog = *capacity.NewInstanceTypesCatalog(nil)
 	}
 
 	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.NewSnapshots.Get("ngs")) {
@@ -392,7 +392,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
 				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, &instanceTypeCatalog)
 					if err != nil {
 						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
