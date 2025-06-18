@@ -97,10 +97,10 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-var removeMigLabel = map[string]interface{}{
+var disabledMigLabel = map[string]interface{}{
 	"metadata": map[string]interface{}{
 		"labels": map[string]interface{}{
-			migConfigLabel: nil,
+			migConfigLabel: "all-disabled",
 		},
 	},
 }
@@ -134,7 +134,7 @@ func setGPULabel(input *go_hook.HookInput) error {
 			} else {
 				// remove MIG label if it's set and it's not a MIG node
 				if _, ok := node.(NodeInfo).Labels[migConfigLabel]; ok {
-					input.PatchCollector.PatchWithMerge(removeMigLabel, "v1", "Node", "", node.(NodeInfo).Name)
+					input.PatchCollector.PatchWithMerge(disabledMigLabel, "v1", "Node", "", node.(NodeInfo).Name)
 				}
 			}
 

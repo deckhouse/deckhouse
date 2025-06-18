@@ -148,7 +148,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
             "labels": {
               "node.deckhouse.io/gpu": "",
               "node.deckhouse.io/group": "worker-gpu",
-              "node.deckhouse.io/device-gpu.config": "time-slicing"
+              "node.deckhouse.io/device-gpu.config": "time-slicing",
+              "nvidia.com/mig.config": "all-disabled"
             },
             "name": "worker-gpu-1"
         }
