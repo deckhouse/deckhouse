@@ -29,3 +29,55 @@ For macOS, you can use a [third-party script](https://github.com/andrewgdotcom/o
 {% alert level="warning" %}
 Scripts must have execution permissions.
 {% endalert %}
+
+## How to revoke, rotate or delete a user certificate?
+
+All actions with user certificates are performed from the `openvpn-admin` web interface by clicking on the buttons located to the right of each user.
+![Actions with an active user](../../images/openvpn/active_user.png)
+
+You can rotate a certificate or delete a user only after revoking it.
+![Actions with a revoked user](../../images/openvpn/revoked_user.png)
+
+## How to rotate a server certificate?
+
+The server certificate is rotated automatically N days before the expiration date.
+
+To force rotation, you need to do the following:
+* Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`
+
+```shell
+kubectl -n d8-openvpn delete secrets openvpn-pki-server
+```
+
+* Restart openvpn pods
+
+```shell
+kubectl -n d8-openvpn rollout restart sts openvpn
+```
+
+## How to rotate a root certificate (CA)?
+
+The OpenVPN root certificate is used to issue certificates for the server and all users.
+For this reason, when replacing the root certificate, you need to reissue all specified certificates.
+
+To rotate, you need to do the following:
+* [Revoke or delete](#how-to-revoke-rotate-or-delete-a-user-certificate) all active user certificates.
+If you revoke user, you can renew the user certificate after replacing the root certificate. In this case, you don't need to recreate users.
+* Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`
+
+```shell
+kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+```
+
+* Restart OpenVPN pods
+
+```shell
+kubectl -n d8-openvpn rollout restart sts openvpn
+```
+
+* [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
+* Delete all revoked certificates
+
+```shell
+kubectl -n d8-openvpn delete secrets -l revokedForever=true
+```
