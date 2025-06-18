@@ -147,7 +147,7 @@ func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) {
+func (l *Loader) LoadModule(modulePath string) (*modules.BasicModule, error) {
 	if _, err := readDir(modulePath); err != nil {
 		return nil, err
 	}

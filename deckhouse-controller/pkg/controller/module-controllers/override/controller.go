@@ -104,7 +104,7 @@ type reconciler struct {
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	RunModuleWithNewOpenAPISchema(moduleName, modulePath string) error
 	AreModulesInited() bool
 }
 
@@ -236,7 +236,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		// if module is enabled - push runModule task in the main queue
 		r.log.Info("apply new registry settings to the module", slog.String("name", mpo.Name))
 		modulePath := filepath.Join(r.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, module.Properties.Source, modulePath); err != nil {
+		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, modulePath); err != nil {
 			r.log.Error("failed to run the module with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}

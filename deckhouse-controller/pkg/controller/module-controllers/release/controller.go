@@ -156,7 +156,7 @@ type reconciler struct {
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	RunModuleWithNewOpenAPISchema(moduleName, modulePath string) error
 	GetEnabledModuleNames() []string
 	AreModulesInited() bool
 }
@@ -371,9 +371,8 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
 
 		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		source := release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelSource]
 
-		if err := r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), source, modulePath); err != nil {
+		if err := r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), modulePath); err != nil {
 			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return ctrl.Result{}, fmt.Errorf("run module with new open api schema: %w", err)
