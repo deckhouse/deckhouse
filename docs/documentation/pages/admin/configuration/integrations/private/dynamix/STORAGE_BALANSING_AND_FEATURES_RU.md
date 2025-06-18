@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/public/dynamix/dynamix-storage.html
+permalink: ru/admin/integrations/privat/dynamix/dynamix-storage.html
 lang: ru
 ---
 

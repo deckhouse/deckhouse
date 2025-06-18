@@ -1,6 +1,6 @@
 ---
 title: Интеграция с службами Huawei Cloud
-permalink: ru/admin/integrations/public/huaweicloud/huawei-services.html
+permalink: ru/admin/integrations/privat/huaweicloud/huawei-services.html
 lang: ru
 ---
 

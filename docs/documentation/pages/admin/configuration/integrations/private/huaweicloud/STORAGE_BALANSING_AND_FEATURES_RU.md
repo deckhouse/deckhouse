@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/public/huaweicloud/huawei-storage.html
+permalink: ru/admin/integrations/privat/huaweicloud/huawei-storage.html
 lang: ru
 ---
 

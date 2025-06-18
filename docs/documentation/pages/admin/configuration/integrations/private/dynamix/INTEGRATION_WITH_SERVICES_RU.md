@@ -1,6 +1,6 @@
 ---
 title: Интеграция с облаком Dynamix
-permalink: ru/admin/integrations/public/dynamix/dynamix-services.html
+permalink: ru/admin/integrations/privat/dynamix/dynamix-services.html
 lang: ru
 ---
 

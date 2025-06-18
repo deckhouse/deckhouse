@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/public/dynamix/dynamix-layout.html
+permalink: ru/admin/integrations/privat/dynamix/dynamix-layout.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/huaweicloud/huawei-authorization.html
+permalink: ru/admin/integrations/privat/huaweicloud/huawei-authorization.html
 lang: ru
 ---
 
