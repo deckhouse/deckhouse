@@ -106,20 +106,6 @@ example1  10s       Ready     false
   example    12s       The source not found    false
   ```
 
-* Модуль не должен находиться в режиме обслуживания (`maintenance: NoResourceReconciliation`), иначе ModulePullOverride не будет применён. Режим обслуживания (`maintenance mode`) используется для временного отключения управления ресурсами модуля со стороны Deckhouse. В этом режиме изменения не применяются автоматически.
-
-  Пример:
-
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  ...
-  spec:
-    enabled: true
-    maintenance: NoResourceReconciliation
-    settings: 
-  ```
-
 Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
 
 ```sh
