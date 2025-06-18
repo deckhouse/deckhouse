@@ -384,9 +384,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		availableModule.Checksum = meta.Checksum
-		availableModule.Version = meta.ModuleVersion
-
 		// check if release exists
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
@@ -414,6 +411,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				meta.Checksum = ""
 			}
 		}
+
+		availableModule.Checksum = meta.Checksum
+		availableModule.Version = meta.ModuleVersion
 
 		availableModules = append(availableModules, availableModule)
 	}
