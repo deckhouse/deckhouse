@@ -147,7 +147,7 @@ func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) {
+func (l *Loader) LoadModule(modulePath string) (*modules.BasicModule, error) {
 	if _, err := readDir(modulePath); err != nil {
 		return nil, err
 	}
@@ -195,6 +195,8 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	if err != nil {
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
+
+	l.logger.Info("module loaded", slog.String("module", module.GetBasicModule().Name), slog.String("edition_info", module.GetModuleDefenition().Accessibility.HasAccess()))
 
 	// load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {

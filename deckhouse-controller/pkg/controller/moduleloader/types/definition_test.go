@@ -34,6 +34,36 @@ requirements:
   modules:
     prometheus: ">= 0.0.0"
     control-plane-manager: ">= 0.0.0"
+accessibility:
+  batches:
+    ee-networking:
+      available: true
+      enabled: true
+      featureFlags: ["a", "b", "c"]
+
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Minimal
+        - Managed
+        - Default
+    ee:
+      available: true
+      enabledInBundles:
+        - Minimal
+        - Managed
+        - Default
+      featureFlags: ["AllowSomeSuperFeature"]
+    se:
+      available: true
+      enabledInBundles:
+        - Minimal
+        - Managed
+        - Default
+      featureFlags: ["SomeLimit:50"]
+    be:
+      available: false
 `
 
 	var m Definition
@@ -48,4 +78,25 @@ requirements:
 	assert.Equal(t, ">= 1.31", m.Requirements.Kubernetes)
 	assert.Equal(t, ">= 1.67", m.Requirements.Deckhouse)
 	assert.Equal(t, ">= 0.0.0", m.Requirements.ParentModules["prometheus"])
+	assert.NotNil(t, m.Accessibility)
+	assert.NotEmpty(t, m.Accessibility.Editions)
+	assert.True(t, m.Accessibility.Editions.Default.Available)
+	assert.Contains(t, m.Accessibility.Editions.Default.EnabledInBundles, Bundle("Minimal"))
+	assert.Contains(t, m.Accessibility.Editions.Default.EnabledInBundles, Bundle("Managed"))
+	assert.Contains(t, m.Accessibility.Editions.Default.EnabledInBundles, Bundle("Default"))
+	assert.Empty(t, m.Accessibility.Editions.Default.FeatureFlags)
+	assert.True(t, m.Accessibility.Editions.Ee.Available)
+	assert.Contains(t, m.Accessibility.Editions.Ee.EnabledInBundles, Bundle("Minimal"))
+	assert.Contains(t, m.Accessibility.Editions.Ee.EnabledInBundles, Bundle("Managed"))
+	assert.Contains(t, m.Accessibility.Editions.Ee.EnabledInBundles, Bundle("Default"))
+	assert.Contains(t, m.Accessibility.Editions.Ee.FeatureFlags, FeatureFlag("AllowSomeSuperFeature"))
+	assert.True(t, m.Accessibility.Editions.Se.Available)
+	assert.Contains(t, m.Accessibility.Editions.Se.EnabledInBundles, Bundle("Minimal"))
+	assert.Contains(t, m.Accessibility.Editions.Se.EnabledInBundles, Bundle("Managed"))
+	assert.Contains(t, m.Accessibility.Editions.Se.EnabledInBundles, Bundle("Default"))
+	assert.Contains(t, m.Accessibility.Editions.Se.FeatureFlags, FeatureFlag("SomeLimit:50"))
+	assert.False(t, m.Accessibility.Editions.Be.Available)
+	assert.Empty(t, m.Accessibility.Editions.Be.EnabledInBundles)
+	assert.Empty(t, m.Accessibility.Editions.Be.FeatureFlags)
+	assert.NotEmpty(t, m.Accessibility.Batches)
 }
