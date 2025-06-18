@@ -123,7 +123,7 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 	snaps := input.NewSnapshots.Get("csr")
-	for csrInfo, err := range sdkobjectpatch.SnapshotIter[*CsrInfo](snaps) {
+	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
 		if err != nil {
 			continue
 		}
