@@ -326,7 +326,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 
 	log.Debug("module metadata",
 		slog.String("module", moduleName),
-		slog.String("old_checksum", moduleChecksum),
 	)
 
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
