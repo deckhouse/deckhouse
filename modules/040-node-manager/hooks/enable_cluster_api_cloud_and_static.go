@@ -114,14 +114,17 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var capiEnabled bool
 	var capsEnabled bool
 
-	configMapSnapshots, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "config_map")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'pki_checksum' snapshot: %w", err)
-	}
+	configMapSnapshots := input.NewSnapshots.Get("config_map")
 
 	if len(configMapSnapshots) > 0 {
-		capiEnabled = hasCapiProvider || configMapSnapshots[0]
-		capsEnabled = configMapSnapshots[0]
+		var capsFromStartSnap bool
+		err := configMapSnapshots[0].UnmarshalTo(capsFromStartSnap)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal start 'pki_checksum' snapshot: %w", err)
+		}
+
+		capiEnabled = hasCapiProvider || capsFromStartSnap
+		capsEnabled = capsFromStartSnap
 	} else {
 		capiEnabled = hasCapiProvider || hasStaticInstancesField
 	}
