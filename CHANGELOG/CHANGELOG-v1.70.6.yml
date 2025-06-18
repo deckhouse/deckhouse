@@ -1,0 +1,9 @@
+deckhouse:
+  fixes:
+    - summary: Remove unnecessary modules downloading.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14003
+openvpn:
+  fixes:
+    - summary: Added a migration hook to mitigate false positive `OpenVPNClientCertificateExpired` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13987
+
