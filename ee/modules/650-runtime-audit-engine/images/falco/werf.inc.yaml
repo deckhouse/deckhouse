@@ -1,51 +1,44 @@
-{{- $falcoVersion := "0.39.2" }}
-{{- $falcoctlVersion := "0.10.1" }}
-{{- $pluginsVersion := "plugins/kafka/v0.1.3" }}
+{{- $falcoVersion := "0.41.1" }}
+{{- $falcoctlVersion := "0.11.2" }}
+{{- $pluginsVersion := "plugins/gcpaudit/v0.6.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: base/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /falco-package
+  add: /out
   to: /
   includePaths:
-  - usr/bin/
-  - usr/share/
-  - etc/
+  - usr/bin/falco
+  - etc/falco
+  - usr/share/falco/plugins/libcontainer.so
+  - lib64
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
-  add: /src/falcoctl
+  add: /out/falcoctl
   to: /usr/bin/falcoctl
   before: install
-shell:
-  beforeInstall:
-  - rm -df /lib/modules
-  - ln -s $HOST_ROOT/lib/modules /lib/modules
-  install:
-  - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
-docker:
-  CMD: ["/usr/bin/falco"]
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+  add: /out/usr/share/falco/plugins
+  to: /usr/share/falco/plugins
+  before: install
+imageSpec:
+  config:
+    cmd: ["/usr/bin/falco"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/falcoctl
-  to: /patches/falcoctl
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git /src/falco
-  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git /src/plugins
-  - git clone --branch v{{ $falcoctlVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcoctl.git /src/falcoctl
-  - cd /src/plugins
+  - git clone --branch {{ $falcoVersion}} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falco.git /src/falco
+  - git clone --branch {{ $pluginsVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/plugins.git /src/plugins
+  - git clone --branch v{{ $falcoctlVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falcoctl.git /src/falcoctl
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
   - cd /src/falcoctl
-  - git apply /patches/falcoctl/*.patch --verbose
   - git rev-parse HEAD > RELEASE
   - git rev-parse HEAD > COMMIT
   - rm -rf /src/falco/.git
@@ -74,15 +67,17 @@ shell:
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod download
   - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
-  - chown 64535:64535 falcoctl
-  - chmod 0755 falcoctl
+  - mkdir -p /out
+  - cp falcoctl /out
+  - chown 64535:64535 /out/falcoctl
+  - chmod 0755 /out/falcoctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/alt-p11-artifact
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
+  add: /src/falco
   to: /src
   before: install
 mount:
@@ -93,20 +88,15 @@ mount:
 - from: tmp_dir
   to: /root/.cache/go-build
 - from: tmp_dir
-  to: /src/falco/build
+  to: /src/build
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
-  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
-  - rm -f /usr/bin/clang
-  - ln -s /usr/bin/clang-18 /usr/bin/clang
-  - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
-  - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
-  - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
-  - cd /src/falco
+  - export ALTWRAP_LLVM_VERSION=18.1
+  - export GCC_VERSION=12
+  - cd /src
   {{- if $.DistroPackagesProxy }}
   # build in the closed env
   - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcosecurity-libs-repo/CMakeLists.txt
@@ -118,9 +108,11 @@ shell:
   - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcoctl.cmake
   - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" cmake/modules/rules.cmake
   {{- end }}
-  - mkdir -p /src/falco/build
-  - cd /src/falco/build
-  - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src/falco
+  - mkdir -p /src/build
+  - cd /src/build
+  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src
+  # fix build tbb lib on altlinux (redefine FORTIFY_SOURCE)
+  - sed -i 's|cd /src/build/tbb-prefix/src/tbb && /usr/bin/cmake -E touch /src/build/tbb-prefix/src/tbb-stamp/tbb-configure|&\n\tsed -i "s\|-D_FORTIFY_SOURCE=2\|-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2\|g" /src/build/tbb-prefix/src/tbb/src/tbb/CMakeFiles/tbb.dir/flags.make|' CMakeFiles/tbb.dir/build.make
   {{- if $.DistroPackagesProxy }}
   # build in the closed env
   - |
@@ -128,24 +120,61 @@ shell:
       sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" $f
     done
   {{- end }}
-  - make package -j4
-  - mkdir -p /falco-package
-  - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
+  - make falco -j ${BUILD_THREADS}
+  - make install DESTDIR=/out
+  - "sed -i 's|time_format_iso_8601: false|time_format_iso_8601: true|' /out/etc/falco/falco.yaml"
   # cleanup to reduce artifact size
   - make clean
-  - cd /src/plugins/plugins/json
-  - make
-  - cp libjson.so /falco-package/usr/share/falco/plugins
-  - make clean
-  - cd /src/plugins/plugins/k8saudit
-  - make
-  - cp libk8saudit.so /falco-package/usr/share/falco/plugins
-  - make clean
-  - cd /src/plugins/plugins/k8smeta
+  - cd /out
+  - /binary_replace.sh -i usr/bin/falco -o /out
+  - chown -R 64535:64535 /out
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/plugins
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /src/build
+shell:
+  install:
+  - export CGO_ENABLED=1
+  - export ALTWRAP_LLVM_VERSION=18.1
+  - export GCC_VERSION=12
+  - mkdir -p /out/usr/share/falco/plugins
   {{- if $.DistroPackagesProxy }}
-  # build in the closed env
-  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
+  - # build in the closed env
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" src/k8smeta/test/CMakeLists.txt
   {{- end }}
+  - cd /src/plugins/json
   - make
-  - cp libk8smeta.so /falco-package/usr/share/falco/plugins
+  - cp libjson.so /out/usr/share/falco/plugins
   - make clean
+  - cd /src/plugins/k8saudit
+  - make
+  - cp libk8saudit.so /out/usr/share/falco/plugins
+  - make clean
+  - cd /src/plugins/k8smeta
+  - make
+  - cp libk8smeta.so /out/usr/share/falco/plugins
+  - make clean
+  - cd /out
+  - /binary_replace.sh -i "usr/share/falco/plugins/libjson.so usr/share/falco/plugins/libk8saudit.so usr/share/falco/plugins/libk8smeta.so" -o /out
+  - chown -R 64535:64535 /out
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+fromImage: common/relocate-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  - apt-get install -y git libelf-devel libbpf-devel bpftool cmake clang18.1 build-essential golang gcc12 gcc12-c++ perl-IPC-Cmd
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
