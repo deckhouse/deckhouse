@@ -4,7 +4,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $featureGatesList := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
 {{- if semverCompare "<= 1.32" .clusterConfiguration.kubernetesVersion -}}
-  {{ $featureGatesList := concat $featureGatesList "InPlacePodVerticalScaling=true" -}}
+  {{ $featureGatesList = append $featureGatesList "InPlacePodVerticalScaling=true" -}}
 {{- end -}}
 {{- $featureGates := $featureGatesList | join "," -}}
 {{- /* admissionPlugins */ -}}
