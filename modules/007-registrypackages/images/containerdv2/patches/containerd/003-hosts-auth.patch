@@ -1,54 +1,8 @@
-Subject: [PATCH] add hosts auth
----
-Index: cmd/ctr/commands/resolver.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/cmd/ctr/commands/resolver.go b/cmd/ctr/commands/resolver.go
---- a/cmd/ctr/commands/resolver.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/cmd/ctr/commands/resolver.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
-@@ -28,12 +28,13 @@
- 	"strings"
-
- 	"github.com/containerd/console"
-+	"github.com/urfave/cli/v2"
-+
- 	"github.com/containerd/containerd/v2/core/remotes"
- 	"github.com/containerd/containerd/v2/core/remotes/docker"
- 	"github.com/containerd/containerd/v2/core/remotes/docker/config"
- 	"github.com/containerd/containerd/v2/core/transfer/registry"
- 	"github.com/containerd/containerd/v2/pkg/httpdbg"
--	"github.com/urfave/cli/v2"
- )
-
- // PushTracker returns a new InMemoryTracker which tracks the ref status
-@@ -82,10 +83,12 @@
- 	}
-
- 	hostOptions := config.HostOptions{}
--	hostOptions.Credentials = func(host string) (string, string, error) {
--		// If host doesn't match...
--		// Only one host
--		return username, secret, nil
-+	if username != "" && secret != "" {
-+		hostOptions.Credentials = func(host string) (string, string, error) {
-+			// If host doesn't match...
-+			// Only one host
-+			return username, secret, nil
-+		}
- 	}
- 	if cliContext.Bool("plain-http") {
- 		hostOptions.DefaultScheme = "http"
-Index: core/remotes/docker/config/hosts.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
---- a/core/remotes/docker/config/hosts.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/core/remotes/docker/config/hosts.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
-@@ -20,6 +20,7 @@
+index 40d451af0..a59e2233c 100644
+--- a/core/remotes/docker/config/hosts.go
++++ b/core/remotes/docker/config/hosts.go
+@@ -20,6 +20,7 @@ package config
  import (
  	"context"
  	"crypto/tls"
@@ -56,15 +10,15 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  	"fmt"
  	"net"
  	"net/http"
-@@ -59,9 +60,19 @@
-
+@@ -59,9 +60,19 @@ type hostConfig struct {
+ 
  	rewrites []hostPathRewrite
-
+ 
 +	auth authConfig
 +
  	// TODO: Add credential configuration (domain alias, username)
  }
-
+ 
 +// authConfig holds authentication-related parameters for interacting with a registry.
 +type authConfig struct {
 +	userName      string
@@ -76,10 +30,10 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  // HostPathRewrite is used to confirure rewrite paths in the mirror hosts
  type hostPathRewrite struct {
  	regexp      *regexp.Regexp
-@@ -166,19 +177,35 @@
+@@ -166,19 +177,41 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  			}
  		}
-
+ 
 -		authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
 -		if options.Credentials != nil {
 -			authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
@@ -92,46 +46,52 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  			// Allow setting for each host as well
  			explicitTLSFromHost := host.caCerts != nil || host.clientPairs != nil || host.skipVerify != nil
  			explicitTLS := tlsConfigured || explicitTLSFromHost
-
+ 
 +			authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
 +			hostAuth := host.auth // copy to local variable from loop variable
 +
-+			// use creds from registry config options as fallback in the case
-+			// of credentials from puller is empty
-+			creds := docker.WithAuthCreds(func(s string) (string, string, error) {
-+				return parseAuth(&hostAuth)
-+			})
-+
 +			if options.Credentials != nil {
-+				// check if credentials contains some information
-+				username, password, err := options.Credentials(host.host)
-+				if err != nil {
-+					return nil, err
-+				}
-+				// if creds aren't empty, use it
-+				if username != "" || password != "" {
-+					creds = docker.WithAuthCreds(options.Credentials)
-+				}
++				optsCreds := options.Credentials // copy to local variable
++
++				creds := docker.WithAuthCreds(func(host string) (string, string, error) {
++					u, p, err := optsCreds(host)
++
++					if (u != "" && p != "") || err != nil {
++						return u, p, err
++					}
++
++					// use creds from registry config options as fallback in the case
++					// of credentials from puller is empty
++					return parseAuth(&hostAuth)
++				})
++
++				authOpts = append(authOpts, creds)
++			} else {
++				creds := docker.WithAuthCreds(func(host string) (string, string, error) {
++					return parseAuth(&hostAuth)
++				})
++
++				authOpts = append(authOpts, creds)
 +			}
-+			authOpts = append(authOpts, creds)
++
 +			authOpts = append(authOpts, options.AuthorizerOpts...)
 +
  			if explicitTLSFromHost || host.dialTimeout != nil || len(host.header) != 0 {
  				c := *client
  				if explicitTLSFromHost || host.dialTimeout != nil {
-@@ -217,7 +244,7 @@
+@@ -217,7 +250,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  				rhosts[i].Authorizer = docker.NewDockerAuthorizer(append(authOpts, docker.WithAuthClient(&c))...)
  			} else {
  				rhosts[i].Client = client
 -				rhosts[i].Authorizer = authorizer
 +				rhosts[i].Authorizer = docker.NewDockerAuthorizer(authOpts...)
  			}
-
+ 
  			// When TLS has been configured for the operation or host and
-@@ -398,6 +425,19 @@
+@@ -398,6 +431,19 @@ type hostFileConfig struct {
  		Replacement string `toml:"replace"`
  	} `toml:"rewrite"`
-
+ 
 +	Auth struct {
 +		// Username is the username to login the registry.
 +		Username string `toml:"username" json:"username"`
@@ -147,11 +107,11 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
-
-@@ -583,6 +623,13 @@
+ 
+@@ -583,6 +629,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		}
  	}
-
+ 
 +	result.auth = authConfig{
 +		userName:      config.Auth.Username,
 +		password:      config.Auth.Password,
@@ -161,8 +121,8 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +
  	return result, nil
  }
-
-@@ -687,3 +734,31 @@
+ 
+@@ -687,3 +740,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
  	}
  	return hosts, nil
  }
@@ -194,18 +154,14 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +
 +	return "", "", nil
 +}
-Index: core/remotes/docker/config/hosts_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
---- a/core/remotes/docker/config/hosts_test.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-+++ b/core/remotes/docker/config/hosts_test.go	(revision 9163d3bc0d515208a37365d00f7d0312fceced95)
-@@ -300,6 +300,70 @@
+index bfa1dde8c..2faebea32 100644
+--- a/core/remotes/docker/config/hosts_test.go
++++ b/core/remotes/docker/config/hosts_test.go
+@@ -300,6 +300,70 @@ replace = "/other/path2"
  	}
  }
-
+ 
 +func TestParseHostFileWithAuth(t *testing.T) {
 +	const testtoml = `
 +server = "https://test-default.registry"
@@ -272,8 +228,8 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
 +
  func TestLoadCertFiles(t *testing.T) {
  	dir := t.TempDir()
-
-@@ -656,6 +720,20 @@
+ 
+@@ -656,6 +720,20 @@ func compareHostConfig(j, k hostConfig) bool {
  			return false
  		}
  	}
@@ -293,8 +249,8 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
 +
  	return true
  }
-
-@@ -680,6 +758,7 @@
+ 
+@@ -680,6 +758,7 @@ func printHostConfig(hc []hostConfig) string {
  		if hc[i].rewrites != nil {
  			fmt.Fprintf(b, "\t\trewrites: %#v\n", hc[i].rewrites)
  		}
