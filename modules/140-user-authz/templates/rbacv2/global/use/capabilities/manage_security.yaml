@@ -32,6 +32,7 @@ rules:
       - watch
       - create
       - update
+      - patch
       - delete
       - impersonate
   - apiGroups:
