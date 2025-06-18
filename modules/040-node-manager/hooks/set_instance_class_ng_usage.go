@@ -17,11 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-<<<<<<< refactoring-hooks-snapshots
 	"fmt"
-=======
 	"log/slog"
->>>>>>> main
 	"strings"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"

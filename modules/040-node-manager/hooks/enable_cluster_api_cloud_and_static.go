@@ -140,7 +140,6 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	configMapSnapshots := input.NewSnapshots.Get("config_map")
 
 	if len(configMapSnapshots) > 0 {
-<<<<<<< refactoring-hooks-snapshots
 		var capsFromStartSnap bool
 		err := configMapSnapshots[0].UnmarshalTo(&capsFromStartSnap)
 		if err != nil {
@@ -149,15 +148,8 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 
 		capiEnabled = hasCapiProvider || capsFromStartSnap
 		capsEnabled = capsFromStartSnap
-=======
-		capiEnabledFromCM := configMapSnapshots[0].(bool)
-		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capiEnabledFromCM)
-
-		capiEnabled = hasCapiProvider || capiEnabledFromCM
-		capsEnabled = configMapSnapshots[0].(bool)
 
 		input.Logger.Info("Calculated flags", "capiEnabled", capiEnabled, "capsEnabled", capsEnabled)
->>>>>>> main
 	} else {
 		input.Logger.Info("ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed not found")
 

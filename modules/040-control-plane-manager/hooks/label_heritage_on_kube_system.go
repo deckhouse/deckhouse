@@ -60,7 +60,6 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-<<<<<<< refactoring-hooks-snapshots
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "ns")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
@@ -68,14 +67,6 @@ func labelHeritage(input *go_hook.HookInput) error {
 	if len(snaps) == 1 {
 		name := snaps[0]
 		input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
-=======
-	snap := input.Snapshots["ns"]
-	if len(snap) == 1 {
-		if snap[0] != nil {
-			name := snap[0].(string)
-			input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
-		}
->>>>>>> main
 	}
 
 	return nil
