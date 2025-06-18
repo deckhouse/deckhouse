@@ -741,7 +741,6 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   dvp-provider:
     iconPath: images/icons/platforms/dvp.png
-    ee_only: true
     layout:
       code: standard
       name: Standard
