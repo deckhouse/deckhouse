@@ -70,7 +70,7 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 		return fmt.Errorf("read open API files: %w", err)
 	}
 
-	dm, err := addonmodules.NewBasicModule(d.Name, d.Path, d.Weight, nil, cb, vb, addonmodules.WithLogger(logger.Named("basic-module")))
+	dm, err := addonmodules.NewBasicModule(remapDefinitionToModuleConfig(d), nil, cb, vb, addonmodules.WithLogger(logger.Named("basic-module")))
 	if err != nil {
 		return fmt.Errorf("new basic module: %w", err)
 	}

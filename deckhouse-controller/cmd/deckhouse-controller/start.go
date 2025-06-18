@@ -154,6 +154,7 @@ func entrypoint(logger *log.Logger) error {
 	}
 
 	if featureFlag {
+		logger.Warn("DKPFF_NEW_EDITIONS enabled")
 		return nil
 	}
 

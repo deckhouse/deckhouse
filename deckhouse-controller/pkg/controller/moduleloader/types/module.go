@@ -29,7 +29,7 @@ type Module struct {
 }
 
 func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
-	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
+	basic, err := modules.NewBasicModule(remapDefinitionToModuleConfig(def), staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
 	if err != nil {
 		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
@@ -60,4 +60,14 @@ func (m *Module) GetConfirmationDisableReason() (string, bool) {
 		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
 	}
 	return "", false
+}
+
+func remapDefinitionToModuleConfig(def *Definition) *modules.Config {
+	if def == nil {
+		return nil
+	}
+
+	return &modules.Config{
+		Name: def.Name,
+	}
 }

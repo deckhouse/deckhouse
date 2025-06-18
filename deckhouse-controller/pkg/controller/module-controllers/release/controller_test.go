@@ -727,7 +727,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
-	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm, _ := addonmodules.NewBasicModule(&addonmodules.Config{Name: name, Weight: 900}, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
 	bm.SetPhase(addonmodules.Ready)
 	if s.modulePhase != "" {
 		bm.SetPhase(s.modulePhase)
