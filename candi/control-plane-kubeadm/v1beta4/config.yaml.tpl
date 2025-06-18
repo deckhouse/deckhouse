@@ -143,6 +143,24 @@ apiServer:
     - name: oidc-issuer-url
       value: {{ .apiserver.oidcIssuerURL }}
     {{- end }}
+    {{ if .apiserver.webhookURL }}
+    - name: authorization-mode
+      value: Node,Webhook,RBAC
+    - name: authorization-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookURL }}
+    - name: authentication-token-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookCacheTTL }}
+    - name: authentication-token-webhook-cache-ttl
+      value: {{.apiserver.authnWebhookCacheTTL | quote }}
+    {{- end -}}
+    {{ if .apiserver.auditWebhookURL }}
+    - name: audit-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
+    {{- end -}}
     - name: profiling
       value: "false"
     - name: request-timeout
