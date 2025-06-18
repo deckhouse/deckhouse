@@ -156,13 +156,13 @@ dhcpOptions:
 ## WithNATInstance
 
 In this placement strategy, Deckhouse creates a NAT instance inside new separate subnet and adds a rule to a route table containing a route to `0.0.0.0/0` with a NAT instance as the next hop.
-This separate subnet is needed to avoid routing loop. This network must not overlap with other cluster networks.
+The subnet is allocated to prevent routing loops and must not overlap with other networks used in the cluster.
 
-To use an existing network, you must specify the `withNATInstance.internalSubnetID` parameter — NAT instance will be created within this subnet's zone.
+To place the NAT instance in an existing subnet, use the `withNATInstance.internalSubnetID` parameter — the instance will be created in the zone corresponding to that subnet.
 
-If `withNATInstance.internalSubnetCIDR` parameter is used, a new internal subnet will be created, and NAT instance will be deployed within it.
+If you need to create a new subnet, specify the `withNATInstance.internalSubnetCIDR` parameter — the NAT instance will be deployed in it.
 
-Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` parameter is required.
+One of the parameters — `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` — is required.
 
 If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
