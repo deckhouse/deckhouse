@@ -258,7 +258,7 @@ import:
   to: /usr/bin/rev
   before: install
 shell:
-  beforeInstall:
+  install:
   {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
   # link /run directory to /var/run
   - ln -s /var/run /run
