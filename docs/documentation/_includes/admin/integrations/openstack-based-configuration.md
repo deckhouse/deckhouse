@@ -428,7 +428,7 @@ spec:
       owner: default
 ```
 
-### Список необходимых сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
+### Список необходимых сервисов
 
 Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 

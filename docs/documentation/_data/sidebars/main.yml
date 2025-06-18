@@ -909,12 +909,12 @@ entries:
                     ru: Веб-интерфейс Grafana
                   url: /user/web/grafana.html
                 - title:
-                    en: Alertmanager-email web interface
-                    ru: Веб-интерфейс Alertmanager-email
+                    en: Alert management web UI
+                    ru: Веб-интерфейс управления алертами
                   url: /user/web/alertmanager.html
                 - title:
-                    en: Kubeconfig web interface
-                    ru: Веб-интерфейс Kubeconfig
+                    en: Kubeconfig generator web UI
+                    ru: Веб-интерфейс генератора kubeconfig
                   url: /user/web/kubeconfig.html
                 - title:
                     en: Console web interface
