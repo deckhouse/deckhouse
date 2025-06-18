@@ -982,7 +982,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
-			status.Message = "initial module config validation failed: " + err.Error()
+			status.Message = "Initial module config validation failed:\n" + err.Error()
 
 			module := new(v1alpha1.Module)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
@@ -998,7 +998,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 				module.SetConditionFalse(
 					v1alpha1.ModuleConditionEnabledByModuleConfig,
 					"",
-					fmt.Sprintf("Initial config for module %s is not valid", release.GetModuleName()),
+					fmt.Sprintf("ModuleRelease could not be applied. Module config validation failed: see details in the module release v%s", release.GetVersion().String()),
 				)
 				return true
 			})
