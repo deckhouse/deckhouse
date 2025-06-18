@@ -1,0 +1,10 @@
+loki:
+  fixes:
+    - summary: Fix several bugs introduced while implementing loki disk based retention
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14026
+      impact: loki statefulset will be rollout restarted
+prometheus:
+  fixes:
+    - summary: Add headers field to values spec
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13823
+
