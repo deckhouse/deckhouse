@@ -47,7 +47,7 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	}, nil)
 
 	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
-	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "commander", "stable", "")
+	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "commander", "stable")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no version found")
 }

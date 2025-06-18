@@ -168,6 +168,13 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
+	def, err := f.moduleDownloader.DownloadModuleDefinitionByVersion(f.moduleName, f.targetReleaseMeta.ModuleVersion)
+	if err != nil {
+		return fmt.Errorf("download module definition: %w", err)
+	}
+
+	f.targetReleaseMeta.ModuleDefinition = def
+
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
 
@@ -399,7 +406,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			Spec: v1alpha1.ModuleReleaseSpec{
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleWeight,
+				Weight:     meta.ModuleDefinition.Weight,
 				Changelog:  meta.Changelog,
 			},
 		}
@@ -449,7 +456,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleWeight,
+		Weight:     meta.ModuleDefinition.Weight,
 		Changelog:  meta.Changelog,
 	}
 
