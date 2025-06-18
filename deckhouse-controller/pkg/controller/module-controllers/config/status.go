@@ -25,11 +25,11 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	bootstrappedextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/bootstrapped"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
 	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
-	systemextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/system"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -218,9 +218,9 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message += ": " + errMsg.Error()
 		}
 
-	case systemextender.Name:
-		reason = v1alpha1.ModuleReasonSystemExtender
-		message = v1alpha1.ModuleMessageSystemExtender
+	case bootstrappedextender.Name:
+		reason = v1alpha1.ModuleReasonBootstrappedExtender
+		message = v1alpha1.ModuleMessageBootstrappedExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender
