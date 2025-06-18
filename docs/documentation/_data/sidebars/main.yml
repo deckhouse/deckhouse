@@ -279,19 +279,19 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/privat/huaweicloud/huawei-authorization.html
+                          url: /admin/integrations/private/huaweicloud/huawei-authorization.html
                         - title:
                             en: Configuration and layout
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/privat/huaweicloud/huawei-layout.html
+                          url: /admin/integrations/private/huaweicloud/huawei-layout.html
                         - title:
                             en: Storage, balancing and features
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/privat/huaweicloud/huawei-storage.html
+                          url: /admin/integrations/private/huaweicloud/huawei-storage.html
                         - title:
                             en: Integration with Huawei Cloud
                             ru: Интеграция с службами Huawei Cloud
-                          url: /admin/integrations/privat/huaweicloud/huawei-services.html
+                          url: /admin/integrations/private/huaweicloud/huawei-services.html
                     - title:
                         en: Integration with Dynamix
                         ru: Интеграция с Dynamix
@@ -299,19 +299,19 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/privat/dynamix/dynamix-authorization.html
+                          url: /admin/integrations/private/dynamix/dynamix-authorization.html
                         - title:
                             en: Configuration and layout
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/privat/dynamix/dynamix-layout.html
+                          url: /admin/integrations/private/dynamix/dynamix-layout.html
                         - title:
                             en: Storage, balancing and features
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/privat/dynamix/dynamix-storage.html
+                          url: /admin/integrations/private/dynamix/dynamix-storage.html
                         - title:
                             en: Integration with Dynamix
                             ru: Интеграция с службами Dynamix
-                          url: /admin/integrations/privat/dynamix/dynamix-services.html
+                          url: /admin/integrations/private/dynamix/dynamix-services.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации
