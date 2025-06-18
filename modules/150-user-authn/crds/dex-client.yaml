@@ -64,6 +64,18 @@ spec:
                     [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
                   items:
                     type: string
+                secretMetadata:
+                  type: object
+                  description: 'A list of labels and an annotations that will be transferred to the metadata secrets of the DexClient resource.'
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
     - name: v1
       served: true
       storage: true
