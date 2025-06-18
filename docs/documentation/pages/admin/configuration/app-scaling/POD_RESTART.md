@@ -3,30 +3,35 @@ title: "Pod restart on configuration change"
 permalink: en/admin/configuration/app-scaling/pod-restart.html
 ---
 
-Deckhouse Kubernetes Platform supports automatic pod rollout (restart with new replicas) when ConfigMap or Secret resources change. This mechanism runs on system nodes and is based on the [Reloader](https://github.com/stakater/Reloader) project. It is controlled via annotations applied to workload controllers (Deployment, DaemonSet, StatefulSet).
+Deckhouse Kubernetes Platform can automatically restart Pods when certain ConfigMap or Secret resources are modified. This functionality is based on the [Reloader](https://github.com/stakater/Reloader) project, runs on the cluster's system nodes, and is controlled via annotations added to Pod controllers (Deployment, DaemonSet, StatefulSet).
 
-> Reloader is not designed to be highly available.
+{% alert %}
+Reloader is not designed to be highly available.
+{% endalert %}
 
 The following annotations allow you to control pod restarts.
 
 ## Supported annotations
 
-| Annotation | Applied to | Description | Example values |
-|------------|------------|-------------|----------------|
-| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Automatically restarts pods when any related ConfigMap or Secret (used as a volume or environment variable) is changed | `"true"`, `"false"` |
-| `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Triggers restart only when a related resource is annotated with `pod-reloader.deckhouse.io/match: "true"` | `"true"`, `"false"` |
-| `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `ConfigMap` objects that trigger a restart when changed | `"some-cm"`, `"some-cm1,some-cm2"` |
-| `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Specifies the list of `Secret` objects that trigger a restart when changed | `"some-secret"`, `"some-secret1,some-secret2"` |
-| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Marks a resource as relevant for `pod-reloader.deckhouse.io/search: "true"` mode so its changes are tracked | `"true"`, `"false"` |
+| Annotation | Applies to objects | Purpose | Example values |
+|-----------|--------------------|---------|----------------|
+| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Automatically restarts Pods when any related ConfigMap or Secret changes (used as a volume or environment variable) | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Restarts only when resources annotated with `pod-reloader.deckhouse.io/match: "true"` are changed | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Specifies particular `ConfigMap` resources that should trigger a restart when changed | `"some-cm"`, `"some-cm1,some-cm2"` |
+| `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Specifies particular `Secret` resources that should trigger a restart when changed | `"some-secret"`, `"some-secret1,some-secret2"` |
+| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Marks resources to be tracked when `pod-reloader.deckhouse.io/search: "true"` is used | `"true"`, `"false"` |
 
-> The `pod-reloader.deckhouse.io/search` annotation must not be used together with `pod-reloader.deckhouse.io/auto: "true"`. In this case, both `pod-reloader.deckhouse.io/search` and `pod-reloader.deckhouse.io/match` annotations will be ignored. To ensure proper operation, either set `pod-reloader.deckhouse.io/auto` to `"false"` or remove it.
->
-> Likewise, `configmap-reload` and `secret-reload` will be ignored if `pod-reloader.deckhouse.io/auto: "true"` is set. Disable `auto` to make them effective.
+{% alert level="warning"%}
+The `pod-reloader.deckhouse.io/search` annotation must not be used together with `pod-reloader.deckhouse.io/auto: "true"`. In this case, both `pod-reloader.deckhouse.io/search` and `pod-reloader.deckhouse.io/match` annotations will be ignored. To ensure correct behavior, set `pod-reloader.deckhouse.io/auto: "false"` or remove it.
+
+The `pod-reloader.deckhouse.io/configmap-reload` and `pod-reloader.deckhouse.io/secret-reload` annotations do not work when `pod-reloader.deckhouse.io/auto: "true"` is present. To ensure correct behavior, disable `auto`.
+{% endalert %}
 
 ## Usage examples
 
-### Tracking all changes in all attached resources: mounted as volumes or used in environment values
+### Tracking all changes in all attached resources
 
+Connected resources can be used either as environment variables or mounted as volumes.
 
 ```yaml
 apiVersion: apps/v1
@@ -161,12 +166,12 @@ You can enable or disable the pod restart functionality in the following ways:
 
 The pod restart mechanism works out of the box and does not require any mandatory configuration. By default, it is enabled in the Default and Managed module bundles and disabled in the Minimal bundle.
 
-If needed, its behavior can be adjusted using the ModuleConfig resource.
+If needed, its behavior can be adjusted in the settings of the pod-reloader module (ModuleConfig `pod-reloader`).
 
 Available parameters:
 
-| Parameter         | Type     | Description                                                                 | Default      |
-|------------------|----------|-----------------------------------------------------------------------------|--------------|
-| `reloadOnCreate` | boolean  | Enables restart when a `ConfigMap` or `Secret` is created, not only modified | `true`       |
-| `nodeSelector`   | object   | Restricts component placement to specific nodes (same as `spec.nodeSelector`) | Not set      |
-| `tolerations`    | array    | Allows scheduling on tainted nodes (same as `spec.tolerations`)             | Not set      |
+| Parameter         | Type    | Description                                                                 | Default&nbsp;Value          |
+|------------------|---------|-----------------------------------------------------------------------------|-----------------------------|
+| `reloadOnCreate` | boolean | Restart on ConfigMap or Secret creation, not only on modification           | `true`                      |
+| `nodeSelector`   | object  | Limits the nodes where the component can run (equivalent to `spec.nodeSelector`) | Not&nbsp;set               |
+| `tolerations`    | array   | Allows scheduling on tainted nodes (equivalent to `spec.tolerations`)      | Not&nbsp;set               |
