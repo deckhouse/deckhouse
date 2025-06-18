@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromCacheVersion: "2025-06-18.01" # TODO: delete
+fromCacheVersion: "2025-06-18.02" # TODO: delete
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -20,7 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
-fromCacheVersion: "2025-06-18.01" # TODO: delete
+fromCacheVersion: "2025-06-18.02" # TODO: delete
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -41,7 +41,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromCacheVersion: "2025-06-18.01" # TODO: delete
+fromCacheVersion: "2025-06-18.02" # TODO: delete
 fromImage: builder/golang-bullseye
 mount:
 {{ include "mount points for golang builds" . }}
