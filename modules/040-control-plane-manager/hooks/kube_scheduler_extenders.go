@@ -67,30 +67,32 @@ func handleExtenders(input *go_hook.HookInput) error {
 
 	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
-	for config, err := range sdkobjectpatch.SnapshotIter[KubeSchedulerWebhook](input.NewSnapshots.Get("kube_scheduler_extenders")) {
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.NewSnapshots.Get("kube_scheduler_extenders")) {
 		if err != nil {
 			input.Logger.Error("failed to iterate over 'nodes' snapshots", log.Err(err))
 			continue
 		}
 
-		err = verifyCAChain(config.ClientConfig.CABundle)
-		if err != nil {
-			input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
-			config.ClientConfig.CABundle = kubernetesCABase64
-		}
+		for _, config := range snapshot {
+			err = verifyCAChain(config.ClientConfig.CABundle)
+			if err != nil {
+				input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
+				config.ClientConfig.CABundle = kubernetesCABase64
+			}
 
-		urlPrefix, err := url.JoinPath(fmt.Sprintf("https://%s.%s.svc.%s:%d", config.ClientConfig.Service.Name, config.ClientConfig.Service.Namespace, clusterDomain, config.ClientConfig.Service.Port), config.ClientConfig.Service.Path)
-		if err != nil {
-			return err
+			urlPrefix, err := url.JoinPath(fmt.Sprintf("https://%s.%s.svc.%s:%d", config.ClientConfig.Service.Name, config.ClientConfig.Service.Namespace, clusterDomain, config.ClientConfig.Service.Port), config.ClientConfig.Service.Path)
+			if err != nil {
+				return err
+			}
+			newExtender := extenderConfig{
+				URLPrefix: urlPrefix,
+				Weight:    config.Weight,
+				Timeout:   config.TimeoutSeconds,
+				Ignorable: config.FailurePolicy == "Ignore",
+				CAData:    config.ClientConfig.CABundle,
+			}
+			extenders = append(extenders, newExtender)
 		}
-		newExtender := extenderConfig{
-			URLPrefix: urlPrefix,
-			Weight:    config.Weight,
-			Timeout:   config.TimeoutSeconds,
-			Ignorable: config.FailurePolicy == "Ignore",
-			CAData:    config.ClientConfig.CABundle,
-		}
-		extenders = append(extenders, newExtender)
 	}
 	input.Values.Set(configPath, extenders)
 	return nil
