@@ -1,3 +1,4 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- define "huaweicloud_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -106,6 +107,10 @@ spec:
               secretKeyRef:
                 name: huaweicloud-credentials
                 key: project-id
+          {{- if $providerClusterConfiguration.enterpriseProjectID }}
+          - name: ENTERPRISE_PROJECT_ID
+            value: {{ $providerClusterConfiguration.enterpriseProjectID | quote }}
+          {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
