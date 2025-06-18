@@ -56,15 +56,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 fromCacheVersion: "2025.06.05.6"
 final: false
-# git:
-# - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-#   to: /patches
-#   stageDependencies:
-#     install:
-#     - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }}-fix {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
-  # - cd /src/operator/
-  # - git apply --verbose /patches/*.patch
+  - rm -rf /src/operator/.git
 ---

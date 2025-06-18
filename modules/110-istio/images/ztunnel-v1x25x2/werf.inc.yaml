@@ -28,13 +28,6 @@ shell:
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src/ztunnel
-# {{- if $.CargoProxy }}
-#   - echo '[source.crates-io]' >> .cargo/config.toml
-#   - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
-#   - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
-#   - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
-# {{- end }}
-  # - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
   - |
     cargo build \
     --release 
@@ -47,15 +40,8 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-# git:
-# - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-#   to: /patches
-#   stageDependencies:
-#     install:
-#     - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/ztunnel.git /src/ztunnel
-  - cd /src/ztunnel/
-  # - git apply --verbose /patches/*.patch
+  - rm -rf /src/ztunnel/.git
 ---

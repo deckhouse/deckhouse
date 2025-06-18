@@ -33,12 +33,6 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
-  enableHTTP10:
-    type: boolean
-    default: false
-    x-examples: [true]
-    description: |
-      Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
     type: object
     x-doc-d8Editions:
