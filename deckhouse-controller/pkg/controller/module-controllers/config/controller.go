@@ -55,6 +55,9 @@ const (
 
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
+
+	obsoleteConfigMetricGroup = "obsoleteVersion_%s"
+	moduleConflictMetricGroup = "module_%s_at_conflict"
 )
 
 func RegisterController(
@@ -218,7 +221,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.log.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
+	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if !moduleConfig.IsEnabled() {
@@ -329,6 +332,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
 	// send event to addon-operator
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
+
+	// clear obsolete metrics
+	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, moduleConfig.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	// clear conflict metrics
+	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
