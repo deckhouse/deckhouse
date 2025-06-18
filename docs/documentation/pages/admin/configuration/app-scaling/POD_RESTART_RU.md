@@ -4,29 +4,35 @@ permalink: ru/admin/configuration/app-scaling/pod-restart.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform поддерживает автоматический rollout (перезапуск с созданием новых реплик) подов при изменении ресурсов ConfigMap и Secret, который работает на системных узлах кластера. Эта возможность реализована на базе [Reloader](https://github.com/stakater/Reloader) и управляется через аннотации, добавляемые к контроллерам рабочих нагрузок (Deployment, DaemonSet, StatefulSet).
+Deckhouse Kubernetes Platform может автоматически перезапускать поды при изменении определенных ресурсов ConfigMap и Secret. Эта возможность реализована на базе проекта [Reloader](https://github.com/stakater/Reloader), работает на системных узлах кластера и управляется через аннотации, добавляемые к контроллерам подов (Deployment, DaemonSet, StatefulSet).
 
-> Reloader не предназначен для работы в отказоустойчивом режиме.
+{% alert %}
+Reloader не предназначен для работы в отказоустойчивом режиме.
+{% endalert %}
 
 Далее описаны основные аннотации, позволяющие контролировать перезапуск подов.
 
 ## Поддерживаемые аннотации
 
-| Аннотация | Применяется к | Назначение | Примеры значений |
+| Аннотация | Применяется к объектам | Назначение | Примеры значений |
 |----------|----------------|------------|------------------|
-| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Автоматический перезапуск подов при изменении всех связанных ConfigMap и Secret (используемых как volume или переменные окружения) | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/auto` | Deployment, DaemonSet, StatefulSet | Автоматический перезапуск подов при изменении всех связанных с ним ConfigMap и Secret (используемых как volume или переменные окружения) | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Перезапуск только при изменении ресурсов с аннотацией `pod-reloader.deckhouse.io/match: "true"` | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `ConfigMap`, при изменении которых должен выполняться перезапуск | `"some-cm"`, `"some-cm1,some-cm2"` |
 | `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `Secret`, при изменении которых должен выполняться перезапуск | `"some-secret"`, `"some-secret1,some-secret2"` |
 | `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Помечает ресурсы, изменения которых отслеживаются при использовании аннотации `pod-reloader.deckhouse.io/search`: "true"` | `"true"`, `"false"` |
 
-> Аннотация `pod-reloader.deckhouse.io/search` не должна использоваться совместно с `pod-reloader.deckhouse.io/auto: "true"`. В этом случае аннотации `pod-reloader.deckhouse.io/search` и `pod-reloader.deckhouse.io/match` будут проигнорированы. Для корректной работы установите `pod-reloader.deckhouse.io/auto: "false"` или удалите её.
->
-> Аннотации `pod-reloader.deckhouse.io/configmap-reload` и `pod-reloader.deckhouse.io/secret-reload` не работают при наличии `pod-reloader.deckhouse.io/auto: "true"`. Для корректной работы отключите `auto`.
+{% alert level="warning"%}
+Аннотация `pod-reloader.deckhouse.io/search` не должна использоваться совместно с `pod-reloader.deckhouse.io/auto: "true"`. В этом случае аннотации `pod-reloader.deckhouse.io/search` и `pod-reloader.deckhouse.io/match` будут проигнорированы. Для корректной работы установите `pod-reloader.deckhouse.io/auto: "false"` или удалите её.
+
+Аннотации `pod-reloader.deckhouse.io/configmap-reload` и `pod-reloader.deckhouse.io/secret-reload` не работают при наличии `pod-reloader.deckhouse.io/auto: "true"`. Для корректной работы отключите `auto`.
+{% endalert %}
 
 ## Примеры использования
 
-### Слежение за всеми изменениями во всех подключенных ресурсах: смонтированных как volume или используемых в переменных окружения
+### Слежение за всеми изменениями во всех подключенных ресурсах
+
+Подключённые ресурсы могут быть использованы как в переменных окружения, так и смонтированы как тома (volumes).
 
 ```yaml
 apiVersion: apps/v1
@@ -167,11 +173,11 @@ metadata:
 
 Механизм перезапуска подов работает «из коробки» и не требует обязательной конфигурации. По умолчанию он включён в наборах модулей Default и Managed и отключён в наборе Minimal.
 
-При необходимости его поведение можно изменить через ресурс ModuleConfig.
+При необходимости его поведение можно изменить в настройках модуля pod-reloader (ModuleConfig `pod-reloader`).
 
 Доступные параметры:
 
-| Параметр        | Тип      | Описание                                                                 | По умолчанию |
+| Параметр        | Тип      | Описание                                                                 |  Значение по умолчанию |
 |----------------|----------|--------------------------------------------------------------------------|--------------|
 | `reloadOnCreate` | boolean  | Перезапуск при создании ConfigMap или Secret, а не только при изменении | `true`       |
 | `nodeSelector`   | object   | Ограничение на узлы для запуска компонента (аналог `spec.nodeSelector`)     | Не задан     |
