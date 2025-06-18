@@ -46,7 +46,6 @@ type ModuleReleaseFetcherConfig struct {
 	RegistryClientMetaFetcher cr.Client
 	Clock                     clockwork.Clock
 	ModuleDownloader          *downloader.ModuleDownloader
-	// moduleManager             moduleManager
 
 	ModuleName        string
 	TargetReleaseMeta *downloader.ModuleDownloadResult
@@ -60,20 +59,19 @@ type ModuleReleaseFetcherConfig struct {
 	Logger *log.Logger
 }
 
-func NewDeckhouseReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetcher {
+func NewModuleReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetcher {
 	return &ModuleReleaseFetcher{
 		k8sClient:                cfg.K8sClient,
 		registryClientTagFetcher: cfg.RegistryClientTagFetcher,
 		clock:                    cfg.Clock,
 		moduleDownloader:         cfg.ModuleDownloader,
-		// moduleManager:             cfg.moduleManager,
-		moduleName:        cfg.ModuleName,
-		targetReleaseMeta: cfg.TargetReleaseMeta,
-		source:            cfg.Source,
-		updatePolicyName:  cfg.UpdatePolicyName,
-		metricStorage:     cfg.MetricStorage,
-		metricGroupName:   cfg.MetricModuleGroup,
-		logger:            cfg.Logger,
+		moduleName:               cfg.ModuleName,
+		targetReleaseMeta:        cfg.TargetReleaseMeta,
+		source:                   cfg.Source,
+		updatePolicyName:         cfg.UpdatePolicyName,
+		metricStorage:            cfg.MetricStorage,
+		metricGroupName:          cfg.MetricModuleGroup,
+		logger:                   cfg.Logger,
 	}
 }
 
@@ -82,7 +80,6 @@ type ModuleReleaseFetcher struct {
 	registryClientTagFetcher cr.Client
 	clock                    clockwork.Clock
 	moduleDownloader         *downloader.ModuleDownloader
-	// moduleManager  moduleManager
 
 	moduleName        string
 	targetReleaseMeta *downloader.ModuleDownloadResult
@@ -96,7 +93,7 @@ type ModuleReleaseFetcher struct {
 	logger *log.Logger
 }
 
-// checkDeckhouseRelease create fetcher and start
+// fetchModuleReleases create fetcher and start
 func (r *reconciler) fetchModuleReleases(
 	ctx context.Context,
 	moduleDownloader *downloader.ModuleDownloader,
@@ -107,11 +104,11 @@ func (r *reconciler) fetchModuleReleases(
 	metricModuleGroup string,
 	opts []cr.Option,
 ) error {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkDeckhouseRelease")
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkModuleRelease")
 	defer span.End()
 
 	// client watch only one channel
-	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
+	// registry.deckhouse.io/deckhouse/ce/modules/$module/release-channel:$release-channel
 	registryClient, err := r.dc.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
@@ -131,14 +128,14 @@ func (r *reconciler) fetchModuleReleases(
 		Logger:                   r.logger.Named("release-fetcher"),
 	}
 
-	releaseFetcher := NewDeckhouseReleaseFetcher(cfg)
+	releaseFetcher := NewModuleReleaseFetcher(cfg)
 
 	return releaseFetcher.fetchModuleReleases(ctx)
 }
 
 // fetchModuleReleases is a complete flow for loop
 func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchDeckhouseRelease")
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleRelease")
 	defer span.End()
 
 	releases, err := f.listModuleReleases(ctx, f.moduleName)
@@ -155,7 +152,7 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		releaseForUpdate = deployedRelease
 	}
 
-	// check sequence from the start if no deckhouse release deployed
+	// check sequence from the start if no module release deployed
 	// last element because it's reversed
 	if len(releasesInCluster) == 0 && len(releases) > 0 {
 		releaseForUpdate = releases[len(releases)-1]
