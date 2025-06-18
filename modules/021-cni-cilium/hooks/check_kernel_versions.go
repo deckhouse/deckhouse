@@ -41,12 +41,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
-<<<<<<< refactoring-hooks-snapshots
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-=======
-	"github.com/deckhouse/deckhouse/pkg/log"
->>>>>>> main
 )
 
 type nodeConstraint struct {
