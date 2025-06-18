@@ -59,11 +59,11 @@ spec:
         - --address=:8943
         - --eviction-tolerance=0.1
         - --eviction-rate-limit=1
-        {{- if $.Values.global.highAvailability -}}
+        {{- if $.Values.global.highAvailability }}
         - --min-replicas=2
         {{- else }}
         - --min-replicas=1
-        {{- end -}}
+        {{- end }}
         - --stderrthreshold=0
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --feature-gates=InPlaceOrRecreate=true
