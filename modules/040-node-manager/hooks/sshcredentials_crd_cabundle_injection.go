@@ -160,12 +160,12 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 		var crd CRD
 		var bundle certificate.Certificate
 
-		err := input.NewSnapshots.Get("cabundle")[0].UnmarshalTo(&crd)
+		err := input.NewSnapshots.Get("cabundle")[0].UnmarshalTo(&bundle)
 		if err != nil {
 			return nil
 		}
 
-		err = input.NewSnapshots.Get("sshcredentials")[0].UnmarshalTo(&bundle)
+		err = input.NewSnapshots.Get("sshcredentials")[0].UnmarshalTo(&crd)
 		if err != nil {
 			return nil
 		}
