@@ -459,6 +459,10 @@ data:
         exit_code=1
       fi
 
+      echo "Uncordon node"
+      kubectl --request-timeout 60s annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
+      kubectl -request-timeout 60s taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
+
       exit ${exit_code}
     }
 
@@ -962,9 +966,6 @@ data:
       echo "Unable to bring up GPU client components by setting their daemonset labels"
       exit_failed
     fi
-
-    echo "Uncordon node"
-    kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
 
     exit_success
 {{- end }}
