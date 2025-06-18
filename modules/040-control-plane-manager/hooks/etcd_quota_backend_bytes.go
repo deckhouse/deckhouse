@@ -158,7 +158,7 @@ func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
 	etcdEndpointsSnapshots := input.NewSnapshots.Get("etcd_endpoints")
-	for endpoint, err := range sdkobjectpatch.SnapshotIter[*etcdInstance](etcdEndpointsSnapshots) {
+	for endpoint, err := range sdkobjectpatch.SnapshotIter[etcdInstance](etcdEndpointsSnapshots) {
 		if err != nil {
 			input.Logger.Error("failed to iterate over 'etcd_endpoints' snapshot", log.Err(err))
 			currentQuotaBytes = defaultEtcdMaxSize
