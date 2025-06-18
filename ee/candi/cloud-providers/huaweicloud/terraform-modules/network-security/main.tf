@@ -4,6 +4,7 @@
 resource "huaweicloud_networking_secgroup" "kube" {
   count = var.enabled ? 1 : 0
   name = var.prefix
+  enterprise_project_id = var.enterprise_project_id
 }
 
 resource "huaweicloud_networking_secgroup_rule" "allow_ssh" {
