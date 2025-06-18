@@ -27,7 +27,7 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`.
 cgroup_driver="systemd"
-{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+{{- if eq .cri "Containerd" }}
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ]; then
   cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
@@ -254,6 +254,7 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
+PodPidsLimit: 1000
 cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
