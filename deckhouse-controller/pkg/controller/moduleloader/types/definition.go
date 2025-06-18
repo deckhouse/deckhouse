@@ -77,7 +77,8 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 	}
 
 	err = dm.Validate()
-	// next we will need to record all validation errors except required (602).
+
+	// next we will need to record all validation errors
 	var result error
 	var mErr *multierror.Error
 	if errors.As(err, &mErr) {
@@ -86,7 +87,7 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 		}
 	}
 
-	// now result will contain all validation errors, if any, except required.
+	// now result will contain all validation errors
 	if result != nil {
 		return fmt.Errorf("validate module: %w", result)
 	}
