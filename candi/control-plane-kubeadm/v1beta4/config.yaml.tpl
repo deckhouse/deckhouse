@@ -160,7 +160,7 @@ apiServer:
     {{ if .apiserver.auditWebhookURL }}
     - name: audit-webhook-config-file
       value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
-    {{- end -}}
+    {{- end }}
     - name: profiling
       value: "false"
     - name: request-timeout
