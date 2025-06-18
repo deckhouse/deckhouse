@@ -229,6 +229,7 @@ entries:
                 en: DVP
                 ru: DVP
               moduleName: cloud-provider-dvp
+              featureStatus: experimental
               folders:
                 - title:
                     en: Description
@@ -262,14 +263,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/cloud-provider-dvp/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-dvp/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-dvp/faq.html
             - title:
                 en: Google Cloud Platform
                 ru: Google Cloud Platform

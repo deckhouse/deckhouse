@@ -74,7 +74,7 @@ spec:
                         - EFI
                         - EFIWithSecureBoot
                       default: EFI
-                      description: >
+                      description: |
                         Defines a bootloader for the virtual machine.
 
                         * `BIOS`: Use BIOS.

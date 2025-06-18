@@ -1,13 +1,14 @@
 ---
 title: "Cloud provider — DVP: preparing environment"
-description: "Configuring Deckhouse for DVP cloud provider operation."
+description: "Configuring Deckhouse for DVP cloud provider operation"
 ---
 
-Deckhouse components use the DVP API to interact with resources in DVP. To configure this connection, you need to create a user and assign appropriate access rights to it, and generate kubeconfig
+Deckhouse components interact with DVP resources through the DVP API.
+To configure this connection, create a new user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
-## User Creation
+## Creating a user
 
-The user must be created in the DVP cluster
+Create a new user in the DVP cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF
@@ -28,9 +29,9 @@ type: kubernetes.io/service-account-token
 EOF
 ```
 
-## Adding a Role
+## Adding a role
 
-Add a role to a created user in a DVP cluster
+Add a role to the created user in the DVP cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF
@@ -50,8 +51,6 @@ roleRef:
 EOF
 ```
 
-## Generating kubeconfig
+## Generating a kubeconfig
 
-You can read how to generate kubeconfig in the link starting from the 3rd paragraph.
-
-<https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-serviceaccount-%D0%B4%D0%BB%D1%8F-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80%D0%B0-%D0%B8-%D0%BF%D1%80%D0%B5%D0%B4%D0%BE%D1%81%D1%82%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B5%D0%BC%D1%83-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0>
+To generate a kubeconfig, follow the [user creation guide](/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) starting from **step 3**.

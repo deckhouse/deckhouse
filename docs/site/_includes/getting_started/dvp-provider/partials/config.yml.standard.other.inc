@@ -13,19 +13,19 @@ cloud:
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
-# [<en>] must not overlap with the address space of DVP Pods.
-# [<ru>] Адресное пространство Pod’ов кластера.
-# [<ru>] не должно пересекаться с адресным пространством Pod'ов DVP.
+# [<en>] Must not overlap with the address space of DVP Pods.
+# [<ru>] Адресное пространство подов кластера.
+# [<ru>] Не должно пересекаться с адресным пространством подов DVP.
 podSubnetCIDR: 10.112.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<en>] must not overlap with the address space of DVP services.
-# [<ru>] Адресное пространство для service’ов кластера.
-# [<ru>] не должно пересекаться с адресным пространством service'ов DVP.
+# [<en>] Must not overlap with the address space of DVP services.
+# [<ru>] Адресное пространство для сервисов кластера.
+# [<ru>] Не должно пересекаться с адресным пространством сервисов DVP.
 serviceSubnetCIDR: 10.223.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
+# [<en>] Settings for bootstrapping the Deckhouse cluster.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
@@ -54,7 +54,7 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -65,8 +65,8 @@ spec:
   version: 2
   settings:
     modules:
-      # [<en>] Template that will be used for system apps domains within the cluster.
-      # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] Template that will be used for system app domains within the cluster.
+      # [<en>] For example, Grafana for %s.example.com will be available as 'grafana.example.com'.
       # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
       # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
       # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
@@ -75,7 +75,7 @@ spec:
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
 ---
-# [<en>] user-authn module settings.
+# [<en>] User-authn module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
@@ -103,7 +103,7 @@ spec:
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -145,16 +145,16 @@ masterNodeGroup:
       # [<en>] Image parameters that will be used to create the virtual machine's root disk.
       # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
       image:
-        # [<en>] The kind of the image source.
+        # [<en>] Kind of the image source.
         # [<ru>] Тип источника изображения.
         kind: ClusterVirtualImage
-        # [<en>] The name of the image that will be used to create the root disk.
-        # [<en>] > The installation requires Linux OS images with cloud-init pre-installed.
+        # [<en>] Name of the image that will be used to create the root disk.
+        # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
         # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
-        # [<ru>] > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+        # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
         name: ubuntu-2204
-    # [<en>] Specifies settings for the etcd data disk.
-    # [<ru>] Указание настроек для диска данных etcd.
+    # [<en>] Settings for the etcd data disk.
+    # [<ru>] Настройки для диска данных etcd.
     etcdDisk:
       # [<en>] Etcd disk size.
       # [<ru>] Размер диска etcd.
@@ -171,13 +171,13 @@ sshPublicKey: *!CHANGE_SSH_KEY*
 # [<ru>] Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
 provider:
   # [<en>] Kubeconfig to connect to Deckhouse Kubernetes Platform API, Base64-encoded.
-  # [<ru>] Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
+  # [<ru>] Kubeconfig для подключения к API Deckhouse Kubernetes Platform в кодировке Base64.
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
   # [<en>] Namespace in which DKP cluster resources will be created.
   # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
   namespace: demo
 ---
-# [<en>] Section containing the parameters of instance class for worker nodes.
+# [<en>] Section containing parameters of instance class for worker nodes.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
@@ -219,16 +219,16 @@ spec:
     # [<en>] Image parameters that will be used to create the virtual machine's root disk.
     # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
     image:
-      # [<en>] The kind of the image source.
+      # [<en>] Kind of the image source.
       # [<ru>] Тип источника изображения.
       kind: ClusterVirtualImage
-      # [<en>] The name of the image that will be used to create the root disk.
-      # [<en>] > The installation requires Linux OS images with cloud-init pre-installed.
+      # [<en>] Name of the image that will be used to create the root disk.
+      # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
       # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
-      # [<ru>] > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+      # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
       name: ubuntu-2204
 ---
-# [<en>] Section containing the parameters of worker node group.
+# [<en>] Section containing parameters of worker node group.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
@@ -251,7 +251,7 @@ spec:
     minPerZone: 1
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing parameters of the NGINX Ingress controller.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры NGINX Ingress controller.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
@@ -262,8 +262,8 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
-  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
+  # [<en>] Describes on which nodes the Ingress Controller will be located. The label "node.deckhouse.io/group: <NAME_GROUP_NAME>" is set automatically.
+  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл "node.deckhouse.io/group: <NODE_GROUP_NAME>" устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
 ---

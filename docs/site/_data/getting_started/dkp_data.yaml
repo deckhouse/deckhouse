@@ -746,12 +746,12 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on DVP"
-      ru: "Deckhouse Kubernetes Platform на DVP"
+      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
+      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
     type: cloud
     name:
-      en: Deckhouse Virtualization Platform
-      ru: Deckhouse Virtualization Platform
+      en: DVP
+      ru: DVP
     steps:
       step2:
         name:

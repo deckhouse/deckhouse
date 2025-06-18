@@ -1,5 +1,7 @@
-![Схема](/images/gs/cloud-provider-dvp/dvp-standard.png)
-<!--- Source: https://docs.google.com/drawings/d/1JSua20j5vdM9266Qjrm_Vn0u-DFdEnMmSWyBsT1IDzo/edit --->
+![Схема размещения Standard](/images/gs/cloud-provider-dvp/dvp-standard.png)
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=1314-7740&t=5VUUyoMpasR1vVxZ-4 --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 ---
@@ -31,5 +33,4 @@ masterNodeGroup:
 provider:
   kubeconfigDataBase64: <KUBE_CONFIG>
   namespace: demo
-
 ```
