@@ -20,7 +20,7 @@ Reloader не предназначен для работы в отказоуст
 | `pod-reloader.deckhouse.io/search` | Deployment, DaemonSet, StatefulSet | Перезапуск только при изменении ресурсов с аннотацией `pod-reloader.deckhouse.io/match: "true"` | `"true"`, `"false"` |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `ConfigMap`, при изменении которых должен выполняться перезапуск | `"some-cm"`, `"some-cm1,some-cm2"` |
 | `pod-reloader.deckhouse.io/secret-reload` | Deployment, DaemonSet, StatefulSet | Указание конкретных `Secret`, при изменении которых должен выполняться перезапуск | `"some-secret"`, `"some-secret1,some-secret2"` |
-| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Помечает ресурсы, изменения которых отслеживаются при использовании аннотации `pod-reloader.deckhouse.io/search`: "true"` | `"true"`, `"false"` |
+| `pod-reloader.deckhouse.io/match` | ConfigMap, Secret | Помечает ресурсы, изменения которых отслеживаются при использовании аннотации `pod-reloader.deckhouse.io/search`: `"true"` | `"true"`, `"false"` |
 
 {% alert level="warning"%}
 Аннотация `pod-reloader.deckhouse.io/search` не должна использоваться совместно с `pod-reloader.deckhouse.io/auto: "true"`. В этом случае аннотации `pod-reloader.deckhouse.io/search` и `pod-reloader.deckhouse.io/match` будут проигнорированы. Для корректной работы установите `pod-reloader.deckhouse.io/auto: "false"` или удалите её.
@@ -177,7 +177,7 @@ metadata:
 
 Доступные параметры:
 
-| Параметр        | Тип      | Описание                                                                 |  Значение по умолчанию |
+| Параметр        | Тип      | Описание                                                                 |  Значение по&nbsp;умолчанию |
 |----------------|----------|--------------------------------------------------------------------------|--------------|
 | `reloadOnCreate` | boolean  | Перезапуск при создании ConfigMap или Secret, а не только при изменении | `true`       |
 | `nodeSelector`   | object   | Ограничение на узлы для запуска компонента (аналог `spec.nodeSelector`)     | Не задан     |
