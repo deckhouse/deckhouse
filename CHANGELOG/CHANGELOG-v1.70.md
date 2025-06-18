@@ -98,6 +98,7 @@
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
  - **[control-plane-manager]** Fixed performance regression in `etcd`. [#13581](https://github.com/deckhouse/deckhouse/pull/13581)
+ - **[deckhouse]** Remove unnecessary modules downloading. [#14003](https://github.com/deckhouse/deckhouse/pull/14003)
  - **[deckhouse]** Added changes for the `CSE` edition build. [#13312](https://github.com/deckhouse/deckhouse/pull/13312)
     Reassembling all images.
  - **[deckhouse]** Added a condition to apply patch releases in the maintenance window, if it exists. [#12935](https://github.com/deckhouse/deckhouse/pull/12935)
@@ -134,6 +135,7 @@
  - **[node-manager]** Fixed increased `403` errors from `capi-controller-manager` accessing the `Kubernetes API server` root path ('/'). [#13125](https://github.com/deckhouse/deckhouse/pull/13125)
  - **[node-manager]** Fixed panic in `vSphere` provider during VM creation. [#13083](https://github.com/deckhouse/deckhouse/pull/13083)
  - **[node-manager]** Rewrite static Node adoption for `CAPS`. [#11807](https://github.com/deckhouse/deckhouse/pull/11807)
+ - **[openvpn]** Added a migration hook to mitigate false positive `OpenVPNClientCertificateExpired` alerts. [#13987](https://github.com/deckhouse/deckhouse/pull/13987)
  - **[openvpn]** Fixed condition of alert triggering for client certificate. [#13900](https://github.com/deckhouse/deckhouse/pull/13900)
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
