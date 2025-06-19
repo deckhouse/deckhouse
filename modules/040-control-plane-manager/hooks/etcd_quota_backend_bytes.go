@@ -23,7 +23,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -32,9 +31,11 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/filter"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type etcdNode struct {

@@ -25,8 +25,9 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	"github.com/deckhouse/module-sdk/pkg"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backend-bytes ::", func() {

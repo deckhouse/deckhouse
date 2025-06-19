@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -34,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"

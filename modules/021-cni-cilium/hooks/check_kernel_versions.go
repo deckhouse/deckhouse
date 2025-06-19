@@ -39,11 +39,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/module-sdk/pkg"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type nodeConstraint struct {
@@ -132,7 +133,7 @@ func handleNodes(input *go_hook.HookInput) error {
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
 		for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
 			if err != nil {
-				input.Logger.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+				input.Logger.Error("failed to iterate over 'nodes' snapshots", log.Err(err))
 				continue
 			}
 
