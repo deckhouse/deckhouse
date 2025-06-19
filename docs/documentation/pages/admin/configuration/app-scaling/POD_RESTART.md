@@ -75,6 +75,8 @@ metadata:
 
 ### Tracking changes in specific resources
 
+Indicates that only those Secrets or ConfigMaps with the annotation `pod-reloader.deckhouse.io/match: "true"` should be monitored. This is useful when a pod uses many resources, but restarts are required only upon changes to specific ones.
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -104,6 +106,8 @@ metadata:
 ```
 
 ### Tracking changes in resources from the list
+
+Explicitly specifies a list of ConfigMaps that should trigger a pod restart when changed.
 
 ```yaml
 apiVersion: apps/v1
