@@ -70,16 +70,11 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func generateValidateWebhookCert(input *go_hook.HookInput) error {
-	snapshots := input.NewSnapshots.Get(snapshotName)
+	snapshots := input.Snapshots[snapshotName]
 
 	// Try reuse certificate from Secret
 	if len(snapshots) > 0 {
-		secret := certificate.Certificate{}
-		err := snapshots[0].UnmarshalTo(&secret)
-		if err != nil {
-			input.Logger.Error(fmt.Sprintf("Failed to unmarshal certificate: %v", err))
-			return err
-		}
+		secret := snapshots[0].(certificate.Certificate)
 		input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.cert", secret.Cert)
 		input.Values.Set("controlPlaneManager.internal.admissionWebhookClientCertificateData.key", secret.Key)
 		return nil
