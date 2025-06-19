@@ -91,6 +91,11 @@ properties:
     default: true
     description: |
       Enables the Cilium `L2 neighbor discovery` mechanism, which helps ensure that ARP table entries are kept up-to-date on all cluster nodes.
+  extraLBAlgorithmsEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enables service-level annotation for configuring BPF load balancing algorithm.
   resourcesManagement:
     description: |
       Settings for CPU and memory requests and limits by cilium agent pods.
