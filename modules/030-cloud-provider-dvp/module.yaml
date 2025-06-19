@@ -1,4 +1,5 @@
 name: cloud-provider-dvp
+critical: true
 weight: 30
 subsystems:
   - infrastructure

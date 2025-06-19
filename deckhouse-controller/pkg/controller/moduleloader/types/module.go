@@ -34,7 +34,7 @@ func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
 
-	basic.SetSystem(def.System)
+	basic.SetCritical(def.Critical)
 
 	return &Module{
 		def:   def,

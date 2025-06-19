@@ -1,5 +1,5 @@
 name: terraform-manager
-system: true
+critical: true
 weight: 40
 subsystems:
   - infrastructure

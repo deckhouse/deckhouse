@@ -1,5 +1,5 @@
 name: deckhouse
-system: true
+critical: true
 weight: 2
 stage: "General Availability"
 subsystems:

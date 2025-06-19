@@ -1,6 +1,6 @@
 name: cni-flannel
 stage: "General Availability"
-system: true
+critical: true
 weight: 35
 subsystems:
   - networking
