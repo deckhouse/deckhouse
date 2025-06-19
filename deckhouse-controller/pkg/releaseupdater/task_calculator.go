@@ -155,7 +155,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
-		logger = logger.With(logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original())))
+		logger = logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original()))
 
 		logger.Debug("deployed release found")
 

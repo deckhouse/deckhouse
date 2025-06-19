@@ -994,7 +994,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
 			}
 
-			err = utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			err := utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.SetConditionFalse(
 					v1alpha1.ModuleConditionEnabledByModuleConfig,
 					"",
@@ -1010,6 +1010,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 				)
 				return nil, fmt.Errorf("update '%s' module status: %w", release.GetModuleName(), err)
 			}
+
 			r.log.Debug(
 				"successfully updated module conditions",
 				slog.String("module", release.GetModuleName()),
