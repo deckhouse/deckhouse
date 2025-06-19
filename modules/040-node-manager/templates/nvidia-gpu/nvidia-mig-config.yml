@@ -460,8 +460,8 @@ data:
       fi
 
       echo "Uncordon node"
-      kubectl --request-timeout 60s annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
-      kubectl -request-timeout 60s taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
+      kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
+      kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
 
       exit ${exit_code}
     }
@@ -676,13 +676,14 @@ data:
       # Drain the node after confirming approval
       attempt=0
       until
-        kubectl --request-timeout 60s annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
+        kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
       do
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
             echo "ERROR: Failed to annotate node ${NODE_NAME}"
             exit_failed
         fi
+        echo "Could not annotate node"
         echo "Retry in 10sec..."
         sleep 10
       done
@@ -697,7 +698,8 @@ data:
             echo "ERROR: Failed to get annotation 'update.node.deckhouse.io/drained' from ${NODE_NAME}"
             exit_failed
         fi
-        echo "Retry in 10sec..."
+        echo "Could not get node annotation"
+        echo "Retry in 30sec..."
         sleep 30
       done
     }
