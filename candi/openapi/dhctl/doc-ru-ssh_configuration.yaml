@@ -3,7 +3,7 @@ apiVersions:
 - apiVersion: dhctl.deckhouse.io/v1
   openAPISpec:
     description: |
-      Конфигурационня SSH для dhctl.
+      Конфигурация SSH для dhctl.
     properties:
       apiVersion:
         description: Версия Deckhouse API.
