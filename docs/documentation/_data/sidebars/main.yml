@@ -1182,6 +1182,10 @@ entries:
               en: Application service architecture with Istio enabled
               ru: Архитектура прикладного сервиса с включенным Istio
             url: /architecture/network/service-with-istio.html
+          - title:
+              en: Caching DNS server in a cluster
+              ru: Кэширующий DNS-сервер в кластере
+            url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
