@@ -6,9 +6,10 @@
 
 Создается внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
 
-> **Внимание.**
-> Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
-> Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
+{% alert level="warning" %}
+Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
+Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
+{% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
@@ -107,13 +108,15 @@ provider:
 один — в публичную сеть, другой — во внутреннюю сеть. Данная схема размещения должна использоваться, если необходимо, чтобы
 все узлы кластера были доступны напрямую.
 
-> **Внимание.**
-> В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
+{% alert level="warning" %}
+В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
 сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
->
-> **Внимание.**
-> В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
+{% endalert %}
+
+{% alert level="warning" %}
+В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
+{% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
@@ -194,10 +197,11 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-> **Внимание.**
-> В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
+{% alert level="warning" %}
+В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
 сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
+{% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
@@ -274,9 +278,10 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-> **Внимание.**
-> В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
-> Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании OpenStackInstanceClass в кластере.
+{% alert level="warning" %}
+В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
+Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании OpenStackInstanceClass в кластере.
+{% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
@@ -362,11 +367,16 @@ provider:
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
-> После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% alert level="info" %}
+После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% endalert %}
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).  Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [`OpenStackInstanceClass`](../../../../reference/cr/openstackinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресусре [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).
+Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [`OpenStackInstanceClass`](../../../../reference/cr/openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
-> **Внимание.** При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`.
+{% alert level="warning" %}
+При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`.
+{% endalert %}
 
 ### Примеры конфигурации
 
@@ -418,7 +428,6 @@ spec:
       owner: default
 ```
 
-
 ### Список необходимых сервисов
 
 Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
@@ -439,7 +448,9 @@ spec:
 
 ### Настройка LoadBalancer
 
-> **Внимание.** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+{% alert level="warning" %}
+Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+{% endalert %}
 
 #### Пример IngressNginxController
 
@@ -576,11 +587,11 @@ spec:
 
 ### Проверка поддержки провайдером группы безопасности (security groups)
 
-Достаточно выполнить команду `openstack security group list`. Если в ответ вы не получите ошибок, это значит, что [группы безопасности](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
+Выполните команду `openstack security group list`. Если в ответ вы не получите ошибок, это значит, что [группы безопасности](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
 
 ### Настройка работы онлайн-изменений размера дисков
 
-{{ site.data.admin.cloud-types.types[page.cloud_type].name }} API успешно рапортует об изменении размера диска, но Cinder никак не оповещает Nova о том, что диск изменился, поэтому диск внутри гостевой ОС остается старого размера.
+При успешном изменении размера диска с помощью VK Cloud API, Cinder не передает информацию об этом изменении в Nova, в результате чего диск внутри гостевой операционной системы остается прежнего размера.
 
 Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
 
@@ -602,7 +613,7 @@ username = {{ nova_service_user_name }}
 
 {% endraw %}
 
-[Источник...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
+Более подробная информация в [документации OpenStack-Ansible](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
 
 ### Использование `rootDiskSize`
 

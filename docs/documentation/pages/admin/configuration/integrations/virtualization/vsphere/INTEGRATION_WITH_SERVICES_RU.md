@@ -17,4 +17,6 @@ Deckhouse Kubernetes Platform интегрируется с инфраструк
   - через внешние балансировщики;
   - через MetalLB (в режиме BGP).
 
-> Возможна организация гибридного кластера с узлами на vSphere и bare-metal.
+{% alert level="info" %}
+Возможно создание гибридного кластера с узлами на vSphere и bare-metal.
+{% endalert %}

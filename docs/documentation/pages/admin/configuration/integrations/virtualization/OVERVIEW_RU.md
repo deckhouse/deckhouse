@@ -4,11 +4,10 @@ permalink: ru/admin/integrations/virtualization/overview.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства для интеграции с системами виртуализации, развёрнутыми на вашей инфраструктуре или предоставляемыми провайдерами облачных услуг. Они позволяют автоматически использовать инфраструктуру систем виртуализации для заказа виртуальных машин и подключния их к кластеру, развертывания кластеров и выполнения масшитабирование ресурсов в случае необходимости.
+В Deckhouse Kubernetes Platform (DKP) поддерживаются следующие системы виртуализации:
 
-Поддерживаются следующие системы виртуализации:
-
-* VMware vSphere;
-* VMware Cloud Director.
+* [VMware vSphere](./vsphere/vsphere-authorization.html);
+* [VMware Cloud Director](./vcd/сonnection-and-authorization.html);
+* [zVirt](./zvirt/zvirt-authorization.html).
 
 В следующих разделах описано, как настроить интеграцию с различными системами виртуализации.

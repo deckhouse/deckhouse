@@ -157,7 +157,9 @@ provider:
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
-> После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% alert level="info" %}
+После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+{% endalert %}
 
 Пример конфигурации:
 
@@ -193,7 +195,7 @@ provider:
   serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
 
@@ -216,7 +218,7 @@ provider:
 - Разрешение подключения к портам статического узла для работы приложения.
 - Ограничение доступа к внешним ресурсам или другим виртуальным машинам в облаке по требованию службы безопасности.
 
-Для всего этого необходимо применять дополнительные network tags.
+Для всего этого необходимо применять дополнительные [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags).
 
 ### Установка дополнительных network tags на статических и master-узлах
 

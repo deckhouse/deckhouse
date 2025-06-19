@@ -6,7 +6,7 @@ lang: ru
 
 ## Standard
 
-Схема размещения Standard используется для интеграции Deckhouse с виртуальной инфраструктурой zVirt. Эта схема предполагает развертывание всех узлов в пределах одного кластера zVirt с централизованным управлением шаблонами, хранилищем и сетями.
+Схема размещения Standard используется для интеграции Deckhouse Kubernetes Platform с виртуальной инфраструктурой zVirt. Эта схема предполагает развертывание всех узлов в пределах одного кластера zVirt с централизованным управлением шаблонами, хранилищем и сетями.
 
 Особенности:
 
@@ -51,4 +51,6 @@ masterNodeGroup:
 - `vnicProfileID` — UUID сетевого профиля (vNIC);
 - `storageDomainID` — UUID хранилища (Storage Domain), в котором размещаются диски.
 
-> Значения UUID (`clusterID`, `vnicProfileID`, `storageDomainID`) можно получить через API zVirt или интерфейс администратора.
+{% alert level="info" %}
+Значения UUID (`clusterID`, `vnicProfileID`, `storageDomainID`) можно получить через API zVirt или интерфейс администратора.
+{% endalert %}

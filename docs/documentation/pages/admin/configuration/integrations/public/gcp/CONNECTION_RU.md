@@ -4,9 +4,7 @@ permalink: ru/admin/integrations/public/gcp/сonnection-and-authorization.html
 lang: ru
 ---
 
-Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать service account.
-
-Далее представлена краткая последовательность действий по созданию и использованию service account.
+Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать Service Account.
 
 ## Создание Service Account
 
@@ -18,9 +16,9 @@ lang: ru
 
 ### Настройка через Google Cloud Console
 
-Перейдите [по ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).
+Перейдите [в Google Cloud Console](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый Service Account (также можно выбрать уже существующий).
 
-Созданному service account'у должны быть присвоены несколько обязательных ролей:
+Созданному Service Account должны быть присвоены несколько обязательных ролей:
 
 ```text
 Compute Admin
@@ -28,7 +26,7 @@ Service Account User
 Network Management Admin
 ```
 
-Роли можно присвоить на этапе создания service account'а либо изменить [на этой странице](https://console.cloud.google.com/iam-admin/iam).
+Роли можно присвоить на этапе создания Service Account либо [изменить](https://console.cloud.google.com/iam-admin/iam).
 
 Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке «Actions» нажмите  на три вертикальные точки и выберите «Manage keys». Затем нажмите «Add key» → «Create new key» → «Key type» → «JSON».
 
@@ -36,7 +34,7 @@ Network Management Admin
 
 Установите и инициализируйте gcloud CLI, следуя [официальной инструкции](https://cloud.google.com/sdk/docs/install-sdk).
 
-Для создания service account через интерфейс командной строки выполните следующие шаги:
+Для создания Service Account через интерфейс командной строки выполните следующие шаги:
 
 1. Экспортируйте переменные окружения:
 
@@ -51,13 +49,13 @@ Network Management Admin
    gcloud config set project $PROJECT_ID
    ```
 
-1. Создайте service account:
+1. Создайте Service Account:
 
    ```shell
    gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
    ```
 
-1. Присвойте роли созданному service account:
+1. Присвойте роли созданному Service Account:
 
    ```shell
    for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin;
@@ -73,7 +71,7 @@ Network Management Admin
    roles/networkmanagement.admin
    ```
 
-1. Выполните проверку ролей service account:
+1. Выполните проверку ролей Service Account:
 
    ```shell
    gcloud projects get-iam-policy ${PROJECT_ID} --flatten="bindings[].members" --format='table(bindings.role)' \
