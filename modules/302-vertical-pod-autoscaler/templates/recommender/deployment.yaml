@@ -41,6 +41,7 @@ spec:
     metadata:
       labels:
         app: vpa-recommender
+        tier: vpa-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -56,7 +57,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "recommender") }}
         command:
         - /recommender
-        - --address=:8942
+        - --address=127.0.0.1:8942 # prometheus metrics address
         - --kube-api-burst=100
         - --kube-api-qps=50
         - --pod-recommendation-min-cpu-millicores=25
@@ -68,11 +69,57 @@ spec:
         - --humanize-memory=true
         - --v=4
         ports:
-        - containerPort: 8080
+        - containerPort: 8942
+          name: http-metrics
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "recommender_resources" . | nindent 12 }}
 {{- end }}
-
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4204"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:8942
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: kube-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployment
+                    subresource: prometheus-metrics
+                    name: https-metrics
+        ports:
+          - containerPort: 4204
+            name: https
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4204
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4204
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
