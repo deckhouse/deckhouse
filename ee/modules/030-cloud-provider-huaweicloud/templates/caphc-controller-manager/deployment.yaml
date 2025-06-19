@@ -102,15 +102,11 @@ spec:
               secretKeyRef:
                 name: huaweicloud-credentials
                 key: secret-key
-          - name: HUAWEICLOUD_PROJECT_ID
+          - name: HUAWEICLOUD_ENTERPRISE_PROJECT_ID
             valueFrom:
               secretKeyRef:
                 name: huaweicloud-credentials
-                key: project-id
-          {{- if $providerClusterConfiguration.enterpriseProjectID }}
-          - name: ENTERPRISE_PROJECT_ID
-            value: {{ $providerClusterConfiguration.enterpriseProjectID | quote }}
-          {{- end }}
+                key: enterprise-project-id
         livenessProbe:
           httpGet:
             path: /healthz
