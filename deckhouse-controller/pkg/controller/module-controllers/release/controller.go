@@ -1252,7 +1252,13 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		condMessage := fmt.Sprintf("%s: see details in the module release v%s", msg, mr.GetVersion().String())
-		newState := corev1.ConditionStatus(strconv.FormatBool(conditionState))
+
+		var newState corev1.ConditionStatus
+		if conditionState {
+			newState = corev1.ConditionTrue
+		} else {
+			newState = corev1.ConditionFalse
+		}
 
 		for idx, cond := range module.Status.Conditions {
 			if cond.Type == v1alpha1.ModuleConditionLastReleaseDeployed {

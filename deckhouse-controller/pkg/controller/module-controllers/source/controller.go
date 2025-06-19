@@ -310,7 +310,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		if errs := validation.IsDNS1123Subdomain(moduleName); len(errs) > 0 {
-			logger.Warn("the module has invalid name: must coply with RFC 1123 subdomain format, skip it")
+			logger.Warn("the module has invalid name: must comply with RFC 1123 subdomain format, skip it")
 			continue
 		}
 

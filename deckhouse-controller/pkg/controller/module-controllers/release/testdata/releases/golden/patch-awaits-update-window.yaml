@@ -60,5 +60,5 @@ status:
     message: 'ModuleRelease could not be applied, release postponed: see details in
       the module release v1.26.3'
     reason: ReleaseDeployTimeCheck
-    status: "false"
+    status: "False"
     type: LastReleaseDeployed
