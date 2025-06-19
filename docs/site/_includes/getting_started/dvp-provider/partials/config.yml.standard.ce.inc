@@ -32,7 +32,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
   registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 # [<en>] Deckhouse module settings.
