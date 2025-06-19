@@ -91,7 +91,7 @@ spec:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:
               fieldRef:
-                fieldPath: status.hostIP
+                fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               upstreams:
