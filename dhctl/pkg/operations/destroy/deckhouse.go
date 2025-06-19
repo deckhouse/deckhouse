@@ -92,6 +92,7 @@ func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType stri
 	if err != nil {
 		return err
 	}
+	log.InfoF("[DCHLT-TEST] resourcesDestroyed %v\n", resourcesDestroyed)
 
 	if resourcesDestroyed {
 		log.WarnLn("Resources was destroyed. Skip it")
