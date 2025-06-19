@@ -331,3 +331,7 @@ apiVersions:
             type: string
             description: |
               The project ID.
+          enterpriseProjectID:
+            type: string
+            description: |
+              The enterprise project ID.
