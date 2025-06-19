@@ -426,14 +426,21 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			return false
 		}
-		// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-		if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
+
+		switch module.Status.Phase {
+		case v1alpha1.ModulePhaseConflict,
+			v1alpha1.ModulePhaseDownloading,
+			v1alpha1.ModulePhaseDownloadingError:
+			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
+			// same thing if module is not installed
 			module.Status.Phase = v1alpha1.ModulePhaseAvailable
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		default:
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		}
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+
 		return true
 	})
 }
