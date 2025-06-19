@@ -95,7 +95,7 @@ spec:
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               upstreams:
-              - upstream: http://127.0.0.1:8943
+              - upstream: http://127.0.0.1:8943/metrics
                 path: /metrics
                 authorization:
                   resourceAttributes:
