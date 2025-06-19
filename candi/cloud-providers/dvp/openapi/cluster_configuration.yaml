@@ -233,19 +233,19 @@ apiVersions:
                         type: string
                       description: |
                         Allows a virtual machine to be assigned to specified DVP nodes.
-                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes pods.
+                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes Pods.
                       type: object
 
                     priorityClassName:
                       description: |
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes pods.
+                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes Pods.
                       type: string
 
                     tolerations:
                       type: array
                       description: |
                         Allows setting tolerations for virtual machines for a DVP node.
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes pods.
+                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes Pods.
                       items:
                         type: object
                         description: ""
