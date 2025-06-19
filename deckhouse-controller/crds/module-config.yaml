@@ -51,16 +51,18 @@ spec:
                   enum: ["NoResourceReconciliation"]
                   description: |
                     Defines the module maintenance mode.
-                    
+
                     - `NoResourceReconciliation`: A mode for developing or tweaking the module.
-                    
+
                       In this mode:
-                    
+
                       - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
                       - Resource monitoring is disabled, which prevents deleted resources from being restored.
                       - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
                       - The `ModuleIsInMaintenanceMode` alert is triggered.
-                  x-doc-examples: ['false']
+
+                      If Deckhouse restarts, the module reapplies its last known state once and then continues in unmanaged mode.
+                  x-doc-examples: ['NoResourceReconciliation']
                 version:
                   type: number
                   description: |
