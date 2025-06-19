@@ -21,6 +21,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
@@ -48,8 +50,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // for verification requests to our custom modules from clients inside cluster,
 // hook must store it to `global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA`.
 func discoveryExtentsionAPIServerCA(input *go_hook.HookInput) error {
-	intervalScrapSnap := input.Snapshots["extension_api_server_authentication"]
-
+	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "extension_api_server_authentication")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal extension_api_server_authentication snapshot: %w", err)
+	}
 	if len(intervalScrapSnap) == 0 {
 		return fmt.Errorf("extension api server authentication not found")
 	}

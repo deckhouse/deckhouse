@@ -30,6 +30,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -124,14 +126,16 @@ func handleCheckEtcdPeers(input *go_hook.HookInput, dc dependency.Container) err
 	if masterNodes > 1 {
 		return nil
 	}
+	etcdPods, err := sdkobjectpatch.UnmarshalToStruct[etcdPod](input.NewSnapshots, "etcd_pods")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal etcd_pods snapshot: %w", err)
+	}
 
-	snap := input.Snapshots["etcd_pods"]
-
-	if len(snap) == 0 {
+	if len(etcdPods) == 0 {
 		return nil
 	}
 
-	etcdPod := snap[0].(etcdPod)
+	etcdPod := etcdPods[0]
 	etcdPodIP := etcdPod.IP
 	peerURL := etcdPod.PeerURL
 

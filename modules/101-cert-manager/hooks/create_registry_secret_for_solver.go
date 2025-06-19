@@ -190,9 +190,9 @@ func handleChallenge(input *go_hook.HookInput) error {
 
 	registryCfg := d8RegistrySnap[0].(registrySecret).Config
 
-	challengesNss := set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
+	challengesNss := set.NewFromSnapshot(input.NewSnapshots.Get(challengesSnapshot))
 
-	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots[saSnapshot])
+	serviceAccountsNss := set.NewFromSnapshot(input.NewSnapshots.Get(saSnapshot))
 
 	// namespace -> .dockerconfigjson content
 	secretsByNs := map[string]string{}

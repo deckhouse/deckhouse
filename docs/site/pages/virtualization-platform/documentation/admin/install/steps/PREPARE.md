@@ -8,8 +8,8 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/prepare.
 Before installing the virtualization platform, you need to plan its parameters:
 
 1. Choose the platform edition and update channel:
-   - [Platform Editions](../../editions.html);
-   - [Update Channels](../../release-channels.html).
+   - [Platform Editions](../../../about/editions.html);
+   - [Update Channels](../../../about/release-channels.html).
 
 1. Determine the IP address subnets:
    - Subnet used by nodes for internal communication;
@@ -27,7 +27,7 @@ Before installing the virtualization platform, you need to plan its parameters:
      > The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
 
 1. Choose the storage to be used:
-   - You can select a storage system from the [supported list](../../install/requirements.html#supported-storage-systems);
+   - You can select a storage system from the [supported list](../../../about/requirements.html#supported-storage-systems);
    - [Storage configuration](../../install/steps/storage.html) will be done after the basic platform installation.
 
 ## Node Preparation
@@ -36,7 +36,7 @@ Before installing the virtualization platform, you need to plan its parameters:
    - Make sure that Intel-VT (VMX) or AMD-V (SVM) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
 
 1. Install the operating system:
-   - Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
+   - Install one of the [supported operating systems](../../../about/requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
 
 1. Check access to the container image registry:
    - Ensure that each node has access to a container image registry. By default, the installer uses the public registry `registry.deckhouse.io`. Configure network connectivity and the necessary security policies to access this repository.

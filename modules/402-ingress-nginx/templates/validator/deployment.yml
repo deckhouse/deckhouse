@@ -1,0 +1,186 @@
+{{- define "ingress-validator" }}
+{{- $ctx := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+{{- $checksum := toJson $crd | sha256sum }}
+{{- $version := $crd.spec.controllerVersion | default $ctx.Values.ingressNginx.defaultControllerVersion }}
+{{- $resources := $crd.spec.resourcesRequests | default dict }}
+{{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
+
+{{- if (has "vertical-pod-autoscaler" $ctx.Values.global.enabledModules) }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: validator-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: validator-{{ $name }}
+  {{- if eq ($resources.mode | default "") "VPA" }}
+  updatePolicy:
+    updateMode: {{ $resources.vpa.mode | default "Initial" | quote }}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: validator
+        minAllowed:
+          cpu: {{ $resources.vpa.cpu.min | default "10m" | quote }}
+          memory: {{ $resources.vpa.memory.min | default "50Mi" | quote }}
+        maxAllowed:
+          cpu: {{ $resources.vpa.cpu.max | default "50m" | quote }}
+          memory: {{ $resources.vpa.memory.max | default "200Mi" | quote }}
+  {{- else }}
+  updatePolicy:
+    updateMode: "Off"
+  {{- end }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: validator-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ctx 1 0) }}
+  selector:
+    matchLabels:
+      app: validator
+      name: {{ $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validator-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+  annotations:
+    ingress-nginx-controller.deckhouse.io/validator-version: {{ $version | quote }}
+    ingress-nginx-controller.deckhouse.io/checksum: {{ $checksum }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ctx | nindent 2 }}
+  selector:
+    matchLabels:
+      app: validator
+      name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: validator
+        name: {{ $name }}
+    spec:
+      {{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+        {{- toYaml $crd.spec.nodeSelector | nindent 8 }}
+      {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $ctx "frontend") | nindent 6 }}
+      {{- end }}
+      {{- if $crd.spec.tolerations }}
+      tolerations:
+        {{- toYaml $crd.spec.tolerations | nindent 6 }}
+      {{- else }}
+      {{- include "helm_lib_tolerations" (tuple $ctx "system") | nindent 6 }}
+      {{- end }}
+      {{- include "helm_lib_priority_class" (tuple $ctx "production-high") | nindent 6 }}
+      serviceAccountName: validator
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: 420
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - name: validator
+          image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              value: "127.0.0.1"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+            initialDelaySeconds: 10
+            periodSeconds: 2
+            timeoutSeconds: 5
+          args:
+            - /nginx-ingress-controller
+            - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
+            - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
+            - --healthz-port=10254
+            - --healthz-host=0.0.0.0
+            - --validating-webhook=:8443
+            - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
+            - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
+            - --watch-namespace=d8-ingress-nginx
+            {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
+            - --validating-verify-admission-requests=true
+            - --validating-webhook-allow-cn=kube-api-admission
+            - --validating-webhook-allow-ca-file=/chroot/etc/nginx/admission-ssl/ca.crt
+            {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/wait-shutdown"]
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
+              {{- if eq ($resources.mode | default "") "Static" }}
+              {{- $resourcesRequestsStatic := $resources.static | default dict }}
+              cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
+              memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
+              {{- else if not $resources }}
+              cpu: "350m"
+              memory: "500Mi"
+              {{- end }}
+          ports:
+            - name: webhook
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+            - name: secret-nginx-auth-tls
+              mountPath: /chroot/etc/nginx/ssl/
+            - name: webhook-cert
+              mountPath: /chroot/etc/nginx/webhook-ssl/
+              readOnly: true
+            {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
+            - name: webhook-client-ca
+              mountPath: /chroot/etc/nginx/admission-ssl/
+              readOnly: true
+            {{- end}}
+      volumes:
+        - name: secret-nginx-auth-tls
+          secret:
+            secretName: ingress-nginx-{{ $crd.name }}-auth-tls
+        - name: webhook-cert
+          secret:
+            secretName: ingress-admission-certificate
+        {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
+        - name: webhook-client-ca
+          configMap:
+            name: admission-client-ca.crt
+        {{- end}}
+{{- end }}
+
+{{- $ctx := . }}
+{{- range $crd := $ctx.Values.ingressNginx.internal.ingressControllers }}
+  {{- if $crd.spec.validationEnabled }}
+  {{ include "ingress-validator" (list $ctx $crd $crd.name) }}
+  {{- end }}
+{{- end }}

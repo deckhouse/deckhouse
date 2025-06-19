@@ -79,13 +79,15 @@ To do this, download and publish it on any HTTP service accessible from the clus
         name: win-virtio-iso
     ```
 
-1. After creating the resource, the virtual machine will be started.
-   You need to connect to it and use the graphical wizard to add the `virtio` drivers
-   and perform the OS installation.
-
-   Command to connect:
+1. After creating the resource, start the virtual machine:
 
     ```bash
+    d8 v vnc -n default win-vm
+    ```
+
+1. Connect to it using the graphical installer and complete the OS and `virtio` driver installation:
+
+    ```console
     d8 v vnc -n default win-vm
     ```
 

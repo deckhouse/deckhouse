@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/storage.
 
 ## Storage Configuration
 
-After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](/products/virtualization-platform/documentation/admin/install/requirements.html#supported-storage-systems).
+After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](/products/virtualization-platform/documentation/about/requirements.html#supported-storage-systems).
 
 Next, we will consider enabling and configuring the software-defined storage `sds-replicated-volume`. This storage allows you to create replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
 

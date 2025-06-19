@@ -20,6 +20,8 @@ import yaml
 import base64
 import inspect
 
+SSL_CERT_FILE = os.getenv('SSL_CERT_FILE','/etc/ssl/certs/ca-certificates.crt')
+
 GITHUB_TOKEN=os.getenv('GITHUB_TOKEN')
 if (GITHUB_TOKEN == None):
     print("GITHUB_TOKEN env variable was not found. Terminated.")
@@ -35,15 +37,15 @@ groups:
 - name: "v1"
   channels:
     - name: alpha
-      version: {alpha}
+      version: v{alpha}
     - name: beta
-      version: {beta}
+      version: v{beta}
     - name: ea
-      version: {early-access}
+      version: v{early-access}
     - name: stable
-      version: {stable}
+      version: v{stable}
     - name: rock-solid
-      version: {rock-solid}
+      version: v{rock-solid}
 '''
 result_channels = {}
 stable_version = None
@@ -74,7 +76,7 @@ def collect_released_versions():
         if (editions['FE'] and (list(editions.values())[:-1] == list(editions.values())[1:])):
             return editions
         else:
-            return None 
+            return None
 
     # collect all deployed versions for each channel
     for channel in channels.keys():
@@ -96,7 +98,7 @@ def collect_released_versions():
                     deploy_status = job['conclusion']
             if (deploy_status != 'success'):
                 continue
-            
+
             # collect deployed versions for channel in one run
             for job in jobs:
                 if ('Enable' in job['name']) and (job['conclusion'] == 'success'):
@@ -129,18 +131,24 @@ def collect_released_versions():
 def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     output_prefix = 'DEPLOY_'
 
+    cfg = client.Configuration()
+
     try:
         kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
-        config.load_kube_config_from_dict(kubeconf)
+        config.load_kube_config_from_dict(kubeconf,client_configuration=cfg)
     except Exception as e:
         print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Unable to connect to "{kubeconf_name}". Skipping.')
         write_output(output_prefix+kubeconf_name,'false')
         print(f'Error: {e}')
         return
-      
+
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
 
-    v1 = client.CoreV1Api()
+    cfg.ssl_ca_cert = SSL_CERT_FILE
+    print(f'::add-mask::{cfg.host}')
+    api_client = client.ApiClient(configuration=cfg)
+    v1 = client.CoreV1Api(api_client)
+
     try:
         cm = v1.read_namespaced_config_map(CM_NAME,namespace)
     except Exception as e:
@@ -171,5 +179,5 @@ if __name__ == "__main__":
             kubecfgs |= {key:value}
     for item,value in kubecfgs.items():
       determine_clusters_need_deploy(item,value)
-      
+
     determine_release_id()

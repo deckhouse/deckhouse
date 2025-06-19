@@ -52,7 +52,7 @@ func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func discoveryIsIstioCNIEnabled(input *go_hook.HookInput) error {
-	istioCniDaemonSets := input.Snapshots["istio-cni-daemonset"]
+	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
 	isIstioCNIEnabled := len(istioCniDaemonSets) != 0
 	input.Values.Set("cniCilium.internal.isIstioCNIEnabled", isIstioCNIEnabled)
 	return nil

@@ -74,8 +74,13 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 	var stdin io.Reader
 
 	// If the sudo password is set, we need to pipe it to the ssh command.
-	if instanceScope.Credentials.Spec.SudoPassword != "" {
-		stdin = bytes.NewBufferString(instanceScope.Credentials.Spec.SudoPassword)
+
+	if instanceScope.Credentials.Spec.SudoPasswordEncoded != "" {
+		pass, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.SudoPasswordEncoded)
+		if err != nil {
+			return err
+		}
+		stdin = bytes.NewBuffer(pass)
 
 		command = fmt.Sprintf(`sudo -S sh -c "%s"`, command)
 	} else {

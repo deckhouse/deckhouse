@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -178,8 +179,8 @@ func getDexUsers(input *go_hook.HookInput) error {
 			}
 		}
 
-		input.Logger.Infof("Update groups in user status %s. Groups: %v", dexUser.Name, patch["status"].(expirePatch).Groups)
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
+		input.Logger.Info("Update groups in user status", slog.String("name", dexUser.Name), slog.String("groups", strings.Join(patch["status"].(expirePatch).Groups, ",")))
+		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)

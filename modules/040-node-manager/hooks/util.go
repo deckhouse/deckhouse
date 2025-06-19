@@ -90,7 +90,7 @@ func semverMin(versions []*semver.Version) *semver.Version {
 }
 
 func patchNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, patch interface{}) {
-	patcher.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
+	patcher.PatchWithMerge(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
 func setNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, statusField string, value interface{}) {
