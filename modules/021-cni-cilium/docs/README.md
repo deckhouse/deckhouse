@@ -41,7 +41,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
    ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
 
 {% alert level="warning" %}
-In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
+In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.
 Network equipment must be ready for asymmetric traffic flow: IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
 {% endalert %}
 
@@ -83,6 +83,23 @@ When changing Cilium's operation mode (the [tunnelMode](configuration.html#param
 ## Disabling the kube-proxy Module
 
 Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-proxy` is automatically disabled when the `cni-cilium` module is enabled.
+
+## Using selective load balancing algorithm for services
+
+In Deckhouse Kubernetes Platform, you can apply the following algorithms to load balance service traffic:
+
+* **Random**. Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
+* **Maglev**. Uses consistent hashing to distribute traffic evenly, suitable for high load services.
+* **Least Connections**. Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long connections.
+
+By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
+
+* Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLBAlgorithmsEnabled`](configuration.html#parameters-extralbalgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
+* In the service manifest, specify the `cilium.io/bpf-lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
+
+{% alert level="warning" %}
+This mechanism requires Linux kernel version 5.15 or higher to work correctly.
+{% endalert %}
 
 ## Using Egress Gateway
 

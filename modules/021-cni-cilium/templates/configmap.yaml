@@ -116,6 +116,9 @@ data:
   bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
+  {{- if .Values.cniCilium.extraLBAlgorithmsEnabled }}
+  bpf-lb-algorithm-annotation: "true"
+  {{- end }}
 
   enable-session-affinity: "true"
   {{- if .Values.cniCilium.svcSourceRangeCheck }}
