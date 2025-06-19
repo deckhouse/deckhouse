@@ -17,9 +17,9 @@ limitations under the License.
 package destination
 
 import (
-	"fmt"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
@@ -47,6 +47,16 @@ type KafkaSASL struct {
 	Mechanism string `json:"mechanism,omitempty"`
 
 	Enabled bool `json:"enabled,omitempty"`
+}
+
+func normalizeKey(key string) string {
+	var b strings.Builder
+	for _, c := range key {
+		if unicode.IsLetter(c) || unicode.IsNumber(c) {
+			b.WriteRune(unicode.ToLower(c))
+		}
+	}
+	return b.String()
 }
 
 func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
@@ -119,12 +129,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 
 		sort.Strings(keys)
 		for _, k := range keys {
-			if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-				dataField := validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-				extensions[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-			} else {
-				extensions[k] = cspec.ExtraLabels[k]
-			}
+			extensions[normalizeKey(k)] = k
 		}
 
 		encoding.Codec = "cef"
