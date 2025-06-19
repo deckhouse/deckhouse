@@ -462,6 +462,10 @@ entries:
                     ru: Вертикальное масштабирование
                   url: /admin/configuration/app-scaling/vpa.html
                 - title:
+                    en: Pod restart on configuration change
+                    ru: Перезапуск подов при изменении конфигурации
+                  url: /admin/configuration/app-scaling/pod-restart.html  
+                - title:
                     en: Load distribution management
                     ru: Управление распределением нагрузки
                   folders:
