@@ -1,0 +1,11 @@
+kind: SSHHost
+apiVersions:
+- apiVersion: dhctl.deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Конфигурация SSH-хоста.
+    properties:
+      apiVersion:
+        description: Версия Deckhouse API.
+      host:
+        description: SSH-хост.
