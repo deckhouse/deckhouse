@@ -139,10 +139,8 @@ spec:
             value: 60s
           - name: GFD_FAIL_ON_INIT_ERROR
             value: "true"
-        {{- if eq ($ng).gpu.sharing "Mig" }}
           - name: NVIDIA_MIG_MONITOR_DEVICES
             value: all
-        {{- end }}
           - name: NODE_NAME
             valueFrom:
               fieldRef:
