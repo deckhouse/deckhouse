@@ -101,7 +101,7 @@ spec:
                     namespace: kube-system
                     apiGroup: apps
                     apiVersion: v1
-                    resource: deployment
+                    resource: deployments
                     subresource: prometheus-metrics
                     name: vpa-recommender
         ports:
