@@ -58,6 +58,9 @@ spec:
         operator: "Equal"
         value: "true"
         effect: "NoSchedule"
+      - key: node.kubernetes.io/unschedulable
+        operator: "Exists"
+        effect: "NoSchedule"
       priorityClassName: cluster-medium
       serviceAccountName: nvidia-mig-manager
       automountServiceAccountToken: true
