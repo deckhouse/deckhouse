@@ -170,7 +170,7 @@ spec:
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
           args:
           {{- if ($.Values.istio.internal.enableAmbientMode) }}
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4287"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4286"
           {{- else }}
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
           {{- end }}
@@ -198,17 +198,17 @@ spec:
                     name: istio-cni-node
           ports:
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
-            - containerPort: 4287
+            - containerPort: 4286
               name: https-metrics
           livenessProbe:
             httpGet:
               path: /livez
-              port: 4287
+              port: 4286
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /livez
-              port: 4287
+              port: 4286
               scheme: HTTPS
             {{- else }}
             - containerPort: 9734
