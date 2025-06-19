@@ -14,7 +14,6 @@ resource "vcd_network_routed_v2" "network" {
 
   gateway            = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length      = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
-  guest_vlan_allowed = false
   dns1               = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 0 ? var.providerClusterConfiguration.internalNetworkDNSServers[0] : null
   dns2               = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 1 ? var.providerClusterConfiguration.internalNetworkDNSServers[1] : null
 }
