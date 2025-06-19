@@ -106,7 +106,7 @@ spec:
                     name: https-metrics
         ports:
           - containerPort: 4204
-            name: https
+            name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
