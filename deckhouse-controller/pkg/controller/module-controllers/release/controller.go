@@ -576,6 +576,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
 		if err = r.ApplyRelease(ctx, release, task); err != nil {
+			r.log.Error("apply forced release", log.Err(err))
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
@@ -648,6 +649,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			r.log.Warn("met requirements status update ", slog.String("release", release.GetName()), log.Err(err))
 		}
 
+		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "not met requirements")
+		if err != nil {
+			return res, fmt.Errorf("update module last release deployed status: %w", err)
+		}
+
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
@@ -667,6 +673,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	err = r.ApplyRelease(ctx, release, task)
 	if err != nil {
+		r.log.Error("apply predicted release", log.Err(err))
+
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
@@ -908,6 +916,8 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "loadModule")
 	defer span.End()
 
+	logger := r.log.With(slog.String("module", release.GetModuleName()))
+
 	// dryrun for testing purpose
 	if release.GetDryRun() {
 		go r.runDryRunDeploy(release)
@@ -929,11 +939,11 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	// clear tmp dir
 	defer func() {
 		if err = os.RemoveAll(tmpDir); err != nil {
-			r.log.Error("failed to remove old module directory", slog.String("directory", tmpDir), log.Err(err))
+			logger.Error("failed to remove old module directory", slog.String("directory", tmpDir), log.Err(err))
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
+	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, logger)
 	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
 
 	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
@@ -968,7 +978,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		"module":  release.GetModuleName(),
 	}
 
-	if err = def.Validate(values, r.log); err != nil {
+	if err = def.Validate(values, logger); err != nil {
 		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
 			Message: "validation failed: " + err.Error(),
@@ -984,43 +994,16 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			status.Phase = v1alpha1.ModuleReleasePhasePending
 			status.Message = "Initial module config validation failed:\n" + err.Error()
 
-			module := new(v1alpha1.Module)
-			if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
-				r.log.Error(
-					"get module failed",
-					slog.String("module", release.GetModuleName()),
-					log.Err(err),
-				)
-				return nil, fmt.Errorf("get the '%s' module: %w", release.GetModuleName(), err)
-			}
-
-			err := utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				module.SetConditionFalse(
-					v1alpha1.ModuleConditionEnabledByModuleConfig,
-					"",
-					fmt.Sprintf("ModuleRelease could not be applied. Module config validation failed: see details in the module release v%s", release.GetVersion().String()),
-				)
-				return true
-			})
-			if err != nil {
-				r.log.Error(
-					"update module conditions failed",
-					slog.String("module", release.GetModuleName()),
-					log.Err(err),
-				)
-				return nil, fmt.Errorf("update '%s' module status: %w", release.GetModuleName(), err)
-			}
-
-			r.log.Debug(
-				"successfully updated module conditions",
-				slog.String("module", release.GetModuleName()),
-			)
+			logger.Debug("successfully updated module conditions")
 		}
 
 		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
-			r.log.Error("update status", slog.String("release", release.Name), log.Err(err))
-
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
+		}
+
+		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "module config validation failed")
+		if err != nil {
+			return nil, fmt.Errorf("update module last release deployed status: %w", err)
 		}
 
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
@@ -1087,6 +1070,11 @@ func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.Modu
 	})
 	if err != nil {
 		r.log.Warn("met release conditions status update ", slog.String("release", mr.GetName()), log.Err(err))
+	}
+
+	err = r.updateModuleLastReleaseDeployedStatus(ctx, mr, "release postponed")
+	if err != nil {
+		return fmt.Errorf("update module last release deployed status: %w", err)
 	}
 
 	backoff := &wait.Backoff{
@@ -1244,6 +1232,32 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 
 		return nil
 	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
+}
+
+func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, msg string) error {
+	logger := r.log.With(slog.String("module", mr.GetModuleName()))
+
+	module := new(v1alpha1.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mr.GetModuleName()}, module); err != nil {
+		return fmt.Errorf("get module: %w", err)
+	}
+
+	logger.Debug("refresh module status")
+
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+		module.SetConditionFalse(
+			v1alpha1.ModuleConditionLastReleaseDeployed,
+			"",
+			fmt.Sprintf("ModuleRelease could not be applied, %s: see details in the module release v%s", msg, mr.GetVersion().String()),
+		)
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("update status with retry: %w", err)
+	}
+
+	return nil
 }
 
 // deleteRelease deletes the module from filesystem

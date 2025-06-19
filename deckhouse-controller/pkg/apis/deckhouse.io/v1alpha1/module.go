@@ -36,6 +36,7 @@ const (
 
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
+	ModuleConditionLastReleaseDeployed    = "LastReleaseDeployed"
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
