@@ -72,18 +72,8 @@ spec:
         app: validator
         name: {{ $name }}
     spec:
-      {{- if $crd.spec.nodeSelector }}
-      nodeSelector:
-        {{- toYaml $crd.spec.nodeSelector | nindent 8 }}
-      {{- else }}
-      {{- include "helm_lib_node_selector" (tuple $ctx "frontend") | nindent 6 }}
-      {{- end }}
-      {{- if $crd.spec.tolerations }}
-      tolerations:
-        {{- toYaml $crd.spec.tolerations | nindent 6 }}
-      {{- else }}
-      {{- include "helm_lib_tolerations" (tuple $ctx "system") | nindent 6 }}
-      {{- end }}
+      {{- include "helm_lib_node_selector" (tuple $ctx "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ctx "production-high") | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
