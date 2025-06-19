@@ -5886,7 +5886,17 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate has expired.\n\nTo restore VPN functionality, renew the expired certificate as soon as possible.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          \n          "
+      description: |-
+        The OpenVPN CA certificate has expired.
+
+        To restore VPN functionality, renew the expired certificate as soon as possible.
+        After renewing the certificate, **you will need to reissue all client and server certificates**.
+        Check [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+        View certificate details to display the exact expiration date.
+        ```shell
+        kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN CA certificate has expired.
       severity: "4"
