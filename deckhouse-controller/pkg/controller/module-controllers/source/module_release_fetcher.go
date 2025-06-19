@@ -138,6 +138,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleRelease")
 	defer span.End()
 
+	logger := f.logger.With(
+		slog.String("module_name", f.moduleName),
+		slog.String("source_name", f.source.Name),
+	)
+
 	releases, err := f.listModuleReleases(ctx, f.moduleName)
 	if err != nil {
 		return fmt.Errorf("list module releases: %w", err)
@@ -146,9 +151,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	var releaseForUpdate *v1alpha1.ModuleRelease
 	releasesInCluster := make([]*v1alpha1.ModuleRelease, 0, len(releases))
 
-	idx, deployedRelease := getLatestDeployedRelease(releases)
-	if idx != -1 {
-		releasesInCluster = releases[:idx+1]
+	deployedIdx, deployedRelease := getLatestDeployedRelease(releases)
+	if deployedIdx != -1 {
+		logger.Debug("no latest deploy release")
+
+		releasesInCluster = releases[:deployedIdx+1]
 		releaseForUpdate = deployedRelease
 	}
 
@@ -174,6 +181,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
+
+	logger.Debug("start ensure releases",
+		slog.Bool("deployed_release_found", deployedIdx != -1),
+		slog.String("module_version", newSemver.String()),
+	)
 
 	err = f.ensureReleases(ctx, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
@@ -208,7 +220,15 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		"registry": f.source.Spec.Registry.Repo,
 	}
 
+	logger := f.logger.With(
+		slog.String("module_name", f.moduleName),
+		slog.String("source_name", f.source.Name),
+		slog.String("module_version", f.targetReleaseMeta.ModuleVersion),
+	)
+
 	if len(releasesInCluster) == 0 {
+		logger.Debug("no release in cluster")
+
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -221,6 +241,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	actual := releaseForUpdate
 	metricLabels["actual_version"] = "v" + actual.GetVersion().String()
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
+		logger.Debug("from deployed")
+
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -243,6 +265,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
+			logger.Debug("from deployed")
+
 			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
 			if err != nil {
 				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -262,9 +286,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	current := actual.GetVersion()
 	for _, ver := range vers {
 		ensureErr := func() error {
-			f.logger.Debug("ensure module release for module for the module source",
-				slog.String("name", f.moduleName),
-				slog.String("source_name", f.source.Name))
+			logger.Debug("ensure module release", slog.String("version", ver.String()))
 
 			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
 			if err != nil {
