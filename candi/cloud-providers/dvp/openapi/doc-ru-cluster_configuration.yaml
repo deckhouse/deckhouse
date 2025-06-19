@@ -4,7 +4,7 @@ apiVersions:
       description: |
         Описывает конфигурацию облачного кластера в Deckhouse Virtualization Platform (DVP).
 
-        Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+        Используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке.
 
         Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -35,7 +35,7 @@ apiVersions:
                 Набор зон, в которых могут быть созданы узлы.
 
                 Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
-                [Подробнее о топологических метках...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                 > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
@@ -67,7 +67,7 @@ apiVersions:
                       description: |
                         Имя VirtualMachineClass.
 
-                        Ресурс VirtualMachineClass предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Он позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
+                        Предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Русурс позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
                     bootloader:
                       description: |
                         Определяет загрузчик для виртуальной машины.
@@ -90,14 +90,14 @@ apiVersions:
                     nodeSelector:
                       description: |
                         Позволяет назначить виртуальную машину на указанные узлы DVP.
-                        [Подробнее](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) как в параметре `spec.nodeSelector` подов в Kubernetes.
+                        [Подробнее](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) — как в параметре `spec.nodeSelector` подов в Kubernetes.
                     priorityClassName:
                       description: |
-                        [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) как в параметре `spec.priorityClassName` подов в Kubernetes.
+                        [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) — как в параметре `spec.priorityClassName` подов в Kubernetes.
                     tolerations:
                       description: |
                         Позволяет установить допуски для виртуальной машины для узла DVP.
-                        [Подробней](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) как в параметре `spec.tolerations` подов в Kubernetes;
+                        [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) — как в параметре `spec.tolerations` подов в Kubernetes;
                 rootDisk: &instanceClassRootDisk
                   description: |
                     Указывает настройки для корневого диска виртуальной машины.
@@ -148,7 +148,7 @@ apiVersions:
                   Набор зон, в которых могут быть созданы узлы.
 
                   Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
-                  [Подробнее о топологических метках...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                  [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                   > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
@@ -180,13 +180,13 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее о возможных схемах размещения провайдера...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-dvp/layouts.html).
+            [Подробнее о возможных схемах размещения провайдера.](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-dvp/layouts.html).
         region:
           description: |
             Название региона.
 
             Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
-            [Подробнее о топологических метках...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
             > Чтобы установить требуемую метку для узла DVP, следуйте [документации по  NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
@@ -194,7 +194,7 @@ apiVersions:
             Набор зон, в которых могут быть созданы узлы.
 
             Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
-            [Подробнее о топологических метках...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
             > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:

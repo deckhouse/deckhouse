@@ -125,7 +125,7 @@ apiVersions:
                 A set of zones in which nodes can be created.
 
                 To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-                [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                 > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               items:
@@ -182,7 +182,7 @@ apiVersions:
                       description: |
                         The name of the VirtualMachineClass.
 
-                        The VirtualMachineClass resource is intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
+                        Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                     bootloader:
                       type: string
                       enum:
@@ -233,19 +233,19 @@ apiVersions:
                         type: string
                       description: |
                         Allows a virtual machine to be assigned to specified DVP nodes.
-                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes Pods.
+                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes pods.
                       type: object
 
                     priorityClassName:
                       description: |
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes Pods.
+                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes pods.
                       type: string
 
                     tolerations:
                       type: array
                       description: |
                         Allows setting tolerations for virtual machines for a DVP node.
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes Pods.
+                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes pods.
                       items:
                         type: object
                         description: ""
@@ -357,7 +357,7 @@ apiVersions:
                   A set of zones in which nodes can be created.
 
                   To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-                  [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                  [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                   > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
                 items:
@@ -432,7 +432,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts...](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html)
+            [Read more about possible provider layouts.](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html)
           enum: [Standard]
 
         region:
@@ -441,7 +441,7 @@ apiVersions:
             Region name.
 
             To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
-            [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
+            [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
 
             > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
@@ -450,7 +450,7 @@ apiVersions:
             A set of zones in which nodes can be created.
 
             To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-            [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
             > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
           items:
