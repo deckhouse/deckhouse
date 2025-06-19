@@ -38,6 +38,7 @@ import (
 	cp "github.com/otiai10/copy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -649,7 +650,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			r.log.Warn("met requirements status update ", slog.String("release", release.GetName()), log.Err(err))
 		}
 
-		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "not met requirements")
+		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, not met requirements", "ReleaseRequirementsCheck", false)
 		if err != nil {
 			return res, fmt.Errorf("update module last release deployed status: %w", err)
 		}
@@ -681,6 +682,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	// no deckhouse restart if dryrun
 	if release.GetDryRun() {
 		return ctrl.Result{}, nil
+	}
+
+	err = r.updateModuleLastReleaseDeployedStatus(ctx, release, "Latest release succesfully deployed", "", true)
+	if err != nil {
+		return res, fmt.Errorf("update module last release deployed status: %w", err)
 	}
 
 	modulesChangedReason = "a new module release deployed"
@@ -1001,7 +1007,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
-		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "module config validation failed")
+		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, module config validation failed", "ReleaseConfigValidationCheck", false)
 		if err != nil {
 			return nil, fmt.Errorf("update module last release deployed status: %w", err)
 		}
@@ -1072,7 +1078,7 @@ func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.Modu
 		r.log.Warn("met release conditions status update ", slog.String("release", mr.GetName()), log.Err(err))
 	}
 
-	err = r.updateModuleLastReleaseDeployedStatus(ctx, mr, "release postponed")
+	err = r.updateModuleLastReleaseDeployedStatus(ctx, mr, "ModuleRelease could not be applied, release postponed", "ReleaseDeployTimeCheck", false)
 	if err != nil {
 		return fmt.Errorf("update module last release deployed status: %w", err)
 	}
@@ -1234,7 +1240,7 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 }
 
-func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, msg string) error {
+func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, msg, reason string, conditionState bool) error {
 	logger := r.log.With(slog.String("module", mr.GetModuleName()))
 
 	module := new(v1alpha1.Module)
@@ -1245,11 +1251,38 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 	logger.Debug("refresh module status")
 
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-		module.SetConditionFalse(
-			v1alpha1.ModuleConditionLastReleaseDeployed,
-			"",
-			fmt.Sprintf("ModuleRelease could not be applied, %s: see details in the module release v%s", msg, mr.GetVersion().String()),
-		)
+		condMessage := fmt.Sprintf("%s: see details in the module release v%s", msg, mr.GetVersion().String())
+		newState := corev1.ConditionStatus(strconv.FormatBool(conditionState))
+
+		for idx, cond := range module.Status.Conditions {
+			if cond.Type == v1alpha1.ModuleConditionLastReleaseDeployed {
+				module.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: r.dependencyContainer.GetClock().Now()}
+
+				if cond.Status != newState {
+					module.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: r.dependencyContainer.GetClock().Now()}
+					module.Status.Conditions[idx].Status = newState
+				}
+
+				if cond.Reason != reason {
+					module.Status.Conditions[idx].Reason = reason
+				}
+
+				if cond.Message != condMessage {
+					module.Status.Conditions[idx].Message = condMessage
+				}
+
+				return nil
+			}
+		}
+
+		module.Status.Conditions = append(module.Status.Conditions, v1alpha1.ModuleCondition{
+			Type:               v1alpha1.ModuleConditionLastReleaseDeployed,
+			Status:             newState,
+			Reason:             reason,
+			Message:            condMessage,
+			LastProbeTime:      metav1.Time{Time: r.dependencyContainer.GetClock().Now()},
+			LastTransitionTime: metav1.Time{Time: r.dependencyContainer.GetClock().Now()},
+		})
 
 		return nil
 	})

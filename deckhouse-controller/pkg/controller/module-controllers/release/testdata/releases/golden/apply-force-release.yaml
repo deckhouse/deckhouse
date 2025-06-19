@@ -75,3 +75,12 @@ status:
   pullDuration: 9m15s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "999"
+properties: {}
+status: {}

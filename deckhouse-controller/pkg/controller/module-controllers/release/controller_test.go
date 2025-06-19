@@ -172,6 +172,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("deckhouse unsuitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
+
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
@@ -636,42 +637,49 @@ func skipNotSpecErrors(errs []error) []error {
 	return result
 }
 
-func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.Object {
-	var res client.Object
+func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) client.Object {
+	raw := []byte(strObj)
 
-	var typ runtime.TypeMeta
-
-	err := yaml.Unmarshal([]byte(obj), &typ)
+	metaType := new(runtime.TypeMeta)
+	err := yaml.Unmarshal(raw, metaType)
 	require.NoError(suite.T(), err)
 
-	switch typ.Kind {
-	case "ModuleSource":
-		var ms v1alpha1.ModuleSource
-		err = yaml.Unmarshal([]byte(obj), &ms)
-		require.NoError(suite.T(), err)
-		res = &ms
+	var obj client.Object
 
-	case "ModuleRelease":
-		var mr v1alpha1.ModuleRelease
-		err = yaml.Unmarshal([]byte(obj), &mr)
+	switch metaType.Kind {
+	case v1alpha1.ModuleSourceGVK.Kind:
+		source := new(v1alpha1.ModuleSource)
+		err = yaml.Unmarshal(raw, source)
 		require.NoError(suite.T(), err)
-		res = &mr
-		suite.testMRName = mr.Name
+		obj = source
 
-	case "ModuleUpdatePolicy":
-		var mup v1alpha2.ModuleUpdatePolicy
-		err = yaml.Unmarshal([]byte(obj), &mup)
+	case v1alpha1.ModuleReleaseGVK.Kind:
+		release := new(v1alpha1.ModuleRelease)
+		err = yaml.Unmarshal(raw, release)
 		require.NoError(suite.T(), err)
-		res = &mup
+		obj = release
+		suite.testMRName = release.Name
+
+	case v1alpha2.ModuleUpdatePolicyGVK.Kind:
+		policy := new(v1alpha2.ModuleUpdatePolicy)
+		err = yaml.Unmarshal(raw, policy)
+		require.NoError(suite.T(), err)
+		obj = policy
+
+	case v1alpha1.ModuleGVK.Kind:
+		module := new(v1alpha1.Module)
+		err = yaml.Unmarshal(raw, module)
+		require.NoError(suite.T(), err)
+		obj = module
 
 	case "Secret":
-		var sec corev1.Secret
-		err = yaml.Unmarshal([]byte(obj), &sec)
+		secret := new(corev1.Secret)
+		err = yaml.Unmarshal(raw, secret)
 		require.NoError(suite.T(), err)
-		res = &sec
+		obj = secret
 	}
 
-	return res
+	return obj
 }
 
 func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) string {
@@ -692,6 +700,14 @@ func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1
 	return release
 }
 
+func (suite *ReleaseControllerTestSuite) getModule(name string) *v1alpha1.Module {
+	module := new(v1alpha1.Module)
+	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, module)
+	require.NoError(suite.T(), err)
+
+	return module
+}
+
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
@@ -709,6 +725,15 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 
 	for _, release := range releases.Items {
 		got, _ := yaml.Marshal(release)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	modules := new(v1alpha1.ModuleList)
+	require.NoError(suite.T(), suite.client.List(context.TODO(), modules))
+
+	for _, module := range modules.Items {
+		got, _ := yaml.Marshal(module)
 		result.WriteString("---\n")
 		result.Write(got)
 	}

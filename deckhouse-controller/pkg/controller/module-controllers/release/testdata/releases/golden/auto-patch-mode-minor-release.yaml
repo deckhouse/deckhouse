@@ -42,3 +42,20 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'ModuleRelease could not be applied, release postponed: see details in
+      the module release v1.27.0'
+    reason: ReleaseDeployTimeCheck
+    status: "false"
+    type: LastReleaseDeployed

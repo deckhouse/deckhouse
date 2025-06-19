@@ -96,3 +96,19 @@ status:
   pullDuration: 9m15s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: upmeter
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'Latest release succesfully deployed: see details in the module release
+      v1.71.0'
+    status: "true"
+    type: LastReleaseDeployed

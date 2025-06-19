@@ -17,6 +17,7 @@ package ctrlutils
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,10 +85,20 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 			}
 
 			if options.statusUpdate {
-				return c.Status().Update(ctx, obj)
+				err := c.Status().Update(ctx, obj)
+				if err != nil {
+					return fmt.Errorf("status update: %w", err)
+				}
+
+				return nil
 			}
 
-			return c.Update(ctx, obj)
+			err := c.Update(ctx, obj)
+			if err != nil {
+				return fmt.Errorf("update: %w", err)
+			}
+
+			return nil
 		})
 	})
 }

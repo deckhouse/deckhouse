@@ -153,3 +153,12 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: echo
+  resourceVersion: "999"
+properties: {}
+status: {}
