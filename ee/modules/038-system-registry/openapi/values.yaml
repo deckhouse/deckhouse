@@ -252,7 +252,7 @@ properties:
                       type: string
                     password:
                       type: string
-              hash:
+              version:
                 type: string
           state:
             type: object
@@ -265,7 +265,7 @@ properties:
                   properties:
                     processed:
                       type: integer
-                      format: int64
+                      format: int
                     items:
                       type: array
                       items:
@@ -291,16 +291,10 @@ properties:
                     last_attempt:
                       type: string
                       format: date-time
-          status:
-            type: object
-            default: {}
-            properties:
-              hash:
+              version:
                 type: string
               ready:
                 type: boolean
                 default: false
               message:
                 type: string
-
-

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/ettle/strcase"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,7 +36,7 @@ var _ = sdk.RegisterFunc(
 		Queue: "/modules/system-registry/checker",
 		Schedule: []go_hook.ScheduleConfig{
 			{
-				Name:    "checker",
+				Name:    "checker loop every 10 sec",
 				Crontab: "*/10 * * * * *", // every 10 sec
 
 			},
@@ -114,21 +113,21 @@ var _ = sdk.RegisterFunc(
 		},
 	},
 	func(input *go_hook.HookInput) error {
-		startTime := time.Now()
 		paramsAccessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
-		stateAccessor := helpers.NewValuesAccessor[State](input, "systemRegistry.internal.checker.state")
+		stateAccessor := helpers.NewValuesAccessor[stateModel](input, "systemRegistry.internal.checker.state")
 
 		state := stateAccessor.Get()
 
-		inputs := Inputs{
-			Params: prepareParams(paramsAccessor.Get()),
+		params, err := prepareParams(paramsAccessor.Get())
+		if err != nil {
+			return fmt.Errorf("cannot prepare params: %w", err)
 		}
-		paramsAccessor.Set(inputs.Params) // testing
+		paramsAccessor.Set(params) // testing
 
+		inputs := inputsModel{
+			Params: params,
+		}
 		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
-
-		var err error
-
 		inputs.ImagesInfo.DeckhouseImages, err = helpers.SnapshotToSingle[deckhouseImagesModel](input, deckhouseDeploymentSnapName)
 		if err != nil {
 			return fmt.Errorf("cannot get deckhouse deployment snapshot: %w", err)
@@ -139,24 +138,11 @@ var _ = sdk.RegisterFunc(
 			return fmt.Errorf("cannot get modules images: %w", err)
 		}
 
-		if err := state.process(inputs); err != nil {
+		if err := state.Process(input.Logger, inputs); err != nil {
 			return err
 		}
 
-		var imagesCount int64
-		for _, v := range state.Queues {
-			imagesCount += int64(len(v.Items)) + int64(len(v.Retry))
-		}
-
 		stateAccessor.Set(state)
-
-		executionDuration := time.Since(startTime)
-		input.Logger.Warn(
-			"ImageChecker Run",
-			"images.count", imagesCount,
-			"execution.start", startTime,
-			"execution.duration", executionDuration.String(),
-		)
 
 		return nil
 	},
@@ -206,33 +192,40 @@ func getModulesImagesDigests(input *go_hook.HookInput) (map[string]string, error
 	return digests, nil
 }
 
-func prepareParams(value Params) Params {
-	repoRef1, err := gcr_name.NewRepository("fake-registry.local/flant/deckhouse")
-	if err != nil {
-		panic(err)
-	}
-
-	repoRef2, err := gcr_name.NewRepository("test-registry.local/flant/dkp")
-	if err != nil {
-		panic(err)
-	}
-
-	repos := map[string]gcr_name.Repository{
-		"fake": repoRef1,
-		"test": repoRef2,
-	}
-
+func prepareParams(value Params) (Params, error) {
 	if value.Registries == nil {
 		value.Registries = make(map[string]RegistryParams)
+
+		repoRef1, err := gcr_name.NewRepository("fake-registry.local/flant/deckhouse")
+		if err != nil {
+			return value, fmt.Errorf("cannot parse repo1")
+		}
+
+		repoRef2, err := gcr_name.NewRepository("test-registry.local/flant/dkp")
+		if err != nil {
+			return value, fmt.Errorf("cannot parse repo2")
+		}
+
+		repos := map[string]gcr_name.Repository{
+			"fake": repoRef1,
+			"test": repoRef2,
+		}
+
+		for k, v := range repos {
+			item := value.Registries[k]
+
+			item.Address = v.Registry.Name()
+			item.Scheme = strings.ToUpper(v.Registry.Scheme())
+
+			value.Registries[k] = item
+		}
+
+		value.Version = ""
+		value.Version, err = helpers.ComputeHash(value)
+		if err != nil {
+			return value, fmt.Errorf("cannot compute version: %w", err)
+		}
 	}
-	for k, v := range repos {
-		item := value.Registries[k]
 
-		item.Address = v.Registry.Name()
-		item.Scheme = strings.ToUpper(v.Registry.Scheme())
-
-		value.Registries[k] = item
-	}
-
-	return value
+	return value, nil
 }
