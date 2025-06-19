@@ -127,9 +127,9 @@ const (
 )
 
 type CEFEncoding struct {
-	DeviceVendor  string `json:"device_vendor,omitempty"`
-	DeviceProduct string `json:"device_product,omitempty"`
-	DeviceVersion string `json:"device_version,omitempty"`
+	DeviceVendor  string `json:"deviceVendor,omitempty"`
+	DeviceProduct string `json:"deviceProduct,omitempty"`
+	DeviceVersion string `json:"deviceVersion,omitempty"`
 }
 
 type CommonEncoding struct {
