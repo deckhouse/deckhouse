@@ -99,6 +99,34 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		if spec.Encoding.CEF.DeviceVersion != "" {
 			deviceVersion = spec.Encoding.CEF.DeviceVersion
 		}
+		extensions := map[string]string{
+			"message":   "message",
+			"timestamp": "timestamp",
+			"node":      "node",
+			"host":      "host",
+			"pod":       "pod",
+			"podip":     "pod_ip",
+			"namespace": "namespace",
+			"image":     "image",
+			"container": "container",
+			"podowner":  "pod_owner",
+		}
+
+		keys := make([]string, 0, len(cspec.ExtraLabels))
+		for key := range cspec.ExtraLabels {
+			keys = append(keys, key)
+		}
+
+		sort.Strings(keys)
+		for _, k := range keys {
+			if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
+				dataField := validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
+				extensions[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
+			} else {
+				extensions[k] = cspec.ExtraLabels[k]
+			}
+		}
+
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
 			Version:            "V1",
@@ -108,33 +136,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 			DeviceEventClassID: "Log event",
 			Name:               "cef.name",
 			Severity:           "cef.severity",
-			Extensions: map[string]string{
-				"message":   "message",
-				"timestamp": "timestamp",
-				"node":      "node",
-				"host":      "host",
-				"pod":       "pod",
-				"podip":     "pod_ip",
-				"namespace": "namespace",
-				"image":     "image",
-				"container": "container",
-				"podowner":  "pod_owner",
-			},
-		}
-		var dataField string
-		keys := make([]string, 0, len(cspec.ExtraLabels))
-		for key := range cspec.ExtraLabels {
-			keys = append(keys, key)
-		}
-
-		sort.Strings(keys)
-		for _, k := range keys {
-			if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-				dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-				encoding.CEF.Extensions[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-			} else {
-				encoding.CEF.Extensions[k] = cspec.ExtraLabels[k]
-			}
+			Extensions:         extensions,
 		}
 	}
 
