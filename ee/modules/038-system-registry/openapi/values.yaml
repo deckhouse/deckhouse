@@ -291,3 +291,16 @@ properties:
                     last_attempt:
                       type: string
                       format: date-time
+          status:
+            type: object
+            default: {}
+            properties:
+              hash:
+                type: string
+              ready:
+                type: boolean
+                default: false
+              message:
+                type: string
+
+
