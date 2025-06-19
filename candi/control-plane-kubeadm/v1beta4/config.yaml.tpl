@@ -34,12 +34,10 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
-clusterName: {{ .clusterConfiguration.clusterName | default "kubernetes" }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki
 certificateValidityPeriod: 8760h0m0s
 caCertificateValidityPeriod: 87600h0m0s
-imageRepository: {{ .clusterConfiguration.imageRepository | default "registry.k8s.io" }}
 encryptionAlgorithm: {{ .clusterConfiguration.encryptionAlgorithm }}
 networking:
   serviceSubnet: {{ .clusterConfiguration.serviceSubnetCIDR | quote }}
@@ -142,6 +140,24 @@ apiServer:
       value: email
     - name: oidc-issuer-url
       value: {{ .apiserver.oidcIssuerURL }}
+    {{- end }}
+    {{ if .apiserver.webhookURL }}
+    - name: authorization-mode
+      value: Node,Webhook,RBAC
+    - name: authorization-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookURL }}
+    - name: authentication-token-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookCacheTTL }}
+    - name: authentication-token-webhook-cache-ttl
+      value: {{.apiserver.authnWebhookCacheTTL | quote }}
+    {{- end -}}
+    {{ if .apiserver.auditWebhookURL }}
+    - name: audit-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
     {{- end }}
     - name: profiling
       value: "false"
