@@ -22,6 +22,7 @@ import (
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
+	registryswither "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
@@ -32,16 +33,17 @@ const (
 	valuesPath    = "systemRegistry.internal.orchestrator"
 	SubmoduleName = "orchestrator"
 
-	configSnapName          = "config"
-	stateSnapName           = "state"
-	registrySecretSnapName  = "registry-secret"
-	pkiSnapName             = "pki"
-	secretsSnapName         = "secrets"
-	usersSnapName           = "users"
-	nodeServicesSnapName    = "node-services"
-	inClusterProxySnapName  = "incluster-proxy"
-	registryServiceSnapName = "registry-service"
-	bashibleSnapName        = "bashible"
+	configSnapName               = "config"
+	stateSnapName                = "state"
+	registrySecretSnapName       = "registry-secret"
+	pkiSnapName                  = "pki"
+	secretsSnapName              = "secrets"
+	usersSnapName                = "users"
+	nodeServicesSnapName         = "node-services"
+	inClusterProxySnapName       = "incluster-proxy"
+	registryServiceSnapName      = "registry-service"
+	bashibleSnapName             = "bashible"
+	registrySecretModuleSnapName = "registry-secret-module"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -118,6 +120,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		users.KubernetsConfig(usersSnapName),
 		registryservice.KubernetsConfig(registryServiceSnapName),
 		inclusterproxy.KubernetesConfig(inClusterProxySnapName),
+		registryswither.KubernetesConfig(registrySecretModuleSnapName),
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
@@ -221,6 +224,19 @@ func handle(input *go_hook.HookInput) error {
 	inputs.Bashible, err = bashible.InputsFromSnapshot(input, bashibleSnapName)
 	if err != nil {
 		return fmt.Errorf("get Bashible snapshot error: %w", err)
+	}
+
+	inputs.RegistrySwitcher, err = registryswither.InputsFromSnapshot(input, registrySecretModuleSnapName)
+	if err != nil {
+		return fmt.Errorf("get RegistrySecretModule snapshot error: %w", err)
+	}
+
+	// Get global registry values for registry-secret module
+	inputs.RegistrySwitcher.GlobalRegistryValues = registryswither.GlobalRegistryValues{
+		Address: input.Values.Get("global.modulesImages.registry.address").String(),
+		Scheme:  input.Values.Get("global.modulesImages.registry.scheme").String(),
+		CA:      input.Values.Get("global.modulesImages.registry.CA").String(),
+		Path:    input.Values.Get("global.modulesImages.registry.path").String(),
 	}
 
 	values.Hash, err = helpers.ComputeHash(inputs)

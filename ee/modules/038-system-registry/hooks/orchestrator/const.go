@@ -20,6 +20,7 @@ const (
 	ConditionTypeBashiblePreflightCheck  = "ContainerdConfigPreflightReady"
 	ConditionTypeBashibleTransitionStage = "TransitionContainerdConfigReady"
 	ConditionTypeBashibleFinalStage      = "FinalContainerdConfigReady"
+	ConditionTypeDeckhouseRegistrySwitch = "DeckhouseRegistrySwitchReady"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"
@@ -35,6 +36,7 @@ var supportedConditions = map[string]struct{}{
 	ConditionTypeBashiblePreflightCheck:  {},
 	ConditionTypeBashibleTransitionStage: {},
 	ConditionTypeBashibleFinalStage:      {},
+	ConditionTypeDeckhouseRegistrySwitch: {},
 }
 
 var _ error = ErrTransitionNotSupported{}

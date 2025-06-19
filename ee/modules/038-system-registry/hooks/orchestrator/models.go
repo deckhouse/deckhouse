@@ -13,6 +13,7 @@ import (
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
+	registryswither "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
@@ -35,13 +36,14 @@ type Inputs struct {
 	RegistrySecret  deckhouse_registry.Config
 	IngressClientCA *x509.Certificate // optional
 
-	PKI             pki.Inputs
-	Secrets         secrets.Inputs
-	Users           users.Inputs
-	NodeServices    nodeservices.Inputs
-	InClusterProxy  inclusterproxy.Inputs
-	RegistryService registryservice.Inputs
-	Bashible        bashible.Inputs
+	PKI              pki.Inputs
+	Secrets          secrets.Inputs
+	Users            users.Inputs
+	NodeServices     nodeservices.Inputs
+	InClusterProxy   inclusterproxy.Inputs
+	RegistryService  registryservice.Inputs
+	Bashible         bashible.Inputs
+	RegistrySwitcher registryswither.Inputs
 }
 
 type Values struct {

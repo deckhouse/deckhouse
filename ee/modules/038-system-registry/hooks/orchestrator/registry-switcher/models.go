@@ -3,7 +3,7 @@ Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package deckhouseregistry
+package registryswitcher
 
 import (
 	"errors"
@@ -15,11 +15,36 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
 )
 
+var (
+	failedResult = Result{
+		Ready:   false,
+		Message: "Failed to switch....",
+	}
+)
+
 type Params struct {
 	RegistrySecret deckhouse_registry.Config
 
 	ManagedMode   *ManagedModeParams
 	UnmanagedMode *UnmanagedModeParams
+}
+
+type Inputs struct {
+	DeckhouseDeployment  DeckhouseDeploymentStatus
+	GlobalRegistryValues GlobalRegistryValues
+}
+
+type GlobalRegistryValues struct {
+	Address string
+	Scheme  string
+	CA      string
+	Path    string
+}
+
+type DeckhouseDeploymentStatus struct {
+	IsExist  bool
+	IsReady  bool
+	ReadyMsg string
 }
 
 type ManagedModeParams struct {
@@ -40,17 +65,60 @@ type State struct {
 	Config deckhouse_registry.Config `json:"-"`
 }
 
-func (s *State) Process(params Params) (bool, error) {
+type Result struct {
+	Ready   bool
+	Message string
+}
+
+func (s *State) Process(params Params, inputs Inputs) (Result, error) {
 	newSecret, err := buildRegistrySecret(params)
 	if err != nil {
-		return false, fmt.Errorf("cannot build deckhouse-registry secret: %w", err)
+		return failedResult, fmt.Errorf("cannot build deckhouse-registry secret: %w", err)
 	}
 	s.Config = newSecret
+	return s.processResult(params, inputs), nil
+}
 
-	if newSecret.Equal(&params.RegistrySecret) {
-		return true, nil
+func (s *State) processResult(params Params, inputs Inputs) Result {
+	// First check if secret is ready
+	secretReady := s.Config.Equal(&params.RegistrySecret)
+	if !secretReady {
+		return Result{
+			Ready:   false,
+			Message: "Waiting secret update",
+		}
 	}
-	return false, nil
+
+	// Compare global values with expected values
+	if inputs.GlobalRegistryValues.Address != s.Config.Address ||
+		inputs.GlobalRegistryValues.Scheme != s.Config.Scheme ||
+		inputs.GlobalRegistryValues.CA != s.Config.CA ||
+		inputs.GlobalRegistryValues.Path != s.Config.Path {
+		return Result{
+			Ready:   false,
+			Message: "Waiting global vars update",
+		}
+	}
+
+	// Check deployment exist
+	if !inputs.DeckhouseDeployment.IsExist {
+		return Result{
+			Ready:   false,
+			Message: "Deckhouse deployment is not exist",
+		}
+	}
+
+	// Check deployment ready
+	if !inputs.DeckhouseDeployment.IsReady {
+		return Result{
+			Ready:   false,
+			Message: inputs.DeckhouseDeployment.ReadyMsg,
+		}
+	}
+	return Result{
+		Ready:   true,
+		Message: "Switch is ready",
+	}
 }
 
 func buildRegistrySecret(params Params) (deckhouse_registry.Config, error) {

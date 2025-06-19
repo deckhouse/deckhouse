@@ -19,8 +19,8 @@ import (
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
-	registrysecret "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-secret"
 	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
+	registryswitcher "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
@@ -32,15 +32,15 @@ type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
 
-	PKI             pki.State            `json:"pki,omitempty"`
-	Secrets         secrets.State        `json:"secrets,omitempty"`
-	Users           users.State          `json:"users,omitempty"`
-	NodeServices    nodeservices.State   `json:"node_services,omitempty"`
-	InClusterProxy  inclusterproxy.State `json:"in_cluster_proxy,omitempty"`
-	IngressEnabled  bool                 `json:"ingress_enabled,omitempty"`
-	RegistryService registryservice.Mode `json:"registry_service,omitempty"`
-	Bashible        bashible.State       `json:"bashible,omitempty"`
-	RegistrySecret  registrysecret.State `json:"-"`
+	PKI             pki.State              `json:"pki,omitempty"`
+	Secrets         secrets.State          `json:"secrets,omitempty"`
+	Users           users.State            `json:"users,omitempty"`
+	NodeServices    nodeservices.State     `json:"node_services,omitempty"`
+	InClusterProxy  inclusterproxy.State   `json:"in_cluster_proxy,omitempty"`
+	IngressEnabled  bool                   `json:"ingress_enabled,omitempty"`
+	RegistryService registryservice.Mode   `json:"registry_service,omitempty"`
+	Bashible        bashible.State         `json:"bashible,omitempty"`
+	RegistrySecret  registryswitcher.State `json:"-"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -175,9 +175,9 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 			},
 		},
 	}
-	registrySecretParams := registrysecret.Params{
+	registrySecretParams := registryswitcher.Params{
 		RegistrySecret: inputs.RegistrySecret,
-		ManagedMode: &registrysecret.ManagedModeParams{
+		ManagedMode: &registryswitcher.ManagedModeParams{
 			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
 			Username: state.Users.RO.UserName,
 			Password: state.Users.RO.Password,
@@ -212,12 +212,12 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	// Registry service
 	state.RegistryService = registryservice.ModeNodeServices
 
-	// Deckhouse-registry secret
-	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
+	// Update Deckhouse-registry secret and wait
+	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
 	if err != nil {
 		return err
 	}
-	if !processedRegistrySecret {
+	if !processedRegistrySwitcher {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
@@ -304,9 +304,9 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 			},
 		},
 	}
-	registrySecretParams := registrysecret.Params{
+	registrySecretParams := registryswitcher.Params{
 		RegistrySecret: inputs.RegistrySecret,
-		ManagedMode: &registrysecret.ManagedModeParams{
+		ManagedMode: &registryswitcher.ManagedModeParams{
 			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
 			Username: state.Users.RO.UserName,
 			Password: state.Users.RO.Password,
@@ -338,12 +338,12 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// Registry service
 	state.RegistryService = registryservice.ModeNodeServices
 
-	// Deckhouse-registry secret
-	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
+	// Update Deckhouse-registry secret and wait
+	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
 	if err != nil {
 		return err
 	}
-	if !processedRegistrySecret {
+	if !processedRegistrySwitcher {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
@@ -431,9 +431,9 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			},
 		},
 	}
-	registrySecretParams := registrysecret.Params{
+	registrySecretParams := registryswitcher.Params{
 		RegistrySecret: inputs.RegistrySecret,
-		ManagedMode: &registrysecret.ManagedModeParams{
+		ManagedMode: &registryswitcher.ManagedModeParams{
 			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
 			Username: inputs.Params.UserName,
 			Password: inputs.Params.Password,
@@ -470,12 +470,12 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	// Registry service
 	state.RegistryService = registryservice.ModeInClusterProxy
 
-	// Deckhouse-registry secret
-	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
+	// Update Deckhouse-registry secret and wait
+	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
 	if err != nil {
 		return err
 	}
-	if !processedRegistrySecret {
+	if !processedRegistrySwitcher {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
@@ -544,9 +544,9 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 			},
 		}
 
-		registrySecretParams := registrysecret.Params{
+		registrySecretParams := registryswitcher.Params{
 			RegistrySecret: inputs.RegistrySecret,
-			UnmanagedMode: &registrysecret.UnmanagedModeParams{
+			UnmanagedMode: &registryswitcher.UnmanagedModeParams{
 				ImagesRepo: unmanagedParams.ImagesRepo,
 				Scheme:     unmanagedParams.Scheme,
 				CA:         unmanagedParams.CA,
@@ -565,15 +565,16 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 			return nil
 		}
 
-		// Deckhouse-registry secret
-		processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
+		// Update Deckhouse-registry secret and wait
+		processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
 		if err != nil {
 			return err
 		}
-		if !processedRegistrySecret {
+		if !processedRegistrySwitcher {
 			state.setReadyCondition(false, inputs)
 			return nil
 		}
+
 		state.Bashible.UnmanagedParams = nil
 	}
 
@@ -825,6 +826,31 @@ func (state *State) cleanupInClusterProxy(inputs Inputs) bool {
 	})
 
 	return true
+}
+
+func (state *State) processRegistrySwitcher(params registryswitcher.Params, inputs Inputs) (bool, error) {
+	// Update Deckhouse-registry secret and wait
+	result, err := state.RegistrySecret.Process(params, inputs.RegistrySwitcher)
+	if err != nil {
+		return false, err
+	}
+	if !result.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeDeckhouseRegistrySwitch,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            result.Message,
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeDeckhouseRegistrySwitch,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+	return true, nil
 }
 
 func (state *State) cleanupUsupportedConditions() {

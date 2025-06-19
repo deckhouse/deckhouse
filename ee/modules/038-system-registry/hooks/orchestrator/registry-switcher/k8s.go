@@ -1,9 +1,9 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package inclusterproxy
+package registryswitcher
 
 import (
 	"fmt"
@@ -17,11 +17,6 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
-const (
-	versionAnnotation = "registry.deckhouse.io/version"
-	deploymentName    = "registry-incluster-proxy"
-)
-
 func KubernetesConfig(name string) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:              name,
@@ -29,21 +24,19 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 		Kind:              "Deployment",
 		NamespaceSelector: helpers.NamespaceSelector,
 		NameSelector: &types.NameSelector{
-			MatchNames: []string{deploymentName},
+			MatchNames: []string{"deckhouse"},
 		},
 		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-			var d appsv1.Deployment
-			err := sdk.FromUnstructured(obj, &d)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert deployment \"%s\" to struct: %v", obj.GetName(), err)
+			var deployment appsv1.Deployment
+			if err := sdk.FromUnstructured(obj, &deployment); err != nil {
+				return nil, fmt.Errorf("failed to convert deckhouse deployment to struct: %w", err)
 			}
 
-			readyMsg, isReady := helpers.AssessDeploymentStatus(&d)
-			ret := Inputs{
+			readyMsg, isReady := helpers.AssessDeploymentStatus(&deployment)
+			ret := DeckhouseDeploymentStatus{
 				IsExist:  true,
 				IsReady:  isReady,
 				ReadyMsg: readyMsg,
-				Version:  d.Annotations[versionAnnotation],
 			}
 			return ret, nil
 		},
@@ -51,5 +44,22 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 }
 
 func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
-	return helpers.SnapshotToSingle[Inputs](input, name)
+	deployment, err := helpers.SnapshotToSingle[DeckhouseDeploymentStatus](input, name)
+	if err != nil {
+		// If no deployment found, it's not ready
+		if err == helpers.ErrNoSnapshot {
+			return Inputs{
+				DeckhouseDeployment: DeckhouseDeploymentStatus{
+					IsExist:  false,
+					IsReady:  false,
+					ReadyMsg: "Deckhouse deployment not found",
+				},
+			}, nil
+		}
+		return Inputs{}, fmt.Errorf("get deckhouse deployment snapshot error: %w", err)
+	}
+
+	return Inputs{
+		DeckhouseDeployment: deployment,
+	}, nil
 }
