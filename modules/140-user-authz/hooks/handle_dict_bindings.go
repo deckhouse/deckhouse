@@ -95,7 +95,7 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 
 		for _, subject := range parsed.Subjects {
 			if subject.Kind == "ServiceAccount" && subject.Namespace == "" {
-				subject.Namespace = "test"
+				subject.Namespace = parsed.Namespace
 			}
 			subjects[stringBySubject(subject)] = subject
 		}
