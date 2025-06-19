@@ -98,7 +98,7 @@ apiServer:
     - name: audit-log-truncate-enabled
       value: "true"
     - name: audit-log-maxage
-      value: "7"
+      value: "30"
     - name: audit-log-maxsize
       value: "100"
     - name: audit-log-maxbackup
