@@ -104,7 +104,7 @@ spec:
                     apiVersion: v1
                     resource: deployment
                     subresource: prometheus-metrics
-                    name: https-metrics
+                    name: vpa-updater
         ports:
           - containerPort: 4204
             name: https-metrics
