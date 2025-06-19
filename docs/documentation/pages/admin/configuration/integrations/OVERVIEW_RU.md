@@ -20,13 +20,13 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 - OpenStack;
 - Amazon Web Services (AWS);
 - Microsoft Azure;
-- Huawei Cloud;
-- Dynamix;
 - Google Cloud Platform (GCP).
 
 Возможна интеграция с [частными облаками,](./private/overview.html) развёрнутыми с использованием следующих решений:
 - VK Cloud;
 - OpenStack;
+- Huawei Cloud;
+- Dynamix;
 - Deckhouse Virtualization.
 
 Помимо облачных провайдеров поддерживается интеграция со следующими [системами виртуализации](./virtualization/overview.html):
