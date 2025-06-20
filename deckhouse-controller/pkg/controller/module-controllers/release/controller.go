@@ -389,7 +389,9 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	pendingReleaseFound := false
 	for _, rel := range moduleReleases.Items {
-		if rel.Status.Phase == v1alpha1.ModuleReleasePhasePending {
+		// if pending release version is lower than deployed
+		// it will be skipped later in reconcile cycle
+		if rel.Status.Phase == v1alpha1.ModuleReleasePhasePending && release.GetVersion().GreaterThan(rel.GetVersion()) {
 			pendingReleaseFound = true
 		}
 	}
@@ -760,8 +762,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	err = r.ApplyRelease(ctx, release, task)
 	if err != nil {
-		logger.Error("apply predicted release", log.Err(err))
-
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
@@ -1090,9 +1090,9 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
-		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, module config validation failed", "ReleaseConfigValidationCheck", false)
-		if err != nil {
-			return nil, fmt.Errorf("update module last release deployed status: %w", err)
+		moduleErr := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, module config validation failed", "ReleaseConfigValidationCheck", false)
+		if moduleErr != nil {
+			return nil, fmt.Errorf("update module last release deployed status: %w", moduleErr)
 		}
 
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)

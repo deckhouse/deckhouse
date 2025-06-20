@@ -258,6 +258,23 @@ func (m *Module) SetConditionFalse(condName, reason, message string) {
 	})
 }
 
+func (m *Module) RemoveCondition(condName string) {
+	for idx, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			// If there's only one element, simply make the slice empty
+			if len(m.Status.Conditions) == 1 {
+				m.Status.Conditions = []ModuleCondition{}
+				return
+			}
+
+			// Remove the element at idx by shifting all the elements after it
+			m.Status.Conditions = append(m.Status.Conditions[:idx], m.Status.Conditions[idx+1:]...)
+
+			return
+		}
+	}
+}
+
 func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 	for _, cond := range m.Status.Conditions {
 		if cond.Type == ModuleConditionEnabledByModuleConfig && cond.Status == corev1.ConditionFalse {
