@@ -23,3 +23,11 @@
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- define "nvidia_gpu_enabled" }}
+  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+    {{- if ($ng).gpu }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
