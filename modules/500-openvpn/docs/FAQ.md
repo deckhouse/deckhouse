@@ -2,7 +2,7 @@
 title: "The openvpn module: FAQ"
 ---
 
-## Why doesn't automatic DNS server configuration work when connecting to macOS and Linux using the OpenVPN client?
+## Why doesn't automatic DNS server configuration work when connecting to macOS and Linux using the OpenVPN client
 
 Due to the architectural features of the Linux and macOS operating systems, automatic DNS server configuration when using the official OpenVPN client is not possible.
 
@@ -30,54 +30,63 @@ For macOS, you can use a [third-party script](https://github.com/andrewgdotcom/o
 Scripts must have execution permissions.
 {% endalert %}
 
-## How to revoke, rotate or delete a user certificate?
+## How to revoke, rotate or delete a user certificate
 
-All actions with user certificates are performed from the `openvpn-admin` web interface by clicking on the buttons located to the right of each user.
+All operations with client certificates are performed via the openvpn-admin web interface. Buttons for managing certificates are available to the right of each user's name:
+
 ![Actions with an active user](../../images/openvpn/active_user.png)
 
-You can rotate a certificate or delete a user only after revoking it.
+To rotate (issue a new certificate) or delete a client, you must first revoke their current certificate:
+
 ![Actions with a revoked user](../../images/openvpn/revoked_user.png)
 
-## How to rotate a server certificate?
+Once revoked, the Renew (rotation) and Delete (removal) actions become available.
 
-The server certificate is rotated automatically N days before the expiration date.
+## How to rotate a server certificate
 
-To force rotation, you need to do the following:
-* Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`
+The server certificate is rotated automatically several days before it expires.
 
-```shell
-kubectl -n d8-openvpn delete secrets openvpn-pki-server
-```
+If you need to rotate the certificate manually (e.g., due to certificate corruption or an unscheduled replacement), follow these steps:
 
-* Restart openvpn pods
+1. Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`:
 
-```shell
-kubectl -n d8-openvpn rollout restart sts openvpn
-```
+   ```shell
+   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   ```
 
-## How to rotate a root certificate (CA)?
+1. Restart the OpenVPN pods to trigger the generation of a new certificate:
 
-The OpenVPN root certificate is used to issue certificates for the server and all users.
-For this reason, when replacing the root certificate, you need to reissue all specified certificates.
+   ```shell
+   kubectl -n d8-openvpn rollout restart sts openvpn
+   ```
 
-To rotate, you need to do the following:
-* [Revoke or delete](#how-to-revoke-rotate-or-delete-a-user-certificate) all active user certificates.
-If you revoke user, you can renew the user certificate after replacing the root certificate. In this case, you don't need to recreate users.
-* Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`
+A new certificate will be generated automatically when the pods start.
 
-```shell
-kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
-```
+## How to rotate a root certificate (CA)
 
-* Restart OpenVPN pods
+The root certificate (CA) is used to sign all certificates in OpenVPN — both server and client. Therefore, when replacing the CA, you must reissue all dependent certificates.
 
-```shell
-kubectl -n d8-openvpn rollout restart sts openvpn
-```
+Steps to rotate the root certificate:
 
-* [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
-* Delete all revoked certificates
+1. [Revoke or delete](#how-to-revoke-rotate-or-delete-a-user-certificate) all active client certificates using the openvpn-admin web interface.
+If you choose to revoke certificates, you can rotate them later (Renew) after the CA is replaced, without recreating the clients.
 
-```shell
-kubectl -n d8-openvpn delete secrets -l revokedForever=true
-```
+1. Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`:
+
+   ```shell
+   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   ```
+
+1. Restart OpenVPN pods:
+
+   ```shell
+   kubectl -n d8-openvpn rollout restart sts openvpn
+   ```
+
+1. [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
+
+1. Delete all revoked certificate secrets:
+
+   ```shell
+   kubectl -n d8-openvpn delete secrets -l revokedForever=true
+   ```
