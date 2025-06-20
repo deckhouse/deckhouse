@@ -5819,13 +5819,14 @@ alerts:
       description: |-
         The OpenVPN client certificate for **{{ $labels.client }}** has expired.
 
-        Check the certificate information and make sure it actually expires.
+        Check the certificate information and make sure it actually expires:
+
         ```shell
         kubectl -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
 
         Renew or delete the expired certificate.
-        Check [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
       summary: |
         OpenVPN client certificate expired for {{ $labels.client }}
       severity: "4"
@@ -5839,9 +5840,10 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
-        View certificate details to display the exact expiration date.
+        View certificate details to display the exact expiration date:
+
         ```shell
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
@@ -5858,9 +5860,10 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
-        View certificate details to display the exact expiration date.
+        View certificate details to display the exact expiration date:
+
         ```shell
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
@@ -5919,7 +5922,7 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
+      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
       summary: |
         OpenVPN CA certificate expires in less than 7 days.
       severity: "5"
@@ -5929,7 +5932,7 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```                              "
+      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```                              "
       summary: |
         OpenVPN CA certificate expires in less than 30 days.
       severity: "5"
