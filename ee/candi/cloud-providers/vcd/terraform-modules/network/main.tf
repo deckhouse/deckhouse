@@ -3,6 +3,7 @@
 
 locals {
   useNSXT = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
+  edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -21,7 +22,7 @@ resource "vcd_network_routed_v2" "network" {
   org  = var.providerClusterConfiguration.organization
   name = var.providerClusterConfiguration.mainNetwork
 
-  edge_gateway_id = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
+  edge_gateway_id = local.edgeGatewayId
 
   gateway       = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
