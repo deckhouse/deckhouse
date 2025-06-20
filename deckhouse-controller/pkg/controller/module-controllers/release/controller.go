@@ -1272,7 +1272,7 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		condMessage := msg
 
-		// if not successfull - see for details in the module release
+		// if not successful - see for details in the module release
 		if !conditionState {
 			condMessage = fmt.Sprintf("%s: see details in the module release v%s", msg, mr.GetVersion().String())
 		}

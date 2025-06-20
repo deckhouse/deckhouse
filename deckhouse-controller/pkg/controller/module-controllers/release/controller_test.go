@@ -754,14 +754,6 @@ func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1
 	return release
 }
 
-func (suite *ReleaseControllerTestSuite) getModule(name string) *v1alpha1.Module {
-	module := new(v1alpha1.Module)
-	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, module)
-	require.NoError(suite.T(), err)
-
-	return module
-}
-
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
