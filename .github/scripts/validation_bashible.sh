@@ -179,6 +179,6 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -e config=config.yaml \
   --entrypoint=bash \
   ${REGISTRY}/deckhouse/ee/install:stable - || dockerExit=1
-dhctl config render bashible-bundle --bundle-name ubuntu-lts --config $config
+dhctl config render bashible-bundle --config $config
 SCRIPT_END
 exit $dockerExit
