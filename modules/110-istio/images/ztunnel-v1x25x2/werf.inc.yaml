@@ -34,7 +34,6 @@ shell:
   - strip /src/ztunnel/out/rust/release/ztunnel
   - mkdir -p /src/ztunnel/bin
   - mv /src/ztunnel/out/rust/release/ztunnel /src/ztunnel/bin/ztunnel
-  - rm -rf /src/ztunnel/.git
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
