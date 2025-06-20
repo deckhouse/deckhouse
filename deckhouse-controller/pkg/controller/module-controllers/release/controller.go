@@ -309,7 +309,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 				slog.String("source", release.GetModuleSource()),
 			).Debug("result of handle deployed release", log.Err(err))
 
-			return res, nil
+			return res, err
 		}
 
 		return res, nil
@@ -335,7 +335,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			slog.String("source", release.GetModuleSource()),
 		).Debug("result of handle pending release", log.Err(err))
 
-		return res, nil
+		return res, err
 	}
 
 	return res, nil
@@ -622,10 +622,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
-	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	if release.GetForce() {
 		logger.Warn("forced release found")
 
@@ -668,6 +664,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			logger.Warn("await order status update ", log.Err(err))
 		}
 
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
+		logger.Debug("module is not ready, waiting")
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
