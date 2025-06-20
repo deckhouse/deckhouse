@@ -119,6 +119,7 @@ apiVersions:
         enum:
         - "Containerd"
         - "NotManaged"
+        - "ContainerdV2"
         default: "Containerd"
       kubernetesVersion:
         type: string
