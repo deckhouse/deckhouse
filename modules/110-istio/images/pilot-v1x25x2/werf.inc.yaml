@@ -34,6 +34,9 @@ import:
   add: /src/istio
   to: /src/istio
   before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
