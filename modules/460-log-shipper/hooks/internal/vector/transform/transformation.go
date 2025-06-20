@@ -25,60 +25,71 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-type module interface {
-	getTransform() apis.LogTransform
-}
-
-func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
+func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
-	var module module
-	for _, tm := range tms {
+	var transformation apis.LogTransform
+	var err error
+	for num, tm := range tms {
 		switch tm.Action {
-		case "normalizeLabelKeys":
-			module = normalizeLabelKeys{}
-		case "ensureStructuredMessage":
-			module = ensureStructuredMessage{targetField: tm.TargetField}
-		case "dropLabels":
-			if len(tm.Labels) > 0 {
-				module = dropLabels{labels: tm.Labels}
+		case "ReplaceDotKeys":
+			if len(tm.ReplaceDotKeys.Labels) > 0 {
+				transformation = normalizeKeys(num, tm.ReplaceDotKeys)
+			}
+		case "EnsureStructuredMessage":
+			if tm.EnsureStructuredMessage.SourceFormat != "" {
+				transformation, err = ensureStructuredMessage(num, tm.EnsureStructuredMessage)
+				if err != nil {
+					return nil, err
+				}
+			}
+		case "DropLabels":
+			if len(tm.DropLabels.Labels) > 0 {
+				transformation = dropLabels(num, tm.DropLabels)
 			}
 		default:
-			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
+			return nil, fmt.Errorf("transformions: action %s not valide", tm.Action)
 		}
-		lofTransform := module.getTransform()
-		transforms = append(transforms, lofTransform)
+		transforms = append(transforms, transformation)
 	}
 	return transforms, nil
 }
 
-type normalizeLabelKeys struct{}
-
-func (nlk normalizeLabelKeys) getTransform() apis.LogTransform {
+func normalizeKeys(num int, r v1alpha1.ReplaceDotKeysSpec) apis.LogTransform {
 	var vrl string
-	name := "tf_normolazeLabelKeys"
-	vrl = "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
+	name := fmt.Sprintf("tf_replaceDotKeys_%s_%d", splitAndremoveDot(r.Labels), num)
+	labels := checkFixDotPrefix(r.Labels)
+	for _, l := range labels {
+		vrl = fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}", l, l, l)
+	}
 	return NewTransformation(name, vrl)
 }
 
-type ensureStructuredMessage struct {
-	targetField string
-}
-
-func (esm ensureStructuredMessage) getTransform() apis.LogTransform {
+func ensureStructuredMessage(num int, e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := "tf_ensureStructuredMessage"
-	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", esm.targetField)
-	return NewTransformation(name, vrl)
+	name := fmt.Sprintf("tf_ensureStructuredMessage_%s_%d", e.SourceFormat, num)
+	switch e.SourceFormat {
+	case "String":
+		if e.String.TargetField == "" {
+			return nil, fmt.Errorf("transformions ensureStructuredMessage string: TargetField is empty")
+		}
+		vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", e.String.TargetField)
+	case "JSON":
+		if e.JSON.Depth == 0 {
+			return nil, fmt.Errorf("transformions ensureStructuredMessage JSON: Depth is empty")
+		}
+		vrl = fmt.Sprintf(".message = parse_json!(.message, max_depth: %d)\n", e.JSON.Depth)
+	case "Klog":
+		vrl = ".message = parse_json(.message) ?? parse_klog!(.message)\n"
+	default:
+		return nil, fmt.Errorf("transformions ensureStructuredMessage: sourceFormat %s not valide", e.SourceFormat)
+	}
+	return NewTransformation(name, vrl), nil
 }
 
-type dropLabels struct {
-	labels []string
-}
-
-func (d dropLabels) getTransform() apis.LogTransform {
+func dropLabels(num int, d v1alpha1.DropLabelsSpec) apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_delete_%s", splitAndremoveDot(d.labels))
-	labels := checkFixDotPrefix(d.labels)
+	name := fmt.Sprintf("tf_dropLabels_%s_%d", splitAndremoveDot(d.Labels), num)
+	labels := checkFixDotPrefix(d.Labels)
 	for _, l := range labels {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
