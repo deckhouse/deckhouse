@@ -2,17 +2,17 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  use_nsxt = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
+  useNSXT = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
-  count = local.use_nsxt ? 1 : 0
+  count = local.useNSXT ? 1 : 0
   org   = var.providerClusterConfiguration.organization
   name  = var.providerClusterConfiguration.edgeGatewayName
 }
 
 data "vcd_edgegateway" "gateway" {
-  count = local.use_nsxt ? 0 : 1
+  count = local.useNSXT ? 0 : 1
   org   = var.providerClusterConfiguration.organization
   name  = var.providerClusterConfiguration.edgeGatewayName
 }
@@ -21,7 +21,7 @@ resource "vcd_network_routed_v2" "network" {
   org  = var.providerClusterConfiguration.organization
   name = var.providerClusterConfiguration.mainNetwork
 
-  edge_gateway_id = local.use_nsxt ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
+  edge_gateway_id = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
 
   gateway       = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
