@@ -139,6 +139,9 @@ apiVersions:
         virtualApplicationName:
           description: |
             Имя VMware Cloud Director Virtual Application (принадлежащее Virtual Data Center).
+        edgeGatewayName:
+          description: |
+            Имя VMware Cloud Director Edge Gateway (принадлежащее Virtual Data Center).
         mainNetwork:
           description: |
             Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
@@ -147,6 +150,9 @@ apiVersions:
             Адресация для внутренней сети узлов кластера.
 
             Адреса распределяются начиная с десятого адреса. Например, если у вас подсеть `192.168.199.0/24`, адреса будут распределяться, начиная с `192.168.199.10`.
+        internalNetworkDNSServers:
+          description: |
+            Список адресов рекурсивных DNS внутренней сети.
         layout:
           description: |
             Способ размещения ресурсов в облаке.
