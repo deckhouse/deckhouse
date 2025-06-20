@@ -1,4 +1,5 @@
 name: local-path-provisioner
+critical: true
 subsystems:
   - infrastructure
 namespace: d8-local-path-provisioner
