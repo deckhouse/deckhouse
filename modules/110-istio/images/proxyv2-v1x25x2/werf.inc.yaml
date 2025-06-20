@@ -262,7 +262,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
