@@ -685,6 +685,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			logger.Warn("module release status update failed", log.Err(err))
 		}
 
+		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, awaiting for deployed release be ready", "ReleaseDeployedIsNotReady", false)
+		if err != nil {
+			return res, fmt.Errorf("update module last release deployed status: %w", err)
+		}
+
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 

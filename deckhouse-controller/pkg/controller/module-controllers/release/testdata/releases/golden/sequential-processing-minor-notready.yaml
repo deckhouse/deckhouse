@@ -129,6 +129,14 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: upmeter
-  resourceVersion: "999"
+  resourceVersion: "1000"
 properties: {}
-status: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'ModuleRelease could not be applied, awaiting for deployed release be
+      ready: see details in the module release v1.72.0'
+    reason: ReleaseDeployedIsNotReady
+    status: "False"
+    type: LastReleaseDeployed

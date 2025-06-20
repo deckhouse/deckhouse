@@ -118,3 +118,9 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: upmeter
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
