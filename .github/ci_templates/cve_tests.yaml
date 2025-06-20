@@ -56,7 +56,7 @@ remove_labels:
     echo "REF=${{ github.event.inputs.pull_request_ref }}"
     PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
     echo "PR_NUMBER=$PR_NUMBER"
-    echo "TAG=$PR_NUMBER" >> $GITHUB_ENV
+    echo "TAG=pr$PR_NUMBER" >> $GITHUB_ENV
 # </template: exctract_pr_number>
 {!{- end -}!}
 {!{ define "cve_scan_deckhouse_images" }!}
@@ -65,7 +65,7 @@ remove_labels:
   run: |
     if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
       echo "SCAN_TARGET=only_main" >> $GITHUB_ENV
-    elif [ "${{ github.event_name }}" == "pull_request" ]; then
+    elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.pull_request_ref }}" ]; then
       echo "SCAN_TARGET=pr" >> $GITHUB_ENV
     elif [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
       echo "SCAN_TARGET=regular" >> $GITHUB_ENV
