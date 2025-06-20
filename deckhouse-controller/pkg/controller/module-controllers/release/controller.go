@@ -38,7 +38,6 @@ import (
 	cp "github.com/otiai10/copy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -395,6 +394,8 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 			pendingReleaseFound = true
 		}
 	}
+
+	r.dependencyContainer.GetClock().Now()
 
 	if !pendingReleaseFound {
 		err = r.updateModuleLastReleaseDeployedStatus(ctx, release, "", "", true)
@@ -1341,42 +1342,11 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 			condMessage = fmt.Sprintf("%s: see details in the module release v%s", msg, mr.GetVersion().String())
 		}
 
-		var newState corev1.ConditionStatus
 		if conditionState {
-			newState = corev1.ConditionTrue
+			module.SetConditionTrue(v1alpha1.ModuleConditionLastReleaseDeployed, v1alpha1.WithTimer(r.dependencyContainer.GetClock().Now))
 		} else {
-			newState = corev1.ConditionFalse
+			module.SetConditionFalse(v1alpha1.ModuleConditionLastReleaseDeployed, reason, condMessage, v1alpha1.WithTimer(r.dependencyContainer.GetClock().Now))
 		}
-
-		for idx, cond := range module.Status.Conditions {
-			if cond.Type == v1alpha1.ModuleConditionLastReleaseDeployed {
-				module.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: r.dependencyContainer.GetClock().Now()}
-
-				if cond.Status != newState {
-					module.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: r.dependencyContainer.GetClock().Now()}
-					module.Status.Conditions[idx].Status = newState
-				}
-
-				if cond.Reason != reason {
-					module.Status.Conditions[idx].Reason = reason
-				}
-
-				if cond.Message != condMessage {
-					module.Status.Conditions[idx].Message = condMessage
-				}
-
-				return nil
-			}
-		}
-
-		module.Status.Conditions = append(module.Status.Conditions, v1alpha1.ModuleCondition{
-			Type:               v1alpha1.ModuleConditionLastReleaseDeployed,
-			Status:             newState,
-			Reason:             reason,
-			Message:            condMessage,
-			LastProbeTime:      metav1.Time{Time: r.dependencyContainer.GetClock().Now()},
-			LastTransitionTime: metav1.Time{Time: r.dependencyContainer.GetClock().Now()},
-		})
 
 		return nil
 	})

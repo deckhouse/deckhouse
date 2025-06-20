@@ -461,7 +461,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		}
 
-		module.RemoveCondition(v1alpha1.ModuleReleaseLabelDeployed)
+		module.SetConditionUnknown(v1alpha1.ModuleReleaseLabelDeployed, "", "")
 
 		return true
 	})
