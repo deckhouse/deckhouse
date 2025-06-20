@@ -521,6 +521,14 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	var res ctrl.Result
 
+	logger := r.log.With(
+		slog.String("module_name", release.GetModuleName()),
+		slog.String("release_name", release.GetName()),
+		slog.String("source", release.GetModuleSource()),
+	)
+
+	logger.Debug("handle pending release")
+
 	var modulesChangedReason string
 	defer func() {
 		if modulesChangedReason != "" {
@@ -545,12 +553,12 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			})
 
 			if err := r.updateReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); err != nil {
-				r.log.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
+				logger.Error("failed to update release status", log.Err(err))
 
 				return res, err
 			}
 
-			r.log.Error("failed to get update policy", slog.String("policy", policyName), log.Err(err))
+			logger.Error("failed to get update policy", slog.String("policy", policyName), log.Err(err))
 
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
@@ -558,7 +566,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		// TODO(ipaqsa): remove it
 		if policy.Spec.Update.Mode == v1alpha1.ModuleUpdatePolicyModeIgnore {
 			if err := r.updateReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); err != nil {
-				r.log.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
+				logger.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
 				return res, err
 			}
@@ -580,12 +588,12 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	// parse notification config from the deckhouse-discovery secret
 	config, err := utils.GetNotificationConfig(ctx, r.client)
 	if err != nil {
-		r.log.Error("failed to parse the notification config", log.Err(err))
+		logger.Error("failed to parse the notification config", log.Err(err))
 
 		return res, err
 	}
 
-	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, r.log)
+	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, logger)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {
@@ -597,11 +605,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	if release.GetForce() {
-		r.log.Warn("forced release found")
+		logger.Warn("forced release found")
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
 		if err = r.ApplyRelease(ctx, release, task); err != nil {
-			r.log.Error("apply forced release", log.Err(err))
+			logger.Error("apply forced release", log.Err(err))
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
@@ -615,36 +623,42 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	case releaseUpdater.Process:
 		// pass
 	case releaseUpdater.Skip:
+		logger.Debug("skip pending release")
+
 		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSkipped,
 			Message: task.Message,
 		})
 		if err != nil {
-			r.log.Warn("skip order status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("skip order status update ", slog.String("release", release.GetName()), log.Err(err))
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 
 		return res, nil
 	case releaseUpdater.Await:
+		logger.Debug("await pending release")
+
 		err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
 			Message: task.Message,
 		})
 		if err != nil {
-			r.log.Warn("await order status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("await order status update ", slog.String("release", release.GetName()), log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, r.log)
+	logger.Debug("process pending release")
+
+	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
 			Message: err.Error(),
 		})
 		if updateErr != nil {
-			r.log.Warn("create release checker status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("create release checker status update ", slog.String("release", release.GetName()), log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -671,7 +685,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			Message: strings.Join(msgs, ";"),
 		})
 		if err != nil {
-			r.log.Warn("met requirements status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("met requirements status update ", slog.String("release", release.GetName()), log.Err(err))
 		}
 
 		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, not met requirements", "ReleaseRequirementsCheck", false)
@@ -681,6 +695,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
+
+	logger.Debug("requirements checks passed")
 
 	us := &releaseUpdater.Settings{
 		NotificationConfig: config,
@@ -696,9 +712,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	logger.Debug("pre apply checks passed")
+
 	err = r.ApplyRelease(ctx, release, task)
 	if err != nil {
-		r.log.Error("apply predicted release", log.Err(err))
+		logger.Error("apply predicted release", log.Err(err))
 
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
@@ -709,6 +727,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	modulesChangedReason = "a new module release deployed"
+
+	logger.Debug("module release deployed")
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
