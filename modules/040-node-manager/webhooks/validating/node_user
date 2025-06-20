@@ -51,6 +51,7 @@ function __main__() {
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
   operation=$(context::jq -r '.review.request.operation')
+  passwordHash=$(context::jq -r '.review.request.object.spec.passwordHash')
 
   snapshots=$(context::jq -cr '[.snapshots.nodeUsers[].filterResult]')
   if [ "$operation" = "UPDATE" ]; then
@@ -79,6 +80,13 @@ EOF
       return 0
     fi
   done
+
+if [ -z "$passwordHash" ] || [ "$passwordHash" = "null" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed": true, "warnings": ["Password hash is empty. This may not be secure and it may be prohibited by PAM settings."] }
+EOF
+      return 0
+  fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
