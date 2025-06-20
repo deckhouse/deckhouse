@@ -182,7 +182,7 @@ fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
+fromImage: builder/golang-bookworm
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
