@@ -5848,7 +5848,7 @@ alerts:
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
-        OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
       severity: "5"
       markupFormat: markdown
     - name: OpenVPNClientCertificateExpired
@@ -5868,7 +5868,7 @@ alerts:
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
-        OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
       severity: "5"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpired
