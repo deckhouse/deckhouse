@@ -557,10 +557,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
-	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	if release.GetForce() {
 		r.log.Warn("forced release found")
 
@@ -596,6 +592,27 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		})
 		if err != nil {
 			r.log.Warn("await order status update ", slog.String("release", release.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
+		r.log.Debug("module is not ready, waiting")
+
+		drs := &v1alpha1.ModuleReleaseStatus{
+			Phase: v1alpha1.ModuleReleasePhasePending,
+		}
+
+		drs.Message = "awaiting for module to be ready"
+
+		if task.DeployedReleaseInfo != nil {
+			drs.Message = fmt.Sprintf("awaiting for module v%s to be ready", task.DeployedReleaseInfo.Version.String())
+		}
+
+		updateErr := r.updateReleaseStatus(ctx, release, drs)
+		if updateErr != nil {
+			r.log.Warn("module release status update failed", log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
