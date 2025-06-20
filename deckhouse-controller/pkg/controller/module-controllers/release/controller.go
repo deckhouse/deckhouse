@@ -301,7 +301,18 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{}, nil
 
 	case v1alpha1.ModuleReleasePhaseDeployed:
-		return r.handleDeployedRelease(ctx, release)
+		res, err := r.handleDeployedRelease(ctx, release)
+		if err != nil {
+			r.log.With(
+				slog.String("module_name", release.GetModuleName()),
+				slog.String("release_name", release.GetName()),
+				slog.String("source", release.GetModuleSource()),
+			).Debug("result of handle deployed release", log.Err(err))
+
+			return res, nil
+		}
+
+		return res, nil
 	}
 
 	// if module pull override exists, don't process pending release, to avoid fs override
@@ -322,7 +333,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			slog.String("module_name", release.GetModuleName()),
 			slog.String("release_name", release.GetName()),
 			slog.String("source", release.GetModuleSource()),
-		).Debug("result of handle pendingrelease", log.Err(err))
+		).Debug("result of handle pending release", log.Err(err))
 
 		return res, nil
 	}
