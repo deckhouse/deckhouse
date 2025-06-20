@@ -123,7 +123,7 @@ secrets:
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
   - rm -rf /tmp/bazel-cache/.git
   - mkdir -p /tmp/bazel-deps
   - git lfs install
