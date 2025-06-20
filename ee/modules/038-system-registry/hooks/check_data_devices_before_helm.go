@@ -13,6 +13,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
@@ -49,6 +51,15 @@ func filterRegistryDataDeviceNodes(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 func handleRegistryDataDeviceNodes(input *go_hook.HookInput) error {
+	orchestratorTargetMode := registry_const.ToModeType(
+		input.Values.Get("systemRegistry.internal.orchestrator.target_mode").String())
+
+	// If the orchestrator is in direct or unmanaged mode, we do not need to check for data devices.
+	// In these modes, the there is no system registry instance, so no data devices are required.
+	if orchestratorTargetMode == registry_const.ModeDirect || orchestratorTargetMode == registry_const.ModeUnmanaged {
+		return nil
+	}
+
 	clusterType, ok := input.Values.GetOk("global.clusterConfiguration.clusterType")
 	if !ok {
 		return fmt.Errorf("Cluster type 'global.clusterConfiguration.clusterType' not found")

@@ -28,6 +28,10 @@ global:
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
+systemRegistry:
+  internal:
+    orchestrator:
+      target_mode: "Local"
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)
@@ -131,6 +135,44 @@ metadata:
 				node := f.KubernetesResource("Node", "", "missing-static-node")
 				Expect(node.Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("With Cloud cluster without devices and in Direct mode", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.clusterType", "Cloud")
+			f.ValuesSet("systemRegistry.internal.orchestrator.target_mode", "Direct")
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: cloud-node-001
+`, 1))
+			f.RunHook()
+		})
+
+		It("Should correctly identify nodes with registry data device labels in Cloud cluster", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("With Cloud cluster without devices and in Unmanaged mode", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.clusterType", "Cloud")
+			f.ValuesSet("systemRegistry.internal.orchestrator.target_mode", "Unmanaged")
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: cloud-node-001
+`, 1))
+			f.RunHook()
+		})
+
+		It("Should correctly identify nodes with registry data device labels in Cloud cluster", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 })
