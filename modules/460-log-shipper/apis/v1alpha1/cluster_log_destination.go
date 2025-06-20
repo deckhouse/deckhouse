@@ -126,8 +126,15 @@ const (
 	EncodingCodecGELF   EncodingCodec = "GELF"
 )
 
+type CEFEncoding struct {
+	DeviceVendor  string `json:"deviceVendor,omitempty"`
+	DeviceProduct string `json:"deviceProduct,omitempty"`
+	DeviceVersion string `json:"deviceVersion,omitempty"`
+}
+
 type CommonEncoding struct {
 	Codec EncodingCodec `json:"codec"`
+	CEF   CEFEncoding   `json:"cef,omitempty"`
 }
 
 type LokiSpec struct {
