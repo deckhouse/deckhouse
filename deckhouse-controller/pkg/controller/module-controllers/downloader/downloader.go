@@ -173,6 +173,11 @@ func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion 
 
 // DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
 func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduletypes.Definition, error) {
+	log.Info("fetching module release",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+	)
+
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
@@ -319,7 +324,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
-	log.Info("fetching module release",
+	log.Info("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("releasechannel", releaseChannel),
 	)
