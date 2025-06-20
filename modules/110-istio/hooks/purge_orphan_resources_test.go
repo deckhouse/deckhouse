@@ -52,6 +52,16 @@ metadata:
   name: v1x16
   namespace: d8-istio
 `
+		istioYAML = `
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  finalizers:
+  - istio-finalizer.sailoperator.io
+  name: v1x16
+  namespace: d8-istio
+`
 		federationYAML = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -162,6 +172,16 @@ metadata:
 			Version: "v1alpha1",
 			Kind:    "IstioOperator",
 		}
+		istioGVR = schema.GroupVersionResource{
+			Group:    "sailoperator.io",
+			Version:  "v1",
+			Resource: "istios",
+		}
+		istioGVK = schema.GroupVersionKind{
+			Group:   "sailoperator.io",
+			Version: "v1",
+			Kind:    "Istio",
+		}
 		federationGVR = schema.GroupVersionResource{
 			Group:    "deckhouse.io",
 			Version:  "v1alpha1",
@@ -180,6 +200,7 @@ metadata:
 		mwc              *admissionregistrationv1.MutatingWebhookConfiguration
 		vwc              *admissionregistrationv1.ValidatingWebhookConfiguration
 		iop              *unstructured.Unstructured
+		istio            *unstructured.Unstructured
 		federation       *unstructured.Unstructured
 		multicluster     *unstructured.Unstructured
 		rootCert         *corev1.ConfigMap
@@ -188,6 +209,7 @@ metadata:
 	)
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(iopYAML), &iop)
+		_ = yaml.Unmarshal([]byte(istioYAML), &istio)
 		_ = yaml.Unmarshal([]byte(federationYAML), &federation)
 		_ = yaml.Unmarshal([]byte(multiclusterYAML), &multicluster)
 		_ = yaml.Unmarshal([]byte(nsYAML), &ns)
@@ -204,6 +226,7 @@ metadata:
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD(iopGVK.Group, iopGVK.Version, iopGVK.Kind, true)
+	f.RegisterCRD(istioGVK.Group, istioGVK.Version, istioGVK.Kind, true)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)   // cluster-scoped
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false) // cluster-scoped
 
@@ -259,6 +282,7 @@ metadata:
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), otherNs1, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Create(context.TODO(), iop, metav1.CreateOptions{})
+			_, _ = f.KubeClient().Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Create(context.TODO(), istio, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(federationGVR).Create(context.TODO(), federation, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(multiclusterGVR).Create(context.TODO(), multicluster, metav1.CreateOptions{})
 			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr1, metav1.CreateOptions{})
@@ -282,6 +306,7 @@ metadata:
 
 			// Verify namespace-scoped resources are deleted
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x16").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").Exists()).To(BeFalse())
 
 			// Verify other resources are deleted
@@ -293,6 +318,10 @@ metadata:
 			// Verify ConfigMaps are deleted
 			_, err = f.KubeClient().CoreV1().ConfigMaps(otherNs1.Name).Get(context.TODO(), "istio-ca-root-cert", metav1.GetOptions{})
 			Expect(err).To(HaveOccurred())
+
+			// Verify logs contain expected messages
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Finalizers from Istio/v1x16 in namespace d8-istio removed"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Istio/v1x16 deleted from namespace d8-istio"))
 		})
 	})
 })

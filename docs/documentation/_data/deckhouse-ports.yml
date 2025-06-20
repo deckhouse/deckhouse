@@ -222,6 +222,11 @@ groups:
     description:
       en: "monitoring-ping metrics"
       ru: "Метрики monitoring-ping"
+  - ports: "4286"
+    protocol: TCP
+    description:
+      en: Istio CNI metrics port
+      ru: Метрики Istio CNI
 
 - group: ExternalToMaster
   description:
