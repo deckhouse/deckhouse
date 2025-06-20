@@ -115,6 +115,13 @@ spec:
           - mountPath: /usr/bin/reconfigure-mig.sh
             name: mig-parted-reconfigure-script
             subPath: reconfigure-mig.sh
+          - mountPath: /usr/bin/prestop.sh
+            name: mig-parted-reconfigure-script
+            subPath: prestop.sh
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "bash", "-c", "/usr/bin/prestop.sh"]
       volumes:
       - name: host-root
         hostPath:

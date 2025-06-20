@@ -459,6 +459,7 @@ data:
         exit_code=1
       fi
 
+      rm -f /processing
       echo "Uncordon node"
       kubectl uncordon "${NODE_NAME}"
       kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
@@ -813,6 +814,7 @@ data:
       exit_failed
     fi
 
+    touch /processing
     echo "Cordon node"
     kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule
 
@@ -971,4 +973,13 @@ data:
     fi
 
     exit_success
+  prestop.sh: |
+    #!/usr/bin/bash
+    
+    if stat /processing > /dev/null 2>&1
+    then
+      kubectl uncordon "${NODE_NAME}"
+      kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
+      kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
+    fi
 {{- end }}
