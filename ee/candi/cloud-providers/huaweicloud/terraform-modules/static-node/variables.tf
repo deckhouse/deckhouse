@@ -72,3 +72,7 @@ variable "node_group_name" {
 variable "subnet" {
   type = string
 }
+
+variable "enterprise_project_id" {
+  type = string
+}
