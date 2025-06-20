@@ -7,6 +7,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
+{{- if semverCompare "<= 1.32" .clusterConfiguration.kubernetesVersion -}}
+  {{ $featureGates = list $featureGates "InPlacePodVerticalScaling=true" | join "," -}}
+{{- end -}}
 
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration

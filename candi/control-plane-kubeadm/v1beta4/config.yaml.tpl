@@ -2,11 +2,12 @@
 RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
-{{- $featureGatesList := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+
+{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
 {{- if semverCompare "<= 1.32" .clusterConfiguration.kubernetesVersion -}}
-  {{ $featureGatesList = append $featureGatesList "InPlacePodVerticalScaling=true" -}}
+  {{ $featureGates = list $featureGates "InPlacePodVerticalScaling=true" | join "," -}}
 {{- end -}}
-{{- $featureGates := $featureGatesList | join "," -}}
+
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
