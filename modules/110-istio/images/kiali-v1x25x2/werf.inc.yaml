@@ -53,7 +53,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
 final: false
-from: {{ .Images.BASE_NODE_20_ALPINE }}
+fromImage: builder/node-alpine
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
