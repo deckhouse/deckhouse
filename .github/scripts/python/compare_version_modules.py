@@ -26,6 +26,8 @@ def regctl(command_list):
     return completed_process.stdout
 
 
+dangerous_modules = ["controlPlaneManager", "ingressNginx.controller"]
+
 image_from = os.getenv("IMAGE_FROM")
 image_to = os.getenv("IMAGE_TO")
 
@@ -74,8 +76,17 @@ for module, images in digests_unique.items():
 
 results.sort()
 
+dangerous_results = [i for i in results if any(m in i for m in dangerous_modules)]
+
+if len(dangerous_results != 0):
+    print("Found possibly dangerous changes in following module images:")
+    print(*dangerous_results, sep="\n")
+
 if len(results) != 0:
     print("Found changes in following module images:")
     print(*results, sep="\n")
 else:
     print("No changed module images found.")
+
+if len(dangerous_results != 0):
+    exit(1)

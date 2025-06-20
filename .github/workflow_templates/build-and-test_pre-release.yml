@@ -300,3 +300,4 @@ jobs:
           else
             echo "No released versions exist. Skipping."
           fi
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
