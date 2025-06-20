@@ -26,10 +26,25 @@ spec:
       username: test
       password: test
   transformations:
-    - action: NormalizeLabelKeys
-    - action: EnsureStructuredMessage
-      targetField: text
-    - action: DropLabels
+  - action: ReplaceDotKeys
+    replaceDotKeys:
       labels:
-      - first
-      - .second
+        - pod_labels
+  - action: EnsureStructuredMessage
+    ensureStructuredMessage:
+      sourceFormat: String
+      string:
+        targetField: text
+  - action: EnsureStructuredMessage
+    ensureStructuredMessage:
+      sourceFormat: JSON
+      json:
+        depth: 1
+  - action: EnsureStructuredMessage
+    ensureStructuredMessage:
+      sourceFormat: Klog
+  - action: DropLabels
+    dropLabels:
+      labels: 
+        - first
+        - .second

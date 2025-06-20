@@ -26,22 +26,32 @@ import (
 
 var testCases = []struct {
 	name string
-	in   v1alpha1.Transform
+	in   v1alpha1.TransformationSpec
 	out  string
 }{
-	{"fixNestedJson label message", v1alpha1.Transform{Action: "EnsureStructuredMessage", TargetField: "text"},
+	{"EnsureStructuredMessage String Format", v1alpha1.TransformationSpec{Action: "EnsureStructuredMessage",
+		EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{SourceFormat: "String",
+			String: v1alpha1.SourceFormatStringSpec{TargetField: "text"}}},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
-	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
+	{"EnsureStructuredMessage JSON Format ", v1alpha1.TransformationSpec{Action: "EnsureStructuredMessage",
+		EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{SourceFormat: "JSON",
+			JSON: v1alpha1.SourceFormatJSONSpec{Depth: 1}}},
+		".message = parse_json!(.message, max_depth: 1)\n"},
+	{"EnsureStructuredMessage Klog Format", v1alpha1.TransformationSpec{Action: "EnsureStructuredMessage",
+		EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{SourceFormat: "Klog"}},
+		".message = parse_json(.message) ?? parse_klog!(.message)\n"},
+	{"DropLabels", v1alpha1.TransformationSpec{Action: "DropLabels",
+		DropLabels: v1alpha1.DropLabelsSpec{Labels: []string{"first", "second"}}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
-	// {"delZero", v1alpha1.Transform{Action: "DropLabels", Labels: []string{}}, ""},
-	{"replaceDot", v1alpha1.Transform{Action: "NormalizeLabelKeys"},
+	{"ReplaceDotKeys", v1alpha1.TransformationSpec{Action: "ReplaceDotKeys",
+		ReplaceDotKeys: v1alpha1.ReplaceDotKeysSpec{Labels: []string{"pod_labels"}}},
 		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
 }
 
 func TestReplaceDot(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			tr, err := BuildModes([]v1alpha1.Transform{test.in})
+			tr, err := BuildModes([]v1alpha1.TransformationSpec{test.in})
 			if err != nil {
 				t.Error(err)
 			}
