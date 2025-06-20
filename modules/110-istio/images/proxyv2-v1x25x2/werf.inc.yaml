@@ -116,8 +116,7 @@ import:
   to: /src/proxy
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
