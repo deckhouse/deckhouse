@@ -1,6 +1,6 @@
 ---
 image: install-standalone-builder-content
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 final: false
 git:
 - add: /
@@ -15,7 +15,7 @@ import:
 ---
 image: install-standalone-builder
 final: false
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 import:
 - image: install-standalone-builder-content
   add: /
