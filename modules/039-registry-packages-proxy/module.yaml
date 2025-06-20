@@ -1,4 +1,5 @@
 name: registry-packages-proxy
+critical: true
 weight: 39
 subsystems:
   - infrastructure
