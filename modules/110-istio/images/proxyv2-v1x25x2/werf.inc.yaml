@@ -185,8 +185,7 @@ image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 fromImage: builder/golang-bookworm
 final: false
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
   add: /usr/local/go
