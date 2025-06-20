@@ -1,5 +1,5 @@
 ---
-title: "Модуль embedded-registry: настройка"
+title: "Модуль system-registryy: настройка"
 description: ""
 ---
 

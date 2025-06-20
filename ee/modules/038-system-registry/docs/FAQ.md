@@ -1,4 +1,4 @@
 ---
-title: "Module embedded-registry: FAQ"
+title: "Module system-registry: FAQ"
 description: ""
 ---

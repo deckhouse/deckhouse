@@ -1,5 +1,5 @@
 ---
-title: "Модуль embedded-registry"
+title: "Модуль system-registry"
 description: ""
 ---
 

@@ -1,4 +1,4 @@
 ---
-title: "Module embedded-registry: examples"
+title: "Module system-registry: examples"
 description: ""
 ---

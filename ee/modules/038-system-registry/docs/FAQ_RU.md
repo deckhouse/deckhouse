@@ -1,5 +1,5 @@
 ---
-title: "Модуль embedded-registry: FAQ"
+title: "Модуль system-registry: FAQ"
 description: ""
 ---
 

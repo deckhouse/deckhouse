@@ -1,5 +1,5 @@
 ---
-title: "Module embedded-registry: configuration"
+title: "Module system-registry: configuration"
 description: ""
 ---
 

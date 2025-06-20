@@ -1,5 +1,5 @@
 ---
-title: "Модуль embedded-registry: примеры"
+title: "Модуль system-registry: примеры"
 description: ""
 ---
 
