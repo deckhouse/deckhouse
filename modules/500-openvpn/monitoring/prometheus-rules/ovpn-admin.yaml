@@ -63,19 +63,19 @@
           kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```
 
-    - alert: OpenVPNServerCertificateExpiringInAWeek
-      expr: ovpn_server_cert_expire < 7
-      for: 1h
+    - alert: OpenVPNServerCertificateExpiresTomorrow
+      expr: ovpn_server_cert_expire == 1
+      for: 1m
       labels:
-        severity_level: "5"
+        severity_level: "4"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: OpenVPN server certificate expires in less than 7 days.
+        summary: OpenVPN server certificate will expire tomorrow.
         description: |-
-          The OpenVPN server certificate is set to expire in {{ $value }} days.
+          The OpenVPN server certificate is set to expire in less than 1 day.
 
-          OpenVPN server certificate renews automatically X days before expiration.  
+          OpenVPN server certificate renews automatically 1 days before expiration.  
           Automatic rotation did not work.  
           Check the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
 
@@ -97,7 +97,7 @@
         description: |-
           The OpenVPN server certificate has expired.
 
-          OpenVPN server certificate renews automatically X days before expiration.  
+          OpenVPN server certificate renews automatically 1 days before expiration.  
           Automatic rotation did not work.  
           Check the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
 
@@ -138,9 +138,41 @@
         plk_protocol_version: "1"
         summary: OpenVPN CA certificate expires in less than 7 days.
         description: |-
-          The OpenVPN CA certificate will expire in less than 7 days.
+          The OpenVPN CA certificate is set to expire in {{ $value }} days.
 
-          Immediate renewal is recommended.
+          Renew the CA certificate if necessary.
+          After renewing the certificate, **you will need to reissue all client and server certificates**.
+          Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```               
+
+    - alert: OpenVPNServerCACertificateExpiresTomorrow 
+      expr: ovpn_server_ca_cert_expire == 1
+      for: 10m
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate will expire tomorrow
+        description: |-
+
+          OpenVPN CA certificate renews automatically 1 days before expiration.  
+          Automatic rotation did not work.  
+          Check the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          kubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```       
+
+          The hook should rotate CA and server certificates before expiry.
+
 
     - alert: OpenVPNServerCACertificateExpired
       expr: ovpn_server_ca_cert_expire == 0
@@ -152,27 +184,14 @@
         plk_protocol_version: "1"
         summary: OpenVPN CA certificate has expired.
         description: |-
-          The OpenVPN CA certificate has expired.
+          OpenVPN CA certificate renews automatically 1 days before expiration.  
+          Automatic rotation did not work.  
+          Check the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
 
-          To restore VPN functionality, renew the expired certificate as soon as possible.
+          View certificate details to display the exact expiration date:
 
-    - alert: OpenVPNClientsNeedRenewDueToNewCA
-      expr: (ovpn_client_cert_expire <= 0) and ignoring(client) (ovpn_server_ca_cert_expire > 3650)
-      for: 5m
-      labels:
-        severity_level: "5"
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        summary: "Expired OpenVPN client certificate detected after CA renewal for {{ $labels.client }}"
-        description: |-
-          The OpenVPN client certificate for **{{ $labels.client }}** has expired, while current CA is valid for more than 10 years.
-
-          This likely indicates that the CA was recently rotated and client certificates need to be reissued.
-
-
-
-          View certificate details to display the exact expiration date.
           ```shell
-          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
-          ```
+          kubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```       
+
+          The hook should rotate CA and server certificates before expiry.
