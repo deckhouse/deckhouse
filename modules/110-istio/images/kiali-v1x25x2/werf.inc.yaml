@@ -36,6 +36,9 @@ import:
   add: /src/kiali
   to: /src/kiali
   before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
