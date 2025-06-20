@@ -117,6 +117,9 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
