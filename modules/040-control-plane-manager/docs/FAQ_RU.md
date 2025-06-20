@@ -651,8 +651,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Восстановите базу данных etcd.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
    ```
 
 1. Запустите etcd. Запуск может занять некоторое время.
@@ -661,6 +661,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
+
+1. Перезапустите control-plane узел кластера.
 
 <div id='восстановление-кластерa-multi-master'></div>
 
