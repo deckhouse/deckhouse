@@ -31,7 +31,11 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type etcdNode struct {
@@ -154,8 +158,14 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
-	for _, endpointRaw := range input.Snapshots["etcd_endpoints"] {
-		endpoint := endpointRaw.(*etcdInstance)
+	etcdEndpointsSnapshots := input.NewSnapshots.Get("etcd_endpoints")
+	for endpoint, err := range sdkobjectpatch.SnapshotIter[etcdInstance](etcdEndpointsSnapshots) {
+		if err != nil {
+			input.Logger.Error("failed to iterate over 'etcd_endpoints' snapshot", log.Err(err))
+			currentQuotaBytes = defaultEtcdMaxSize
+			nodeWithMaxQuota = "default"
+			break
+		}
 		quotaForInstance := endpoint.MaxDbSize
 		if quotaForInstance > currentQuotaBytes {
 			currentQuotaBytes = quotaForInstance
@@ -171,25 +181,31 @@ func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	return currentQuotaBytes, nodeWithMaxQuota
 }
 
-func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
+func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
 	if len(snapshots) == 0 {
-		return nil
+		return nil, fmt.Errorf("'master_nodes' snapshot is empty")
 	}
+	var nodeWithMinimalMemory *etcdNode
+	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](snapshots) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iterate over 'master_nodes' snapshot: %w", err)
+		}
 
-	node := snapshots[0].(*etcdNode)
-	for i := 1; i < len(snapshots); i++ {
-		n := snapshots[i].(*etcdNode)
+		if nodeWithMinimalMemory == nil {
+			nodeWithMinimalMemory = &node
+		}
+
 		// for not dedicated nodes we will not set new quota
-		if !n.IsDedicated {
-			return n
+		if !node.IsDedicated {
+			return &node, nil
 		}
 
-		if n.Memory < node.Memory {
-			node = n
+		if node.Memory < nodeWithMinimalMemory.Memory {
+			*nodeWithMinimalMemory = node
 		}
 	}
 
-	return node
+	return nodeWithMinimalMemory, nil
 }
 
 func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
@@ -224,10 +240,11 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 
 	input.Logger.Debug("Current etcd quota. Getting from node with max quota", slog.Int64("quota", currentQuotaBytes), slog.String("from", nodeWithMaxQuota))
 
-	snaps := input.Snapshots["master_nodes"]
-	node := getNodeWithMinimalMemory(snaps)
-	if node == nil {
-		input.Logger.Warn("Cannot get node with minimal memory")
+	masterNodeSnapshots := input.NewSnapshots.Get("master_nodes")
+	node, err := getNodeWithMinimalMemory(masterNodeSnapshots)
+
+	if err != nil {
+		input.Logger.Warn("Cannot get node with minimal memory", log.Err(err))
 		return currentQuotaBytes
 	}
 

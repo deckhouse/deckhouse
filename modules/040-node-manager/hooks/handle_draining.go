@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
@@ -133,12 +135,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
-	snap := input.Snapshots["nodes_for_draining"]
-	for _, s := range snap {
-		if s == nil {
+	dNodes := input.NewSnapshots.Get("nodes_for_draining")
+	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
+		if err != nil {
 			continue
 		}
-		dNode := s.(drainingNode)
 
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
 		if !exists {

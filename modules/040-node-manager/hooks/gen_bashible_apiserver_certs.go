@@ -25,6 +25,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
@@ -67,7 +69,7 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 	var cert certificate.Certificate
 	var err error
 
-	if len(input.Snapshots["secret"]) == 0 {
+	if len(input.NewSnapshots.Get("secret")) == 0 {
 		// No certificate in snapshot => generate a new one.
 		// Secret/bashible-api-server-tls will be updated by Helm.
 		cert, err = generateNewBashibleCert(input)
@@ -76,7 +78,12 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 		}
 	} else {
 		// Certificate is in the snapshot => load it.
-		cert = input.Snapshots["secret"][0].(certificate.Certificate)
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "secret")
+		if err != nil {
+			return err
+		}
+
+		cert = secrets[0]
 	}
 
 	// Note that []byte values will be encoded in base64. Use strings here!

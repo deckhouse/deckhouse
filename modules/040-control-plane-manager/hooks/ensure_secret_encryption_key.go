@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type SecretEncryptionKey []byte
@@ -81,14 +83,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, ensureEncryptionSecretKey)
 
 func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
-	keys, ok := input.Snapshots["secret_encryption_key"]
-
+	keys, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "secret_encryption_key")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'secret_encryption_key' snapshot: %w", err)
+	}
 	var secretKey []byte
-	if ok && len(keys) > 0 {
-		secretKey, ok = keys[0].([]byte)
-		if !ok {
-			return fmt.Errorf("cannot convert Kubernetes Secret to SecretEncryptionKey")
-		}
+	if len(keys) > 0 {
+		secretKey = keys[0]
 	}
 
 	if len(secretKey) == 0 {

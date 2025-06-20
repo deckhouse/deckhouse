@@ -37,6 +37,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -121,14 +123,12 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
-	snap := input.Snapshots["csr"]
-	for _, s := range snap {
-		if s == nil {
+	snaps := input.NewSnapshots.Get("csr")
+	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
+		if err != nil {
 			continue
 		}
 
-		csrInfo := s.(*CsrInfo)
 		if !csrInfo.Valid {
 			input.Logger.Warn("csr info not valid", slog.String(csrInfo.Name, csrInfo.ErrMsg))
 			continue

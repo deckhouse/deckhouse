@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,9 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -146,10 +151,12 @@ func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func calculateReplicasAndPatchMachineDeployment(
-	input *go_hook.HookInput, snap []go_hook.FilterResult, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) {
-	for _, sn := range snap {
-		md := sn.(setReplicasMachineDeployment)
-
+	input *go_hook.HookInput, snaps []pkg.Snapshot, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) {
+	for md, err := range sdkobjectpatch.SnapshotIter[setReplicasMachineDeployment](snaps) {
+		if err != nil {
+			input.Logger.Error("failed to iterate over snapshot", log.Err(err))
+			continue
+		}
 		ng, ok := nodeGroups[md.NodeGroup]
 		if !ok {
 			input.Logger.Warn("can't find NodeGroup to get min and max instances per zone", slog.String("name", md.NodeGroup))
@@ -190,14 +197,17 @@ func calculateReplicasAndPatchMachineDeployment(
 func handleSetReplicas(input *go_hook.HookInput) error {
 	nodeGroups := make(map[string]setReplicasNodeGroup)
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		ng := sn.(setReplicasNodeGroup)
+	snaps := input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[setReplicasNodeGroup](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		nodeGroups[ng.Name] = ng
 	}
 
-	calculateReplicasAndPatchMachineDeployment(input, input.Snapshots["mds"], nodeGroups, "machine.sapcloud.io/v1alpha1")
-	calculateReplicasAndPatchMachineDeployment(input, input.Snapshots["capi_mds"], nodeGroups, "cluster.x-k8s.io/v1beta1")
+	calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("mds"), nodeGroups, "machine.sapcloud.io/v1alpha1")
+	calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
 
 	return nil
 }

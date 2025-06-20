@@ -25,6 +25,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
@@ -58,15 +60,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, convertStaticClusterConfigurationHandler)
 
 func convertStaticClusterConfigurationHandler(input *go_hook.HookInput) error {
-	secret := input.Snapshots["static_cluster_configuration"]
+	secret, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "static_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'static_cluster_configuration' snapshot: %w", err)
+	}
 	if len(secret) == 0 {
 		return nil
 	}
 
-	staticConfiguration, ok := secret[0].([]byte)
-	if !ok {
-		return fmt.Errorf("static_cluster_configuration filterFunc problem: expect []byte, got %T", staticConfiguration)
-	}
+	staticConfiguration := secret[0]
 
 	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)
 	if err != nil {

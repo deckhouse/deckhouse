@@ -22,6 +22,10 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(
@@ -68,9 +72,12 @@ func updateControlPlane(input *go_hook.HookInput) error {
 			"externalManagedControlPlane": true,
 		},
 	}
+	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.NewSnapshots.Get("control_plane")) {
+		if err != nil {
+			input.Logger.Error("failed to iterate over 'control_plane' classes", log.Err(err))
+			continue
+		}
 
-	for _, snapshot := range input.Snapshots["control_plane"] {
-		controlPlane := snapshot.(controlPlane)
 		// patch status
 		input.PatchCollector.PatchWithMerge(statusPatch, controlPlane.APIVersion, controlPlane.Kind, controlPlane.Namespace, controlPlane.Name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}
