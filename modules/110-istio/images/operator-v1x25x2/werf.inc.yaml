@@ -45,7 +45,7 @@ shell:
   install:
   - cd /src/operator/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download
   - common/scripts/gobuild.sh /src/operator/out/ /src/operator/cmd/main.go
