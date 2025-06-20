@@ -98,9 +98,11 @@ data:
   kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
+  # Enable socket-based LB for E/W traffic
   bpf-lb-sock: "true"
   # required for service meshes (istio, linkerd, ...) to force opening sockets to original Service IPs
-  bpf-lb-sock-hostns-only: "true"
+  # FIXME Docs: Skip socket LB for services when inside a pod namespace, in favor of service LB at the pod interface. Socket LB is still used when in the host namespace. Required by service mesh (e.g., Istio, Linkerd).
+  bpf-lb-sock-hostns-only: "false"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
@@ -116,6 +118,9 @@ data:
   bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
+  {{- if .Values.cniCilium.extraLBAlghorhithmsEnabled }}
+  bpf-lb-algorithm-annotation: "true"
+  {{- end }}
 
   enable-session-affinity: "true"
   {{- if .Values.cniCilium.svcSourceRangeCheck }}
