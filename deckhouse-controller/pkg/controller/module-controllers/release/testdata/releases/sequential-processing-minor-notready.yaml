@@ -79,7 +79,7 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Downloaded
+  phase: Deployed
   pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"

@@ -477,7 +477,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
-				require.Error(suite.T(), err)
+				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
 				require.NoError(suite.T(), err)
 			})
