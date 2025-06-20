@@ -56,7 +56,6 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025.06.05.6"
 final: false
 shell:
   install:
