@@ -132,7 +132,7 @@ shell:
   
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
