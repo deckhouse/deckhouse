@@ -187,6 +187,107 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
+func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {
+	return func(input *go_hook.HookInput, dc dependency.Container) error {
+		if args.BeforeHookCheck != nil && !args.BeforeHookCheck(input) {
+			return nil
+		}
+
+		if err := storageClassChangeWithArgs(input, dc, args); err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Container, args Args) error {
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
+	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.NewSnapshots, "pvcs")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pvcs snapshot: %w", err)
+	}
+
+	pods, err := sdkobjectpatch.UnmarshalToStruct[Pod](input.NewSnapshots, "pods")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pods snapshot: %w", err)
+	}
+
+	findPodByPVCName := func(pvcName string) (Pod, error) {
+		for _, pod := range pods {
+			if pod.PVCName == pvcName {
+				return pod, nil
+			}
+		}
+
+		return Pod{}, fmt.Errorf("pod with volume name [%s] not found", pvcName)
+	}
+
+	for _, pvc := range pvcs {
+		if !pvc.IsDeleted {
+			continue
+		}
+
+		pod, err := findPodByPVCName(pvc.Name)
+		if err == nil {
+			// if someone deleted pvc then evict the pod.
+			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{
+				ObjectMeta: metav1.ObjectMeta{Name: pod.Name},
+			})
+			input.Logger.Info("evicting Pod due to PVC stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), slog.String("pvc_name", pvc.Name))
+
+			if err != nil {
+				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("name", pod.Name), log.Err(err))
+			}
+		}
+	}
+
+	var currentStorageClass string
+	if len(pvcs) > 0 {
+		currentStorageClass = pvcs[0].StorageClassName
+	}
+
+	effectiveStorageClass, err := calculateEffectiveStorageClass(input, args, currentStorageClass)
+	if err != nil {
+		return err
+	}
+
+	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
+		if !isEmptyOrFalseStr(currentStorageClass) {
+			for _, pvc := range pvcs {
+				input.Logger.Info("PVC StorageClass changed. Deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
+				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Error("failed to delete PVC", log.Err(err))
+				}
+			}
+		}
+
+		input.Logger.Info("StorageClass changed. Deleting objects", slog.String("namespace", args.Namespace), slog.String("object_kind", args.ObjectKind), slog.String("name", args.ObjectName))
+		switch args.ObjectKind {
+		case "Prometheus":
+			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{
+				Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com",
+			}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
+		case "StatefulSet":
+			err = kubeClient.AppsV1().StatefulSets(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
+		default:
+			input.Logger.Log(context.Background(), log.LevelFatal.Level(), "unknown object kind")
+			panic("unknown object kind")
+		}
+
+		if err != nil && !errors.IsNotFound(err) {
+			input.Logger.Error(err.Error())
+		}
+	}
+
+	return nil
+}
+
 // effective storage class is the target storage class. If it changes, the PVC will be recreated.
 func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, currentStorageClass string) (string, error) {
 	var effectiveStorageClass string
@@ -195,6 +296,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
 	}
+
 	for _, sc := range defaultSCs {
 		if sc.IsDefault {
 			effectiveStorageClass = sc.Name
@@ -247,90 +349,6 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 	return effectiveStorageClass, nil
 }
 
-func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Container, args Args) error {
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.NewSnapshots, "pvcs")
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal pvcs snapshot: %w", err)
-	}
-
-	pods, err := sdkobjectpatch.UnmarshalToStruct[Pod](input.NewSnapshots, "pods")
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal pods snapshot: %w", err)
-	}
-
-	findPodByPVCName := func(pvcName string) (Pod, error) {
-		for _, pod := range pods {
-			if pod.PVCName == pvcName {
-				return pod, nil
-			}
-		}
-		return Pod{}, fmt.Errorf("pod with volume name [%s] not found", pvcName)
-	}
-
-	for _, pvc := range pvcs {
-		if !pvc.IsDeleted {
-			continue
-		}
-		pod, err := findPodByPVCName(pvc.Name)
-		if err == nil {
-			// if someone deleted pvc then evict the pod.
-			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{
-				ObjectMeta: metav1.ObjectMeta{Name: pod.Name},
-			})
-			input.Logger.Info("evicting Pod due to PVC stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("pod_name", pod.Name), slog.String("pvc_name", pvc.Name))
-
-			if err != nil {
-				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("name", pod.Name), log.Err(err))
-			}
-		}
-	}
-
-	var currentStorageClass string
-	if len(pvcs) > 0 {
-		currentStorageClass = pvcs[0].StorageClassName
-	}
-
-	effectiveStorageClass, err := calculateEffectiveStorageClass(input, args, currentStorageClass)
-	if err != nil {
-		return err
-	}
-	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
-		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
-		if wasPvc {
-			for _, pvc := range pvcs {
-				input.Logger.Info("PVC StorageClass changed. Deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
-				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
-				if err != nil {
-					input.Logger.Error("failed to delete PVC", log.Err(err))
-				}
-			}
-		}
-
-		input.Logger.Info("StorageClass changed. Deleting objects", slog.String("namespace", args.Namespace), slog.String("object_kind", args.ObjectKind), slog.String("name", args.ObjectName))
-		switch args.ObjectKind {
-		case "Prometheus":
-			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{
-				Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com",
-			}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
-		case "StatefulSet":
-			err = kubeClient.AppsV1().StatefulSets(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
-		default:
-			input.Logger.Log(context.Background(), log.LevelFatal.Level(), "unknown object kind")
-			panic("unknown object kind")
-		}
-
-		if err != nil && !errors.IsNotFound(err) {
-			input.Logger.Error(err.Error())
-		}
-	}
-	return nil
-}
-
 func storageClassesAreEqual(sc1, sc2 string) bool {
 	if sc1 == sc2 {
 		return true
@@ -343,17 +361,4 @@ func storageClassesAreEqual(sc1, sc2 string) bool {
 // set by humans, while absent values resolve to empty strings.
 func isEmptyOrFalseStr(sc string) bool {
 	return sc == "" || sc == "false"
-}
-
-func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		if args.BeforeHookCheck != nil && !args.BeforeHookCheck(input) {
-			return nil
-		}
-		err := storageClassChangeWithArgs(input, dc, args)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 }
