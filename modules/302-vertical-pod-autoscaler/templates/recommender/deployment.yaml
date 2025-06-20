@@ -67,6 +67,10 @@ spec:
         - --stderrthreshold=0
         - --memory-saver=true
         - --humanize-memory=true
+        - --storage=prometheus
+        - --prometheus-address=https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
+        - --prometheus-insecure=true
+        - --bearer-token-file=/var/run/secrets/kubernetes.io/serviceaccount/token
         - --v=4
         ports:
         - containerPort: 8942
