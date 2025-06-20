@@ -44,6 +44,6 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/ztunnel.git /src/ztunnel
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/ztunnel.git /src/ztunnel
   - rm -rf /src/ztunnel/.git
 ---
