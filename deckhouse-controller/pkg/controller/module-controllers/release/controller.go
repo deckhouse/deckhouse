@@ -316,7 +316,18 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	}
 
 	// process only pending releases
-	return r.handlePendingRelease(ctx, release)
+	res, err = r.handlePendingRelease(ctx, release)
+	if err != nil {
+		r.log.With(
+			slog.String("module_name", release.GetModuleName()),
+			slog.String("release_name", release.GetName()),
+			slog.String("source", release.GetModuleSource()),
+		).Debug("result of handle pendingrelease", log.Err(err))
+
+		return res, nil
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
@@ -643,7 +654,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			Message: task.Message,
 		})
 		if err != nil {
-			logger.Warn("await order status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("await order status update ", log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -658,7 +669,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			Message: err.Error(),
 		})
 		if updateErr != nil {
-			logger.Warn("create release checker status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("create release checker status update ", log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -685,7 +696,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			Message: strings.Join(msgs, ";"),
 		})
 		if err != nil {
-			logger.Warn("met requirements status update ", slog.String("release", release.GetName()), log.Err(err))
+			logger.Warn("met requirements status update ", log.Err(err))
 		}
 
 		err := r.updateModuleLastReleaseDeployedStatus(ctx, release, "ModuleRelease could not be applied, not met requirements", "ReleaseRequirementsCheck", false)
