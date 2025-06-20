@@ -403,6 +403,7 @@ spec:
                           description: Validate the TLS certificate of the remote host.
                 kafka:
                   type: object
+                  description: "How to encode the message."
                   required:
                     - topic
                     - bootstrapServers
@@ -611,6 +612,7 @@ spec:
                       description: "Address of the socket."
                     encoding:
                       type: object
+                      description: "How to encode the message."
                       properties:
                         codec:
                           type: string
