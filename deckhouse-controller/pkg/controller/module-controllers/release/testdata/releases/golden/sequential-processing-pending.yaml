@@ -38,7 +38,7 @@ metadata:
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
-    status: deployed
+    status: superseded
   name: upmeter-v1.70.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -46,7 +46,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   changelog:
     features:
@@ -76,7 +76,7 @@ metadata:
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
-    status: deployed
+    status: superseded
   name: upmeter-v1.71.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -84,7 +84,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   changelog:
     features:
@@ -143,13 +143,11 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: upmeter
-  resourceVersion: "1002"
+  resourceVersion: "1000"
 properties: {}
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Latest release succesfully deployed: see details in the module release
-      v1.72.0'
     status: "True"
     type: LastReleaseDeployed

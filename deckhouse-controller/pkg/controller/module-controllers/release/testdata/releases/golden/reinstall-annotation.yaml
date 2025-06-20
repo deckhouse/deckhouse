@@ -63,6 +63,11 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: parca
-  resourceVersion: "999"
+  resourceVersion: "1000"
 properties: {}
-status: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
