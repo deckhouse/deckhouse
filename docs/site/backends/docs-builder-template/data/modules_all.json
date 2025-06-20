@@ -240,7 +240,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/snapshot-controller/alpha/"
+    "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
   },
   "static-routing-manager": {
     "editions": [
