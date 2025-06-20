@@ -27,8 +27,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 fromImage: builder/golang-alpine
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
