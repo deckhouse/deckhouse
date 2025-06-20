@@ -10,7 +10,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
   - rm -rf /src/istio/.git
   - git clone --depth 1 --branch {{ $kialiVersion }} {{ $.SOURCE_REPO }}/istio/kiali.git /src/kiali/
   - rm -rf /src/kiali/.git
