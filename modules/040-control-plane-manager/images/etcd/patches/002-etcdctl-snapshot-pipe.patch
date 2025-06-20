@@ -1,4 +1,4 @@
-Subject: [PATCH] add pipe func patch
+Subject: [PATCH] feature: support for piping snapshot to stdout
 ---
 Index: client/v3/snapshot/v3_snapshot.go
 IDEA additional info:
