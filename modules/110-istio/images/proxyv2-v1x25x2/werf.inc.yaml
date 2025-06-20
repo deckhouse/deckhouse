@@ -178,7 +178,7 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
