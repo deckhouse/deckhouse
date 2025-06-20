@@ -1,4 +1,4 @@
-Subject: [PATCH] Prometheus bearer and insecure
+Subject: [PATCH] Prometheus bearer token and insecure
 ---
 Index: vertical-pod-autoscaler/pkg/recommender/main.go
 IDEA additional info:
@@ -6,9 +6,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/vertical-pod-autoscaler/pkg/recommender/main.go b/vertical-pod-autoscaler/pkg/recommender/main.go
---- a/vertical-pod-autoscaler/pkg/recommender/main.go	(revision ee360d45bfc2ddf01803ee73dac6e3470fe6895e)
-+++ b/vertical-pod-autoscaler/pkg/recommender/main.go	(date 1750459862933)
-@@ -71,6 +71,7 @@
+--- a/vertical-pod-autoscaler/pkg/recommender/main.go	(revision 69eeed3cb2fdde4028307bd61341d9111af07c34)
++++ b/vertical-pod-autoscaler/pkg/recommender/main.go	(date 1750461258312)
+@@ -70,6 +70,7 @@
  // Prometheus history provider flags
  var (
  	prometheusAddress   = flag.String("prometheus-address", "http://prometheus.monitoring.svc", `Where to reach for Prometheus metrics`)
@@ -16,7 +16,7 @@ diff --git a/vertical-pod-autoscaler/pkg/recommender/main.go b/vertical-pod-auto
  	prometheusJobName   = flag.String("prometheus-cadvisor-job-name", "kubernetes-cadvisor", `Name of the prometheus job name which scrapes the cAdvisor metrics`)
  	historyLength       = flag.String("history-length", "8d", `How much time back prometheus have to be queried to get historical metrics`)
  	historyResolution   = flag.String("history-resolution", "1h", `Resolution at which Prometheus is queried for historical metrics`)
-@@ -84,6 +85,8 @@
+@@ -83,6 +84,8 @@
  	ctrNameLabel        = flag.String("container-name-label", "name", `Label name to look for container names`)
  	username            = flag.String("username", "", "The username used in the prometheus server basic auth")
  	password            = flag.String("password", "", "The password used in the prometheus server basic auth")
@@ -25,10 +25,11 @@ diff --git a/vertical-pod-autoscaler/pkg/recommender/main.go b/vertical-pod-auto
  )
 
  // External metrics provider flags
-@@ -148,6 +151,20 @@
- 		klog.InfoS("DEPRECATION WARNING: The 'min-checkpoints' flag is deprecated and has no effect. It will be removed in a future release.")
+@@ -142,6 +145,21 @@
+ 		klog.ErrorS(nil, "--vpa-object-namespace and --ignored-vpa-object-namespaces are mutually exclusive and can't be set together.")
+ 		os.Exit(255)
  	}
-
++
 +	if *bearerToken != "" && *bearerTokenFile != "" && *username != "" {
 +		klog.ErrorS(nil, "--bearer-token, --bearer-token-file and --username are mutually exclusive and can't be set together.")
 +		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
@@ -46,7 +47,7 @@ diff --git a/vertical-pod-autoscaler/pkg/recommender/main.go b/vertical-pod-auto
  	ctx := context.Background()
 
  	healthCheck := metrics.NewHealthCheck(*metricsFetcherInterval * 5)
-@@ -304,6 +321,7 @@
+@@ -297,6 +315,7 @@
  	} else {
  		config := history.PrometheusHistoryProviderConfig{
  			Address:                *prometheusAddress,
@@ -54,7 +55,7 @@ diff --git a/vertical-pod-autoscaler/pkg/recommender/main.go b/vertical-pod-auto
  			QueryTimeout:           promQueryTimeout,
  			HistoryLength:          *historyLength,
  			HistoryResolution:      *historyResolution,
-@@ -316,7 +334,8 @@
+@@ -309,7 +328,8 @@
  			CtrNameLabel:           *ctrNameLabel,
  			CadvisorMetricsJobName: *prometheusJobName,
  			Namespace:              commonFlag.VpaObjectNamespace,
@@ -70,8 +71,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go b/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go
---- a/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go	(revision ee360d45bfc2ddf01803ee73dac6e3470fe6895e)
-+++ b/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go	(date 1750460077240)
+--- a/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go	(revision 69eeed3cb2fdde4028307bd61341d9111af07c34)
++++ b/vertical-pod-autoscaler/pkg/recommender/input/history/history_provider.go	(date 1750461150848)
 @@ -18,6 +18,7 @@
 
  import (
