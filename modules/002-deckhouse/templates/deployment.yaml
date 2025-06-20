@@ -193,6 +193,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: USE_NELM
+              value: "true"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
               value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
