@@ -64,6 +64,7 @@ A new certificate will be generated automatically when the pods start.
 
 ## How to rotate a root certificate (CA)
 
+The root certificate (CA) and server certificate are rotated automatically 1 day before expiration. Automatic rotation of clients certificates is not provided.
 The root certificate (CA) is used to sign all certificates in OpenVPN — both server and client. Therefore, when replacing the CA, you must reissue all dependent certificates.
 
 Steps to rotate the root certificate:
