@@ -1,7 +1,7 @@
 - name: openvpn.admin.info
   rules:
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire == 0
+      expr: ovpn_client_cert_expire <= 0
       for: 1m
       labels:
         severity_level: "4"
@@ -112,7 +112,22 @@
 
           Immediate renewal is recommended.
 
-    - alert: OpenVPNServerCACertificateExpired
+    - alert: OpenVPNServerCACertificateExpiresTomorrow # The alert is triggered when there are more than 24 hours until the end of certification
+      expr: ovpn_server_ca_cert_expire == 1
+      for: 10m
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: "OpenVPN CA certificate will expire tomorrow"
+        description: |-
+          The OpenVPN CA certificate will expire in less than 1 day.
+
+          The hook should rotate CA and server certificates before expiry.
+
+
+    - alert: OpenVPNServerCACertificateExpired # The alert is triggered when the end of certification is less than 24 hours away
       expr: ovpn_server_ca_cert_expire == 0
       for: 1m
       labels:
@@ -125,3 +140,19 @@
           The OpenVPN CA certificate has expired.
 
           To restore VPN functionality, renew the expired certificate as soon as possible.
+
+    - alert: OpenVPNClientsNeedRenewDueToNewCA
+      expr: (ovpn_client_cert_expire <= 0) and ignoring(client) (ovpn_server_ca_cert_expire > 3650)
+      for: 5m
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: "Expired OpenVPN client certificate detected after CA renewal for {{ $labels.client }}"
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}** has expired, while current CA is valid for more than 10 years.
+
+          This likely indicates that the CA was recently rotated and client certificates need to be reissued.
+
+
