@@ -837,7 +837,7 @@ spec:
                 transformations:
                   type: array
                   description: >
-                    List of transformation steps. Each step defines a specific action and parameters for it
+                    List of transformations that can be applied to logs before sending them to the destination.
                   items:
                     type: object
                     oneOf:
@@ -868,7 +868,7 @@ spec:
                     properties:
                       action:
                         type: string
-                        enum: ["replaceDotKeys", "EnsureStructuredMessage", "DropLabels"]
+                        enum: ["ReplaceDotKeys", "EnsureStructuredMessage", "DropLabels"]
                         description: Type of transformations.
                       replaceDotKeys:
                         type: object
