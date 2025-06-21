@@ -90,6 +90,7 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
     ${cri_config} \\
     ${credential_provider_flags} \\
     --hostname-override=$(bb-d8-node-name) \\
+    --feature-gates=InPlacePodVerticalScaling=true \\
     --v=2
 EOF
 

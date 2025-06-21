@@ -1,10 +1,10 @@
 {{- define "deckhouse_resources" }}
 {{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 cpu: 100m
-memory: 1000Mi
+memory: 500Mi
 {{- else }}
 cpu: 150m
-memory: 1000Mi
+memory: 500Mi
 {{- end }}
 {{- end }}
 
@@ -26,7 +26,7 @@ spec:
     kind: Deployment
     name: deckhouse
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
@@ -109,7 +109,7 @@ spec:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
         - key: node.deckhouse.io/uninitialized
           operator: "Exists"
-          effect: "NoSchedule"        
+          effect: "NoSchedule"
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
@@ -246,7 +246,7 @@ spec:
               value: "/chroot"
 {{- end }}
             - name: TRACING_OTLP_ENDPOINT
-              valueFrom: 
+              valueFrom:
                 secretKeyRef:
                   name: d8-otlp-tracing
                   key: endpoint
@@ -315,7 +315,7 @@ spec:
                     namespace: d8-system
                     apiGroup: apps
                     apiVersion: v1
-                    resource: deployment
+                    resource: deployments
                     subresource: http
                     name: debugSrv
           ports:
