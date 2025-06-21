@@ -969,7 +969,7 @@ spec:
                               - depth
                             properties:
                               depth:
-                                type: int
+                                type: integer
                                 description: "The depth for parsing json"
                       dropLabels:
                         type: object
