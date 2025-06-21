@@ -416,8 +416,49 @@ spec:
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                 transformations:
-                  description: >
+                  description: |
                     Список трансформаций, которые могут применяться к логам перед отправкой.
+                    
+                    Возможные варианты:
+
+                      - `ReplaceDotKeys` — заменяет точки на нижние подчеркивания в заданых лейблах.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceDotKeys
+                          replaceDotKeys:
+                            labels:
+                              - pod_labels
+                        ```
+
+                      - `EnsureStructuredMessage` — проверяет, что сообщение структурировано в формате JSON и при необходимости оборачивает его в JSON-объект.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: EnsureStructuredMessage
+                          ensureStructuredMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels` — удаляет указанные лейблы.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - first
+                              - second
+                        ```
+
                   items:
                     properties:
                       action:

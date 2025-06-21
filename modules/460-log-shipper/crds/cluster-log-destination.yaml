@@ -836,8 +836,49 @@ spec:
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
                 transformations:
                   type: array
-                  description: >
+                  description: |
                     List of transformations that can be applied to logs before sending them to the destination.
+
+                    Available options:
+
+                          - `ReplaceDotKeys`: Replaces dots with underscores in the labels.
+
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: ReplaceDotKeys
+                              replaceDotKeys:
+                                labels:
+                                  - pod_labels
+                            ```
+
+                          - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                            
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: EnsureStructuredMessage
+                              ensureStructuredMessage:
+                                sourceFormat: String
+                                string:
+                                  targetField: msg
+                            ```
+
+                          - `DropLabels`: Removes the specified labels.
+                            
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: DropLabels
+                              dropLabels:
+                                labels:
+                                  - first
+                                  - second
+                            ```
+
                   items:
                     type: object
                     oneOf:
@@ -845,7 +886,7 @@ spec:
                           replaceDotKeys: {}
                           action:
                             enum:
-                              - replaceDotKeys
+                              - ReplaceDotKeys
                         required:
                           - normalizeKeys
                           - action
