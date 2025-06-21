@@ -68,9 +68,15 @@ spec:
         - --memory-saver=true
         - --humanize-memory=true
         - --storage=prometheus
-        - --prometheus-address=https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
+        - --prometheus-address=https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}:9090
         - --prometheus-insecure=true
         - --bearer-token-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        - --metric-for-pod-labels=kube_pod_info{job="kube-state-metrics"}
+        - --pod-namespace-label=namespace
+        - --pod-name-label=pod
+        - --prometheus-cadvisor-job-name=kubelet
+        - --container-pod-name-label=pod
+        - --container-name-label=container
         - --v=4
         ports:
         - containerPort: 8942
