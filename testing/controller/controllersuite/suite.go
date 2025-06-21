@@ -47,10 +47,6 @@ type Suite struct {
 	tmpDir     string
 }
 
-func (suite *Suite) loggerExit(i int) {
-	suite.T().Fatalf("logger call Exit(%d)", i)
-}
-
 func (suite *Suite) Setup(initObjects []client.Object, opts ...SuiteOption) error {
 	suite.Lock()
 	defer suite.Unlock()
@@ -158,16 +154,6 @@ func (suite *Suite) TearDownSubTest() {
 
 		suite.Check(err)
 	}
-}
-
-func (suite *Suite) sameFile(a *os.File, b *os.File) bool {
-	aStat, err := a.Stat()
-	suite.Check(err)
-
-	bStat, err := b.Stat()
-	suite.Check(err)
-
-	return os.SameFile(aStat, bStat)
 }
 
 var (

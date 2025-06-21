@@ -150,13 +150,19 @@ function prepare_environment() {
     ;;
 
   "GCP")
-    # shellcheck disable=SC2016
-    env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="user"
+    cluster_template_id="565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"serviceAccountJson\": \"${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "AWS")
@@ -299,6 +305,7 @@ function wait_alerts_resolve() {
   "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
   "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
   "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
+  "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
   )
 
   # Alerts
@@ -330,7 +337,7 @@ function wait_alerts_resolve() {
       echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
@@ -371,12 +378,24 @@ function wait_upmeter_green() {
       echo "  Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
   done
 
+}
+
+function check_resources_state_results() {
+  echo "Check applied resource status..."
+  response=$(get_cluster_status)
+  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response")
+  if [ -n "$errors" ]; then
+    echo "  Errors found:"
+    echo "${errors}"
+    return 1
+  fi
+  echo "Check applied resource status... Passed"
 }
 
 function change_deckhouse_image() {
@@ -571,14 +590,16 @@ function run-test() {
     fi
   done
 
-  wait_upmeter_green
+  wait_upmeter_green || return $?
+
+  check_resources_state_results || return $?
 
   if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
     echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
     sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
-  wait_alerts_resolve
+  wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
 
@@ -605,6 +626,27 @@ function run-test() {
     if [[ $test_failed == "true" ]]; then
       return 1
     fi
+  if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
+    echo "Run Autoscaler test"
+    testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
+    testRunAttempts=5
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAutoscalerScript}"; then
+        test_failed=""
+        break
+      else
+        test_failed="true"
+        >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+        sleep 30
+      fi
+    done
+  else
+    echo "Autoscaler test skipped."
+  fi
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting switch deckhouse image"

@@ -12,5 +12,5 @@ knownPageNames:
 moduleStageBageMap:
   experimental: Exp
   preview: Pre
-  "general availability": GA
+  general_availability: GA
   deprecated: Dep

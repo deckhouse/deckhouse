@@ -17,7 +17,7 @@
         To resolve this issue, follow these steps:
 
         1. Check the current release channel used in the cluster:
-        
+
            ```bash
            kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
@@ -39,8 +39,8 @@
         A new Deckhouse release is awaiting manual approval.
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
-        
-        To approve the release, run the following command: 
+
+        To approve the release, run the following command:
 
         ```bash
         kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
@@ -61,8 +61,8 @@
         A new Deckhouse release is awaiting manual approval.
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
-        
-        To approve the release, run the following command: 
+
+        To approve the release, run the following command:
 
         ```bash
         kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
@@ -83,7 +83,7 @@
         A new Deckhouse release is awaiting manual approval.
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
-        
+
         To approve the release, run the following command:
 
         ```bash
@@ -106,7 +106,7 @@
         The requirements for the Deckhouse release haven't been met.
 
         To check the details, run the following command:
-        
+
         ```bash
         kubectl describe DeckhouseRelease {{ $labels.name }}
         ```
@@ -127,19 +127,19 @@
         The new Deckhouse release includes a disruptive update that requires manual approval.
 
         To check the details, run the following command:
-        
+
         ```bash
         kubectl describe DeckhouseRelease {{ $labels.name }}
         ```
-        
+
         To approve the disruptive update, run the following command:
-        
+
         ```bash
         kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, manualApproval) (d8_module_release_info{manualApproval="true"})) by (name, moduleName)
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "6"
     annotations:
@@ -152,7 +152,7 @@
         A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
 
         To approve the module release, run the following command:
-        
+
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
@@ -171,11 +171,11 @@
         Module `{{ $labels.moduleName }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
 
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
-        
+
         ```bash
         kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
-      
+
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
     labels:
@@ -192,7 +192,7 @@
         The Deckhouse release notification webhook failed to send.
 
         To check the notification webhook address, run the following command:
-        
+
         ```bash
         kubectl get mc deckhouse -o yaml
         ```
@@ -211,7 +211,7 @@
         A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
 
         To check the requirements, run the following command:
-        
+
         ```bash
         kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
         ```
@@ -253,7 +253,7 @@
         Conflict detected for module {{ $labels.moduleName }}.
       description: |
         Deckhouse has detected conflicting sources for the {{ $labels.moduleName }} module.
-        
+
         To resolve this issue, specify the correct source in the module configuration.
 
   - alert: ModuleConfigObsoleteVersion
@@ -267,9 +267,9 @@
         ModuleConfig `{{ $labels.name }}` is outdated.
       description: |
         Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
-        
+
         To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
-      
+
   - alert: ModuleHasDeprecatedUpdatePolicy
     expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
     labels:
@@ -283,13 +283,13 @@
         Deckhouse has detected that the module `{{ $labels.moduleName }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
 
         To specify the update policy in the module configuration, run the following command:
-        
+
         ```bash
         kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
-        
+
         After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
-        
+
         ```bash
         kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```

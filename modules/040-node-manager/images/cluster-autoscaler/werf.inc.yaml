@@ -1,6 +1,12 @@
+{{- $maxVersion := "1.32" -}}
+
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
-  {{- $image_version := $version | replace "." "-" }}
+  {{- $origVersion := toString $key }}
+  {{- if semverCompare (printf ">%s" $maxVersion) $version -}}
+    {{- $version = $maxVersion -}}
+  {{- end -}}
+  {{- $image_version := $origVersion | replace "." "-" }}
   {{- if $value.clusterAutoscalerPatch }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
@@ -9,6 +15,7 @@
         {{- $patch = true }}
       {{- end }}
     {{- end }}
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
 fromImage: common/src-artifact

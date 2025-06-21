@@ -27,7 +27,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -123,9 +126,9 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 	}
 
 	// Try to restore generated password from the Secret, or generate a new one.
-	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
+	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.NewSnapshots.Get(secretBindingName))
 	if err != nil {
-		input.Logger.Infof("No password in Secret, generate new one: %s", err)
+		input.Logger.Info("No password in Secret, generate new one", log.Err(err))
 		pass = GeneratePassword()
 	}
 
@@ -153,19 +156,22 @@ func (h *Hook) PasswordInternalKey() string {
 
 // restoreGeneratedPasswordFromSnapshot extracts password from the plain basic auth string:
 // username:{PLAIN}password
-func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
-	if len(snapshot) != 1 {
+func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshots []sdkpkg.Snapshot) (string, error) {
+	if len(snapshots) != 1 {
 		return "", fmt.Errorf("secret/%s not found", h.Secret.Name)
 	}
 
-	// Expect one field with basic auth.
-	secretData, ok := snapshot[0].(map[string][]byte)
-	if !ok {
-		return "", fmt.Errorf("secret/%s has empty data", h.Secret.Name)
+	secretData := make(map[string][]byte, 0)
+	// Expect one field with basic auth
+	err := snapshots[0].UnmarshalTo(&secretData)
+	if err != nil {
+		return "", fmt.Errorf("secret/%s has empty data: %w", h.Secret.Name, err)
 	}
+
 	if len(secretData) != 1 {
 		return "", fmt.Errorf("secret/%s has more than one field", h.Secret.Name)
 	}
+
 	authBytes, ok := secretData[defaultBasicAuthPlainField]
 	if !ok {
 		return "", fmt.Errorf("secret/%s has no %s field", h.Secret.Name, defaultBasicAuthPlainField)

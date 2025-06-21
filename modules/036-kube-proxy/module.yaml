@@ -1,4 +1,5 @@
 name: kube-proxy
+stage: "General Availability"
 weight: 36
 subsystems:
   - kubernetes

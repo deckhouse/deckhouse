@@ -31,20 +31,39 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
-type Arg struct {
+type ArgV4 struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type ControlPlaneComponentV4 struct {
+	ExtraArgs []ArgV4 `yaml:"extraArgs,omitempty"`
+}
+type APIServerV4 struct {
+	ControlPlaneComponentV4 `yaml:",inline"`
+}
+
+type ClusterConfigurationV4 struct {
+	APIVersion          string      `yaml:"apiVersion"`
+	Kind                string      `yaml:"kind"`
+	EncryptionAlgorithm string      `yaml:"encryptionAlgorithm,omitempty"`
+	APIServer           APIServerV4 `yaml:"apiServer"`
+}
+
+type ArgV3 struct {
 	Name  string
 	Value string
 }
 
-type ControlPlaneComponent struct {
+type ControlPlaneComponentV3 struct {
 	ExtraArgs map[string]string `yaml:"extraArgs,omitempty"`
 }
 
 type APIServer struct {
-	ControlPlaneComponent `yaml:",inline"`
+	ControlPlaneComponentV3 `yaml:",inline"`
 }
 
-type ClusterConfiguration struct {
+type ClusterConfigurationV3 struct {
 	APIVersion string    `yaml:"apiVersion"`
 	Kind       string    `yaml:"kind"`
 	APIServer  APIServer `yaml:"apiServer"`
@@ -82,7 +101,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    effectiveKubernetesVersion: "1.29"
+    admissionWebhookClientCertificateData:
+      cert: mock-cert
+      key: mock-key
+    effectiveKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
     pkiChecksum: checksum
@@ -93,7 +115,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const moduleValuesOnlyIssuer = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -104,7 +129,10 @@ apiserver:
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -119,7 +147,10 @@ apiserver:
 
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -133,7 +164,10 @@ apiserver:
 
 	const moduleValuesCombo = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -149,7 +183,10 @@ apiserver:
 
 	const moduleValuesSuperCombo = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -167,7 +204,10 @@ apiserver:
 
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -184,7 +224,10 @@ apiserver:
 `
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -201,7 +244,10 @@ apiserver:
 
 	const emptyApiserverConfig = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -317,12 +363,17 @@ resources:
 				Expect(s.Exists()).To(BeTrue())
 				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(data, &config)
 				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://api.example.com",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://api.example.com,%s", defultAudience),
+				}))
 			})
 		})
 
@@ -338,12 +389,18 @@ resources:
 				Expect(s.Exists()).To(BeTrue())
 				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(data, &config)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://bob.com,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://api.example.com",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://api.example.com,https://bob.com,%s", defultAudience),
+				}))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -365,12 +422,18 @@ resources:
 
 				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(data, &config)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://api.bob.com,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://api.example.com",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://api.example.com,https://api.bob.com,%s", defultAudience),
+				}))
 
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
@@ -401,12 +464,17 @@ resources:
 
 				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(data, &config)
 				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", defultAudience))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://bob.com,https://flant.com,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: defultAudience,
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://api.example.com,https://bob.com,https://flant.com,%s", defultAudience),
+				}))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -440,12 +508,18 @@ resources:
 				// kubeadm-config.yaml
 				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(kubeadmConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://flant.ru,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://api.example.com",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://api.example.com,https://flant.ru,%s", defultAudience),
+				}))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -479,12 +553,18 @@ resources:
 				// kubeadm-config.yaml
 				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(kubeadmConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://flant.ru,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://kubernetes.default.svc.cluster.local",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://flant.ru,%s", defultAudience),
+				}))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -516,12 +596,18 @@ resources:
 				// kubeadm-config.yaml
 				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(kubeadmConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://flant.com,%s", defultAudience)))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://kubernetes.default.svc.cluster.local",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: fmt.Sprintf("https://flant.com,%s", defultAudience),
+				}))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -553,12 +639,19 @@ resources:
 				// kubeadm-config.yaml
 				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfiguration
+				var config ClusterConfigurationV4
 				err = yaml.Unmarshal(kubeadmConfig, &config)
-				// fmt.Println(string(kubeadmConfig))
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local"))
+
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "service-account-issuer",
+					Value: "https://kubernetes.default.svc.cluster.local",
+				}))
+				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+					Name:  "api-audiences",
+					Value: "https://kubernetes.default.svc.cluster.local",
+				}))
+
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())

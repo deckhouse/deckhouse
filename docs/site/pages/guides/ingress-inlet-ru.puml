@@ -27,7 +27,7 @@ partition Bare metal, облако на vSphere...{
   split again
     ->Вариант 2;
     :Используйте внешний балансировщик
-    (Cloudflare, Qrator, metallb (для bare metal)...);
+    (Cloudflare, Qrator, MetalLB (для bare metal)...);
   end split
   split
      :inlet **HostPort**;

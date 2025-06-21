@@ -138,7 +138,6 @@ serviceSubnetCIDR: 10.222.0.0/16
 }
 
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
-
 	const (
 		stateNGProper = `
 ---
@@ -331,7 +330,7 @@ metadata:
 		return "D8TestInstanceClass", "D8TestInstanceClass"
 	}
 
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.28.5", "kubernetesVersions":["1.28.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.29.5", "kubernetesVersions":["1.29.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "InstanceTypesCatalog", false)
@@ -389,8 +388,10 @@ metadata:
 					},
 					"topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -411,18 +412,20 @@ metadata:
 				    },
                     "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -462,19 +465,21 @@ metadata:
 			expectedJSON := `
 				[
                   {
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
 					"manualRolloutID": "",
-		   "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+                    "kubelet": {
+                      "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				        "mode": "Auto"
+                      },
+			          "topologyManager": {}
+                    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
                     "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
@@ -494,15 +499,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -523,15 +530,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -539,19 +548,21 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
                     "manualRolloutID": "",
-		   "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				        "mode": "Auto"
+			          },
+			          "topologyManager": {}
+		            },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "name": "static1",
                     "nodeType": "Static",
                     "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `",
@@ -565,10 +576,10 @@ metadata:
 			Expect(valuesJSON).To(MatchJSON(expectedJSON))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 		})
 	})
 
@@ -585,18 +596,20 @@ metadata:
 			expectedJSON := `
 				[
                   {
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
-		    "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				        "mode": "Auto"
+			         },
+			         "topologyManager": {}
+		            },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "manualRolloutID": "",
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
@@ -617,15 +630,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
+					   "containerLogMaxSize": "50Mi",
+					   "containerLogMaxFiles": 4,
+					   "resourceReservation": {
+                         "mode": "Auto"
+					   },
+					   "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -646,15 +661,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+                      "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					   },
+					   "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -662,18 +679,20 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
-		    "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		           "kubelet": {
+                     "containerLogMaxSize": "50Mi",
+			         "containerLogMaxFiles": 4,
+			         "resourceReservation": {
+				       "mode": "Auto"
+                     },
+			         "topologyManager": {}
+		            },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "manualRolloutID": "",
                     "name": "static1",
                     "nodeType": "Static",
@@ -687,10 +706,10 @@ metadata:
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 		})
 	})
 
@@ -720,15 +739,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -749,15 +770,17 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -769,12 +792,11 @@ metadata:
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 		})
-
 	})
 
 	Context("Two proper pairs of NG+IC and a NG with wrong ref kind", func() {
@@ -832,19 +854,21 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -861,19 +885,21 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -882,10 +908,10 @@ metadata:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 		})
@@ -960,19 +986,21 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -989,19 +1017,21 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
+                    "kubernetesVersion": "1.29",
 					"cri": {
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
 				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
+					  "containerLogMaxSize": "50Mi",
+					  "containerLogMaxFiles": 4,
+					  "resourceReservation": {
 						"mode": "Auto"
-					},
-					"topologyManager": {}
+					  },
+					  "topologyManager": {}
 				    },
+                    "serializedLabels": "",
+                    "serializedTaints": "",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -1010,17 +1040,17 @@ metadata:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 		})
 	})
 
-	// config    1.29
-	// apiserver 1.29.X  |  effective 1.29
+	// config    1.30
+	// apiserver 1.30.X  |  effective 1.30
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1038,20 +1068,20 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.29")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
+			setK8sVersionAsClusterConfig(f, "1.30")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.29", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.30", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.29"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.30"))
 		})
 	})
 
-	// config    1.28
-	// apiserver 1.29.X  |  effective 1.28
+	// config    1.29
+	// apiserver 1.30.X  |  effective 1.29
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1069,20 +1099,20 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.28")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
+			setK8sVersionAsClusterConfig(f, "1.29")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.28", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.29", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.28"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.29"))
 		})
 	})
 
 	// config    null
-	// apiserver 1.29  |  target 1.29
+	// apiserver 1.30  |  target 1.30
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1100,14 +1130,14 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.29", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.30", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.29"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.30"))
 		})
 	})
 
@@ -1172,10 +1202,10 @@ spec:
 	Context("Cluster with proper NG, global cri is set to containerd", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.28")
+			setK8sVersionAsClusterConfig(f, "1.29")
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.28.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.28.5")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.5")
 			f.RunHook()
 		})
 
@@ -1188,10 +1218,10 @@ spec:
 	Context("Cluster with proper NG, global cri is set to not managed", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.28")
+			setK8sVersionAsClusterConfig(f, "1.29")
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.28.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.28.5")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.5")
 			f.RunHook()
 		})
 
@@ -1403,6 +1433,171 @@ spec:
 		It("Internal fencing values should be generated", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
+		})
+	})
+
+	Context("Serialized labels and taints", func() {
+		Context("NG without labels and taints", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set empty serializedLabels and serializedTaints", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal(""))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal(""))
+			})
+		})
+
+		Context("NG with labels only", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      environment: production
+      app: warp-drive-ai
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedLabels in desired format and empty serializedTaints", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal("app=warp-drive-ai,environment=production"))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal(""))
+			})
+		})
+
+		Context("NG with taints only", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: b
+      value: v
+    - key: a
+    - effect: NoExecute
+      key: d
+    - key: c
+      value: v1
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedTaints in desired format and empty serializedLabels", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal(""))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal("b=v:NoExecute,a,d:NoExecute,c=v1:"))
+			})
+		})
+
+		Context("NG with taints and labels", func() {
+			BeforeEach(func() {
+				ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      environment: production
+      app: warp-drive-ai
+    taints:
+    - effect: NoExecute
+      key: b
+      value: v
+    - key: a
+    - effect: NoExecute
+      key: d
+    - key: c
+      value: v1
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
+`
+				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
+				setK8sVersionAsClusterConfig(f, "1.29")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.30.0")
+				f.RunHook()
+			})
+
+			It("Should set serializedLabels and serializedTaints in desired format", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedLabels").String()).To(Equal("app=warp-drive-ai,environment=production"))
+
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.serializedTaints").String()).To(Equal("b=v:NoExecute,a,d:NoExecute,c=v1:"))
+			})
 		})
 	})
 })

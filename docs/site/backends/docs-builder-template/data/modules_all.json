@@ -37,11 +37,23 @@
   },
   "console": {
     "editions": [
+      "ce",
+      "be",
       "se",
       "se-plus",
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
+      }
+    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
   },
@@ -118,6 +130,15 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
   },
   "observability-platform": {
     "editions": [
@@ -208,6 +229,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/static-routing-manager/early-access/"
+  },
   "stronghold": {
     "editionsWithRestrictions": [
       "be",
@@ -239,12 +267,6 @@
     "editionsWithRestrictions": [
       "ce"
     ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the VM migration without interruption",
-        "ru": "Ограничение на возможность беспростойной миграции виртуальных машин при изменении конфигурации"
-      }
-    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/"
   }

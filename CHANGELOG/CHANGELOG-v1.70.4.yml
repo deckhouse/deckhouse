@@ -1,0 +1,21 @@
+cloud-provider-dvp:
+  features:
+    - summary: Add vmClassName to the config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13779
+  fixes:
+    - summary: Fix cherry-pick conflicts pr https://github.com/deckhouse/deckhouse/pull/13779
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13876
+ingress-nginx:
+  fixes:
+    - summary: Ingress resource validation in ingress-nginx controller re-enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13648
+operator-prometheus:
+  features:
+    - summary: Add to documetation for operator-prometheus CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13896
+      impact: operator-prometheus
+snapshot-controller:
+  features:
+    - summary: Automatic snapshot-controller MC creation for future switch to external module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13974
+

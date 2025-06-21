@@ -29,6 +29,7 @@ type nodeTarget struct {
 	Address string `json:"ipAddress"`
 }
 
+//nolint:unused //TODO: fix unused linters
 type targets struct {
 	Cluster []nodeTarget `json:"clusterTargets"`
 }

@@ -481,6 +481,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   let multimaster = e2eDefaults.multimaster;
   let edition = '';
   let cis = e2eDefaults.cis;
+  let autoscaler = false
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -507,6 +508,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use operator-trivy to get CIS Benchmark report`);
       cis = true;
     }
+    if (info.autoscaler) {
+      core.info(`Detect '${label.name}': enable autoscaler tests`);
+      autoscaler = true;
+    };
   }
 
   if (ver.length === 0) {
@@ -526,6 +531,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
   core.setOutput(`cis`, `${cis}`);
+  core.setOutput(`autoscaler`, `${autoscaler}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -1488,7 +1494,7 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
     return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref });
   }
 
-  if (gitRefInfo.isMain || gitRefInfo.tagVersion) {
+  if (gitRefInfo.tagVersion) {
     // Add a comment on the release issue for main branch
     // and tags with specified version:
     // - find milestone
@@ -1521,6 +1527,6 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
   }
 
   return core.setFailed(
-    `Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`
+    `Git ref '${context.ref}' is not an auto-build tag. Ignore running build-and-test_release workflow.`
   );
 };

@@ -37,7 +37,7 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: vm-teamplates/redos8-cloudinit-2cfg
+    template: vm-templates/redos8-cloudinit-2cfg
     mainNetwork: DPortGroup-lab-vms
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
@@ -85,22 +85,13 @@ spec:
       placement:
         customTolerationKeys:
           - node
-  version: 1
+  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: istio
 spec:
-  version: 2
-  enabled: true
-  settings:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: openvpn
-spec:
-  version: 2
+  version: 3
   enabled: true
   settings:

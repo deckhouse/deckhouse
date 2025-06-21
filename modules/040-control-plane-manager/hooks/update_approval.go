@@ -168,7 +168,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 			continue
 		}
 		if node.IsApproved {
-			input.PatchCollector.MergePatch(removeApprovedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(removeApprovedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
@@ -183,7 +183,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, node := range nodeMap {
 		// Approve one node
 		if node.IsWaitingForApproval && node.IsReady && !node.IsUnschedulable {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}

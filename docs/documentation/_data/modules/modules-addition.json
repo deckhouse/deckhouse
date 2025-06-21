@@ -78,10 +78,22 @@
   },
   "console": {
     "editions": [
+      "ce",
+      "be",
       "se",
       "se-plus",
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
+      }
+    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
   },
@@ -189,6 +201,15 @@
       }
     },
     "path": "modules/metallb/"
+  },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
   },
   "observability-platform": {
     "editions": [
@@ -335,12 +356,6 @@
     "editionsWithRestrictions": [
       "ce"
     ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on&nbsp;the&nbsp;VM migration without interruption",
-        "ru": "Ограничение на&nbsp;возможность беспростойной миграции виртуальных машин при изменении конфигурации"
-      }
-    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/"
   }

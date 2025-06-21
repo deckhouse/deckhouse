@@ -483,6 +483,10 @@ spec:
                   oneOf:
                     - required: ["name"]
                     - required: ["value"]
+                evictLocalStoragePods:
+                  type: boolean
+                  default: false
+                  description: Allows Pods using local storage to be evicted.
                 strategies:
                   type: object
                   description: Settings of strategies for the Descheduler instances.

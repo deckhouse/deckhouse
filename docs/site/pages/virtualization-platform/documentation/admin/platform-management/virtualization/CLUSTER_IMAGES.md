@@ -10,19 +10,44 @@ The [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) r
 The process of creating an image involves the following steps:
 
 1. The user creates a [`ClusterVirtualImage`](../../../reference/cr/clustervirtualimage.html) resource.
-1. After creation, the image is automatically downloaded from the source specified in the specification to the storage (DVCR).
-1. Once the download is complete, the resource becomes available for disk creation.
+1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
+1. Once the upload is complete, the resource becomes available for disk creation.
 
 There are different types of images:
 
-- ISO Image — an installation image used for the initial installation of an operating system. These images are released by OS vendors and are used for installing on physical or virtual servers.
-- Pre-installed System Disk Image — contains an already installed and configured operating system, ready for use after creating a virtual machine. These images are offered by several vendors and can be available in formats such as qcow2, raw, vmdk, and others.
+- **ISO image**: An installation image used for the initial installation of an operating system (OS). Such images are released by OS vendors and are used for installation on physical and virtual servers.
+- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. You can obtain pre-configured images from the distribution developers' resources or create them manually.
 
 Examples of resources for obtaining pre-installed virtual machine disk images:
 
-- [Ubuntu](https://cloud-images.ubuntu.com).
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64).
-- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+- Ubuntu
+  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
+  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
+  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
+  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
+- Debian
+  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
+  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
+- AlmaLinux
+  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
+  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
+- RockyLinux
+  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
+- CentOS
+  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
+  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
+  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
+  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+
+The following preinstalled image formats are supported:
+
+- `qcow2`
+- `raw`
+- `vmdk`
+- `vdi`
+
+Image files can also be compressed with one of the following compression algorithms: `gz`, `xz`.
 
 After creating the resource, the type and size of the image are automatically determined and reflected in the resource's status.
 
@@ -97,33 +122,33 @@ Let's explore how to create a cluster image.
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
     metadata:
-      name: ubuntu-22.04
+      name: ubuntu-22-04
     spec:
       # Source for creating the image.
       dataSource:
         type: HTTP
         http:
-          url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+          url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
     EOF
     ```
 
 1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
     ```shell
-    d8 k get clustervirtualimage ubuntu-22.04
+    d8 k get clustervirtualimage ubuntu-22-04
     ```
 
     A shorter version of the command:
 
    ```shell
-    d8 k get cvi ubuntu-22.04
+    d8 k get cvi ubuntu-22-04
     ```
 
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-22.04   Ready   false   100%       23h
+    ubuntu-22-04   Ready   false   100%       23h
     ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
@@ -139,29 +164,31 @@ Until the image transitions to the `Ready` phase, the contents of the `.spec` bl
 
 Once the image reaches the `Ready` phase, modifications to the `.spec` block are not allowed, as the image is considered fully created and ready for use. Making changes to this block after the image has reached the `Ready` state may compromise its integrity or affect its proper usage.
 
-You can track the image creation process by adding the `-w` flag to the previous command:
+Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
+
+You can trace the image creation process by adding the `-w` key to the command used for verification of the created resource:
 
 ```shell
-d8 k get cvi ubuntu-22.04 -w
+d8 k get cvi ubuntu-22-04 -w
 ```
 
 In the output, you should see information about the image creation progress:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22.04   Provisioning   false              4s
-ubuntu-22.04   Provisioning   false   0.0%       4s
-ubuntu-22.04   Provisioning   false   28.2%      6s
-ubuntu-22.04   Provisioning   false   66.5%      8s
-ubuntu-22.04   Provisioning   false   100.0%     10s
-ubuntu-22.04   Provisioning   false   100.0%     16s
-ubuntu-22.04   Ready          false   100%       18s
+ubuntu-22-04   Provisioning   false              4s
+ubuntu-22-04   Provisioning   false   0.0%       4s
+ubuntu-22-04   Provisioning   false   28.2%      6s
+ubuntu-22-04   Provisioning   false   66.5%      8s
+ubuntu-22-04   Provisioning   false   100.0%     10s
+ubuntu-22-04   Provisioning   false   100.0%     16s
+ubuntu-22-04   Ready          false   100%       18s
 ```
 
 Additional information about the downloaded image can be retrieved by describing the `ClusterVirtualImage` resource:
 
 ```shell
-d8 k describe cvi ubuntu-22.04
+d8 k describe cvi ubuntu-22-04
 ```
 
 ### Creating an image from a container registry
@@ -229,7 +256,7 @@ EOF
 
 After creating this resource, it will transition to the `WaitForUserUpload` phase, indicating that it is ready for image upload.
 
-There are two options for uploading — from a cluster node or from any external node outside the cluster:
+There are two options available for uploading: from a cluster node and from an arbitrary node outside the cluster:
 
 ```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
@@ -238,11 +265,16 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 Example output:
 
 ```txt
-# {
-#   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
-#   "inCluster":"http://10.222.165.239/upload"
-# }
+{
+  "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
+  "inCluster":"http://10.222.165.239/upload"
+}
 ```
+
+Where:
+
+- `inCluster`: A URL used to download the image from one of the cluster nodes.
+- `external`: A URL used in all other cases.
 
 As an example, download the Cirros image:
 

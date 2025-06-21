@@ -55,6 +55,7 @@ import (
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
@@ -168,7 +169,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
@@ -182,7 +183,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("kVersion-unsuitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
@@ -588,6 +589,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
+		exts:           extenders.NewExtendersStack("", log.NewNop()),
 	}
 
 	for _, option := range options {

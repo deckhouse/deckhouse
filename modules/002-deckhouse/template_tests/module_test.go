@@ -46,11 +46,16 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.28.10"
+  kubernetesVersion: "1.29.14"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
   placement: {}
+internal:
+  modules:
+    admissionWebhookClientCA:
+      cert: mock-cert
+      key: mock-key
 `
 
 	globalValues2 = `
@@ -73,6 +78,11 @@ discovery:
     system: 1
 modules:
   placement: {}
+internal:
+  modules:
+    admissionWebhookClientCA:
+      cert: mock-cert
+      key: mock-key
 `
 
 	clusterIsBootstrapped = `
@@ -252,5 +262,4 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(servicePort).To(Equal("6443"))
 		})
 	})
-
 })

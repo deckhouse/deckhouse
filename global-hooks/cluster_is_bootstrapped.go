@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,6 +24,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const bootstrappedFileName = "/tmp/cluster-is-bootstrapped"
@@ -112,8 +115,7 @@ func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 }
 
 func clusterIsBootstrapped(input *go_hook.HookInput) error {
-	isBootstrappedCmSnap := input.Snapshots[isBootstrappedCmSnapName]
-	readyNodesSnap := input.Snapshots[readyNotMasterNodesSnapName]
+	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
 		// if we have cm here then set value and return
@@ -121,9 +123,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		input.Values.Set(clusterBootstrapFlagPath, true)
 		return createBootstrappedFile()
 	}
-
 	// not have `is bootstrap` configmap
-
 	if input.Values.Exists(clusterBootstrapFlagPath) {
 		// here cm was deleted probably
 		// create it!
@@ -131,8 +131,13 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		return createBootstrappedFile()
 	}
 
-	for _, readyRaw := range readyNodesSnap {
-		if readyRaw.(bool) {
+	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal %s snapshot: %w", readyNotMasterNodesSnapName, err)
+	}
+
+	for _, ready := range readyNodes {
+		if ready {
 			createBootstrapClusterCm(input.PatchCollector)
 			input.Values.Set(clusterBootstrapFlagPath, true)
 			if err := createBootstrappedFile(); err != nil {

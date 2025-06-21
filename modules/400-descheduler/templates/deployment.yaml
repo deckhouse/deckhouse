@@ -62,6 +62,7 @@ spec:
         checksum/config: {{ $.Values.descheduler.internal.deschedulers | toJson | sha256sum }}
     spec:
       serviceAccountName: descheduler
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
