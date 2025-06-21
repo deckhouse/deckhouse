@@ -888,7 +888,7 @@ spec:
                             enum:
                               - ReplaceDotKeys
                         required:
-                          - normalizeKeys
+                          - replaceDotKeys
                           - action
                       - properties:
                           ensureStructuredMessage: {}
