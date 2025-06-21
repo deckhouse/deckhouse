@@ -975,7 +975,7 @@ spec:
                         type: object
                         description: "Removes the specified labels"
                         required:
-                          - lables
+                          - labels
                         properties:
                           labels:
                             type: array
