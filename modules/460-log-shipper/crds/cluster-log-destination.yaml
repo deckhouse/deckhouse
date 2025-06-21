@@ -834,6 +834,154 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                transformations:
+                  type: array
+                  description: |
+                    List of transformations that can be applied to logs before sending them to the destination.
+
+                    Available options:
+
+                          - `ReplaceDotKeys`: Replaces dots with underscores in the labels.
+
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: ReplaceDotKeys
+                              replaceDotKeys:
+                                labels:
+                                  - pod_labels
+                            ```
+
+                          - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                            
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: EnsureStructuredMessage
+                              ensureStructuredMessage:
+                                sourceFormat: String
+                                string:
+                                  targetField: msg
+                            ```
+
+                          - `DropLabels`: Removes the specified labels.
+                            
+                            Example:
+
+                            ```yaml
+                            transformations:
+                            - action: DropLabels
+                              dropLabels:
+                                labels:
+                                  - first
+                                  - second
+                            ```
+
+                  items:
+                    type: object
+                    oneOf:
+                      - properties:
+                          replaceDotKeys: {}
+                          action:
+                            enum:
+                              - ReplaceDotKeys
+                        required:
+                          - replaceDotKeys
+                          - action
+                      - properties:
+                          ensureStructuredMessage: {}
+                          action:
+                            enum:
+                              - EnsureStructuredMessage
+                        required:
+                          - ensureStructuredMessage
+                          - action
+                      - properties:
+                          dropLabels: {}
+                          action:
+                            enum:
+                              - DropLabels
+                        required:
+                          - dropLabels
+                          - action
+                    properties:
+                      action:
+                        type: string
+                        enum: ["ReplaceDotKeys", "EnsureStructuredMessage", "DropLabels"]
+                        description: Type of transformations.
+                      replaceDotKeys:
+                        type: object
+                        description: "Normalizes names with a dot, replacing dots with underscores"
+                        required:
+                          - labels
+                        properties:
+                          labels:
+                            type: array
+                            description: "List of labels for relace dot in key"
+                            items:
+                              type: string
+                      ensureStructuredMessage:
+                        type: object
+                        description: "Ensures that the message field contains a Json object"
+                        required:
+                          - sourceFormat
+                        oneOf:
+                          - properties:
+                              string: {}
+                              sourceFormat:
+                                enum:
+                                  - String
+                            required:
+                              - string
+                              - sourceFormat
+                          - properties:
+                              json: {}
+                              sourceFormat:
+                                enum:
+                                  - JSON
+                            required:
+                              - json
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - Klog
+                            required:
+                              - sourceFormat
+                        properties:
+                          sourceFormat:
+                            type: string
+                            enum: ["String", "JSON", "Klog"]
+                            description: "Format message for parsing in json"
+                          string:
+                            type: object
+                            required:
+                              - targetField
+                            properties:
+                              targetField:
+                                type: string
+                                description: "The target field into which wrapped string is placed"
+                          json:
+                            type: object
+                            required:
+                              - depth
+                            properties:
+                              depth:
+                                type: integer
+                                description: "The depth for parsing json"
+                      dropLabels:
+                        type: object
+                        description: "Removes the specified labels"
+                        required:
+                          - labels
+                        properties:
+                          labels:
+                            type: array
+                            description: "List of labels to remove"
+                            items:
+                              type: string
                 buffer:
                   type: object
                   oneOf:
