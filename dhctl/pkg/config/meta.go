@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -204,7 +205,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraint, err)
 		}
 
-		infrastructureModulesDir := getInfrastructureModulesDir("vcd")
+		infrastructureModulesDir := infrastructure.GetInfrastructureModulesDir("vcd")
 
 		versionsFilePath := filepath.Join(infrastructureModulesDir, "versions.tf")
 

@@ -30,16 +30,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-)
-
-var (
-	dhctlPath         = "/"
-	cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
 )
 
 const (
@@ -121,9 +117,32 @@ type Runner struct {
 	hook InfraActionHook
 }
 
-func NewRunner(provider, prefix, layout, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
-	workingDir := buildInfrastructurePath(provider, layout, step)
+func NewRunner(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
+	provider := cfg.ProviderName
+	prefix := cfg.ClusterPrefix
+	layout := cfg.Layout
+
+	workingDir := infrastructure.GetInfrastructureModulesForRunningDir(provider, layout, step)
 	logger := log.GetDefaultLogger()
+
+	// in terraform >= 0.14 creates special file contains hashes for used providers between runs terraform
+	// it needs for prevent using different providers versions for same infrastructure
+	// because user can use constraints for definition provider version and terraform can upgrade version without
+	// user permission. Now if user get conflict between versions user should confirm upgrade with command
+	// terraform init -upgrade
+	// https://developer.hashicorp.com/terraform/tutorials/configuration-language/provider-versioning
+	// unfortunately we can use different provider version between runs. For example cloud provider vcd works
+	// in two modes in legacy (for old vcd instances (yes, some our customers cannot upgrade vcd version)) and latest.
+	// user can switch from and to legacy mode in between dhctl runs in same container (in commander for example)
+	// and in this situation user will get provider lock error.
+	// we made a decision that we will remove lock file before infrastructure running
+	err := releaseInfrastructureProviderLock(infrastructure.GetDhctlPath(), infrastructure.GetInfrastructureModulesDir(provider), step, workingDir, logger)
+	if err != nil {
+		// yes, we panic here because returns error in many places and this will lead to a major refactoring, and
+		// we don't expect any problems with file deletion, only in critical situations
+		panic(fmt.Errorf("failed to release infrastructure lock: %v", err))
+	}
+
 	r := &Runner{
 		prefix:                prefix,
 		step:                  step,
@@ -148,11 +167,11 @@ func NewRunner(provider, prefix, layout, step string, stateCache state.Cache, ex
 }
 
 func NewRunnerFromConfig(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
-	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step, stateCache, executorProvider)
+	return NewRunner(cfg, step, stateCache, executorProvider)
 }
 
 func NewImmutableRunnerFromConfig(cfg *config.MetaConfig, step string, executorProvider ExecutorProvider) *Runner {
-	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step, cache.Dummy(), executorProvider)
+	return NewRunner(cfg, step, cache.Dummy(), executorProvider)
 }
 
 func (r *Runner) WithCache(cache state.Cache) *Runner {
@@ -341,7 +360,7 @@ func (r *Runner) Init(ctx context.Context) error {
 
 	return r.logger.LogProcess("default", "infrastructure init ...", func() error {
 		_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
-			err := r.infraExecutor.Init(ctx, fmt.Sprintf("%s/plugins", strings.TrimRight(dhctlPath, "/")))
+			err := r.infraExecutor.Init(ctx, fmt.Sprintf("%s/plugins", strings.TrimRight(infrastructure.GetDhctlPath(), "/")))
 			return 0, err
 		})
 
@@ -789,11 +808,63 @@ func hasAction(actions []string, findAction string) bool {
 	return false
 }
 
-func buildInfrastructurePath(provider, layout, step string) string {
-	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
+func deleteLockFile(fileForDelete, logPrefix, nextActionLogString string, logger log.Logger) (pursue bool, err error) {
+	err = os.Remove(fileForDelete)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return false, err
+		}
+
+		logger.LogDebugF("%s file %s not found. %s\n", logPrefix, fileForDelete, nextActionLogString)
+		return true, nil
+	}
+
+	// terraform lock file was found. Hence, we are using terraform, and we do not need to try to delete tofu lock file
+	logger.LogDebugF("%s file %s was found and deleted. \n", logPrefix, fileForDelete)
+	return false, nil
 }
 
-func InitGlobalVars(pwd string) {
-	dhctlPath = pwd
-	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
+func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModuleDir string, logger log.Logger) error {
+	logger.LogDebugF("Releasing infrastructure provider lock. dhctl dir: %s; modules dir %s; module: %s; desired module dir: %s .\n",
+		dhctlDir, modulesDir, module, desiredModuleDir)
+	defer logger.LogDebugF("Releasing infrastructure provider lock finished.\n")
+
+	// terraform and tofu use same file name for lock file
+	const lockFile = ".terraform.lock.hcl"
+
+	// first, we will process terraform case. Terraform 0.14 version save lock file in same location where terraform runs
+	terraformLockFile := filepath.Join(dhctlDir, lockFile)
+	logger.LogDebugF("Terraform lock file %s\n", terraformLockFile)
+
+	pursue, err := deleteLockFile(terraformLockFile, "Terraform lock", "Try to delete tofu lock files.", logger)
+	if err != nil {
+		return err
+	} else if !pursue {
+		logger.LogDebugF("Terraform lock file %s was deleted. Hence we work with terraform and we do not need delete tofu locks.\n", terraformLockFile)
+		return nil
+	}
+
+	// next, we will process tofu case. Latest terraform version and opentofu can save lock in modules dir (not in desired
+	// module where tofu will run) and in desired module. I do not understand because this behavior happens
+
+	tofuModulesLockFile := filepath.Join(modulesDir, module, lockFile)
+	logger.LogDebugF("Tofu modules lock file %s\n", tofuModulesLockFile)
+
+	pursue, err = deleteLockFile(tofuModulesLockFile, "Tofu modules lock", "Try to delete tofu lock file in module.", logger)
+	if err != nil {
+		return err
+	} else if !pursue {
+		logger.LogDebugF("Tofu modules lock file %s was deleted. Hence we do not need delete tofu 'in module' lock file.\n", tofuModulesLockFile)
+		return nil
+	}
+
+	tofuInModuleLockFile := filepath.Join(desiredModuleDir, lockFile)
+	logger.LogDebugF("Tofu 'in module' lock file %s\n", tofuInModuleLockFile)
+
+	_, err = deleteLockFile(tofuInModuleLockFile, "Tofu 'in module' lock", "", logger)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
