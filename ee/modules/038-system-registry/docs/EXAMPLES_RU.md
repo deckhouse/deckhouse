@@ -1,8 +1,44 @@
 ---
-title: "Модуль system-registry: примеры"
+title: "Модуль registry: примеры"
 description: ""
 ---
 
+## Переключение на режим `Direct`
+
+Для переключения уже работающего кластера на режим `Direct` необходимо выполнить следующие шаги:
+
+1. Убедитесь, что модуль `registry` включен и работает.
+
+```bash
+kubectl get module registry
+```
+
+2. Добавьте следующие настройки в `ModuleConfig` модуля `deckhouse`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    mode: Direct
+    direct:
+      host: registry.deckhouse.ru/deckhouse/ee
+      scheme: https
+      license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
+```
+
+{% alert level="warning" %}
+Если у вас используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/) для корректной настройки.
+{% endalert %}
+
+3. Проверьте статус переключения registry в секрете `registry-state` используя [инструкцию](./faq.html#how-to-check-the-registry-mode-switch-status).
+
+
+<!--
 Ниже приведены примеры запуска и отключения модуля `embedded-registry`
 
 ## Bootstrap кластера с Proxy режимом
@@ -126,3 +162,4 @@ description: ""
 - **TODO**:
 - Переключение на другой registry
 - Отключение модуля embedded registry
+-->

@@ -1,8 +1,9 @@
 ---
-title: "Module embedded-registry: cloud architecture"
+title: "Module registry: cloud architecture"
 description: ""
 ---
 
+<!--
 ## Bootstrap
 
 For the initial master node during the bootstrap phase, the parameter [ProviderSecondaryDevices.RegistryDataDeviceEnable](dhctl/pkg/config/spec_secondary_devices.go) is passed in the `terraform apply` command. This parameter determines whether a disk for the embedded registry will be created.
@@ -14,3 +15,4 @@ After the cluster is started, a [secret is applied](http://dhctl/pkg/operations/
 When a second master node is added, data from the secret is used ([disk mounting step in bashible](candi/bashible/common-steps/node-group/005_integrate_system_registry_data_device.sh.tpl)).
 
 ## Converge
+-->

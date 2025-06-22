@@ -1,25 +1,5 @@
 type: object
 properties:
-  imagesOverride:
-    type: object
-    default: {}
-    description: |
-      Images override
-    properties:
-      registryManager:
-        type: string
-        description: |
-          Registry manager img full path
-        x-example:
-          - dev-registry.deckhouse.io/registryManager:latest
-        x-dmt-default: ""
-      mirrorer:
-        type: string
-        description: |
-          Mirrorer img full path
-        x-example:
-          - dev-registry.deckhouse.io/mirrorer:latest
-        x-dmt-default: ""
   whitelistSourceRanges:
     type: array
     items:
@@ -88,3 +68,25 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the embedded registry ingress.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+
+  # TODO (nabokihms): remove (only for testing purposes)
+  imagesOverride:
+    type: object
+    default: {}
+    description: |
+      Images override
+    properties:
+      registryManager:
+        type: string
+        description: |
+          Registry manager img full path
+        x-example:
+          - dev-registry.deckhouse.io/registryManager:latest
+        x-dmt-default: ""
+      mirrorer:
+        type: string
+        description: |
+          Mirrorer img full path
+        x-example:
+          - dev-registry.deckhouse.io/mirrorer:latest
+        x-dmt-default: ""

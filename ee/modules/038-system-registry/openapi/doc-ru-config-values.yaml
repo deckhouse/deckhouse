@@ -1,13 +1,5 @@
 type: object
 properties:
-  imagesOverride:
-    description: |
-      Переопределение образов
-    properties:
-      registryManager:
-        description: |
-          Образ registry manager-а
-
   whitelistSourceRanges:
     description: "Список адресов в формате CIDR, которым разрешено подключение к embedded registry. Если не указано, то разрешено подключение с любых адресов"
   ingressClass:
@@ -42,3 +34,11 @@ properties:
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для ingress-а embedded registry.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  # TODO (nabokihms): remove (only for testing purposes)
+  imagesOverride:
+    description: |
+      Переопределение образов
+    properties:
+      registryManager:
+        description: |
+          Образ registry manager-а

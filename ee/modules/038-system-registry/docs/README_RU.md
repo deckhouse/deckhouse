@@ -1,8 +1,79 @@
 ---
-title: "Модуль system-registry"
+title: "Модуль registry"
 description: ""
 ---
 
+## Описание
+
+Модуль реализует внутренний реестр container образов. Он позволяет использовать локальный реестр для оптимизации загрузки и хранения образов, а также обеспечивает высокую доступность и отказоустойчивость.
+
+Существует несколько режимов работы модуля, которые позволяют адаптировать его под различные сценарии использования. 
+
+Модуль реализует работу в режимах `Direct`, `Proxy` и `Local` (на данный момент поддерживается только режим `Direct`).
+
+### Direct режим
+
+В этом режиме запросы к реестру обрабатываются напрямую, без промежуточного кэширования.
+
+{% alert level="info" %}
+Для работы режима `Direct` необходимо использовать CRI `Containerd` или `ContainerdV2` на всех узлах кластера.
+{% endalert %}
+
+Перенаправление запросов к registry от CRI осуществляется при помощи его настроек, которые прописываются в конфигурации `containerd`.
+
+В случае компонентов, обращающихся к реестру напрямую, таких как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращения будут идти через In-Cluster Proxy, расположенный на узлах control plane.
+
+```mermaid
+---
+title: Режим Direct
+---
+flowchart TD
+subgraph Cluster["Кластер Deckhouse Kubernetes "]
+
+subgraph Node1["Узел 1"]
+kubelet[Kubelet]
+containerd[Containerd]
+end
+
+subgraph Node2["Узел 2"]
+kubelet2[Kubelet]
+containerd2[Containerd]
+end
+
+subgraph Node3["Узел 3"]
+kubelet3[Kubelet]
+containerd3[Containerd]
+end
+
+
+kubelet --> containerd
+kubelet2 --> containerd2
+kubelet3 --> containerd3
+
+subgraph InCluster["Компоненты кластера"]
+operator[operator-trivy]
+controller[deckhouse-controller]
+exporter[image-availability-exporter]
+registrySVC["In-cluster Proxy **(registry.d8-system.svc:5001)**"]
+end
+
+operator --> registrySVC 
+controller --> registrySVC
+exporter --> registrySVC
+
+end
+
+registryRewritten[("**registry.deckhouse.ru**")]
+
+
+registrySVC --> registryRewritten
+
+containerd -. "**REWRITE** registry.d8-system.svc:5001" .-> registryRewritten
+containerd2 -. "**REWRITE** registry.d8-system.svc:5001" .-> registryRewritten
+containerd3 -. "**REWRITE** registry.d8-system.svc:5001" .-> registryRewritten
+```
+
+<!--
 ## Основные функции
 
 Модуль `embedded-registry` предоставляет возможность использования внутреннего Docker registry для хранения Docker образов компонентов Deckhouse. Ключевые функции:
@@ -41,7 +112,7 @@ description: ""
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
-     name: embedded-registry
+     name: registry
    spec:
      version: 1
      enabled: true
@@ -82,3 +153,4 @@ description: ""
 {% alert level="warning" %}
 **Обратите внимание!** Перед применением ModuleConfig следует обратить внимание на раздел [FAQ](./faq.html) и [Примеры](./examples.html)
 {% endalert %}
+-->

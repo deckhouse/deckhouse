@@ -1,8 +1,9 @@
 ---
-title: "Module embedded-registry: module architecture"
+title: "Module registry: module architecture"
 description: ""
 ---
 
+<!--
 The module consists of the `embedded-registry-manager` daemonset, which includes:
 
 - **Leader**: The manager, only one is elected.
@@ -71,3 +72,4 @@ graph TD;
         end
     end
 ```
+-->

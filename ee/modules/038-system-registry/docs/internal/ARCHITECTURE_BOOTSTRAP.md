@@ -1,8 +1,9 @@
 ---
-title: "Module embedded-registry: bootstrap architecture"
+title: "Module registry: bootstrap architecture"
 description: ""
 ---
 
+<!--
 To pass parameters to a module during the bootstrap stage, [InitConfiguration](candi/openapi/init_configuration.yaml) is used.
 Example:
 
@@ -10,7 +11,7 @@ Example:
 apiVersion: deckhouse.io/v2alpha1
 kind: InitConfiguration
 deckhouse:
-registry:
+  registry:
     mode: Proxy
     proxy:
     imagesRepo: nexus.company.my/deckhouse/ee
@@ -42,3 +43,4 @@ The parameters are parsed and passed to Basible for template rendering. The main
 
 After the bootstrap and the launch of deckhouse, the [ModuleConfig](dhctl/pkg/config/module_config.go#L102) is applied, and the module starts.
 Control of the `embedded-registry` static pods is handed over to the module.
+-->
