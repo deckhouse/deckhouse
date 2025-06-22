@@ -288,6 +288,7 @@ properties:
     type: object
     default:
       mode: Unmanaged
+
     x-examples:
       - mode: Unmanaged
       - mode: Direct
@@ -305,6 +306,7 @@ properties:
             ...
             -----END CERTIFICATE-----
       - mode: Local
+
     properties:
       mode:
         type: string
@@ -409,30 +411,14 @@ properties:
               - "168h"
               - "168h10m"
               - "168h10m5s"
-    # oneOf:
-    #   - required: [mode]
-    #     properties:
-    #       mode:
-    #         enum: [Unmanaged]
-    #     not:
-    #       required: [proxy, direct]
-    #   - required: [mode]
-    #     properties:
-    #       mode:
-    #         enum: [Direct]
-    #       direct: {}
-    #     not:
-    #       required: [proxy]
-    #   - required: [mode]
-    #     properties:
-    #       mode:
-    #         enum: [Proxy]
-    #       proxy: {}
-    #     not:
-    #       required: [direct]
-    #   - required: [mode]
-    #     properties:
-    #       mode:
-    #         enum: [Local]
-    #     not:
-    #       required: [proxy, direct]
+
+# TODO(nabokihms): Uncomment the following validation rules. Commented for easier switching between registry modes.
+# x-deckhouse-validations:
+# - expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) && !has(self.registry.proxy) && !has(self.registry.local) : true"
+#   message: "When mode is 'Direct', only 'direct' must be specified."
+# - expression: "self.registry.mode == 'Proxy' ? has(self.registry.proxy) && !has(self.registry.direct) && !has(self.registry.local) : true"
+#   message: "When mode is 'Proxy', only 'proxy' must be specified."
+# - expression: "self.registry.mode == 'Local' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
+#   message: "When mode is 'Local', 'direct', and 'proxy' options must be omitted."
+# - expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
+#   message: "When mode is 'Unmanaged', 'direct', and 'proxy' options must be omitted."
