@@ -922,6 +922,7 @@ spec:
                             description: "List of labels for relace dot in key"
                             items:
                               type: string
+                              pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                       ensureStructuredMessage:
                         type: object
                         description: "Ensures that the message field contains a Json object"
@@ -962,6 +963,7 @@ spec:
                             properties:
                               targetField:
                                 type: string
+                                pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                                 description: "The target field into which wrapped string is placed"
                           json:
                             type: object
@@ -970,6 +972,8 @@ spec:
                             properties:
                               depth:
                                 type: integer
+                                minimum: 1
+                                maximum: 127
                                 description: "The depth for parsing json"
                       dropLabels:
                         type: object
@@ -982,6 +986,7 @@ spec:
                             description: "List of labels to remove"
                             items:
                               type: string
+                              pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                 buffer:
                   type: object
                   oneOf:

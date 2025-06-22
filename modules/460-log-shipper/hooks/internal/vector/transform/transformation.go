@@ -18,6 +18,7 @@ package transform
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -25,26 +26,36 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
+var (
+	vectorLabelTemplate = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+$`)
+)
+
 func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
 	var transformation apis.LogTransform
 	var err error
-	for num, tm := range tms {
+	for _, tm := range tms {
 		switch tm.Action {
 		case "ReplaceDotKeys":
 			if len(tm.ReplaceDotKeys.Labels) > 0 {
-				transformation = replaceDotKeys(num, tm.ReplaceDotKeys)
+				transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
+				if err != nil {
+					return nil, err
+				}
 			}
 		case "EnsureStructuredMessage":
 			if tm.EnsureStructuredMessage.SourceFormat != "" {
-				transformation, err = ensureStructuredMessage(num, tm.EnsureStructuredMessage)
+				transformation, err = ensureStructuredMessage(tm.EnsureStructuredMessage)
 				if err != nil {
 					return nil, err
 				}
 			}
 		case "DropLabels":
 			if len(tm.DropLabels.Labels) > 0 {
-				transformation = dropLabels(num, tm.DropLabels)
+				transformation, err = dropLabels(tm.DropLabels)
+				if err != nil {
+					return nil, err
+				}
 			}
 		default:
 			return nil, fmt.Errorf("transformions: action %s not valide", tm.Action)
@@ -54,19 +65,22 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 	return transforms, nil
 }
 
-func replaceDotKeys(num int, r v1alpha1.ReplaceDotKeysSpec) apis.LogTransform {
+func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_replaceDotKeys_%d", num)
+	name := fmt.Sprintf("tf_replaceDotKeys")
 	labels := checkFixDotPrefix(r.Labels)
 	for _, l := range labels {
-		vrl = fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}", l, l, l)
+		if !validLabel(l) {
+			return nil, fmt.Errorf("transformions replaceDotKeys label: %s not valide", l)
+		}
+		vrl = fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n", l, l, l)
 	}
-	return NewTransformation(name, vrl)
+	return NewTransformation(name, vrl), nil
 }
 
-func ensureStructuredMessage(num int, e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
+func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_ensureStructuredMessage_%s_%d", e.SourceFormat, num)
+	name := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
 	case "String":
 		if e.String.TargetField == "" {
@@ -86,14 +100,17 @@ func ensureStructuredMessage(num int, e v1alpha1.EnsureStructuredMessageSpec) (a
 	return NewTransformation(name, vrl), nil
 }
 
-func dropLabels(num int, d v1alpha1.DropLabelsSpec) apis.LogTransform {
+func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_dropLabels_%d", num)
+	name := fmt.Sprintf("tf_dropLabels")
 	labels := checkFixDotPrefix(d.Labels)
 	for _, l := range labels {
+		if !validLabel(l) {
+			return nil, fmt.Errorf("transformions dropLabels label: %s not valide", l)
+		}
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
-	return NewTransformation(name, vrl)
+	return NewTransformation(name, vrl), nil
 }
 
 func NewTransformation(name, vrl string) *DynamicTransform {
@@ -121,4 +138,7 @@ func checkFixDotPrefix(lbs []string) []string {
 		labels = append(labels, l)
 	}
 	return labels
+}
+func validLabel(label string) bool {
+	return vectorLabelTemplate.MatchString(label)
 }

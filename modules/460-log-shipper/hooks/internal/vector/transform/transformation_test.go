@@ -45,7 +45,7 @@ var testCases = []struct {
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
 	{"ReplaceDotKeys", v1alpha1.TransformationSpec{Action: "ReplaceDotKeys",
 		ReplaceDotKeys: v1alpha1.ReplaceDotKeysSpec{Labels: []string{"pod_labels"}}},
-		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
+		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n"},
 }
 
 func TestReplaceDot(t *testing.T) {
