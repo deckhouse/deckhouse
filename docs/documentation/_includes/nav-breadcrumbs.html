@@ -1,7 +1,11 @@
 <div class="breadcrumbs-container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+      {% if page.sidebar == 'embedded-modules' %}
+        <li class="breadcrumbs__item"><strong><a href="/modules/">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</a></strong></li>
+      {% else %}
+        <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+      {% endif %}
     </ol>
   </div>
   <div class="breadcrumbs__right">

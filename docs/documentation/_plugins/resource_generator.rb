@@ -5,6 +5,8 @@ module ResourceGenerator
     safe true
 
     def generate(site)
+
+      return
       languages = ['ru', 'en']
       productCode = 'kubernetes-platform'
       sidebar = 'kubernetes-platform'

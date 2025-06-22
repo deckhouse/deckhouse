@@ -10,6 +10,10 @@ import:
   add: /src/docs-builder
   to: /app/server
   before: setup
+- image: d8-docs-artifacts
+  add: /export/embedded_modules.json
+  to: /app/hugo/data/dkp/embedded_modules.json
+  before: setup
 imageSpec:
   config:
     workingDir: "/app"
@@ -20,9 +24,51 @@ git:
 {{ if ne .ModuleName "docs" }}
     excludePaths:
     - config/production/
+    - data/dkp/embedded_modules.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo/config/production/hugo.yaml
 {{ end }}
+---
+image: d8-docs-artifacts
+from: {{ .Images.BASE_ALPINE }}
+final: false
+shell:
+  setup:
+  - |
+    mkdir -p /export
+    #for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
+    for name in $(find /rawdata/embedded-modules/ -regex '^.\+/modules/[^/]\+/docs/README.md$'); do
+      moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
+      DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' )
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" 'select(. != null) | .module=$module | .embedded="true" | .url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end '
+    done | jq -s  'unique_by(.module) | {entries: .}' | jq '(.entries[] | select(.module == "cert-manager")).tags = ["embedded", "security", "policy"]'  > /export/embedded_modules.json
+    # TODO ^^^ Have to fix this.
+    MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
+    if [ "$MODULES_COUNT" -le 10 ]; then
+      echo "Got only $MODULES_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got ${MODULES_COUNT} DKP embedded modules."
+      echo
+    fi
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+git:
+- add: /{{ .ModulePath }}
+  to: /rawdata/embedded-modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/{README,readme}*.md
+  - ee/**/docs/{README,readme}*.md
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine

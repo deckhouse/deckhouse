@@ -1,7 +1,7 @@
 {%- assign moduleSnakeName = page['module-snake-name'] %}
 {%- assign moduleKebabName = page['module-kebab-name'] %}
 
-{%- assign configVersion = site.data.schemas[moduleKebabName].config-values.x-config-version |  default: "1" %}
+{%- assign configVersion = site.data.schemas.modules[moduleKebabName].config-values.x-config-version |  default: "1" %}
 
 {%- if configVersion.size < 1 %}
   {%- assign configVersion = "1" %}
@@ -34,4 +34,4 @@ spec:
 
 ## {{ site.data.i18n.common['parameters'][page.lang] }}
 
-{{ site.data.schemas[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}
+{{ site.data.schemas.modules[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}
