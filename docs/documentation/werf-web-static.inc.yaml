@@ -49,34 +49,34 @@ shell:
           fi
         done
 
-        #echo '[] Generating configuration schemas...'
-        #export MODULES_DIR=/src/modules
-        #export MODULES_DIR=modules_en
-        #bash _tools/modules_generate_configuration.sh
-        #export MODULES_DIR=modules_ru MODULES_LANG=ru
-        #bash _tools/modules_generate_configuration.sh
+        echo '[] Generating configuration schemas...'
+        export MODULES_DIR=/src/modules
+        export MODULES_DIR=modules_en
+        bash _tools/modules_generate_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash _tools/modules_generate_configuration.sh
 
-        #echo
-        #echo '[] Generating cluster configuration schemas...'
-        #export MODULES_DIR=modules_en
-        #bash _tools/generate_cluster_configuration.sh
-        #export MODULES_DIR=modules_ru MODULES_LANG=ru
-        #bash _tools/generate_cluster_configuration.sh
+        echo
+        echo '[] Generating cluster configuration schemas...'
+        export MODULES_DIR=modules_en
+        bash _tools/generate_cluster_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash _tools/generate_cluster_configuration.sh
 
-        #echo
-        #echo "[] Generating CR schemas..."
-        #export MODULES_DIR=modules_en
-        #bash _tools/modules_generate_cr.sh
-        #export MODULES_DIR=modules_ru
-        #bash _tools/modules_generate_cr.sh
+        echo
+        echo "[] Generating CR schemas..."
+        export MODULES_DIR=modules_en
+        bash _tools/modules_generate_cr.sh
+        export MODULES_DIR=modules_ru
+        bash _tools/modules_generate_cr.sh
 
-        #mkdir -p _data/schemas/crds/
-        #find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
+        mkdir -p _data/schemas/crds/
+        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
-        #echo
-        #echo '[] Preparing OSS license info...'
-        #export MODULES_DIR=/src/modules
-        #bash _tools/modules_generate_ossinfo.sh
+        echo
+        echo '[] Preparing OSS license info...'
+        export MODULES_DIR=/src/modules
+        bash _tools/modules_generate_ossinfo.sh
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml

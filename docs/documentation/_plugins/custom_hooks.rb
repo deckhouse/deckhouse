@@ -140,9 +140,6 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     # if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || (page.name && pageAllowedSuffixes.any? { |suffix| page.name.end_with?(suffix) })
     #if page.dir.match?(%r{/modules(_en|_ru)/([0-9]+-)?[^/]+/docs/$}) && (page.name && pageAllowedSuffixes.any? { |suffix| page.name.end_with?(suffix) })
     if page.dir.match?(%r{(/en|/ru)/modules/([0-9]+-)?[^/]+/$})
-      #page.data['permalink'] = page.dir.sub(%r{^(.*)?/modules(_en|_ru)/([0-9]+-)?([^/]+)/$},'\2/modules/\4') +  page.name.sub(%r{(.+)(_RU|_ru|\.ru|\.en)?\.(md|MD)$},'\1.html').downcase
-#       page.url = "/d"
-#       puts "Processing page: #{page.name} with URL: #{page.url}"
       moduleKebabCase = page.url.sub(%r{(.*)?/modules/([0-9]+-)?([^/]+)/.*$},'\3')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
       page.data['module-kebab-name'] = moduleKebabCase

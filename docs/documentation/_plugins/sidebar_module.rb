@@ -130,53 +130,6 @@ module Jekyll
            external_url = "%s%s%s" % [ @context.registers[:site].config['urls'][lang], @context.registers[:site].config['canonical_url_prefix_documentation'], entry['url'] ]
       end
 
-      #if entry.dig('folders') && entry['folders'].size > 0
-      #   result.push(%Q(<li class='#{ parameters['folder_entry_class']}'>
-      #      <a href='#'>
-      #        <span class='sidebar__submenu-title'>#{entry.dig('title',lang)}</span>
-#
-      #        <span class='sidebar__badge--container'>))
-      #   if (site_mode != 'module' && avail_in_commercial_editions_only) ||
-      #      (doc_edition == 'ce' && avail_in_commercial_editions_only) ||
-      #      (site_mode == 'module' && not_avail_in_this_edition)
-      #       result.push(%Q(
-      #       <span class="sidebar__badge_v2 sidebar__badge_commercial"
-      #             title="#{ if site_mode == 'module' and not_avail_in_this_edition
-      #                          @context.registers[:site].data['i18n']['features']['notAvailableInThisEdition'][lang].sub(/\.$/, '')
-      #                       else
-      #                          @context.registers[:site].data['i18n']['features']['commercial'][lang].sub(/\.$/, '')
-      #                       end}"
-      #       >#{ @context.registers[:site].data['i18n']['features']['currency_sign'][lang] }</span>))
-      #   end
-#
-      #   if entry.has_key?('featureStatus')
-      #     result.push(%Q(
-      #         <span class='sidebar__badge_v2'
-      #               title="#{ @context.registers[:site].data['i18n']['features']["%s_long" % entry['featureStatus']][lang].gsub(/<\/?[^>]*>/, "").lstrip.sub(/\.$/, '')}">
-      #             #{case entry['featureStatus']
-      #                 when "experimental"
-      #                     "Exp"
-      #                 when "deprecated"
-      #                     "Dep"
-      #                 when "temporaryDeprecated"
-      #                     "Temporary deprecated"
-      #                 when "proprietaryOkmeter"
-      #                     "Prop"
-      #               end}))
-      #     result.push('</span>')
-      #   end
-#
-      #   result.push(%q(
-      #     </span>
-      #     </a>
-      #     <ul class='sidebar__submenu'>))
-      #   entry['folders'].each do |sub_entry|
-      #      result.push(sidebar_entry(sub_entry, {"folder_entry_class" => "sidebar__submenu-item sidebar__submenu-item_parent", "item_entry_class" => "sidebar__submenu-item", "not_avail_in_this_edition" => not_avail_in_this_edition}))
-      #   end
-      #   result.push(%q(
-      #     </ul>
-      #   </li>))
-      #elsif entry.has_key?('external_url')
       if entry.has_key?('external_url')
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
       elsif !external_url.nil? && external_url.size > 0
