@@ -38,7 +38,7 @@ lang: ru
   * диагностика проблемных связей.
   * диагностика состояния Control Plane.
 
-With Istio enabled, the Ingress Controller behavior changes as follows:
+С включенным Istio поведение Ingress-контроллера изменяется следующим образом:
 
 * К подам контроллера добавляется sidecar-proxy, который обслуживает только трафик от контроллера в сторону прикладных сервисов (параметр IngressNginxController [`enableIstioSidecar`](../../modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у ресурса IngressNginxController).
 * Сервисы, не находящиеся под управлением Istio, продолжают работать в прежнем режиме, без перехвата запросов сайдкаром контроллера.
