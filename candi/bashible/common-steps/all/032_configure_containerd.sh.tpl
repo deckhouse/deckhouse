@@ -26,6 +26,7 @@ migrate() {
   fi
   sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/deckhouse.toml
   sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/config.toml
+  bb-flag-set containerd-need-restart
 }
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
