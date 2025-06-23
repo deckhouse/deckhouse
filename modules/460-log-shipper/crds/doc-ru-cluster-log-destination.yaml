@@ -469,18 +469,20 @@ spec:
                           labels:
                             description: "Список лейблов для замены точек в ключах"
                       ensureStructuredMessage:
-                        description: "Гарантирует, что поле сообщения содержит объект Json"
+                        description: "Гарантирует, что поле сообщения содержит объект JSON"
                         properties:
                           sourceFormat:
-                            description: "Формат message для преобразования в json"
+                            description: "Формат message для преобразования в JSON"
                           string:
                             properties:
                               targetField:
                                 description: Имя поля, в которое помещается структурированное сообщение.
+                              depth:
+                                description: "Глубина разбора JSON"
                           json:
                             properties:
                               depth:
-                                description: "Глубина разбора json"
+                                description: "Глубина разбора JSON"
                       dropLabels:
                         description: "Удаление заданных лейблов"
                         properties:

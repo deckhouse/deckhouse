@@ -27,17 +27,18 @@ type ReplaceDotKeysSpec struct {
 	Labels []string `json:"labels,omitempty"`
 }
 type EnsureStructuredMessageSpec struct {
-	SourceFormat string                 `json:"sourceFormat,omitempty"`
+	SourceFormat string                 `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`
 	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
 }
 type SourceFormatStringSpec struct {
-	TargetField string `json:"targetField,omitempty"`
+	TargetField string `json:"targetField"`
+	Depth       int    `json:"depth,omitempty"`
 }
 type SourceFormatJSONSpec struct {
-	Depth int `json:"depth,omitempty"`
+	Depth int `json:"depth"`
 }
 
 type DropLabelsSpec struct {
-	Labels []string `json:"labels,omitempty"`
+	Labels []string `json:"labels"`
 }

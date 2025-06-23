@@ -67,7 +67,7 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 
 func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_replaceDotKeys")
+	name := "tf_replaceDotKeys"
 	labels := checkFixDotPrefix(r.Labels)
 	for _, l := range labels {
 		if !validLabel(l) {
@@ -87,6 +87,10 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 			return nil, fmt.Errorf("transformions ensureStructuredMessage string: TargetField is empty")
 		}
 		vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", e.String.TargetField)
+		if e.String.Depth != 0 {
+			vrl = fmt.Sprintf(".message = parse_json(.message, max_depth: %d) ?? { \"%s\": .message }\n", e.String.Depth, e.String.TargetField)
+
+		}
 	case "JSON":
 		if e.JSON.Depth == 0 {
 			return nil, fmt.Errorf("transformions ensureStructuredMessage JSON: Depth is empty")
@@ -102,7 +106,7 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 
 func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_dropLabels")
+	name := "tf_dropLabels"
 	labels := checkFixDotPrefix(d.Labels)
 	for _, l := range labels {
 		if !validLabel(l) {
@@ -139,6 +143,7 @@ func checkFixDotPrefix(lbs []string) []string {
 	}
 	return labels
 }
+
 func validLabel(label string) bool {
 	return vectorLabelTemplate.MatchString(label)
 }

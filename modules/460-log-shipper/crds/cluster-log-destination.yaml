@@ -925,7 +925,7 @@ spec:
                               pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                       ensureStructuredMessage:
                         type: object
-                        description: "Ensures that the message field contains a Json object"
+                        description: "Ensures that the message field contains a JSON object"
                         required:
                           - sourceFormat
                         oneOf:
@@ -955,7 +955,7 @@ spec:
                           sourceFormat:
                             type: string
                             enum: ["String", "JSON", "Klog"]
-                            description: "Format message for parsing in json"
+                            description: "Format message for parsing in JSON"
                           string:
                             type: object
                             required:
@@ -965,6 +965,11 @@ spec:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                                 description: "The target field into which wrapped string is placed"
+                              depth:
+                                type: integer
+                                minimum: 1
+                                maximum: 127
+                                description: "The depth for parsing JSON"
                           json:
                             type: object
                             required:
@@ -974,7 +979,7 @@ spec:
                                 type: integer
                                 minimum: 1
                                 maximum: 127
-                                description: "The depth for parsing json"
+                                description: "The depth for parsing JSON"
                       dropLabels:
                         type: object
                         description: "Removes the specified labels"

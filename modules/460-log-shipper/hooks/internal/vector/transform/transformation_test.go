@@ -29,6 +29,10 @@ var testCases = []struct {
 	in   v1alpha1.TransformationSpec
 	out  string
 }{
+	{"EnsureStructuredMessage String Format Depth 1", v1alpha1.TransformationSpec{Action: "EnsureStructuredMessage",
+		EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{SourceFormat: "String",
+			String: v1alpha1.SourceFormatStringSpec{TargetField: "text", Depth: 1}}},
+		".message = parse_json(.message, max_depth: 1) ?? { \"text\": .message }\n"},
 	{"EnsureStructuredMessage String Format", v1alpha1.TransformationSpec{Action: "EnsureStructuredMessage",
 		EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{SourceFormat: "String",
 			String: v1alpha1.SourceFormatStringSpec{TargetField: "text"}}},
