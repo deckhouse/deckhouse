@@ -106,4 +106,6 @@ function main() {
   fail_fast "$support_status"
 }
 
+{{- if eq .cri "ContainerdV2" }}
 main
+{{ end }}
