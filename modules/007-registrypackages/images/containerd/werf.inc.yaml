@@ -22,7 +22,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
-fromImage: builder/golang-bullseye
+fromImage: builder/golang-bookworm
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -104,7 +104,7 @@ shell:
   - git apply /patches/*.patch --verbose
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-bullseye
+fromImage: builder/golang-bookworm
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
