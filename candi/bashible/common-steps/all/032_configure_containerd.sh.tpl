@@ -19,13 +19,18 @@ _on_containerd_config_changed() {
 
 
 migrate() {
+  bb-log-info "start containerd migration"
   systemctl stop containerd-deckhouse.service
   for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
   if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
     chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
   fi
-  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/deckhouse.toml
-  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/config.toml
+  rm -rf /var/lib/containerd/*
+  bb-flag-set containerd-need-restart
+  bb-flag-set need-local-images-import
+  bb-flag-set reboot
+  bb-flag-unset cntrd-major-version-changed
+  bb-log-info "finish containerd migration"
 }
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
@@ -57,8 +62,6 @@ fi
 {{- if eq .cri "ContainerdV2" }}
 mkdir -p  /etc/containerd/registry.d/_default
 bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
-[host."https://registry-1.docker.io"]
-  capabilities = ["pull", "resolve"]
 
 [host."{{ .registry.scheme }}://{{ .registry.address }}"]
   capabilities = ["pull", "resolve"]
@@ -71,7 +74,7 @@ bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
   {{- end }}
 
     [host."{{ .registry.scheme }}://{{ .registry.address }}".auth]
-    auth = {{ .registry.auth | default "" }}
+    auth = {{ .registry.auth | default "" | quote }}
 EOF
 
 {{- if eq .runType "Normal" }}
@@ -192,7 +195,7 @@ oom_score = 0
             SystemdCgroup = ${systemd_cgroup}
 
     [plugins.'io.containerd.cri.v1.runtime'.cni]
-      bin_dir = '/opt/cni/bin'
+      bin_dirs = ['/opt/cni/bin']
       conf_dir = '/etc/cni/net.d'
       max_conf_num = 1
       setup_serially = false
@@ -439,12 +442,28 @@ oom_score = 0
 EOF
 {{- end }}
 
+
+additional_configs() {
+  local conf_dir="$1"
+  local unusable_conf_dir="$2"
+  local root_path="/etc/containerd"
+  local full_conf_path="$root_path/$conf_dir"
+
+  rm -rf "$root_path/$unusable_conf_dir/"
+  
+  if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
+    toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
+  else
+    cat "$root_path/deckhouse.toml"
+  fi
+}
+
 # Check additional configs
-if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/conf.d/*.toml -)"
-else
-  containerd_toml="$(cat /etc/containerd/deckhouse.toml)"
-fi
+{{- if eq .cri "ContainerdV2" }}
+containerd_toml=$(additional_configs conf2.d conf.d)
+{{- else if eq .cri "Containerd" }}
+containerd_toml=$(additional_configs conf.d conf2.d)
+{{- end }}
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
 
@@ -457,4 +476,8 @@ pull-image-on-create: false
 EOF
 {{- end }}
 
-bb-flag? ctr-major-version-changed && migrate
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+if bb-flag? cntrd-major-version-changed; then
+  migrate
+fi
+{{- end }}

@@ -1,5 +1,8 @@
 {{- $containerd_versions := list "1.7.27" "2.1.3" }}
-{{- $runc_version := "1.3.0" }}
+{{- $runc_versions := list "1.2.5" "1.3.0" }}
+{{- $containerd2runc := dict "1.7.27" "1.2.5" "2.1.3" "1.3.0" }}
+
+{{- range $runc_version := $runc_versions }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
 final: false
@@ -17,7 +20,7 @@ shell:
   install:
   - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - git apply /patches/{{ $runc_version }}/*.patch --verbose
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/.git
 ---
@@ -47,8 +50,12 @@ shell:
   - mv runc /out/runc
   - chown -R 64535:64535 /out
   - chmod 755 /out/runc
+{{- end }}
+
 {{- range $containerd_version := $containerd_versions }}
   {{- $image_version := $containerd_version | replace "." "-" }}
+  {{- $major_version := index (splitList "-" $image_version) 0 }}
+  {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: builder/scratch
@@ -80,6 +87,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
+fromCacheVersion: "2025-06-24.1"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -102,6 +110,9 @@ shell:
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
   - git apply /patches/*.patch --verbose
+  - cd /src/scripts
+  - cp install_v{{ $major_version }} install
+  - rm -rf install_v1 install_v2
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromImage: builder/golang-bookworm

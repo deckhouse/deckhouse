@@ -78,7 +78,7 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1alpha1/update-policies
-  - name: kubernetes-version.deckhouse-webhook.deckhouse.io
+  - name: cluster-configuration.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:
           - ""

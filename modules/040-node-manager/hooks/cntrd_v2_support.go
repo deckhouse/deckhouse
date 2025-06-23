@@ -17,29 +17,37 @@ limitations under the License.
 package hooks
 
 import (
-	"time"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (
 	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
-	cgroupV2MetricName       = "d8_node_cgroup_v2_support_status"
+	cntrdV2GroupName         = "nodes_cntrd_v2"
 )
 
-// set d8_node_cgroup_v2_support_status=1 if node has label node.deckhouse.io/containerd-v2-unsupported
+var cntrdV2UnsupportedMetricName = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
+
+// set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Settings: &go_hook.HookConfigSettings{
-		ExecutionMinInterval: 60 * time.Second,
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "sync",
+			Crontab: "*/3 * * * *",
+		},
 	},
-	Queue: "/modules/node-manager/cgroupv2_support_metrics",
+	Queue: "/modules/node-manager/nodes_cntrdv2_unsupported_metric",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "nodes_with_group",
+			Name:       "nodes_cntrdv2_unsupported",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -53,11 +61,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterNodeForCgroupV2Support,
 		},
 	},
-}, handleCgroupV2SupportMetrics)
+}, handlecntrdV2SupportMetrics)
 
 type cgroupV2SupportNode struct {
-	Name      string
-	NodeGroup string
+	Name                string
+	NodeGroup           string
+	HasUnsupportedLabel bool
 }
 
 func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -68,27 +77,32 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	nodeGroup := node.Labels[nodeGroupLabel]
+	_, hasLabel := node.Labels[containerdV2SupportLabel]
 
 	return cgroupV2SupportNode{
-		Name:      node.Name,
-		NodeGroup: nodeGroup,
+		Name:                node.Name,
+		NodeGroup:           nodeGroup,
+		HasUnsupportedLabel: hasLabel,
 	}, nil
 }
 
-func handleCgroupV2SupportMetrics(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_with_group"]
-
+func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
+	snap := input.Snapshots["nodes_cntrdv2_unsupported"]
+	input.MetricsCollector.Expire(cntrdV2GroupName)
+	options := []sdkpkg.MetricCollectorOption{
+		metrics.WithGroup(cntrdV2GroupName),
+	}
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
 
-		var metricValue float64 = 1.0
-
-		labels := map[string]string{
-			"node":       nodeInfo.Name,
-			"node_group": nodeInfo.NodeGroup,
+		metricValue := 1.0
+		if nodeInfo.HasUnsupportedLabel {
+			labels := map[string]string{
+				"node":       nodeInfo.Name,
+				"node_group": nodeInfo.NodeGroup,
+			}
+			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 		}
-
-		input.MetricsCollector.Set(cgroupV2MetricName, metricValue, labels)
 	}
 
 	return nil
