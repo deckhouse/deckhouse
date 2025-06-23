@@ -37,14 +37,19 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apk add --no-cache patchelf
+  - apk add --no-cache patchelf file
   install:
   - mkdir -p /opt/deckhouse/bin
   - cp -pr /src/sbin/* /src/usr/bin/* /src/usr/sbin/* /src/usr/libexec/* /opt/deckhouse/bin
   - cp -pr /src/usr/lib /opt/deckhouse
-  - cd /opt/deckhouse/lib
-  - ln -s libc.so ld-musl-x86_64.so.1
   - cd /opt/deckhouse/bin
-  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 *
-  - patchelf --set-rpath /opt/deckhouse/lib *
+  - |
+    for i in $(find . -type f); do
+      if file $i | grep -q "ELF"; then
+        patchelf --set-interpreter /opt/deckhouse/lib/libc.so $i
+      fi
+    done
+  - cd /opt/deckhouse/lib
+  - find . -type f -name *.la -delete
+  - find . -type f -name *.a -delete
   - chown -R 64535:64535 /opt/deckhouse
