@@ -139,7 +139,7 @@ function resources_management_memory_units_to_bytes {
 import sys
 from decimal import Decimal
 
-def numfmt_to_bytes(human_number: str, multiplier: float = 1) -> Decimal:
+def numfmt_to_bytes(human_number, multiplier = 1):
     m = float(multiplier)
     units = {
         'Ki': 1024,

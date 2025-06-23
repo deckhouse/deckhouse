@@ -1,0 +1,29 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: Handle hybrid clusters case in the to_tofu_migrate_metric hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13911
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix UUID validation regex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13955
+deckhouse-controller:
+  fixes:
+    - summary: fixes default maintenance value which prevents stuck metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13950
+deckhouse-tools:
+  fixes:
+    - summary: deckhouse-tools fix deployment render
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13933
+docs:
+  fixes:
+    - summary: Updated conversions message.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13927
+node-local-dns:
+  fixes:
+    - summary: Changed container liveness port.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13922
+node-manager:
+  fixes:
+    - summary: fixed update for static clusters
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13963
+

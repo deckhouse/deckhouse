@@ -234,11 +234,11 @@ spec:
     {{- else if .spec.bearerToken }}
     bearerToken: {{ .spec.bearerToken }}
     {{- end }}
-    {{- if .spec.customAuthToken }}
+    {{- if or .spec.customAuthToken .spec.headers }}
     headers:
-      X-Auth-Token: {{ .spec.customAuthToken }}
-    {{- end }}
-    {{- if .spec.headers }}
+      {{- if .spec.customAuthToken }}
+      X-Auth-Token: {{ .spec.customAuthToken | quote }}
+      {{- end }}
       {{- range $key, $value := .spec.headers }}
       {{ $key }}: {{ $value | quote }}
       {{- end }}

@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
@@ -58,6 +59,8 @@ import (
 	"k8s.io/client-go/testing"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/yaml"
+
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -633,7 +636,7 @@ func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) hookcont
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
-	contexts, err := hec.BindingContextController.RunSchedule(crontab)
+	contexts, err := hec.BindingContextController.RunSchedule(context.TODO(), crontab)
 	if err != nil {
 		panic(err)
 	}
@@ -873,17 +876,29 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableValues, err := go_hook.NewPatchableValues(values)
+	patchableValues, err := sdkpatchablevalues.NewPatchableValues(values)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableConfigValues, err := go_hook.NewPatchableValues(convigValues)
+	patchableConfigValues, err := sdkpatchablevalues.NewPatchableValues(convigValues)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
+	newformattedSnapshots := make(go_hook.NewSnapshots, len(hec.BindingContexts.BindingContexts))
+
 	for _, bCtx := range hec.BindingContexts.BindingContexts {
 		for snapBindingName, snaps := range bCtx.Snapshots {
 			for _, snapshot := range snaps {
+				if snapshot.FilterResult == nil {
+					continue
+				}
+
+				rw := reflect.ValueOf(snapshot.FilterResult)
+				if rw.Kind() == reflect.Pointer && rw.IsNil() {
+					continue
+				}
+
 				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
+				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}
 		}
 	}
@@ -905,6 +920,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 
 	hookInput := &go_hook.HookInput{
 		Snapshots:        formattedSnapshots,
+		NewSnapshots:     newformattedSnapshots,
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,

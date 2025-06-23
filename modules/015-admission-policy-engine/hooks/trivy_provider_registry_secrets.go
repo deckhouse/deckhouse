@@ -32,6 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
@@ -115,16 +117,16 @@ func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	cfg := valueDockerConfig{Auths: make(map[string]authConfig)}
-	for _, authSnap := range input.Snapshots["trivy_provider_secrets"] {
-		if authSnap == nil {
+
+	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[dockerConfig](input.NewSnapshots, "trivy_provider_secrets")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal trivy_provider_secrets snapshot: %w", err)
+	}
+
+	for _, auth := range authSnaps {
+		if len(auth.Auths) == 0 {
 			continue
 		}
-
-		auth, ok := authSnap.(*dockerConfig)
-		if !ok || auth == nil || len(auth.Auths) == 0 {
-			continue
-		}
-
 		for registry, config := range auth.Auths {
 			cfg.Auths[registry] = authConfig{
 				Username:      config.Username,
@@ -176,7 +178,6 @@ func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.
 	if err != nil {
 		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
 	}
-
 	return dockerConfigBySecret(secret)
 }
 

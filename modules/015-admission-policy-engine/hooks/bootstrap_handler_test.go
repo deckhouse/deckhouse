@@ -59,7 +59,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -87,7 +87,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -115,7 +115,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -143,7 +143,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})

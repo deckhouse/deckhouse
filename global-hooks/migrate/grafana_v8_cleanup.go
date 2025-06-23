@@ -19,12 +19,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
@@ -176,14 +179,18 @@ func filterResources(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
-	deployments := input.Snapshots["grafana-v8-deployments"]
-	services := input.Snapshots["grafana-v8-services"]
-	ingresses := input.Snapshots["grafana-v8-ingresses"]
-	pdb := input.Snapshots["grafana-v8-pdb"]
+	resources := make([][]GrafanaV8Resource, 0)
+	for _, resource := range []string{"grafana-v8-deployments", "grafana-v8-services", "grafana-v8-ingresses", "grafana-v8-pdb"} {
+		snapshots, err := sdkobjectpatch.UnmarshalToStruct[GrafanaV8Resource](input.NewSnapshots, resource)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal %s snapshot: %w", resource, err)
+		}
 
-	for _, snap := range [][]go_hook.FilterResult{deployments, services, ingresses, pdb} {
-		for _, s := range snap {
-			resource := s.(GrafanaV8Resource)
+		resources = append(resources, snapshots)
+	}
+
+	for _, snap := range resources {
+		for _, resource := range snap {
 			input.PatchCollector.Delete(resource.APIVersion, resource.Kind, resource.Metadata.Namespace, resource.Metadata.Name)
 		}
 	}

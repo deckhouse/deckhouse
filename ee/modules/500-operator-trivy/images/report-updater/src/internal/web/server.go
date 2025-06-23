@@ -66,7 +66,7 @@ type ServerConfig struct {
 }
 
 func NewServer(config *ServerConfig) (*Server, error) {
-	c, err := cache.NewVulnerabilityCache(context.Background(), config.Logger)
+	c, err := cache.New(context.Background(), config.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +123,7 @@ func (s *Server) Run(ctx context.Context) error {
 	s.logger.Printf("server is starting to listen on '%s' ...\n", listenAddr)
 
 	go s.handler.StartRenewCacheLoop(ctx)
+
 	if err = httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("could not listen on %s: %w", listenAddr, err)
 	}

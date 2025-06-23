@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 	audit "k8s.io/apiserver/pkg/apis/audit/v1"
 	"sigs.k8s.io/yaml"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -108,12 +110,18 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 	var policy audit.Policy
 
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
-		appendBasicPolicyRules(&policy, input.Snapshots["configmaps_with_extra_audit_policy"])
+		extraData, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.NewSnapshots, "configmaps_with_extra_audit_policy")
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal configmaps_with_extra_audit_policy snapshot: %w", err)
+		}
+		appendBasicPolicyRules(&policy, extraData)
 	}
-
-	snap := input.Snapshots["kube_audit_policy_secret"]
-	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(snap) > 0 {
-		data := snap[0].([]byte)
+	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "kube_audit_policy_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal kube_audit_policy_secret snapshot: %w", err)
+	}
+	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(datas) > 0 {
+		data := datas[0]
 		err := appendAdditionalPolicyRules(&policy, &data)
 		if err != nil {
 			return err
@@ -140,7 +148,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 	return nil
 }
 
-func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResult) {
+func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 	appendDropResourcesRule := func(resource audit.GroupResources) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
@@ -248,8 +256,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		// Append sa from extra ConfigMaps
 		if len(extraData) > 0 {
 			users := rule.Users
-			for _, cmSnap := range extraData {
-				configMap := cmSnap.(ConfigMapInfo)
+			for _, configMap := range extraData {
 				users = append(users, configMap.ServiceAccounts...)
 			}
 			rule.Users = users
