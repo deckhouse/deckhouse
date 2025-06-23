@@ -1060,10 +1060,10 @@ All commands are executed on the master node of the existing cluster.
 
   {% alert level="info" %}
   The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
-  - BE, the variable should be `be`;
-  - SE, the variable should be `se`;
-  - SE+, it should be `se-plus`;
-  - EE, it should be `ee`.
+- BE, the variable should be `be`;
+- SE, the variable should be `se`;
+- SE+, it should be `se-plus`;
+- EE, it should be `ee`.
   {% endalert %}
 
   ```shell
@@ -1220,10 +1220,10 @@ All commands are executed on the master node of the existing cluster.
   {% alert level="info" %}
   No need to fill the `NEW_EDITION` and `AUTH_STRING` variables when switching to Deckhouse CE edition.
   The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
-  - CE, the variable should be `ce`;
-  - BE, the variable should be `be`;
-  - SE, it should be `se`;
-  - SE+, it should be `se-plus`.
+- CE, the variable should be `ce`;
+- BE, the variable should be `be`;
+- SE, it should be `se`;
+- SE+, it should be `se-plus`.
   {% endalert %}
 
   ```shell

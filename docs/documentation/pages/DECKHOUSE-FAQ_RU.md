@@ -874,10 +874,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
   {% alert level="info" %}
   Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
-  - BE, переменная должна быть `be`;
-  - SE, переменная должна быть `se`;
-  - SE+, переменная должна быть `se-plus`;
-  - EE, переменная должна быть `ee`.
+- BE, переменная должна быть `be`;
+- SE, переменная должна быть `se`;
+- SE+, переменная должна быть `se-plus`;
+- EE, переменная должна быть `ee`.
   {% endalert %}
 
   ```shell
@@ -1034,10 +1034,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
   {% alert level="info" %}
   Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию Deckhouse CE не требуется.
   Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
-  - CE, переменная должна быть `ce`;
-  - BE, переменная должна быть `be`;
-  - SE, переменная должна быть `se`;
-  - SE+, переменная должна быть `se-plus`.
+- CE, переменная должна быть `ce`;
+- BE, переменная должна быть `be`;
+- SE, переменная должна быть `se`;
+- SE+, переменная должна быть `se-plus`.
   {% endalert %}
 
   ```shell
