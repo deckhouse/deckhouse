@@ -351,13 +351,19 @@ func findModuleTemplatesDirs(workDir, moduleDir string) ([]string, error) {
 	checkTemplates := func(modulePath string) error {
 		templatesPath := filepath.Join(modulePath, "templates")
 
-		if info, err := os.Stat(templatesPath); err == nil {
-			if info.IsDir() {
-				templatesDirs = append(templatesDirs, templatesPath)
+		info, err := os.Stat(templatesPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return fmt.Errorf("error checking templates dir %s: %v", templatesPath, err)
 			}
-		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("error checking templates dir %s: %v", templatesPath, err)
+
+			return nil
 		}
+
+		if info.IsDir() {
+			templatesDirs = append(templatesDirs, templatesPath)
+		}
+
 		return nil
 	}
 
