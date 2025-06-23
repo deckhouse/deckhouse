@@ -27,6 +27,7 @@ ctr_import_image() {
 
 
 post-install-import() {
+  bb-log-info "start crt images import"
   local PACKAGE="$1"
   
   if [[ "${PACKAGE}" == "pause" ]]; then
@@ -44,4 +45,10 @@ bb-event-on 'bb-package-installed' 'post-install-import'
 
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
+
+if bb-flag? need-local-images-import; then
+  post-install-import pause
+  post-install-import kubernetes-api-proxy
+  bb-flag-unset need-local-images-import
+fi
 {{- end }}

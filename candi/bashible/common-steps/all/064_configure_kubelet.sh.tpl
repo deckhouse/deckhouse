@@ -254,7 +254,6 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
-PodPidsLimit: 1000
 cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}

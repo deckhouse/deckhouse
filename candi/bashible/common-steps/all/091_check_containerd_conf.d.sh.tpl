@@ -12,20 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set_containerd_config_label() {
+  local label_name="$1"
+  local conf_dir="$2"
+  local label_file_name="$3"
+  local label_dir_path="/var/lib/node_labels/"
+  local full_conf_path="/etc/containerd/${conf_dir}"
+  local label_value="default"
+
+  if ls "${full_conf_path}/"*.toml >/dev/null 2>&1; then
+    label_value="custom"
+  fi
+
+  mkdir -p /var/lib/node_labels/
+  echo "node.deckhouse.io/${label_name}=${label_value}" > $label_dir_path/$label_file_name
+}
+
 {{- if eq .runType "Normal" }}
-  {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
-mkdir -p /var/lib/node_labels
-label_path="/var/lib/node_labels/containerd-conf"
-
-# Check additional configs containerd
-if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  label_value="custom"
-else
-  label_value="default"
-fi
-
-echo "node.deckhouse.io/containerd-config=${label_value}" > "${label_path}"
-  {{- else -}}
-rm -f "${label_path}"
-  {{- end  }}
-{{- end  }}
+  {{- if eq .cri "Containerd" }}
+    set_containerd_config_label "containerd-config" "conf.d" "containerd-conf"
+    rm -f /var/lib/node_labels/containerd-v2-config
+  {{- else if eq .cri "ContainerdV2" }}
+    set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf"
+    rm -f /var/lib/node_labels/containerd-conf
+  {{- else }}
+    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-config
+  {{- end }}
+{{- end }}

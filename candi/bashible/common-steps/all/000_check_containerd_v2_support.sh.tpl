@@ -30,7 +30,7 @@ can_load_erofs() {
 }
 
 function check_containerd_v2_support() {
-  local errors=() err_json
+  local errors=() errs
   local kv=$(uname -r | cut -d- -f1)
   version_ge "$kv" "$MIN_KERNEL" || errors+=("kernel")
 
@@ -45,17 +45,14 @@ function check_containerd_v2_support() {
   can_load_erofs || errors+=("erofs")
 
   if ((${#errors[@]})); then
-    err_json=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
-    printf "%s" "$err_json"
-    return 1
-  else
-    return 0
+    errs=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
+    printf "%s" "$errs"
   fi
 }
 
 function set_labels() {
   local unsupported=$1
-  local err_json=$2
+  local errs=$2
   local retries=0
 
   while true; do
@@ -66,8 +63,8 @@ function set_labels() {
     fi
     local label_status=$?
 
-    if [[ -n $err_json ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$err_json"
+    if [[ -n $errs ]]; then
+      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
     else
       kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
@@ -79,7 +76,7 @@ function set_labels() {
 
     ((retries++))
     if [[ $retries -ge $MAX_RETRIES ]]; then
-      >&2 echo "ERROR: can't set containerd-v2-not-supported label or error annotation on Node."
+      bb-log-error "can't set containerd-v2-not-supported label or error annotation on Node."
       return 1
     fi
     sleep 5
@@ -89,21 +86,29 @@ function set_labels() {
 }
 
 function fail_fast() {
-  local status=$1
-  if (( status != 0 )); then
-    >&2 echo "ERROR: containerd V2 not supported"
+  local unsupported=$1
+  if (( unsupported )); then
+    bb-log-error "containerd V2 is not supported"
     exit 1
   fi
 }
 
 function main() {
-  local support_status err_json
-  err_json=$(check_containerd_v2_support)
-  support_status=$?
-  {{ if eq .runType "Normal" }}
-    set_labels "$support_status" "$err_json"
+  local unsupported errs
+  errs=$(check_containerd_v2_support)
+
+  if [[ -n "$errs" ]]; then
+    unsupported=1
+  else
+    unsupported=0
+  fi
+
+  if [ -f /etc/kubernetes/kubelet.conf ] ; then
+    set_labels "$unsupported" "$errs"
+  fi
+  {{- if eq .cri "ContainerdV2" }}
+  fail_fast "$unsupported"
   {{ end }}
-  fail_fast "$support_status"
 }
 
 main
