@@ -36,11 +36,11 @@ DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
 
 login_prod_registry() {
   echo "Log in to PROD registry"
-  docker login ${PROD_REGISTRY}
+  docker login "${PROD_REGISTRY}"
 }
 login_dev_registry() {
   echo "Log in to DEV registry"
-  docker login ${DEV_REGISTRY}
+  docker login "${DEV_REGISTRY}"
 }
 
 # Create docker config file to use during this CI Job
@@ -48,8 +48,6 @@ echo "----------------------------------------------"
 echo ""
 echo "Preparing DOCKER_CONFIG"
 mkdir -p "${WORKDIR}/docker"
-export DOCKER_CONFIG="${WORKDIR}/docker"
-echo "Docker config path: ${DOCKER_CONFIG}/config.json"
 cat > "${DOCKER_CONFIG}/config.json" << EOL
 {
         "auths": {
@@ -62,6 +60,7 @@ cat > "${DOCKER_CONFIG}/config.json" << EOL
         }
 }
 EOL
+export DOCKER_CONFIG="${WORKDIR}/docker"
 
 echo "----------------------------------------------"
 echo ""
