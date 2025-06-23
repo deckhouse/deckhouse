@@ -89,7 +89,6 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 		vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", e.String.TargetField)
 		if e.String.Depth != 0 {
 			vrl = fmt.Sprintf(".message = parse_json(.message, max_depth: %d) ?? { \"%s\": .message }\n", e.String.Depth, e.String.TargetField)
-
 		}
 	case "JSON":
 		if e.JSON.Depth == 0 {
