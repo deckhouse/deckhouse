@@ -241,8 +241,8 @@ The `/hooks/batch` directory contains the module's hooks. A hook is an executabl
 {% raw %}
 Hook requirements:
 - When run with the `hook config` arguments, it should output its hook configuration in JSON format.
-- When launched with the `hook list` arguments, it should output a run of all hooks with their sequence number.
-- When run with the `hook run 0` arguments, the hook with number 0 should perform its main action.
+- When run with the `hook list` arguments, it should output a run of all hooks with their sequence number.
+- When run with the `hook run 0` arguments, the logic of the hook with number 0 should be executed.
 
 The hook files must be executable. Add the appropriate permissions using the `chmod +x <path to the hook file>` command.
 
