@@ -114,7 +114,7 @@ spec:
 ```bash
 # LOG:
 
-{"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
+{"msg" : "fetching.module.release"} # pod label pod.app=test
 
 # RESULT TRANSFORMATIONS:
 
