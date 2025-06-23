@@ -11,14 +11,6 @@ module "vapp" {
 }
 
 module "network" {
-  source                       = "../../../terraform-modules/network"
+  source                       = "../../../terraform-modules/vapp-network"
   providerClusterConfiguration = var.providerClusterConfiguration
-}
-
-resource "vcd_vapp_org_network" "vapp_network" {
-  org                    = var.providerClusterConfiguration.organization
-  vdc                    = var.providerClusterConfiguration.virtualDataCenter
-  vapp_name              = module.vapp.name
-  org_network_name       = module.network.name
-  reboot_vapp_on_removal = true
 }
