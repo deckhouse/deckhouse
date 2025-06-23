@@ -15,3 +15,11 @@
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+
+_run_ldconfig() {
+  ldconfig
+}
+
+bb-sync-file /etc/ld.so.conf.d/deckhouse.conf - "_run_ldconfig" << "EOF"
+/opt/deckhouse/lib
+EOF
