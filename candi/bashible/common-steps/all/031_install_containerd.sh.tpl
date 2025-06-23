@@ -47,7 +47,7 @@ ctr_version_change_check() {
   fi
 }
 
-ctr_version_change_check
+command -v containerd &>/dev/null && ctr_version_change_check
 
 {{- $containerd := "containerd1727"}}
 {{- if eq .cri "ContainerdV2" }}
