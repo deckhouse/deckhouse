@@ -852,184 +852,19 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
-### Как переключить Deckhouse CE на BE/SE/SE+/EE?
+### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
-Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, то используйте документацию для вашей версии.
+- Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, то используйте документацию для вашей версии.
+- Для коммерческих изданий вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости) с поддержкой нужного издания.
+- Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+- В редакциях Deckhouse CE/BE/SE/SE+ не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` (VSphere поддерживается в редакции SE+) и ряда модулей, подробное сравнение в [документации](revision-comparison.html).
+- Все команды выполняются на master-узле существующего кластера.
 {% endalert %}
 
-Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
+Ниже описаны шаги для переключения кластера с любой редакцию на одну из поддерживаемых: Community Edition, Basic Edition, Standard Edition, Standard Edition+, Enterprise Edition.
 
-{% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
-{% endalert %}
-
-Ниже описаны шаги для переключения кластера Deckhouse Community Edition на одну из редакций (Basic Edition, Standard Edition, Standard Edition+, Enterprise Edition):
-
-{% alert level="warning" %}
-Все команды выполняются на master-узле существующего кластера.
-{% endalert %}
-
-1. Подготовьте переменные с токеном лицензии и названием редакции:
-
-  {% alert level="info" %}
-  Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
-- BE, переменная должна быть `be`;
-- SE, переменная должна быть `se`;
-- SE+, переменная должна быть `se-plus`;
-- EE, переменная должна быть `ee`.
-  {% endalert %}
-
-  ```shell
-  NEW_EDITION=<PUT_YOUR_EDITION_HERE>
-  LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-  AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-  ```
-
-1. Проверьте, чтобы [очередь Deckhouse](#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок:
-
-  Пример вывода:
-
-  ```console
-  Summary:
-  - 'main' queue: empty.
-  - 84 other queues (0 active, 84 empty): 0 tasks.
-  - no tasks to handle.
-  ```
-
-1. Cоздайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: NodeGroupConfiguration
-  metadata:
-    name: containerd-$NEW_EDITION-config.sh
-  spec:
-    nodeGroups:
-    - '*'
-    bundles:
-    - '*'
-    weight: 30
-    content: |
-      _on_containerd_config_changed() {
-        bb-flag-set containerd-need-restart
-      }
-      bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-      mkdir -p /etc/containerd/conf.d
-      bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-      [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
-              auth = "$AUTH_STRING"
-      EOF_TOML
-  EOF  
-  ```
-
-  Дождитесь появления файла `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` на узлах и завершения синхронизации bashible. Чтобы отследить статус синхронизации, проверьте значение `UPTODATE` (число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
-
-  ```shell
-  kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-  ```
-
-  Пример вывода:
-
-  ```console
-  NAME     NODES   READY   UPTODATE
-  master   1       1       1
-  worker   2       2       2
-  ```
-
-  Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
-
-  ```shell
-  journalctl -u bashible -n 5
-  ```
-
-  Пример вывода:
-
-  ```console
-  Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-  Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Annotate node master-ce-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-  Aug 21 11:04:29 master-ce-to-se-0 bashible.sh[53407]: Successful annotate node master-ce-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-  Aug 21 11:04:29 master-ce-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-  ```
-
-1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
-
-  ```shell
-  DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-  kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
-  ```
-
-1. После перехода пода в статус `Running` выполните следующие команды:
-
-  ```shell
-  NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-  USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-  HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-  DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-  MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
-  ```
-
-1. Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами новой редакции:
-
-  ```shell
-  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
-  ```
-
-1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
-
-  ```shell
-  kubectl delete ngc containerd-$NEW_EDITION-config.sh
-  kubectl delete pod $NEW_EDITION-image
-  kubectl apply -f - <<EOF
-      apiVersion: deckhouse.io/v1alpha1
-      kind: NodeGroupConfiguration
-      metadata:
-        name: del-temp-config.sh
-      spec:
-        nodeGroups:
-        - '*'
-        bundles:
-        - '*'
-        weight: 90
-        content: |
-          if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-            rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-          fi
-  EOF
-   ```
-
-  После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup), удалите созданный ресурс NodeGroupConfiguration:
-
-  ```shell
-  kubectl delete ngc del-temp-config.sh
-  ```
-
-### Как переключить Deckhouse EE на BE/SE/SE+/CE?
-
-{% alert level="warning" %}
-Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия меньше, то используйте документацию для вашей версии.
-{% endalert %}
-
-Для переключения на коммерческую редакцию вам потребуется действующий лицензионный ключ поддерживающий нужную вам редакцию. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/kubernetes-platform), нажав на кнопку *Получить консультацию*.
-
-{% alert level="info" %}
-В инструкции используется публичный адрес container registry: `registry.deckhouse.ru`. Если вы используете другой адрес реестра, адаптируйте команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
-
-В редакциях Deckhouse CE/BE/SE/SE+ не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` (поддерживается в редакции SE+) и ряда модулей, подробное сравнение в [документации](revision-comparison.html).
-{% endalert %}
-
-Ниже описаны шаги для переключения кластера Deckhouse Enterprise Edition на одну из редакций (Basic Edition, Standard Edition, Standard Edition+, Community Edition):
-
-{% alert level="warning" %}
-Все команды выполняются на master-узле существующего кластера.
-{% endalert %}
-
-1. Подготовьте переменные с токеном лицензии и названием редакции:
+1. Подготовьте переменные с токеном лицензии и названием новой редакции:
 
   {% alert level="info" %}
   Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию Deckhouse CE не требуется.
@@ -1037,25 +872,17 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - CE, переменная должна быть `ce`;
 - BE, переменная должна быть `be`;
 - SE, переменная должна быть `se`;
-- SE+, переменная должна быть `se-plus`.
+- SE+, переменная должна быть `se-plus`;
+- EE, переменная должна быть `ee`.
   {% endalert %}
 
-  ```shell
-  NEW_EDITION=<PUT_YOUR_EDITION_HERE>
-  LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-  AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-  ```
+   ```shell
+   NEW_EDITION=<PUT_YOUR_EDITION_HERE>
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+   ```
 
-1. Проверьте, чтобы [очередь Deckhouse](#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок:
-
-  Пример вывода:
-
-  ```console
-  Summary:
-  - 'main' queue: empty.
-  - 84 other queues (0 active, 84 empty): 0 tasks.
-  - no tasks to handle.
-  ```
+1. Проверьте, чтобы [очередь Deckhouse](#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок.
 
 1. Cоздайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
@@ -1063,141 +890,145 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
   При переходе на редакцию Deckhouse CE пропустите этот шаг.
   {% endalert %}
 
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: NodeGroupConfiguration
-  metadata:
-    name: containerd-$NEW_EDITION-config.sh
-  spec:
-    nodeGroups:
-    - '*'
-    bundles:
-    - '*'
-    weight: 30
-    content: |
-      _on_containerd_config_changed() {
-        bb-flag-set containerd-need-restart
-      }
-      bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-      mkdir -p /etc/containerd/conf.d
-      bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-      [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
-              auth = "$AUTH_STRING"
-      EOF_TOML
-  EOF  
-  ```
+   ```shell
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-$NEW_EDITION-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+   EOF  
+   ```
 
   Дождитесь появления файла `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` на узлах и завершения синхронизации bashible. Чтобы отследить статус синхронизации, проверьте значение `UPTODATE` (число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
-  ```shell
-  kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-  ```
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
 
   Пример вывода:
 
-  ```console
-  NAME     NODES   READY   UPTODATE
-  master   1       1       1
-  worker   2       2       2
-  ```
+   ```console
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
 
   Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
 
-  ```shell
-  journalctl -u bashible -n 5
-  ```
+   ```shell
+   journalctl -u bashible -n 5
+   ```
 
   Пример вывода:
 
-  ```console
-  Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-  Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-  Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-  Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-  ```
+   ```console
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
 
 1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
 
-  ```shell
-  DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-  kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
-  ```
+   ```shell
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
 
 1. После перехода пода в статус `Running` выполните следующие команды:
 
-  ```shell
-  NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-  USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-  HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-  DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-  MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
-  ```
+   ```shell
+   NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
+   ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
   Посмотреть список модулей, которые не поддерживаются в новой редакции и будут отключены:
 
-  ```shell
-  echo $MODULES_WILL_DISABLE
-  ```
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
 
   > Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется вами в кластере и вы готовы их отключить.
 
   Отключите неподдерживаемые новой редакцией модули:
 
-  ```shell
-  echo $MODULES_WILL_DISABLE | 
-    tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-  ```
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   ```
 
   Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
 
 1. Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами новой редакции:
 
-  Для переключения на BE/SE/SE+ издания:
+  Для переключения на BE/SE/SE+/EE издания:
 
-  ```shell
-  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
-  ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
+   ```
 
   Для переключения на CE издание:
 
-  ```shell
-  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
-  ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
+   ```
 
 1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
-  ```shell
-  kubectl delete ngc containerd-$NEW_EDITION-config.sh
-  kubectl delete pod $NEW_EDITION-image
-  kubectl apply -f - <<EOF
-      apiVersion: deckhouse.io/v1alpha1
-      kind: NodeGroupConfiguration
-      metadata:
-        name: del-temp-config.sh
-      spec:
-        nodeGroups:
-        - '*'
-        bundles:
-        - '*'
-        weight: 90
-        content: |
-          if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-            rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-          fi
-  EOF
-  ```
+  {% alert level="info" %}
+  При переходе на редакцию Deckhouse CE пропустите этот шаг.
+  {% endalert %}
+
+   ```shell
+   kubectl delete ngc containerd-$NEW_EDITION-config.sh
+   kubectl delete pod $NEW_EDITION-image
+   kubectl apply -f - <<EOF
+       apiVersion: deckhouse.io/v1alpha1
+       kind: NodeGroupConfiguration
+       metadata:
+         name: del-temp-config.sh
+       spec:
+         nodeGroups:
+         - '*'
+         bundles:
+         - '*'
+         weight: 90
+         content: |
+           if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+             rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+           fi
+   EOF
+   ```
 
   После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup), удалите созданный ресурс NodeGroupConfiguration:
 
-  ```shell
-  kubectl delete ngc del-temp-config.sh
-  ```
+   ```shell
+   kubectl delete ngc del-temp-config.sh
+   ```
 
 ### Как переключить Deckhouse EE на CSE?
 
