@@ -23,13 +23,13 @@ spec:
             depth: 1
 ```
 
-```
-Логи:
+```bash
+# Логи:
 
 /docker-entrypoint.sh: Configuration complete; ready for start up
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 
-Результат преобразования:
+# Результат преобразования:
 
 "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}
 "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
@@ -51,13 +51,13 @@ spec:
         soureFormat: Klog
 ```
 
-```
-Логи:
+```bash
+# Логи:
 
 I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 
-Результат преобразования:
+# Результат преобразования:
 
 "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}
 "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
@@ -82,12 +82,12 @@ spec:
             depth: 1
 ```
 
-```
-Лог:
+```bash
+# Лог:
 
 {"level" : { "severity": "info" },"msg" : "fetching.module.release"}
 
-Результат преобразования:
+# Результат преобразования:
 
 "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}
 
@@ -111,12 +111,12 @@ spec:
           - pod_labels
 ```
 
-```
-Логи:
+```bash
+# Лог:
 
 {"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
 
-Результат преобразования:
+# Результат преобразования:
 
 {"message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
 
@@ -161,12 +161,12 @@ spec:
           - message.example
 ```
 
-```
-Лог:
+```bash
+# Лог:
 
 {"msg" : "fetching.module.release", "example": "test"}
 
-Результат преобразования:
+# Результат преобразования:
 
 "message": {"msg" : "fetching.module.release"}
 

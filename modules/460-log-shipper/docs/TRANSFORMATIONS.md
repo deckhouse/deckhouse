@@ -23,13 +23,13 @@ spec:
             depth: 1
 ```
 
-```
-LOGS:
+```bash
+# LOGS:
 
 /docker-entrypoint.sh: Configuration complete; ready for start up
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 
-RESULT TRANSFORMATIONS:
+# RESULT TRANSFORMATIONS:
 
 "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}
 "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
@@ -51,13 +51,13 @@ spec:
         soureFormat: Klog
 ```
 
-```
-LOGS:
+```bash
+# LOGS:
 
 I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 
-RESULT TRANSFORMATIONS:
+# RESULT TRANSFORMATIONS:
 
 "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}
 "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
@@ -82,12 +82,12 @@ spec:
             depth: 1
 ```
 
-```
-LOG:
+```bash
+# LOG:
 
 {"level" : { "severity": "info" },"msg" : "fetching.module.release"}
 
-RESULT TRANSFORMATIONS:
+# RESULT TRANSFORMATIONS:
 
 "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}
 
@@ -111,12 +111,12 @@ spec:
           - pod_labels
 ```
 
-```
-LOG:
+```bash
+# LOG:
 
 {"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
 
-RESULT TRANSFORMATIONS:
+# RESULT TRANSFORMATIONS:
 
 {"message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
 
@@ -161,12 +161,12 @@ spec:
           - message.example
 ```
 
-```
-LOG:
+```bash
+# LOG:
 
 {"msg" : "fetching.module.release", "example": "test"}
 
-RESULT TRANSFORMATIONS:
+# RESULT TRANSFORMATIONS:
 
 "message": {"msg" : "fetching.module.release"}
 
