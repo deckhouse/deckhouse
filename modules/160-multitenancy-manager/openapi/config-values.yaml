@@ -13,3 +13,9 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+
+## TEST VALIDATOR
+x-deckhouse-validations:
+  - expression: self.allowNamespacesWithoutProjects == true
+    message: |
+      The `allowNamespacesWithoutProjects` parameter should be enabled.
