@@ -20,7 +20,22 @@ spec:
   scanInterval: <image digest check interval. Default: 15s>
 ```
 
+Также для целей разработки может использоваться режим обслуживания модуля (`maintenance mode`). В этом режиме Deckhouse отключает управление ресурсами модуля и не применяет изменения автоматически. Этот режим не предназначен для эксплуатации в production-кластерах.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+...
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  settings: 
+```
+
 Требования к параметрам ресурса:
+
 * Имя модуля (`metadata.name`) должно соответствовать имени модуля в ModuleSource (`.status.modules.[].name`).
 
 * Тег образа контейнера (`spec.imageTag`) может быть любым. Например, `pr333`, `my-branch`.
@@ -28,31 +43,6 @@ spec:
 Необязательный параметр `spec.scanInterval` устанавливает интервал времени для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
 
 Необязательный параметр `spec.rollback` — если установить этот параметр в `true`, это восстановит развернутый модуль до предыдущего состояния после удаления `ModulePullOverride`.
-
-Deckhouse предоставляет возможность временно изменить поведение модуля с помощью дополнительных параметров объекта `ModulePullOverride`. Эти параметры позволяют управлять жизненным циклом модуля независимо от `module.yaml`:
-
-- `unmanaged` — *boolean*. Отключает управление модулем со стороны Deckhouse (никаких обновлений или удалений).
-- `disable` — *boolean*. Временно отключает модуль и удаляет все его ресурсы.
-- `terminating` — *boolean*. Переводит модуль в состояние удаления, в результате чего удаляются все ресурсы и сам объект Module.
-- `rollback` — *boolean*. Если установлен в `true`, то при удалении объекта `ModulePullOverride`:
-  - будут удалены артефакты модуля;
-  - Deckhouse перезапустится;
-  - будет восстановлена последняя стабильная версия модуля.
-
-Пример:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePullOverride
-metadata:
-  name: example
-spec:
-  version: v1.2.3
-  unmanaged: false
-  disable: false
-  terminating: false
-  rollback: true
-```
 
 Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает конфликт.
 
@@ -65,6 +55,7 @@ example1  10s       Ready     false
 ```
 
 Требования к модулю:
+
 * Модуль должен существовать, иначе сообщение у ModulePullOverride будет *The module not found*.
 
   Пример:

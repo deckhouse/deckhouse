@@ -853,7 +853,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_eks_containerd_automatic
@@ -1368,13 +1368,13 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1396,8 +1396,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
@@ -1434,13 +1434,13 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1462,8 +1462,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -2169,7 +2169,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_openstack_containerd_automatic
@@ -2589,7 +2589,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_automatic
@@ -3021,7 +3021,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_automatic
@@ -3437,7 +3437,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_automatic
@@ -3486,7 +3486,7 @@ jobs:
     name: Send alert about workflow problem
     runs-on: ubuntu-latest
     needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic"]
-    if: ${{ failure() }}
+    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:
     # <template: send_alert_loop_template>
     - name: Check loop alerting credentials

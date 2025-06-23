@@ -15,3 +15,7 @@ lang: ru
 {{ site.data.schemas.global.init_configuration | format_cluster_configuration }}
 
 {{ site.data.schemas.global.static_cluster_configuration | format_cluster_configuration }}
+
+{{ site.data.schemas.global.ssh_configuration | format_cluster_configuration }}
+
+{{ site.data.schemas.global.ssh_host_configuration | format_cluster_configuration }}

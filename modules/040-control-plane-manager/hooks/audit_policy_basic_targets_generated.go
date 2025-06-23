@@ -104,6 +104,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-ingress-nginx:failover-cleaner",
 	"system:serviceaccount:d8-ingress-nginx:ingress-nginx",
 	"system:serviceaccount:d8-ingress-nginx:kruise",
+	"system:serviceaccount:d8-ingress-nginx:validator",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
 	"system:serviceaccount:d8-istio:alliance-metadata-exporter",
 	"system:serviceaccount:d8-istio:cni",

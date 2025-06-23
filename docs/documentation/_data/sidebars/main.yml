@@ -1181,7 +1181,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/operator-prometheus/configuration.html
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/operator-prometheus/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/operator-prometheus/cr.html
             - title:
                 en: okmeter
                 ru: okmeter

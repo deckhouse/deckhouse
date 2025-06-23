@@ -839,6 +839,7 @@ maxSurgePerZone
 maxUnavailable
 maxUnavailablePerZone
 Mayastor
+Mbps
 mc
 MCM
 mcmEmergencyBrake
@@ -887,6 +888,7 @@ MRA
 MRs
 mTLS
 MTLS
+MTU
 multicluster
 Multicluster
 multiclustering
@@ -1044,6 +1046,7 @@ passphrase
 passwordHash
 pathPrefix
 PCI
+pcs
 PDB
 PDF
 PeerAuthentication
@@ -1415,6 +1418,7 @@ UEFI
 UI
 uid
 UID
+un
 uncordoned
 unicode
 uninstall
@@ -1906,6 +1910,7 @@ ZvirtInstanceClass
 майнинг
 маппинг
 маршрутизировать
+маршрутизируемой
 масштабироваться
 масштабируемости
 масштабируемость
@@ -1953,6 +1958,7 @@ ZvirtInstanceClass
 мультитенантности
 мусорку
 мэтчем
+наблюдаемости
 неавторизованный
 невалидным
 недеструктивные
