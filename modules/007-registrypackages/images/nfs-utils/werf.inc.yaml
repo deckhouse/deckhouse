@@ -5,15 +5,13 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /opt/deckhouse
-  to: /opt/deckhouse
-  before: install
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  add: /
   to: /
-  stageDependencies:
-    install:
-    - '**/*'
+  includePaths:
+    - opt/deckhouse
+    - install
+    - uninstall
+  before: install
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "nfs-utils": "{{ $version }}" }
@@ -35,6 +33,12 @@ import:
   - sbin
   - usr
   before: install
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
   - apk add --no-cache patchelf file
