@@ -485,7 +485,6 @@ spec:
                       description: |
                         Стратегия разделения GPU.
                       enum:
-                        - Mps
                         - TimeSlicing
                         - Mig
                         - Exclusive
@@ -497,14 +496,6 @@ spec:
                           description: |
                             Выбранная конфигурация разделения MIG.
                           x-doc-default: all-1g.5gb
-                    mps:
-                      type: object
-                      properties:
-                        replicas:
-                          type: string
-                          description: |
-                            Количество реплик MPS.
-                          x-doc-default: "4"
                     timeSlicing:
                       description: |
                         Параметры Time-slicing.

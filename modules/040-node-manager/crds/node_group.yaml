@@ -1511,9 +1511,8 @@ spec:
                       description: |
                         GPU sharing strategy.
                       enum:
-                        - Mps
                         - TimeSlicing
-                        - Mig
+                        - MIG
                         - Exclusive
                     mig:
                       type: object
@@ -1524,20 +1523,12 @@ spec:
                           description: |
                             Selected parted-config for MIG.
                           x-doc-default: all-1g.5gb
-                    mps:
-                      type: object
-                      properties:
-                        replicas:
-                          type: string
-                          description: |
-                            Count of replicas with MPS.
-                          x-doc-default: "4"
                     timeSlicing:
                       description: |
                         Time-slicing parameters.
                       type: object
                       properties:
-                        gpuPartitionCount:
+                        partitionCount:
                           type: integer
                           description: |
                             Count of partition per GPU with TimeSlicing.
@@ -1555,10 +1546,6 @@ spec:
                         sharing:
                           enum: [Mig]
                         mig: {}
-                    - properties:
-                        sharing:
-                          enum: [Mps]
-                        mps: {}
                     - properties:
                         sharing:
                           enum: [Exclusive]
