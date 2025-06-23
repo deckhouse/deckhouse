@@ -441,4 +441,6 @@ pull-image-on-create: false
 EOF
 {{- end }}
 
-bb-flag? ctr-major-version-changed && migrate
+if bb-flag? ctr-major-version-changed; then
+  migrate
+fi
