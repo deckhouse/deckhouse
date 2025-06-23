@@ -47,6 +47,75 @@ var auditPolicyBasicServiceAccounts = []string{
 }
 `
 
+func main() {
+	workDir := cwd()
+
+	var (
+		output string
+		stream = os.Stdout
+	)
+	flag.StringVar(&output, "output", "", "output file for generated code")
+	flag.Parse()
+
+	if output != "" {
+		var err error
+		stream, err = os.Create(output)
+		if err != nil {
+			panic(err)
+		}
+
+		defer stream.Close()
+	}
+
+	var namespacesMap = make(map[string]struct{})
+	var sasMap = make(map[string]struct{})
+
+	// 1. find all modules
+	res, err := findModules(workDir)
+	if err != nil {
+		panic(err)
+	}
+
+	// 2. find templates for each module and fill ServiceAccounts info
+	for moduleYamlPath, moduleDirName := range res {
+		err = processModule(workDir, moduleYamlPath, moduleDirName, sasMap, namespacesMap)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	namespaces := make([]string, 0, len(namespacesMap))
+	sas := make([]string, 0, len(sasMap))
+
+	for namespace := range namespacesMap {
+		namespaces = append(namespaces, namespace)
+	}
+	for sa := range sasMap {
+		sas = append(sas, sa)
+	}
+
+	sort.Strings(namespaces)
+	sort.Strings(sas)
+
+	t := template.New("variables")
+	t, err = t.Parse(variablesTemplate)
+	if err != nil {
+		panic(err)
+	}
+
+	type Data struct {
+		Namespace, ServiceAccount []string
+	}
+	data := Data{
+		Namespace:      uniqueNonEmptyElementsOf(namespaces),
+		ServiceAccount: uniqueNonEmptyElementsOf(sas),
+	}
+	err = t.Execute(stream, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func cwd() string {
 	_, f, _, ok := runtime.Caller(1)
 	if !ok {
@@ -103,34 +172,6 @@ func processModuleDefinition(path string) ( /*name*/ string /*namespace*/, strin
 		}
 		s.Namespace = strings.Trim(string(ns), "\r\n")
 	}
-
-	return s.Name, s.Namespace, nil
-}
-
-func processLegacyDeclaration(path string) ( /*name*/ string /*namespace*/, string, error) {
-	// if file exists
-	var s moduleMetadata
-	c, err := os.Open(path)
-	if err != nil {
-		return "", "", err
-	}
-	defer c.Close()
-
-	err = yaml.NewDecoder(c).Decode(&s)
-	if err != nil {
-		return "", "", err
-	}
-
-	// trim file name from path
-	dir := filepath.Dir(path)
-	ns, err := os.ReadFile(filepath.Join(dir, ".namespace"))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return s.Name, "", nil
-		}
-		return "", "", err
-	}
-	s.Namespace = strings.Trim(string(ns), "\r\n")
 
 	return s.Name, s.Namespace, nil
 }
@@ -202,89 +243,6 @@ func handleServiceAccounts(templatesDir string, modulePath string, name string, 
 	return nil
 }
 
-func walkModules(namespaces map[string]struct{}, sas map[string]struct{}, workDir string) error {
-	err := filepath.Walk(workDir, func(path string, f os.FileInfo, err error) error {
-
-		modulePath := filepath.Dir(strings.TrimPrefix(path, workDir))
-
-		switch modulePath {
-		case ".", "/":
-			return nil
-
-		case "/modules", "/ee":
-			return nil
-
-		default:
-			if strings.HasPrefix(modulePath, "/modules/") || strings.HasPrefix(modulePath, "/ee/") {
-			} else {
-				return filepath.SkipDir
-			}
-		}
-
-		switch filepath.Base(path) {
-		case "module.yaml":
-			name, ns, err := processModuleDefinition(path)
-			if err != nil {
-				return err
-			}
-
-			if ns != "" {
-				if strings.HasPrefix(ns, "d8-") || ns == "kube-system" {
-					namespaces[ns] = struct{}{}
-				}
-			} else {
-				panic("empty ns: " + modulePath)
-			}
-
-			templatesDir := filepath.Join(filepath.Dir(path), "templates")
-			if err := handleServiceAccounts(templatesDir, modulePath, name, ns, sas); err != nil {
-				return err
-			}
-
-			return filepath.SkipDir
-
-		case "Chart.yaml":
-			// if module.yaml exists, skip this
-			if _, err := os.Stat(filepath.Join(filepath.Dir(path), "module.yaml")); err == nil {
-				return nil
-			}
-
-			if strings.Contains(path, "/charts/") {
-				// skip subcharts dir
-				return filepath.SkipDir
-			}
-
-			name, ns, err := processLegacyDeclaration(path)
-			if err != nil {
-				return err
-			}
-
-			if ns != "" {
-				if strings.HasPrefix(ns, "d8-") || ns == "kube-system" {
-					namespaces[ns] = struct{}{}
-				}
-			} else {
-				panic("empty legacy ns: " + modulePath)
-			}
-
-			templatesDir := filepath.Join(filepath.Dir(path), "templates")
-			if err := handleServiceAccounts(templatesDir, modulePath, name, ns, sas); err != nil {
-				return err
-			}
-
-			return filepath.SkipDir
-
-		default:
-			// not a module dir
-			return nil
-		}
-
-		return nil
-	})
-
-	return err
-}
-
 func unquote(s string) (string, error) {
 	var err error
 	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) || strings.HasPrefix(s, `'`) && strings.HasSuffix(s, `'`) {
@@ -297,62 +255,76 @@ func unquote(s string) (string, error) {
 	return s, err
 }
 
-func main() {
-	workDir := cwd()
+// findModules find all directories, contains module.yaml
+// return map of absoulute path to module.yaml -> last directory, where module.yaml is located (xxx-module-name)
+func findModules(root string) (map[string]string, error) {
+	modulesMap := make(map[string]string)
 
-	var (
-		output string
-		stream = os.Stdout
-	)
-	flag.StringVar(&output, "output", "", "output file for generated code")
-	flag.Parse()
-
-	if output != "" {
-		var err error
-		stream, err = os.Create(output)
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			panic(err)
+			return err
 		}
 
-		defer stream.Close()
-	}
+		if !info.IsDir() {
+			return nil
+		}
 
-	var namespacesMap = make(map[string]struct{})
-	var sasMap = make(map[string]struct{})
-	if err := walkModules(namespacesMap, sasMap, workDir); err != nil {
-		panic(err)
-	}
+		modulePath := filepath.Join(path, "module.yaml")
+		if _, err := os.Stat(modulePath); err != nil {
+			return nil
+		}
 
-	namespaces := make([]string, 0, len(namespacesMap))
-	sas := make([]string, 0, len(sasMap))
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
 
-	for namespace := range namespacesMap {
-		namespaces = append(namespaces, namespace)
-	}
-	for sa := range sasMap {
-		sas = append(sas, sa)
-	}
+		parts := strings.Split(filepath.ToSlash(relPath), "/")
+		for _, part := range parts {
+			if part == "modules" {
+				dirName := filepath.Base(path)
+				modulesMap[modulePath] = dirName
+				break
+			}
+		}
 
-	sort.Strings(namespaces)
-	sort.Strings(sas)
+		return nil
+	})
 
-	t := template.New("variables")
-	t, err := t.Parse(variablesTemplate)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error walking the path %s: %v", root, err)
 	}
 
-	type Data struct {
-		Namespace, ServiceAccount []string
-	}
-	data := Data{
-		Namespace:      uniqueNonEmptyElementsOf(namespaces),
-		ServiceAccount: uniqueNonEmptyElementsOf(sas),
-	}
-	err = t.Execute(stream, data)
+	return modulesMap, nil
+}
+
+func processModule(workDir, moduleYamlPath, moduleDirName string, sas, namespacesMap map[string]struct{}) error {
+	name, namespace, err := processModuleDefinition(moduleYamlPath)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	if namespace == "" {
+		panic("Empty namespace for module " + moduleYamlPath)
+	}
+
+	if strings.HasPrefix(namespace, "d8-") || namespace == "kube-system" {
+		namespacesMap[namespace] = struct{}{}
+	}
+
+	templateDirs, err := findModuleTemplatesDirs(workDir, moduleDirName)
+	if err != nil {
+		return err
+	}
+
+	for _, td := range templateDirs {
+		err = handleServiceAccounts(td, moduleYamlPath, name, namespace, sas)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func uniqueNonEmptyElementsOf(s []string) []string {
@@ -368,4 +340,43 @@ func uniqueNonEmptyElementsOf(s []string) []string {
 	}
 
 	return us
+}
+
+// findModuleTemplatesDirs finds all templates directories within moduleDir
+// under workDir. Returns a slice of absolute paths to templates directories.
+func findModuleTemplatesDirs(workDir, moduleDir string) ([]string, error) {
+	var templatesDirs []string
+
+	checkTemplates := func(modulePath string) error {
+		templatesPath := filepath.Join(modulePath, "templates")
+
+		if info, err := os.Stat(templatesPath); err == nil {
+			if info.IsDir() {
+				templatesDirs = append(templatesDirs, templatesPath)
+			}
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("error checking templates dir %s: %v", templatesPath, err)
+		}
+		return nil
+	}
+
+	// recursive find moduleDir
+	err := filepath.Walk(workDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() && filepath.Base(path) == moduleDir {
+			if err := checkTemplates(path); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error searching for module dirs: %v", err)
+	}
+
+	return templatesDirs, nil
 }
