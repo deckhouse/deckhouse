@@ -48,7 +48,7 @@ echo "----------------------------------------------"
 echo ""
 echo "Preparing DOCKER_CONFIG"
 mkdir -p "${WORKDIR}/docker"
-cat > "${DOCKER_CONFIG}/config.json" << EOL
+cat > "${WORKDIR}/docker/config.json" << EOL
 {
         "auths": {
                 "${PROD_REGISTRY}": {
