@@ -874,10 +874,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
   {% alert level="info" %}
   Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
-  - BE, переменная должна быть `be`;
-  - SE, переменная должна быть `se`;
-  - SE+, переменная должна быть `se-plus`;
-  - EE, переменная должна быть `ee`.
+- BE, переменная должна быть `be`;
+- SE, переменная должна быть `se`;
+- SE+, переменная должна быть `se-plus`;
+- EE, переменная должна быть `ee`.
   {% endalert %}
 
    ```shell
@@ -1034,10 +1034,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
   {% alert level="info" %}
   Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию Deckhouse CE не требуется.
   Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
-  - CE, переменная должна быть `ce`;
-  - BE, переменная должна быть `be`;
-  - SE, переменная должна быть `se`;
-  - SE+, переменная должна быть `se-plus`.
+- CE, переменная должна быть `ce`;
+- BE, переменная должна быть `be`;
+- SE, переменная должна быть `se`;
+- SE+, переменная должна быть `se-plus`.
   {% endalert %}
 
    ```shell
@@ -1128,7 +1128,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```
 
 1. После перехода пода в статус `Running` выполните следующие команды:
- 
+
    ```shell
    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
@@ -1159,11 +1159,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами новой редакции:
 
   Для переключения на BE/SE/SE+ издания:
+
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
   Для переключения на CE издание:
+
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
    ```

@@ -1231,7 +1231,7 @@ All commands are executed on the master node of the existing cluster.
     LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
     AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
     ```
-   
+
 1. Ensure the [Deckhouse queue](#how-to-check-the-job-queue-in-deckhouse) is empty and error-free:
 
     Example output:
@@ -1296,6 +1296,7 @@ All commands are executed on the master node of the existing cluster.
     ```shell
     journalctl -u bashible -n 5
     ```
+
     Example output:
 
     ```console
@@ -1328,6 +1329,7 @@ All commands are executed on the master node of the existing cluster.
     ```shell
     echo $MODULES_WILL_DISABLE
     ```
+
    > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
 
    Disable the modules not supported by the new edition:
@@ -1340,7 +1342,7 @@ All commands are executed on the master node of the existing cluster.
    Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
 
 1. Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
-   
+
    To switch to BE/SE/SE+ editions:
 
     ```shell
