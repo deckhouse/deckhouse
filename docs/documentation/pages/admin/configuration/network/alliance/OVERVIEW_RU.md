@@ -8,10 +8,10 @@ lang: ru
 
 В Deckhouse Kubernetes Platform поддерживаются две схемы межкластерного взаимодействия:
 
-- [федерация](../network/cluster-federation.html);
-- [мультикластер](../network/multicluster.html).
+- [федерация](../alliance/federation.html);
+- [мультикластер](../alliance/multicluster.html).
 
-Обе схемы могут быть реализованы средствами Istio (модуль [istio](../../reference/mc/istio/)) или Cilium (модуль [cni-cilium](../../reference/mc/cni-cilium/)), которые позволяют развернуть service mesh (далее — сервис-меш) для контроля того, как приложения, развернутые в кластере, обмениваются данными между собой и для настройки этих взаимодействий.
+Обе схемы могут быть реализованы средствами Istio (модуль [`istio`](../../../../modules/istio/)) или Cilium (модуль [`cni-cilium`](../../../../modules/cni-cilium/)), которые позволяют развернуть service mesh (далее — сервис-меш) для контроля того, как приложения, развернутые в кластере, обмениваются данными между собой и для настройки этих взаимодействий.
 
 ## Особенности использования service mesh Deckhouse Kubernetes Platform
 

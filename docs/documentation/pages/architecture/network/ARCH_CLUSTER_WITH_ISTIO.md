@@ -39,8 +39,35 @@ Control Plane components:
 
 The Ingress controller must be refined to receive user traffic:
 
-* You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
+* You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../../modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
 * Services not managed by Istio continue to function as before, requests to them are not intercepted by the controller sidecar.
-* Requests to services running under Istio are intercepted by the sidecar and processed according to Istio rules (read more about [activating Istio to work with the application](#activating-istio-to-work-with-the-application)).
+* Requests to services running under Istio are intercepted by the sidecar and processed according to Istio rules (read more about [activating Istio to work with the application](../../user/network/app_istio_activation.html)).
 
 The istiod controller and sidecar-proxy containers export their own metrics that the cluster-wide Prometheus collects.
+
+## Estimating overhead
+
+Using Istio will incur additional resource costs for both **control-plane** (istiod controller) and **data-plane** (istio-sidecars).
+
+### control-plane
+
+The istiod controller continuously monitors the cluster configuration, compiles the settings for the istio-sidecars and distributes them over the network. Accordingly, the more applications and their instances, the more services, and the more frequently this configuration changes, the more computational resources are required and the greater the load on the network. Two approaches are supported to reduce the load on controller instances:
+
+* horizontal scaling (module configuration [`controlPlane.replicasManagement`](../../modules/istio/configuration.html#parameters-controlplane-replicasmanagement)) — the more controller instances, the fewer instances of istio-sidecars to serve for each controller and the less CPU and network load.
+* data-plane segmentation using the [Sidecar](../../modules/istio/istio-cr.html#sidecar) resource (recommended approach) — the smaller the scope of an individual istio-sidecar, the less data in the data-plane needs to be updated and the less CPU and network overhead.
+
+A rough estimate of overhead for a control-plane instance that serves 1000 services and 2000 istio-sidecars is 1 vCPU and 1.5 GB RAM.
+
+### data-plane
+
+The consumption of data-plane resources (istio-sidecar) is affected by many factors:
+
+* number of connections,
+* the intensity of requests,
+* size of requests and responses,
+* protocol (HTTP/TCP),
+* number of CPU cores,
+* complexity of Service Mesh configuration.
+
+A rough estimate of the overhead for an istio-sidecar instance is 0.5 vCPU for 1000 requests/sec and 50 MB RAM.
+istio-sidecars also increase latency in network requests — about 2.5ms per request.

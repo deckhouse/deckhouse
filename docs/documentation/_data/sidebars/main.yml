@@ -870,6 +870,10 @@ entries:
                 ru: Маршрутизация запросов с Istio
               url: /user/network/request_routing_istio.html
             - title:
+                en: Istio activation for applications
+                ru: Активация Istio для приложений
+              url: /user/network/app_istio_activation.html
+            - title:
                 en: Managing request balancing between service Endpoints with Istio
                 ru: Управление балансировкой запросов между endpoint’ами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html

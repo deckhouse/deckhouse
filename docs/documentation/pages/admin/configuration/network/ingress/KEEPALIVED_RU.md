@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/network/ingress/keepalived.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [keepalived](../../reference/mc/keepalived/).
+В Deckhouse Kubernetes Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](../../../../modules/keepalived/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 
