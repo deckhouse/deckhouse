@@ -41,7 +41,7 @@ lang: ru
        description: "Direct access to kubernetes API"
    ```
 
-### Как работает защита доступа к Kubernetes API
+## Как работает защита доступа к Kubernetes API
 
 В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через модуль `user-authn`. Вы можете настроить:
 
