@@ -7,20 +7,20 @@ permalink: en/architecture/network/cluster-with-istio.html
 
 The cluster components are divided into two categories:
 
-* control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
-* data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
+* Control Plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
+* Data Plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
 ![Architecture of the cluster with Istio enabled](../../images/istio/istio-architecture.svg)
 <!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
-All data plane services are grouped into a mesh with the following features:
+All Data Plane services are grouped into a mesh with the following features:
 
 * It has a common namespace for generating service ID in the form `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. Each mesh has a TrustDomain ID (in our case, it is the same as the cluster domain), e.g. `mycluster.local/ns/myns/sa/myapp`.
-* Services within a single mesh can authenticate each other using trusted root certificates.
+* Authentication of services within a single service mesh using trusted root certificates.
 
-Control plane components:
+Control Plane components:
 
-* `istiod` — the main service with the following tasks:
+* **istiod** — the main service with the following tasks:
   * Continuous connection to the Kubernetes API and collecting information about services.
   * Processing and validating all Istio-related Custom Resources using the Kubernetes Validating Webhook mechanism.
   * Configuring each sidecar proxy individually:
@@ -31,11 +31,11 @@ Control plane components:
     * Injecting an additional sidecar-proxy service container.
     * Injecting an additional init container for configuring the network subsystem (configuring DNAT to intercept application traffic).
     * Routing readiness and liveness probes through the sidecar-proxy.
-* `operator` — installs all the resources required to operate a specific version of the control plane.
-* `kiali` — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio that allows you:
-  * Visualize inter-service connections.
-  * Diagnose problem inter-service connections.
-  * Diagnose the control plane state.
+* **operator** — installs all the resources required to operate a specific version of the Control Plane.
+* **kiali** — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio:
+  * visualizing relationships between services.
+  * diagnosing problematic relationships.
+  * diagnosing Control Plane health.
 
 The Ingress controller must be refined to receive user traffic:
 
