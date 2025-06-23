@@ -73,4 +73,3 @@ The following will be automatically configured when API publishing is enabled:
 - Deckhouse will set the required arguments for the kube-apiserver;
 - A CA certificate will be generated and added to the kubeconfig;
 - Login via Dex with OIDC support will be configured.
-
