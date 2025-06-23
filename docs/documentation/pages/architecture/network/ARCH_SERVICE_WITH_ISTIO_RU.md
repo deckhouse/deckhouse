@@ -22,8 +22,8 @@ lang: ru
 * **Ресурсы типа Ingress**:
 
   Эти ресурсы требуют минимальной доработки в виде добавления аннотаций:
-     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — Ingress-контроллер в качестве upstream будет использовать ClusterIP сервиса вместо адресов подов. Балансировкой трафика между подами теперь занимается sidecar-proxy. Используйте эту опцию, только если у вашего сервиса есть ClusterIP.
-     * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — sidecar-proxy Ingress-контроллера принимает решения о маршрутизации на основе заголовка Host. Без данной аннотации контроллер оставит заголовок с адресом сайта, например `Host: example.com`.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — Ingress-контроллер в качестве upstream будет использовать ClusterIP сервиса вместо адресов подов. Балансировкой трафика между подами теперь занимается sidecar-proxy. Используйте эту опцию, только если у вашего сервиса есть ClusterIP.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — sidecar-proxy Ingress-контроллера принимает решения о маршрутизации на основе заголовка Host. Без данной аннотации контроллер оставит заголовок с адресом сайта, например `Host: example.com`.
 * **Сервисы**:
   * Ресурсы типа Service не требуют изменений и продолжают работать без адаптации. Приложениям все так же доступны адреса сервисов вида servicename, servicename.myns.svc и пр.
 * **DNS-запросы**:

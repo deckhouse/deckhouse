@@ -33,9 +33,9 @@ Control Plane components:
     * Routing readiness and liveness probes through the sidecar-proxy.
 * **operator** — installs all the resources required to operate a specific version of the Control Plane.
 * **kiali** — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio:
-    * visualizing relationships between services.
-    * diagnosing problematic relationships.
-    * diagnosing Control Plane health.
+  * visualizing relationships between services.
+  * diagnosing problematic relationships.
+  * diagnosing Control Plane health.
 
 The Ingress controller must be refined to receive user traffic:
 
