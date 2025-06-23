@@ -225,7 +225,6 @@ func walkModules(namespaces map[string]struct{}, sas map[string]struct{}, workDi
 		case "module.yaml":
 			name, ns, err := processModuleDefinition(path)
 			if err != nil {
-				fmt.Println("HERE?", err)
 				return err
 			}
 
@@ -239,7 +238,6 @@ func walkModules(namespaces map[string]struct{}, sas map[string]struct{}, workDi
 
 			templatesDir := filepath.Join(filepath.Dir(path), "templates")
 			if err := handleServiceAccounts(templatesDir, modulePath, name, ns, sas); err != nil {
-				fmt.Println("HERE222?", err)
 				return err
 			}
 
