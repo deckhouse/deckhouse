@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-support"
+	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
 	cgroupV2MetricName       = "d8_node_cgroup_v2_support_status"
 )
 
+// set d8_node_cgroup_v2_support_status=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
 		ExecutionMinInterval: 60 * time.Second,
@@ -55,9 +56,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleCgroupV2SupportMetrics)
 
 type cgroupV2SupportNode struct {
-	Name           string
-	NodeGroup      string
-	V2SupportLabel string
+	Name      string
+	NodeGroup string
 }
 
 func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -69,12 +69,9 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 
 	nodeGroup := node.Labels[nodeGroupLabel]
 
-	v2Support := node.Labels[containerdV2SupportLabel]
-
 	return cgroupV2SupportNode{
-		Name:           node.Name,
-		NodeGroup:      nodeGroup,
-		V2SupportLabel: v2Support,
+		Name:      node.Name,
+		NodeGroup: nodeGroup,
 	}, nil
 }
 
@@ -84,15 +81,7 @@ func handleCgroupV2SupportMetrics(input *go_hook.HookInput) error {
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
 
-		var metricValue float64
-		switch nodeInfo.V2SupportLabel {
-		case "true":
-			metricValue = 1.0
-		case "false":
-			metricValue = 0.0
-		default:
-			metricValue = -1.0
-		}
+		var metricValue float64 = 1.0
 
 		labels := map[string]string{
 			"node":       nodeInfo.Name,

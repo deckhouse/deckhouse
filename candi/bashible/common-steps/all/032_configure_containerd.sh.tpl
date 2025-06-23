@@ -17,6 +17,17 @@ _on_containerd_config_changed() {
   bb-flag-set containerd-need-restart
 }
 
+
+migrate() {
+  systemctl stop containerd-deckhouse.service
+  for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+  if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+    chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+  fi
+  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/deckhouse.toml
+  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/config.toml
+}
+
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
   {{- $max_concurrent_downloads := 3 }}
@@ -428,3 +439,5 @@ debug: false
 pull-image-on-create: false
 EOF
 {{- end }}
+
+bb-flag? ctr-major-version-changed && migrate

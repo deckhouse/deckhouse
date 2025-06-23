@@ -16,8 +16,6 @@ function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
 }
 
-{{ if eq .runType "Normal" }}
-
 MIN_KERNEL="5.8"
 MIN_SYSTEMD="244"
 MAX_RETRIES=10
@@ -31,8 +29,8 @@ can_load_erofs() {
   modprobe -qn erofs 2>/dev/null
 }
 
-check_containerdV2_support() {
-  local errors=()
+function check_containerd_v2_support() {
+  local errors=() err_json
   local kv=$(uname -r | cut -d- -f1)
   version_ge "$kv" "$MIN_KERNEL" || errors+=("kernel")
 
@@ -46,37 +44,66 @@ check_containerdV2_support() {
   has_cgroup2 || errors+=("cgroupv2")
   can_load_erofs || errors+=("erofs")
 
-  local support="true"
-  local err_json=""
   if ((${#errors[@]})); then
-    support="false"
     err_json=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
+    printf "%s" "$err_json"
+    return 1
+  else
+    return 0
   fi
+}
 
-  retries=0
+function set_labels() {
+  local unsupported=$1
+  local err_json=$2
+  local retries=0
+
   while true; do
-    kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-support=${support}"
-    label_status=$?
+    if (( unsupported )); then
+      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
+    else
+      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
+    fi
+    local label_status=$?
 
     if [[ -n $err_json ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=${err_json}"
+      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$err_json"
     else
-      kubectl_exec annotate node "$(bb-d8-node-name)" "node.deckhouse.io/containerd-v2-err-"
+      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
-    annotate_status=$?
+    local annotate_status=$?
 
     if [[ $label_status -eq 0 && $annotate_status -eq 0 ]]; then
       break
     fi
 
     ((retries++))
-    if [[ -n ${MAX_RETRIES-} && retries -ge MAX_RETRIES ]]; then
-      >&2 echo "ERROR: can't set containerd-v2 state on Node."
+    if [[ $retries -ge $MAX_RETRIES ]]; then
+      >&2 echo "ERROR: can't set containerd-v2-not-supported label or error annotation on Node."
       return 1
     fi
     sleep 5
   done
+
+  return 0
 }
 
-check_containerdV2_support
-{{ end }}
+function fail_fast() {
+  local status=$1
+  if (( status != 0 )); then
+    >&2 echo "ERROR: containerd V2 not supported"
+    exit 1
+  fi
+}
+
+function main() {
+  local support_status err_json
+  err_json=$(check_containerd_v2_support)
+  support_status=$?
+  {{ if eq .runType "Normal" }}
+    set_labels "$support_status" "$err_json"
+  {{ end }}
+  fail_fast "$support_status"
+}
+
+main
