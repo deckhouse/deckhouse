@@ -17,7 +17,7 @@ spec:
   transformations:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
-        soureFormat: String
+        sourceFormat: String
           string:
             targetField: msg
             depth: 1
@@ -48,7 +48,7 @@ spec:
   transformations:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
-        soureFormat: Klog
+        sourceFormat: Klog
 ```
 
 ```bash
@@ -76,7 +76,7 @@ spec:
   transformations:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
-        soureFormat: JSON
+        sourceFormat: JSON
           json:
             depth: 1
 ```
@@ -151,7 +151,7 @@ spec:
   transformations:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
-        soureFormat: JSON
+        sourceFormat: JSON
           json:
             depth: 2
     - action: DropLabels
