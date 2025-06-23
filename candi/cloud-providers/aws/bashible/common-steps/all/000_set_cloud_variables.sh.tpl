@@ -16,7 +16,7 @@
 
 shutdown_grace_period="225"
 shutdown_grace_period_critical_pods="15"
-{{ lslds }}
+
 cat << EOF > /var/lib/bashible/cloud-provider-variables
 shutdown_grace_period="$shutdown_grace_period"
 shutdown_grace_period_critical_pods="$shutdown_grace_period_critical_pods"
