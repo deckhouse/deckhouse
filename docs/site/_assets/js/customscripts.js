@@ -453,8 +453,8 @@ document.addEventListener("DOMContentLoaded", function() {
       unwrap: 'Unwrap',
     },
     ru: {
-      wrap: 'Свернуть',
-      unwrap: 'Развернуть',
+      wrap: 'Не переносить строки',
+      unwrap: 'Переносить строки',
     }
   };
   const texts = textTooltip[lang];
@@ -524,7 +524,7 @@ document.addEventListener("DOMContentLoaded", function() {
       arrow: false,
       animation: 'scale',
       theme: 'light',
-      content: texts.unwrap,
+      content: texts.wrap,
       hideOnClick: false,
       delay: [300, 50],
       offset: [0, 10],
@@ -536,7 +536,7 @@ document.addEventListener("DOMContentLoaded", function() {
       arrow: false,
       animation: 'scale',
       theme: 'light',
-      content: texts.wrap,
+      content: texts.unwrap,
       hideOnClick: false,
       delay: [300, 50],
       offset: [0, 10],
