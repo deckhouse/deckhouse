@@ -30,6 +30,10 @@ import:
 - image: tools/nfs-utils-nfs-utils-{{ $image_version }}
   add: /
   to: /src
+  includePaths:
+  - lib
+  - sbin
+  - usr
   before: install
 shell:
   beforeInstall:
