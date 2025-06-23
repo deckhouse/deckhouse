@@ -5,7 +5,7 @@ description: Examples of using log transformations
 
 {% raw %}
 
-## Transform mixed logs, JSON or strings to JSON. Parse JSON and reduce nesting.
+## Transform mixed logs, JSON or strings to JSON. Parse JSON and reduce nesting
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -64,8 +64,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ```
 
-## JSON parsing and nesting reduction.
-
+## JSON parsing and nesting reduction
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -95,7 +94,7 @@ spec:
 
 ## Replacing dots with underscores in label keys
 
-### When applying a transform to labels in message, you must first perform an esureStructuredMessage transform to parse the json
+- When applying a transform to labels in message, you must first perform an esureStructuredMessage transform to parse the json
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -124,7 +123,7 @@ spec:
 
 ## Removing labels
 
-### When applying a transform to labels in message, you must first perform an esureStructuredMessage transform to parse the json
+- When applying a transform to labels in message, you must first perform an esureStructuredMessage transform to parse the json
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
