@@ -1,5 +1,10 @@
 # Changelog v1.70
 
+## [MALFORMED]
+
+
+ - #13974 unknown section "snapshot-controller"
+
 ## Know before update
 
 
@@ -97,6 +102,7 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** fix kubeadm v1beta4 config [#14058](https://github.com/deckhouse/deckhouse/pull/14058)
  - **[control-plane-manager]** audit-log-maxage value to 30 days [#14044](https://github.com/deckhouse/deckhouse/pull/14044)
  - **[control-plane-manager]** Fixed performance regression in `etcd`. [#13581](https://github.com/deckhouse/deckhouse/pull/13581)
  - **[deckhouse]** Fix obsolete config alert stuck after deleting module config. [#14066](https://github.com/deckhouse/deckhouse/pull/14066)
@@ -106,6 +112,7 @@
  - **[deckhouse]** Added a condition to apply patch releases in the maintenance window, if it exists. [#12935](https://github.com/deckhouse/deckhouse/pull/12935)
  - **[deckhouse]** Removed system-wide proxy from `/etc/systemd/system.conf.d/`. [#12832](https://github.com/deckhouse/deckhouse/pull/12832)
  - **[deckhouse]** Changed the method of connecting deckhouse-controller to API-server. [#12282](https://github.com/deckhouse/deckhouse/pull/12282)
+ - **[deckhouse-controller]** fix wrong behavior of Pending ModuleReleases [#14095](https://github.com/deckhouse/deckhouse/pull/14095)
  - **[descheduler]** Fixed bug go mod tidy. [#13447](https://github.com/deckhouse/deckhouse/pull/13447)
  - **[descheduler]** Fixed `descheduler` CVE vulnerabilities. [#13306](https://github.com/deckhouse/deckhouse/pull/13306)
  - **[dhctl]** Fix unexpected behavior with legacy API versions in VCD [#13681](https://github.com/deckhouse/deckhouse/pull/13681)
@@ -128,6 +135,7 @@
  - **[metallb]** Dashboards are aligned with user experience expectations. [#12666](https://github.com/deckhouse/deckhouse/pull/12666)
  - **[monitoring-deckhouse]** Fixed many to many error in `ModuleReleaseIsWaitingManualApproval` alert. [#13429](https://github.com/deckhouse/deckhouse/pull/13429)
  - **[monitoring-ping]** Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289 [#13684](https://github.com/deckhouse/deckhouse/pull/13684)
+ - **[node-local-dns]** Improved stability for clusters with poor node-to-node connection quality by increasing node-local-dns to kube-dns healthcheck timeouts. [#14075](https://github.com/deckhouse/deckhouse/pull/14075)
  - **[node-local-dns]** Changed container liveness port. [#13922](https://github.com/deckhouse/deckhouse/pull/13922)
  - **[node-local-dns]** Fixing of the stale-dns-connections-cleaner pods [#13615](https://github.com/deckhouse/deckhouse/pull/13615)
  - **[node-manager]** fixed update for static clusters [#13963](https://github.com/deckhouse/deckhouse/pull/13963)
