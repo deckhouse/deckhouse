@@ -1,8 +1,8 @@
 {%- assign moduleName = page['module-kebab-name'] %}
 
-{%- if site.data.schemas[moduleName]['conversions'].size > 0 %}
+{%- if site.data.schemas.modules[moduleName]['conversions'].size > 0 %}
 
-{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] | sort %}
+{%- assign moduleConversions = site.data.schemas.modules[moduleName]['conversions'] | sort %}
 
 ## {{ site.data.i18n.common.conversions[page.lang] }}
 

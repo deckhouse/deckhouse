@@ -117,17 +117,13 @@ entries:
                     ru: Публичные облачные провайдеры
                   folders:
                     - title:
-                        en: Обзор
-                        ru: Overview
+                        en: Overview
+                        ru: Обзор
                       url: /admin/integrations/public/overview.html
                     - title:
                         en: Integration with Yandex Cloud
                         ru: Интеграция с Yandex Cloud
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/yandex/yandex-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -149,10 +145,6 @@ entries:
                         ru: Интеграция с VK Cloud
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/vk/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/vk/сonnection-and-authorization.html
@@ -164,10 +156,6 @@ entries:
                         en: Integration with Selectel Cloud
                         ru: Интеграция с Selectel Cloud
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/selectel/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -181,10 +169,6 @@ entries:
                         ru: Интеграция с OVH Cloud
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/ovh/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/ovh/сonnection-and-authorization.html
@@ -197,10 +181,6 @@ entries:
                         ru: Интеграция с облаками на базе OpenStack
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/openstack/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/openstack/сonnection-and-authorization.html
@@ -212,10 +192,6 @@ entries:
                         en: Integration with Amazon Web Services (AWS)
                         ru: Интеграция с Amazon Web Services (AWS)
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/amazon/amazon-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -237,10 +213,6 @@ entries:
                         ru: Интеграция с Microsoft Azure
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/azure/azure-overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/azure/azure-authorization.html
@@ -257,61 +229,9 @@ entries:
                             ru: Интеграция с службами Microsoft Azure
                           url: /admin/integrations/public/azure/azure-services.html
                     - title:
-                        en: Integration with Huawei Cloud
-                        ru: Интеграция с Huawei Cloud
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/huaweicloud/huawei-overview.html
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/huaweicloud/huawei-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/huaweicloud/huawei-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/huaweicloud/huawei-storage.html
-                        - title:
-                            en: Integration with Huawei Cloud
-                            ru: Интеграция с службами Huawei Cloud
-                          url: /admin/integrations/public/huaweicloud/huawei-services.html
-                    - title:
-                        en: Integration with Dynamix
-                        ru: Интеграция с Dynamix
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/dynamix/dynamix-overview.html
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/public/dynamix/dynamix-authorization.html
-                        - title:
-                            en: Configuration and layout
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/dynamix/dynamix-layout.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/dynamix/dynamix-storage.html
-                        - title:
-                            en: Integration with Dynamix
-                            ru: Интеграция с службами Dynamix
-                          url: /admin/integrations/public/dynamix/dynamix-services.html
-                    - title:
                         en: Integration with Google Cloud Platform (GCP)
                         ru: Интеграция с Google Cloud Platform (GCP)
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/gcp/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -333,10 +253,6 @@ entries:
                         ru: Интеграция с VK Cloud
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/private/vk/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/vk/сonnection-and-authorization.html
@@ -349,10 +265,6 @@ entries:
                         ru: Интеграция с OpenStack
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/private/openstack/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/openstack/сonnection-and-authorization.html
@@ -360,22 +272,58 @@ entries:
                             en: Configuration and layout scheme
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Huawei Cloud
+                        ru: Интеграция с Huawei Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/huaweicloud/huawei-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/huaweicloud/huawei-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/private/huaweicloud/huawei-storage.html
+                        - title:
+                            en: Integration with Huawei Cloud
+                            ru: Интеграция с службами Huawei Cloud
+                          url: /admin/integrations/private/huaweicloud/huawei-services.html
+                    - title:
+                        en: Integration with Dynamix
+                        ru: Интеграция с Dynamix
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/dynamix/dynamix-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/dynamix/dynamix-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/private/dynamix/dynamix-storage.html
+                        - title:
+                            en: Integration with Dynamix
+                            ru: Интеграция с службами Dynamix
+                          url: /admin/integrations/private/dynamix/dynamix-services.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации
                   folders:
                     - title:
-                        en: Обзор
-                        ru: Overview
+                        en: Overview
+                        ru: Обзор
                       url: /admin/integrations/virtualization/overview.html
                     - title:
                         en: Integration with VMware vSphere
                         ru: Интеграция с VMware vSphere
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/virtualization/vsphere/vsphere-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -397,10 +345,6 @@ entries:
                         ru: Интеграция с VMware Cloud Director
                       folders:
                         - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/virtualization/vcd/overview.html
-                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
@@ -420,10 +364,6 @@ entries:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/virtualization/zvirt/zvirt-overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -521,6 +461,10 @@ entries:
                     en: Vertical pod autoscaling
                     ru: Вертикальное масштабирование
                   url: /admin/configuration/app-scaling/vpa.html
+                - title:
+                    en: Pod restart on configuration change
+                    ru: Перезапуск подов при изменении конфигурации
+                  url: /admin/configuration/app-scaling/pod-restart.html  
                 - title:
                     en: Load distribution management
                     ru: Управление распределением нагрузки
@@ -969,8 +913,8 @@ entries:
                     ru: Веб-интерфейс Grafana
                   url: /user/web/grafana.html
                 - title:
-                    en: Alertmanager-email web interface
-                    ru: Веб-интерфейс Alertmanager-email
+                    en: Alert management web UI
+                    ru: Веб-интерфейс управления алертами
                   url: /user/web/alertmanager.html
                 - title:
                     en: Kubeconfig generator web UI

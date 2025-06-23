@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/yandex/yandex-authorization.html
 lang: ru
 ---
 
-Для того чтобы Deckhouse мог управлять ресурсами в Yandex Cloud, необходимо:
+Для того чтобы Deckhouse Kubernetes Platform (DKP) мог управлять ресурсами в Yandex Cloud, необходимо:
 
 - создать сервисный аккаунт;
 - назначить ему необходимые IAM-роли;
@@ -16,13 +16,12 @@ lang: ru
 
 ## Подготовка окружения
 
-На виртуальных машинах должен быть установлен пакет `cloud-init`. После запуска виртуальной машины должны быть запущены следующие службы, связанные с этим пакетом:
+На виртуальных машинах должен быть установлен пакет `cloud-init`. После запуска виртуальной машины должны быть запущены службы, связанные с этим пакетом:
+- `cloud-config.service`;
+- `cloud-final.service`;
+- `cloud-init.service`.
 
-* `cloud-config.service`;
-* `cloud-final.service`;
-* `cloud-init.service`.
-
-Проверить, что службы запущенны можно с помощью команд:
+Чтобы проверить, запущены ли службы, выполните команды:
 
 ```console
 systemctl status cloud-config.service
@@ -32,7 +31,8 @@ systemctl status cloud-init.service
 
 ## Создание сервисного аккаунта
 
-Чтобы Deckhouse смог управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings).
+Для управления ресурсами в Yandex Cloud через DKP создайте сервисный аккаунт и выдайте ему права на редактирование.
+Подробную инструкцию по созданию сервисного аккаунта смотрите в [документации Yandex Cloud](https://cloud.yandex.com/ru/docs/resource-manager/operations/cloud/set-access-bindings).
 
 Для создания сервисного аккаунта выполните команду:
 
@@ -49,11 +49,13 @@ created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
 
-> **Важно**. Сохраните `userID` и `folderID` — они понадобятся в следующих шагах.
+{% alert level="warning" %}
+Сохраните `userID` и `folderID` — они понадобятся в следующих шагах.
+{% endalert %}
 
 ## Назначение IAM-ролей
 
-Для работы Deckhouse с ресурсами облака сервисному аккаунту необходимо назначить следующие роли:
+Для работы DKP с ресурсами облака назначьте сервисному аккаунту следующие роли:
 
 ```console
 yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
@@ -71,18 +73,17 @@ yc resource-manager folder add-access-binding --id <folderID> --role load-balanc
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 
-Содержимое файла `deckhouse-sa-key.json` будет использоваться в поле `provider.serviceAccountJSON` при описании конфигурации кластера.
+Содержимое файла `deckhouse-sa-key.json` используйте в поле `provider.serviceAccountJSON` при описании конфигурации кластера.
 
 ## Проверка и увеличение квот
 
-Для развёртывания и масштабирования кластера убедитесь, что в облачном аккаунте установлены необходимые квоты. Рекомендуемые значения:
-
+Убедитесь, что облачный аккаунт имеет необходимые квоты для развёртывания и масштабирования:
 - Виртуальные процессоры: 64
 - Объём SSD-дисков: 2000 ГБ
 - Количество ВМ: 25
 - Объём RAM: 256 ГБ
 
-Увеличение квот можно запросить через консоль Yandex Cloud.
+Увеличьте квоты через консоль Yandex Cloud, если необходимо.
 
 ## Резервирование публичного IP
 
