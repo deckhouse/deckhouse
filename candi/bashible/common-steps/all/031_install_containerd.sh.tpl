@@ -37,18 +37,31 @@ post-install() {
   fi
 }
 
-ctr-version-change-check() {
-local cur_major_v=$(containerd --version | awk '{print $3}' | grep -oE '[1-2]' | head -n1)
-local des_major_v=1
-{{- if eq .cri "ContainerdV2" }}
-des_major_v=2
-{{- end }}
-  if [[ -n "${cur_major_v}" && "${cur_major_v}" != "${des_major_v}" ]]; then
-    bb-deckhouse-get-disruptive-update-approval
+migrate() {
+  systemctl stop containerd-deckhouse.service
+  for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i ; done
+  if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+    chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
   fi
+  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/deckhouse.toml
+  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/config.toml
+  systemctl start containerd-deckhouse.service
+}
+
+ctr-version-change-check() {
+  local cur_major_v=$(containerd --version | awk '{print $3}' | grep -oE '[1-2]' | head -n1)
+  local des_major_v=1
+  {{- if eq .cri "ContainerdV2" }}
+  des_major_v=2
+  {{- end }}
+    if [[ -n "${cur_major_v}" && "${cur_major_v}" != "${des_major_v}" ]]; then
+      bb-deckhouse-get-disruptive-update-approval
+    fi
 }
 
 ctr-version-change-check
+migrate
+
 {{- $containerd := "containerd1727"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerdv2211" }}
