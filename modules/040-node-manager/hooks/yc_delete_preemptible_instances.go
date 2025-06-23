@@ -54,8 +54,8 @@ type Machine struct {
 	MachineClassKind string
 	MachineClassName string
 
-	nodeCreationTimestamp metav1.Time
-	nodeGroup             string
+	NodeCreationTimestamp metav1.Time
+	NodeGroup             string
 }
 
 type NodeGroupStatus struct {
@@ -289,19 +289,19 @@ func deleteMachines(input *go_hook.HookInput) error {
 		}
 
 		if node, ok := nodeNameToNodeMap[machine.Name]; ok {
-			machine.nodeCreationTimestamp = node.CreationTimestamp
-			machine.nodeGroup = node.NodeGroup
+			machine.NodeCreationTimestamp = node.CreationTimestamp
+			machine.NodeGroup = node.NodeGroup
 		} else {
 			continue
 		}
 
 		// skip young Machines
-		if machine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
+		if machine.NodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
 			continue
 		}
 
 		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
-		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.nodeGroup]
+		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.NodeGroup]
 		if !ok {
 			continue
 		}
@@ -325,7 +325,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 func getMachinesToDelete(machines []*Machine) []string {
 	sort.Slice(machines, func(i, j int) bool {
-		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
+		return machines[i].NodeCreationTimestamp.Before(&machines[j].NodeCreationTimestamp)
 	})
 
 	// take 10% of old Machines
