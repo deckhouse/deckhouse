@@ -48,7 +48,7 @@ check_containerdV2_support() {
 
   local support="true"
   local err_json=""
-  if ((${#issues[@]})); then
+  if ((${#errors[@]})); then
     support="false"
     err_json=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
   fi

@@ -37,6 +37,18 @@ post-install() {
   fi
 }
 
+ctr-version-change-check() {
+local cur_major_v=$(containerd --version | awk '{print $3}' | grep -oE '[1-2]' | head -n1)
+local des_major_v=1
+{{- if eq .cri "ContainerdV2" }}
+des_major_v=2
+{{- end }}
+  if [[ -n "${cur_major_v}" && "${cur_major_v}" != "${des_major_v}" ]]; then
+    bb-deckhouse-get-disruptive-update-approval
+  fi
+}
+
+ctr-version-change-check
 {{- $containerd := "containerd1727"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerdv2211" }}
