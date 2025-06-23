@@ -129,5 +129,5 @@ shell:
   - mv bin/* /out
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out
-  - chmod 755 /out/runc
+  - chmod 755 /out/*
 {{- end }}
