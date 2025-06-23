@@ -5848,7 +5848,7 @@ alerts:
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
-        OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
       severity: "5"
       markupFormat: markdown
     - name: OpenVPNClientCertificateExpired
@@ -5868,8 +5868,8 @@ alerts:
         kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
-        OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
-      severity: "5"
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+      severity: "6"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
@@ -5889,7 +5889,7 @@ alerts:
       description: "\nOpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
       summary: |
         OpenVPN CA certificate will expire tomorrow
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpiringInAWeek
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml

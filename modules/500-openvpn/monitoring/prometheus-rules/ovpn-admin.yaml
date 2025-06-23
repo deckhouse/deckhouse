@@ -22,14 +22,14 @@
           Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire < 30
+      expr: ovpn_client_cert_expire < 7
       for: 1h
       labels:
         severity_level: "5"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
         description: |-
           The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
@@ -43,14 +43,14 @@
           ```
 
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire < 7
+      expr: ovpn_client_cert_expire < 30
       for: 1h
       labels:
-        severity_level: "5"
+        severity_level: "6"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
         description: |-
           The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
@@ -154,7 +154,7 @@
       expr: ovpn_server_ca_cert_expire == 1
       for: 10m
       labels:
-        severity_level: "5"
+        severity_level: "4"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
