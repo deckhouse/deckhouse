@@ -481,11 +481,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -575,11 +575,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -858,11 +858,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -952,11 +952,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1235,11 +1235,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1329,11 +1329,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1612,11 +1612,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1706,11 +1706,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1989,11 +1989,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2083,11 +2083,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2366,11 +2366,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2460,11 +2460,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2743,11 +2743,11 @@ jobs:
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2837,11 +2837,11 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
