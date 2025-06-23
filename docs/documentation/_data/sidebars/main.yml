@@ -1132,10 +1132,6 @@ entries:
                     ru: Расширенная конфигурация
                   url: /modules/log-shipper/advanced_usage.html
                 - title:
-                    en: Logs Transformations
-                    ru: Преобразования логов
-                  url: /modules/log-shipper/transformations.html
-                - title:
                     en: Reference
                     ru: Справка
                   folders:
