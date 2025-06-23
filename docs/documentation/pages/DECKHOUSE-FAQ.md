@@ -1058,142 +1058,142 @@ All commands are executed on the master node of the existing cluster.
 
 1. Prepare variables for the license token and edition name:
 
-    {% alert level="info" %}
-    The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
-    - BE, the variable should be `be`;
-    - SE, the variable should be `se`;
-    - SE+, it should be `se-plus`;
-    - EE, it should be `ee`.
-    {% endalert %}
+  {% alert level="info" %}
+  The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
+  - BE, the variable should be `be`;
+  - SE, the variable should be `se`;
+  - SE+, it should be `se-plus`;
+  - EE, it should be `ee`.
+  {% endalert %}
 
-    ```shell
-    NEW_EDITION=<PUT_YOUR_EDITION_HERE>
-    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-    ```
+  ```shell
+  NEW_EDITION=<PUT_YOUR_EDITION_HERE>
+  LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+  AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+  ```
 
 1. Ensure the [Deckhouse queue](#how-to-check-the-job-queue-in-deckhouse) is empty and error-free:
 
-    Example output:
+  Example output:
 
-    ```console
-    Summary:
-    - 'main' queue: empty.
-    - 84 other queues (0 active, 84 empty): 0 tasks.
-    - no tasks to handle.
-    ```
+  ```console
+  Summary:
+  - 'main' queue: empty.
+  - 84 other queues (0 active, 84 empty): 0 tasks.
+  - no tasks to handle.
+  ```
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: containerd-$NEW_EDITION-config.sh
-    spec:
-      nodeGroups:
-      - '*'
-      bundles:
-      - '*'
-      weight: 30
-      content: |
-        _on_containerd_config_changed() {
-          bb-flag-set containerd-need-restart
-        }
-        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-        mkdir -p /etc/containerd/conf.d
-        bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-        [plugins]
-          [plugins."io.containerd.grpc.v1.cri"]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-              [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
-                auth = "$AUTH_STRING"
-        EOF_TOML
-    EOF  
-    ```
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: containerd-$NEW_EDITION-config.sh
+  spec:
+    nodeGroups:
+    - '*'
+    bundles:
+    - '*'
+    weight: 30
+    content: |
+      _on_containerd_config_changed() {
+        bb-flag-set containerd-need-restart
+      }
+      bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+      mkdir -p /etc/containerd/conf.d
+      bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+              auth = "$AUTH_STRING"
+      EOF_TOML
+  EOF  
+  ```
 
-   Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for the bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
+  Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for the bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
-    ```shell
-    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-    ```
-  
-    Example output:
+  ```shell
+  kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+  ```
 
-    ```console
-    NAME     NODES   READY   UPTODATE
-    master   1       1       1
-    worker   2       2       2
-    ```
+  Example output:
 
-   A message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
+  ```console
+  NAME     NODES   READY   UPTODATE
+  master   1       1       1
+  worker   2       2       2
+  ```
 
-    ```shell
-    journalctl -u bashible -n 5
-    ```
+  A message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
 
-    Example output:
+  ```shell
+  journalctl -u bashible -n 5
+  ```
 
-    ```console
-    Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-    Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Annotate node master-ce-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ce-to-se-0 bashible.sh[53407]: Successful annotate node master-ce-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ce-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-    ```
+  Example output:
+
+  ```console
+  Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+  Aug 21 11:04:28 master-ce-to-se-0 bashible.sh[53407]: Annotate node master-ce-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+  Aug 21 11:04:29 master-ce-to-se-0 bashible.sh[53407]: Successful annotate node master-ce-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+  Aug 21 11:04:29 master-ce-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+  ```
 
 1. Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
 
-    ```shell
-    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-    kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
-    ```
+  ```shell
+  DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+  kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
+  ```
 
 1. Once the pod is in `Running` state, execute the following commands:
 
-    ```shell
-    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-    USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-    HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-    DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-    DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
-    ```
+  ```shell
+  NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+  USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+  HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+  DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+  DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+  MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
+  ```
 
 1. Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
-    ```
+  ```shell
+  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+  ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
-    ```shell
-    kubectl delete ngc containerd-$NEW_EDITION-config.sh
-    kubectl delete pod $NEW_EDITION-image
-    kubectl apply -f - <<EOF
-        apiVersion: deckhouse.io/v1alpha1
-        kind: NodeGroupConfiguration
-        metadata:
-          name: del-temp-config.sh
-        spec:
-          nodeGroups:
-          - '*'
-          bundles:
-          - '*'
-          weight: 90
-          content: |
-            if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-              rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-            fi
-    EOF
-    ```
+  ```shell
+  kubectl delete ngc containerd-$NEW_EDITION-config.sh
+  kubectl delete pod $NEW_EDITION-image
+  kubectl apply -f - <<EOF
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroupConfiguration
+      metadata:
+        name: del-temp-config.sh
+      spec:
+        nodeGroups:
+        - '*'
+        bundles:
+        - '*'
+        weight: 90
+        content: |
+          if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+            rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+          fi
+  EOF
+  ```
 
-   After the bashible synchronization completes (the synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
+  After the bashible synchronization completes (the synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
-    ```shell
-    kubectl delete ngc del-temp-config.sh
-    ```
+  ```shell
+  kubectl delete ngc del-temp-config.sh
+  ```
 
 ### How to Switch Deckhouse EE to BE/SE/SE+/CE?
 
@@ -1217,172 +1217,172 @@ All commands are executed on the master node of the existing cluster.
 
 1. Prepare variables for the license token and edition name:
 
-    {% alert level="info" %}
-    No need to fill the `NEW_EDITION` and `AUTH_STRING` variables when switching to Deckhouse CE edition.
-    The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
-    - CE, the variable should be `ce`;
-    - BE, the variable should be `be`;
-    - SE, it should be `se`;
-    - SE+, it should be `se-plus`.
-    {% endalert %}
+  {% alert level="info" %}
+  No need to fill the `NEW_EDITION` and `AUTH_STRING` variables when switching to Deckhouse CE edition.
+  The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
+  - CE, the variable should be `ce`;
+  - BE, the variable should be `be`;
+  - SE, it should be `se`;
+  - SE+, it should be `se-plus`.
+  {% endalert %}
 
-    ```shell
-    NEW_EDITION=<PUT_YOUR_EDITION_HERE>
-    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-    ```
+  ```shell
+  NEW_EDITION=<PUT_YOUR_EDITION_HERE>
+  LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+  AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+  ```
 
 1. Ensure the [Deckhouse queue](#how-to-check-the-job-queue-in-deckhouse) is empty and error-free:
 
-    Example output:
+  Example output:
 
-    ```console
-    Summary:
-    - 'main' queue: empty.
-    - 84 other queues (0 active, 84 empty): 0 tasks.
-    - no tasks to handle.
-    ```
+  ```console
+  Summary:
+  - 'main' queue: empty.
+  - 84 other queues (0 active, 84 empty): 0 tasks.
+  - no tasks to handle.
+  ```
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
-   {% alert level="info" %}
-   Skip this step if switching to Deckhouse CE.
-   {% endalert %}
+  {% alert level="info" %}
+  Skip this step if switching to Deckhouse CE.
+  {% endalert %}
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: containerd-$NEW_EDITION-config.sh
-    spec:
-      nodeGroups:
-      - '*'
-      bundles:
-      - '*'
-      weight: 30
-      content: |
-        _on_containerd_config_changed() {
-          bb-flag-set containerd-need-restart
-        }
-        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-        mkdir -p /etc/containerd/conf.d
-        bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-        [plugins]
-          [plugins."io.containerd.grpc.v1.cri"]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-              [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
-                auth = "$AUTH_STRING"
-        EOF_TOML
-    EOF  
-    ```
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: containerd-$NEW_EDITION-config.sh
+  spec:
+    nodeGroups:
+    - '*'
+    bundles:
+    - '*'
+    weight: 30
+    content: |
+      _on_containerd_config_changed() {
+        bb-flag-set containerd-need-restart
+      }
+      bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+      mkdir -p /etc/containerd/conf.d
+      bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+              auth = "$AUTH_STRING"
+      EOF_TOML
+  EOF  
+  ```
 
-   Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
+  Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
-    ```shell
-    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-    ```
+  ```shell
+  kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+  ```
 
-    Example output:
+  Example output:
 
-    ```console
-    NAME     NODES   READY   UPTODATE
-    master   1       1       1
-    worker   2       2       2
-    ```
+  ```console
+  NAME     NODES   READY   UPTODATE
+  master   1       1       1
+  worker   2       2       2
+  ```
 
-   Also, a message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
+  Also, a message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
 
-    ```shell
-    journalctl -u bashible -n 5
-    ```
+  ```shell
+  journalctl -u bashible -n 5
+  ```
 
-    Example output:
+  Example output:
 
-    ```console
-    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-    ```
+  ```console
+  Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+  Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+  Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+  Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+  ```
 
 1. Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
 
-    ```shell
-    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-    kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
-    ```
+  ```shell
+  DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+  kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
+  ```
 
 1. Once the pod is in `Running` state, execute the following commands:
 
-    ```shell
-    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-    USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-    HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-    DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-    DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
-    ```
+  ```shell
+  NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+  USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+  HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+  DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+  DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+  MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
+  ```
 
 1. Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
 
-    ```shell
-    echo $MODULES_WILL_DISABLE
-    ```
+  ```shell
+  echo $MODULES_WILL_DISABLE
+  ```
 
-   > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
+  > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
 
-   Disable the modules not supported by the new edition:
+  Disable the modules not supported by the new edition:
 
-    ```shell
-    echo $MODULES_WILL_DISABLE | 
-      tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-    ```
+  ```shell
+  echo $MODULES_WILL_DISABLE | 
+    tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+  ```
 
-   Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
+  Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
 
 1. Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
 
-   To switch to BE/SE/SE+ editions:
+  To switch to BE/SE/SE+ editions:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
-    ```
+  ```shell
+  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+  ```
 
-   To switch to CE edition:
+  To switch to CE edition:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
-    ```
+  ```shell
+  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
+  ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
-    ```shell
-    kubectl delete ngc containerd-$NEW_EDITION-config.sh
-    kubectl delete pod $NEW_EDITION-image
-    kubectl apply -f - <<EOF
-        apiVersion: deckhouse.io/v1alpha1
-        kind: NodeGroupConfiguration
-        metadata:
-          name: del-temp-config.sh
-        spec:
-          nodeGroups:
-          - '*'
-          bundles:
-          - '*'
-          weight: 90
-          content: |
-            if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-              rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-            fi
-    EOF
-    ```
+  ```shell
+  kubectl delete ngc containerd-$NEW_EDITION-config.sh
+  kubectl delete pod $NEW_EDITION-image
+  kubectl apply -f - <<EOF
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroupConfiguration
+      metadata:
+        name: del-temp-config.sh
+      spec:
+        nodeGroups:
+        - '*'
+        bundles:
+        - '*'
+        weight: 90
+        content: |
+          if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+            rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+          fi
+  EOF
+  ```
 
-   After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
+  After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
-    ```shell
-    kubectl delete ngc del-temp-config.sh
-    ```
+  ```shell
+  kubectl delete ngc del-temp-config.sh
+  ```
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
