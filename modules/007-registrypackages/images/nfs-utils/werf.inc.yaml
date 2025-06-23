@@ -1,0 +1,46 @@
+{{- $version := "2.8.2" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /opt/deckhouse
+  to: /opt/deckhouse
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nfs-utils": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine
+import:
+- image: tools/nfs-utils-nfs-utils-{{ $image_version }}
+  add: /
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  - apk add --no-cache patchelf
+  install:
+  - mkdir -p /opt/deckhouse/bin
+  - cp -pr /src/sbin/* /src/usr/bin/* /src/usr/sbin/* /src/usr/libexec/* /opt/deckhouse/bin
+  - cp -pr /src/usr/lib /opt/deckhouse
+  - cd /opt/deckhouse/lib
+  - ln -s libc.so ld-musl-x86_64.so.1
+  - cd /opt/deckhouse/bin
+  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 *
+  - patchelf --set-rpath /opt/deckhouse/lib *
+  - chown -R 64535:64535 /opt/deckhouse
