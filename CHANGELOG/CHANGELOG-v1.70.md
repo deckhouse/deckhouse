@@ -1,5 +1,10 @@
 # Changelog v1.70
 
+## [MALFORMED]
+
+
+ - #13974 unknown section "snapshot-controller"
+
 ## Know before update
 
 
@@ -97,12 +102,17 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** fix kubeadm v1beta4 config [#14058](https://github.com/deckhouse/deckhouse/pull/14058)
+ - **[control-plane-manager]** audit-log-maxage value to 30 days [#14044](https://github.com/deckhouse/deckhouse/pull/14044)
  - **[control-plane-manager]** Fixed performance regression in `etcd`. [#13581](https://github.com/deckhouse/deckhouse/pull/13581)
+ - **[deckhouse]** Fix obsolete config alert stuck after deleting module config. [#14066](https://github.com/deckhouse/deckhouse/pull/14066)
+ - **[deckhouse]** Remove unnecessary modules downloading. [#14003](https://github.com/deckhouse/deckhouse/pull/14003)
  - **[deckhouse]** Added changes for the `CSE` edition build. [#13312](https://github.com/deckhouse/deckhouse/pull/13312)
     Reassembling all images.
  - **[deckhouse]** Added a condition to apply patch releases in the maintenance window, if it exists. [#12935](https://github.com/deckhouse/deckhouse/pull/12935)
  - **[deckhouse]** Removed system-wide proxy from `/etc/systemd/system.conf.d/`. [#12832](https://github.com/deckhouse/deckhouse/pull/12832)
  - **[deckhouse]** Changed the method of connecting deckhouse-controller to API-server. [#12282](https://github.com/deckhouse/deckhouse/pull/12282)
+ - **[deckhouse-controller]** fix wrong behavior of Pending ModuleReleases [#14095](https://github.com/deckhouse/deckhouse/pull/14095)
  - **[descheduler]** Fixed bug go mod tidy. [#13447](https://github.com/deckhouse/deckhouse/pull/13447)
  - **[descheduler]** Fixed `descheduler` CVE vulnerabilities. [#13306](https://github.com/deckhouse/deckhouse/pull/13306)
  - **[dhctl]** Fix unexpected behavior with legacy API versions in VCD [#13681](https://github.com/deckhouse/deckhouse/pull/13681)
@@ -114,8 +124,8 @@
  - **[dhctl]** Added waiting for `kubeadm` command completion result. [#12826](https://github.com/deckhouse/deckhouse/pull/12826)
  - **[dhctl]** Fixed a bug that prevented `PersistentVolumes` from being properly deleted by the `dhctl destroy` command in `Stronghold`. [#12814](https://github.com/deckhouse/deckhouse/pull/12814)
  - **[docs]** Update docs about Keycloak configuration for IP [#13766](https://github.com/deckhouse/deckhouse/pull/13766)
- - **[ingress-nginx]** Resolve conflicts to successfully merge [ingress-nginx] Restore validation [#13993](https://github.com/deckhouse/deckhouse/pull/13993)
  - **[ingress-nginx]** Ingress resource validation in ingress-nginx controller re-enabled. [#13648](https://github.com/deckhouse/deckhouse/pull/13648)
+ - **[ingress-nginx]** Resolve conflicts to successfully merge [ingress-nginx] Restore validation [#13993](https://github.com/deckhouse/deckhouse/pull/13993)
  - **[ingress-nginx]** Implemented iptables cleanup when `HostWithFailover` Inlet was reconfigured to another nodes or deleted. [#13106](https://github.com/deckhouse/deckhouse/pull/13106)
  - **[ingress-nginx]** Forbidden to enable `enableIstioSidecar` when `HostWithFailover` is enabled. [#12789](https://github.com/deckhouse/deckhouse/pull/12789)
  - **[istio]** Added condition if the `cloud-provider-huaweicloud` module is enabled, define `RBAC` permissions granting the `cloud-controller-manager` access to list pods in the `d8-istio` namespace. [#13270](https://github.com/deckhouse/deckhouse/pull/13270)
@@ -125,6 +135,7 @@
  - **[metallb]** Dashboards are aligned with user experience expectations. [#12666](https://github.com/deckhouse/deckhouse/pull/12666)
  - **[monitoring-deckhouse]** Fixed many to many error in `ModuleReleaseIsWaitingManualApproval` alert. [#13429](https://github.com/deckhouse/deckhouse/pull/13429)
  - **[monitoring-ping]** Changed the container port kube-rbac-proxy of DaemonSet monitoring-ping from 4229 to 4289 [#13684](https://github.com/deckhouse/deckhouse/pull/13684)
+ - **[node-local-dns]** Improved stability for clusters with poor node-to-node connection quality by increasing node-local-dns to kube-dns healthcheck timeouts. [#14075](https://github.com/deckhouse/deckhouse/pull/14075)
  - **[node-local-dns]** Changed container liveness port. [#13922](https://github.com/deckhouse/deckhouse/pull/13922)
  - **[node-local-dns]** Fixing of the stale-dns-connections-cleaner pods [#13615](https://github.com/deckhouse/deckhouse/pull/13615)
  - **[node-manager]** fixed update for static clusters [#13963](https://github.com/deckhouse/deckhouse/pull/13963)
@@ -134,6 +145,7 @@
  - **[node-manager]** Fixed increased `403` errors from `capi-controller-manager` accessing the `Kubernetes API server` root path ('/'). [#13125](https://github.com/deckhouse/deckhouse/pull/13125)
  - **[node-manager]** Fixed panic in `vSphere` provider during VM creation. [#13083](https://github.com/deckhouse/deckhouse/pull/13083)
  - **[node-manager]** Rewrite static Node adoption for `CAPS`. [#11807](https://github.com/deckhouse/deckhouse/pull/11807)
+ - **[openvpn]** Added a migration hook to mitigate false positive `OpenVPNClientCertificateExpired` alerts. [#13987](https://github.com/deckhouse/deckhouse/pull/13987)
  - **[openvpn]** Fixed condition of alert triggering for client certificate. [#13900](https://github.com/deckhouse/deckhouse/pull/13900)
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
