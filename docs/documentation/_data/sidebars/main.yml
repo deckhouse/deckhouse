@@ -610,6 +610,10 @@ entries:
                         ru: Управление DNS в кластере Kubernetes
                       url: /admin/configuration/network/other/dns.html
                     - title:
+                        en: Caching DNS requests on cluster nodes
+                        ru: Кэширование DNS-запросов на узлах кластера
+                      url: /admin/configuration/network/other/dns-caching.html
+                    - title:
                         en: Operation modes of bpfLB for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
                       url: /admin/configuration/network/other/bpflb.html
@@ -1122,6 +1126,10 @@ entries:
               en: Application service architecture with Istio enabled
               ru: Архитектура прикладного сервиса с включенным Istio
             url: /architecture/network/service-with-istio.html
+          - title:
+              en: Caching DNS server in a cluster
+              ru: Кэширующий DNS-сервер в кластере
+            url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
