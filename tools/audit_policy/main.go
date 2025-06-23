@@ -304,17 +304,14 @@ func processModule(workDir, moduleYamlPath, moduleDirName string, sas, namespace
 		return err
 	}
 
-	if namespace == "" {
-		panic("Empty namespace for module " + moduleYamlPath)
-	}
-
-	if strings.HasPrefix(namespace, "d8-") || namespace == "kube-system" {
-		namespacesMap[namespace] = struct{}{}
-	}
-
 	templateDirs, err := findModuleTemplatesDirs(workDir, moduleDirName)
 	if err != nil {
 		return err
+	}
+
+	// namespace is required only if module has templates
+	if len(templateDirs) > 0 && namespace == "" {
+		panic("Empty namespace for module " + moduleYamlPath)
 	}
 
 	for _, td := range templateDirs {
@@ -322,6 +319,10 @@ func processModule(workDir, moduleYamlPath, moduleDirName string, sas, namespace
 		if err != nil {
 			return err
 		}
+	}
+
+	if strings.HasPrefix(namespace, "d8-") || namespace == "kube-system" {
+		namespacesMap[namespace] = struct{}{}
 	}
 
 	return nil
