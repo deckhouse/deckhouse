@@ -1,0 +1,36 @@
+diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
+index 7faee517ea94c3c1faeb50d563d93ae40caad4e3..67287bf785f03588f53d93eebb1ff1a1013e5d45 100644
+--- a/pkg/storage/stores/indexshipper/compactor/force_expiration.go
++++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
+@@ -9,6 +9,7 @@ import (
+ 	"path/filepath"
+ 	"strings"
+ 	"sync/atomic"
++	"syscall"
+ 	"time"
+ 	"unsafe"
+
+@@ -353,15 +354,21 @@ func evaluateDirSize(path string) (int64, error) {
+
+ // chunk size
+
++const (
++	statBlkSizeBytes = 512
++)
++
+ func evaluateFileSize(path string) (int64, error) {
+-	stat, err := os.Lstat(path)
++	var stat syscall.Stat_t
++	err := syscall.Stat(path, &stat)
+ 	switch {
+ 	case os.IsNotExist(err):
+ 		return 0, nil
+ 	case err != nil:
+ 		return 0, err
+ 	default:
+-		return stat.Size(), nil
++		// st_blocks indicates the number of blocks allocated to the file, in 512-byte units
++		return stat.Blocks * statBlkSizeBytes, nil
+ 	}
+ }
+
