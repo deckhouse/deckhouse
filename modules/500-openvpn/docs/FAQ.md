@@ -2,7 +2,7 @@
 title: "The openvpn module: FAQ"
 ---
 
-## Why doesn't automatic DNS server configuration work when connecting to macOS and Linux using the OpenVPN client?
+## Why doesn't automatic DNS server configuration work when connecting to macOS and Linux using the OpenVPN client
 
 Due to the architectural features of the Linux and macOS operating systems, automatic DNS server configuration when using the official OpenVPN client is not possible.
 
@@ -29,3 +29,65 @@ For macOS, you can use a [third-party script](https://github.com/andrewgdotcom/o
 {% alert level="warning" %}
 Scripts must have execution permissions.
 {% endalert %}
+
+## How to revoke, rotate or delete a user certificate
+
+All operations with client certificates are performed via the openvpn-admin web interface. Buttons for managing certificates are available to the right of each user's name:
+
+![Actions with an active user](../../images/openvpn/active_user.png)
+
+To rotate (issue a new certificate) or delete a client, you must first revoke their current certificate:
+
+![Actions with a revoked user](../../images/openvpn/revoked_user.png)
+
+Once revoked, the Renew (rotation) and Delete (removal) actions become available.
+
+## How to rotate a server certificate
+
+The server certificate is rotated automatically several days before it expires.
+
+If you need to rotate the certificate manually (e.g., due to certificate corruption or an unscheduled replacement), follow these steps:
+
+1. Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`:
+
+   ```shell
+   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   ```
+
+1. Restart the OpenVPN pods to trigger the generation of a new certificate:
+
+   ```shell
+   kubectl -n d8-openvpn rollout restart sts openvpn
+   ```
+
+A new certificate will be generated automatically when the pods start.
+
+## How to rotate a root certificate (CA)
+
+The root certificate (CA) and server certificate are rotated automatically 1 day before expiration. Automatic rotation of clients certificates is not provided.
+The root certificate (CA) is used to sign all certificates in OpenVPN — both server and client. Therefore, when replacing the CA, you must reissue all dependent certificates.
+
+Steps to rotate the root certificate:
+
+1. [Revoke or delete](#how-to-revoke-rotate-or-delete-a-user-certificate) all active client certificates using the openvpn-admin web interface.
+If you choose to revoke certificates, you can rotate them later (Renew) after the CA is replaced, without recreating the clients.
+
+1. Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`:
+
+   ```shell
+   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   ```
+
+1. Restart OpenVPN pods:
+
+   ```shell
+   kubectl -n d8-openvpn rollout restart sts openvpn
+   ```
+
+1. [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
+
+1. Delete all revoked certificate secrets:
+
+   ```shell
+   kubectl -n d8-openvpn delete secrets -l revokedForever=true
+   ```
