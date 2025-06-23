@@ -56,7 +56,6 @@ cat > "${DOCKER_CONFIG}/config.json" << EOL
                 "${PROD_REGISTRY}": {
                         "auth": "$(echo "${PROD_REGISTRY_USER}:${PROD_REGISTRY_PASSWORD}" | base64)"
                 },
-                {
                 "${DEV_REGISTRY}": {
                         "auth": "$(echo "${DEV_REGISTRY_USER}:${DEV_REGISTRY_PASSWORD}" | base64)"
                 }
