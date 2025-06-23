@@ -955,7 +955,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```shell
    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-   HANDLER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
    DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    DECKHOUSE_INIT_CONTAINER=$(kubectl exec $NEW_EDITION-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
@@ -972,8 +971,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
   Disable the modules not supported by the new edition:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
   Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
@@ -991,6 +989,19 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
    ```
+
+1. Check if there are any pods with the Deckhouse old edition address left in the cluster:
+
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.io/deckhouse/$NEW_EDITION"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   > If the module was disabled in the process, enable it again:
+   >
+   > ```shell
+   > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
+   > ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
