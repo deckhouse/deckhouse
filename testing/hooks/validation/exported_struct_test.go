@@ -26,19 +26,18 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"gopkg.in/yaml.v2"
 )
 
 // Check that structures which are used by FilterFunc don't have unexported fields
 func TestValidationHookStructExportedFields(t *testing.T) {
 	gohooks := collectGoHooks()
-
 	for _, hookPath := range gohooks {
 		fset := token.NewFileSet()
 
@@ -190,11 +189,13 @@ func inspectNodes(node ast.Node) (map[string]struct{}, map[string]*ast.StructTyp
 		}
 
 		if fn.Type.Results != nil && len(fn.Type.Results.List) > 0 {
-			structName := parseFilterFuncDeclaration(fn)
-			if structName == "" {
+			structNames := parseFilterFuncDeclaration(fn)
+			if len(structNames) == 0 {
 				return false
 			}
-			structFromFuncs[structName] = struct{}{}
+			for _, structName := range structNames {
+				structFromFuncs[structName] = struct{}{}
+			}
 		}
 
 		return true
@@ -203,109 +204,335 @@ func inspectNodes(node ast.Node) (map[string]struct{}, map[string]*ast.StructTyp
 	return structFromFuncs, structDeclarations
 }
 
-// parseFilterFuncDeclaration parses function signature and returns the name of return-value structure
-func parseFilterFuncDeclaration(fn *ast.FuncDecl) string {
+// parseFilterFuncDeclaration parses function signature and returns the names of return-value structure
+func parseFilterFuncDeclaration(fn *ast.FuncDecl) []string {
 	selector, ok := fn.Type.Results.List[0].Type.(*ast.SelectorExpr)
 	if !ok {
-		return ""
+		return nil
 	}
-
 	if selector.Sel.Name != "FilterResult" {
-		// not our function
-		return ""
+		return nil
 	}
-
 	ident, ok := selector.X.(*ast.Ident)
-	if !ok {
-		return ""
+	if !ok || ident.Name != "go_hook" {
+		return nil
 	}
 
-	// possible bug if packet imported with alias name
-	if ident.Name != "go_hook" {
-		return ""
-	}
+	structNames := make(map[string]struct{})
+	varAssignments := make(map[string]string)
 
-	for _, l := range fn.Body.List {
-		ret, ok := l.(*ast.ReturnStmt)
-		if !ok {
-			continue
-		}
-
-		// parse only return statement
-		firstStatement := ret.Results[0]
-		switch lit := firstStatement.(type) {
-		case *ast.CompositeLit:
-			ident, ok := lit.Type.(*ast.Ident)
-			if !ok {
-				return ""
-			}
-			return ident.Name
-
-		case *ast.Ident:
-			if lit.Obj == nil {
-				return ""
-			}
-			assign, ok := lit.Obj.Decl.(*ast.AssignStmt)
-			if !ok {
-				return ""
-			}
-			if len(assign.Rhs) > 0 {
-				switch rhs0 := assign.Rhs[0].(type) {
-				// pointer
-				case *ast.UnaryExpr:
-					comp, ok := rhs0.X.(*ast.CompositeLit)
-					if !ok {
-						return ""
+	// Helper function to recursively walk statements and collect variable assignments.
+	var collectAssignments func(stmts []ast.Stmt)
+	collectAssignments = func(stmts []ast.Stmt) {
+		for _, stmt := range stmts {
+			switch s := stmt.(type) {
+			case *ast.AssignStmt:
+				if len(s.Lhs) == 1 && len(s.Rhs) == 1 {
+					lhs, ok1 := s.Lhs[0].(*ast.Ident)
+					switch rhs := s.Rhs[0].(type) {
+					case *ast.CompositeLit:
+						if ok1 {
+							if ident, ok := rhs.Type.(*ast.Ident); ok {
+								varAssignments[lhs.Name] = ident.Name
+							}
+						}
+					case *ast.UnaryExpr:
+						// Handle pointer to struct: &privateStruct{...}
+						if rhs.Op == token.AND {
+							if comp, ok := rhs.X.(*ast.CompositeLit); ok {
+								if ident, ok := comp.Type.(*ast.Ident); ok && ok1 {
+									varAssignments[lhs.Name] = ident.Name
+								}
+							}
+						}
 					}
-					ident, ok := comp.Type.(*ast.Ident)
-					if !ok {
-						return ""
-					}
-					return ident.Name
-
-					// struct
-				case *ast.CompositeLit:
-					ident, ok := rhs0.Type.(*ast.Ident)
-					if !ok {
-						return ""
-					}
-					return ident.Name
-
-					// called with new(Struct)
-				case *ast.CallExpr:
-					if len(rhs0.Args) == 0 {
-						return ""
-					}
-					ident, ok := rhs0.Args[0].(*ast.Ident)
-					if !ok {
-						return ""
-					}
-
-					return ident.Name
-
-				case *ast.IndexExpr:
-				// it's some built in types, like getting value := map[string][]byte
-				// pass
-
-				case *ast.BinaryExpr:
-				// it's a boolean type: true/false
-				// pass
-
-				default:
-					fmt.Println("Unknown type", reflect.TypeOf(assign.Rhs[0]))
 				}
+			case *ast.BlockStmt:
+				collectAssignments(s.List)
+			case *ast.IfStmt:
+				collectAssignments([]ast.Stmt{s.Body})
+				if s.Else != nil {
+					switch elseStmt := s.Else.(type) {
+					case *ast.BlockStmt:
+						collectAssignments(elseStmt.List)
+					case *ast.IfStmt:
+						collectAssignments([]ast.Stmt{elseStmt})
+					}
+				}
+			case *ast.ForStmt:
+				collectAssignments(s.Body.List)
+			case *ast.RangeStmt:
+				collectAssignments(s.Body.List)
+			case *ast.SwitchStmt:
+				for _, stmt := range s.Body.List {
+					if caseClause, ok := stmt.(*ast.CaseClause); ok {
+						collectAssignments(caseClause.Body)
+					}
+				}
+			case *ast.TypeSwitchStmt:
+				for _, stmt := range s.Body.List {
+					if caseClause, ok := stmt.(*ast.CaseClause); ok {
+						collectAssignments(caseClause.Body)
+					}
+				}
+			case *ast.DeclStmt, *ast.ExprStmt, *ast.BranchStmt, *ast.LabeledStmt, *ast.ReturnStmt:
+				// These statement types are not relevant for further AST traversal in this context:
+				// - DeclStmt: Variable or constant declarations, already handled or not needed for struct return analysis.
+				// - ExprStmt: Standalone expressions (e.g., function calls), do not affect struct return detection.
+				// - BranchStmt: Control flow statements (break, continue, goto, fallthrough), do not impact struct analysis.
+				// - LabeledStmt: Labels for branching, not relevant for struct or return value analysis.
+				// - ReturnStmt: Return statements are processed separately; no need to traverse further here.
+				// No additional processing is required for these statement types.
+			default:
+				fmt.Printf("Unhandled statement type: %T\n", s)
 			}
+		}
+	}
+	collectAssignments(fn.Body.List)
 
-		default:
-			return ""
+	// Helper function to recursively walk statements and collect struct names from return statements.
+	var walkStmts func(stmts []ast.Stmt)
+	walkStmts = func(stmts []ast.Stmt) {
+		for _, stmt := range stmts {
+			switch s := stmt.(type) {
+			case *ast.ReturnStmt:
+				if len(s.Results) == 0 {
+					continue
+				}
+				switch lit := s.Results[0].(type) {
+				case *ast.CompositeLit:
+					if ident, ok := lit.Type.(*ast.Ident); ok {
+						structNames[ident.Name] = struct{}{}
+					}
+				case *ast.UnaryExpr:
+					// Handle return &privateStruct{...}
+					if lit.Op == token.AND {
+						if comp, ok := lit.X.(*ast.CompositeLit); ok {
+							if ident, ok := comp.Type.(*ast.Ident); ok {
+								structNames[ident.Name] = struct{}{}
+							}
+						}
+					}
+				case *ast.Ident:
+					if structType, ok := varAssignments[lit.Name]; ok {
+						structNames[structType] = struct{}{}
+					}
+				}
+			case *ast.BlockStmt:
+				walkStmts(s.List)
+			case *ast.IfStmt:
+				walkStmts([]ast.Stmt{s.Body})
+				if s.Else != nil {
+					switch elseStmt := s.Else.(type) {
+					case *ast.BlockStmt:
+						walkStmts(elseStmt.List)
+					case *ast.IfStmt:
+						walkStmts([]ast.Stmt{elseStmt})
+					}
+				}
+			case *ast.ForStmt:
+				walkStmts(s.Body.List)
+			case *ast.RangeStmt:
+				walkStmts(s.Body.List)
+			case *ast.SwitchStmt:
+				for _, stmt := range s.Body.List {
+					if caseClause, ok := stmt.(*ast.CaseClause); ok {
+						walkStmts(caseClause.Body)
+					}
+				}
+			case *ast.TypeSwitchStmt:
+				for _, stmt := range s.Body.List {
+					if caseClause, ok := stmt.(*ast.CaseClause); ok {
+						walkStmts(caseClause.Body)
+					}
+				}
+			case *ast.AssignStmt, *ast.DeclStmt, *ast.ExprStmt, *ast.BranchStmt, *ast.LabeledStmt:
+				// These statement types do not affect the analysis of return values or struct usage.
+				// - AssignStmt: Variable assignments, already handled.
+				// - DeclStmt: Declarations (e.g., var, const), not relevant for return analysis.
+				// - ExprStmt: Standalone expressions (e.g., function calls), not relevant here.
+				// - BranchStmt: Control flow statements (break, continue, goto, fallthrough), do not impact struct returns.
+				// - LabeledStmt: Labeled statements for goto/branching, not relevant for struct analysis.
+				// TODO: Add more cases if you want to support select, etc.
+			default:
+				fmt.Printf("Unhandled statement type: %T\n", s)
+			}
 		}
 	}
 
-	return ""
+	walkStmts(fn.Body.List)
+
+	var result []string
+	for name := range structNames {
+		result = append(result, name)
+	}
+	return result
 }
 
 // Test validator logic
 func TestExportStructValidatorLogic(t *testing.T) {
+	t.Run("pointer assignment and return", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+  "github.com/flant/addon-operator/pkg/module_manager/go_hook"
+  "time"
+)
+
+type fooBar struct {
+  str string
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+  asVar := &fooBar{str: "a"}
+  if obj == nil {
+    return asVar, nil
+  }
+  return nil, nil
+}`
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 1, result[0].TotalFields)
+		require.Equal(t, 0, result[0].ExportedFields)
+	})
+
+	t.Run("direct pointer return", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+  "github.com/flant/addon-operator/pkg/module_manager/go_hook"
+  "time"
+)
+
+type fooBar struct {
+  str string
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+  if obj == nil {
+    return &fooBar{str: "a"}, nil
+  }
+  return nil, nil
+}`
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 1, result[0].TotalFields)
+		require.Equal(t, 0, result[0].ExportedFields)
+	})
+
+	t.Run("pointer assignment, switch statement", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+  "github.com/flant/addon-operator/pkg/module_manager/go_hook"
+  "time"
+)
+
+type fooBar struct {
+  str string
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+  asVar := &fooBar{str: "a"}
+  switch obj.Object["field"] {
+  case nil:
+    return asVar, nil
+  default:
+    return nil, nil
+  }
+}`
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 1, result[0].TotalFields)
+		require.Equal(t, 0, result[0].ExportedFields)
+	})
+	t.Run("var assignment", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"time"
+)
+
+type fooBar struct {
+  str string
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	asVar := fooBar{str: "a"}
+	if obj == nil {
+		return asVar, nil
+	}
+	return nil, nil
+}`
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 1, result[0].TotalFields)
+		require.Equal(t, 0, result[0].ExportedFields)
+	})
+	t.Run("early return", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"time"
+)
+
+type fooBar struct {
+  str string
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if obj == nil {
+		return fooBar{str: "a"}, nil
+	}
+	return nil, nil
+}`
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 1, result[0].TotalFields)
+		require.Equal(t, 0, result[0].ExportedFields)
+	})
 	t.Run("test full unexported", func(t *testing.T) {
 		t.Parallel()
 		src := `package foo
