@@ -23,7 +23,6 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromCacheVersion: "2025-06-23 18:00"
 fromImage: builder/alpine
 import:
 - image: tools/nfs-utils-nfs-utils-{{ $image_version }}
