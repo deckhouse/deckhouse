@@ -256,6 +256,8 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		}
 	}
 
+	// TODO: check images in remote registry
+
 	// Preflight Checks
 	if !state.bashiblePreflightCheck(inputs) {
 		return nil
@@ -323,8 +325,6 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		return nil
 	}
 
-	// TODO: check images in remote registry via proxy
-
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
 	if err != nil {
@@ -391,6 +391,8 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 }
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
+	// TODO: check images in remote registry
+
 	// Preflight Checks
 	if !state.bashiblePreflightCheck(inputs) {
 		return nil
@@ -439,8 +441,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			Password: inputs.Params.Password,
 		},
 	}
-
-	// TODO: check images in remote registry
 
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
@@ -530,8 +530,6 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		}
 	}
 
-	// TODO: check images in remote registry
-
 	if (state.Mode == registry_const.ModeProxy ||
 		state.Mode == registry_const.ModeDirect) &&
 		state.Bashible.UnmanagedParams != nil {
@@ -554,6 +552,8 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 				Password:   unmanagedParams.Password,
 			},
 		}
+
+		// TODO: check images in remote registry
 
 		// Bashible with actual params
 		processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
