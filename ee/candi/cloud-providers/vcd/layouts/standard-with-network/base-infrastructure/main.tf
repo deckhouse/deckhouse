@@ -13,4 +13,5 @@ module "vapp" {
 module "vapp-network" {
   source                       = "../../../terraform-modules/vapp-network"
   providerClusterConfiguration = var.providerClusterConfiguration
+  vappName                     = module.vapp.name
 }
