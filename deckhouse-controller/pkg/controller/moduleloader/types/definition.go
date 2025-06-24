@@ -33,6 +33,7 @@ const (
 	DefinitionFile = "module.yaml"
 )
 
+// Definition of module.yaml file struct
 type Definition struct {
 	Name           string   `json:"name" yaml:"name"`
 	Weight         uint32   `json:"weight,omitempty" yaml:"weight,omitempty"`

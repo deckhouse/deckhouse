@@ -524,5 +524,5 @@ type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog map[string]any          `json:"-"`
-	Module    *moduletypes.Definition `json:"module"`
+	Module    *moduletypes.Definition `json:"module,omitempty"`
 }

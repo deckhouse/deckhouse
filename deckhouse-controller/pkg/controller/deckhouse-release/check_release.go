@@ -47,7 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	moduleTypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -762,15 +762,17 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.moduleReader.Len() > 0 {
-		var module moduleTypes.Definition
+		var module moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
 		if err != nil {
 			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
-			// TODO: empty module yaml
+
+			meta.Module = nil
+
+			return meta, nil
 		}
-		fmt.Println("debug module.yaml", module) // debug
-		// TODO: meta.Module processing
-		// meta.Module = module
+
+		meta.Module = &module
 	}
 
 	cooldown := f.fetchCooldown(img)
@@ -1029,7 +1031,8 @@ type ReleaseMetadata struct {
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
 
-	Changelog map[string]interface{} `json:"-"`
+	Changelog map[string]interface{}  `json:"-"`
+	Module    *moduletypes.Definition `json:"module,omitempty"`
 
 	Cooldown *metav1.Time `json:"-"`
 }

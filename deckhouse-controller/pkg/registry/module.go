@@ -23,8 +23,6 @@ import (
 	"path"
 	"strings"
 
-	moduleTypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
-
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -32,6 +30,7 @@ import (
 
 	modRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -163,13 +162,17 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 	}
 
 	if rr.moduleReader.Len() > 0 {
-		var module moduleTypes.Definition
+		var module moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
 		if err != nil {
+			// if module.yaml decode failed - warn about it but don't fail the release
 			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
-			// TODO: empty module yaml
+
+			meta.Module = nil
+
+			return meta, nil
 		}
-		// TODO: meta.Module processing
+
 		meta.Module = &module
 	}
 
