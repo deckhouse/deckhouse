@@ -441,23 +441,6 @@ spec:
 
 Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию `staticInstances`. Это позволяет DKP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
 
-Пример конфигурации:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: static-workers
-spec:
-  nodeType: Static
-  staticInstances:
-    count: 2
-    labelSelector:
-      matchExpressions: []
-      matchLabels:
-        static-node: group-a
-```
-
 ### Настройки для групп с узлами CloudEphemeral
 
 Группы узлов с типом CloudEphemeral предназначены для автоматического масштабирования за счёт создания и удаления виртуальных машин в облаке с помощью Machine Controller Manager (MCM). Этот тип групп широко применяется в cloud-кластерах DKP.
