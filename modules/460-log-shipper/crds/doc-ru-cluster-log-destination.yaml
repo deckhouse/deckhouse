@@ -483,6 +483,10 @@ spec:
                             properties:
                               depth:
                                 description: "Глубина разбора JSON"
+                          klog:
+                            properties:
+                              depth:
+                                description: "Глубина разбора JSON"
                       dropLabels:
                         description: "Удаление заданных лейблов"
                         properties:

@@ -543,12 +543,12 @@ spec:
 
 # RESULT TRANSFORMATIONS:
 
-"message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}
-"message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
+{... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
 
 ```
 
-### Transform mixed logs, JSON or Klog to JSON. Parse JSON
+### Transform mixed logs, JSON or Klog to JSON. Parse JSON and reduce nesting
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -561,6 +561,8 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: Klog
+          klog:
+            depth: 1
 ```
 
 ```bash
@@ -571,8 +573,8 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 # RESULT TRANSFORMATIONS:
 
-"message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}
-"message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
+{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
 
 ```
 
@@ -600,7 +602,7 @@ spec:
 
 # RESULT TRANSFORMATIONS:
 
-"message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}
+{... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
 
 ```
 
@@ -629,7 +631,7 @@ spec:
 
 # RESULT TRANSFORMATIONS:
 
-{"message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
+{... "message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
 
 ```
 
@@ -664,8 +666,6 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: JSON
-          json:
-            depth: 2
     - action: DropLabels
       dropLabels:
         labels:
@@ -679,7 +679,7 @@ spec:
 
 # RESULT TRANSFORMATIONS:
 
-"message": {"msg" : "fetching.module.release"}
+{... "message": {"msg" : "fetching.module.release"}}
 
 ```
 

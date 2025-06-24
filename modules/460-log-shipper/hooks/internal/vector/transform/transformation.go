@@ -73,7 +73,8 @@ func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 		if !validLabel(l) {
 			return nil, fmt.Errorf("transformions replaceDotKeys label: %s not valide", l)
 		}
-		vrl = fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n", l, l, l)
+		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
+			"-> |key| { replace(key, \".\", \"_\")}\n}\n", vrl, l, l, l)
 	}
 	return NewTransformation(name, vrl), nil
 }
@@ -86,17 +87,12 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 		if e.String.TargetField == "" {
 			return nil, fmt.Errorf("transformions ensureStructuredMessage string: TargetField is empty")
 		}
-		vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", e.String.TargetField)
-		if e.String.Depth != 0 {
-			vrl = fmt.Sprintf(".message = parse_json(.message, max_depth: %d) ?? { \"%s\": .message }\n", e.String.Depth, e.String.TargetField)
-		}
+		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? { \"%s\": .message }\n",
+			addMaxDepth(e.String.Depth), e.String.TargetField)
 	case "JSON":
-		if e.JSON.Depth == 0 {
-			return nil, fmt.Errorf("transformions ensureStructuredMessage JSON: Depth is empty")
-		}
-		vrl = fmt.Sprintf(".message = parse_json!(.message, max_depth: %d)\n", e.JSON.Depth)
+		vrl = fmt.Sprintf(".message = parse_json!(.message%s)\n", addMaxDepth(e.JSON.Depth))
 	case "Klog":
-		vrl = ".message = parse_json(.message) ?? parse_klog!(.message)\n"
+		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? parse_klog!(.message)\n", addMaxDepth(e.Klog.Depth))
 	default:
 		return nil, fmt.Errorf("transformions ensureStructuredMessage: sourceFormat %s not valide", e.SourceFormat)
 	}
@@ -128,6 +124,13 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 			"drop_on_abort": false,
 		},
 	}
+}
+
+func addMaxDepth(depth int) string {
+	if depth > 0 {
+		return fmt.Sprintf(", max_depth: %d", depth)
+	}
+	return ""
 }
 
 // dot in label prefix need for vector

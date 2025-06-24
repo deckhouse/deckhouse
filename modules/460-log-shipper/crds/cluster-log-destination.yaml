@@ -943,7 +943,6 @@ spec:
                                 enum:
                                   - JSON
                             required:
-                              - json
                               - sourceFormat
                           - properties:
                               sourceFormat:
@@ -972,8 +971,14 @@ spec:
                                 description: "The depth for parsing JSON"
                           json:
                             type: object
-                            required:
-                              - depth
+                            properties:
+                              depth:
+                                type: integer
+                                minimum: 1
+                                maximum: 127
+                                description: "The depth for parsing JSON"
+                          klog:
+                            type: object
                             properties:
                               depth:
                                 type: integer
