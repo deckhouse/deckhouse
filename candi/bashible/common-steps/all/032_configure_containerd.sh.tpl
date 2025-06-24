@@ -28,6 +28,7 @@ migrate() {
   rm -rf /var/lib/containerd/*
   bb-flag-set containerd-need-restart
   bb-flag-set need-local-images-import
+  bb-flag-set reboot
   bb-flag-unset cntrd-major-version-changed
   bb-flag-unset disruption
   bb-log-info "finish containerd migration"
