@@ -19,14 +19,17 @@ _on_containerd_config_changed() {
 
 
 migrate() {
+  bb-log-info "start containerd migration"
   systemctl stop containerd-deckhouse.service
   for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
   if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
     chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
   fi
-  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/deckhouse.toml
-  sed -i 's|deckhouse.local/images:pause|registry.k8s.io/pause:3.2|g' /etc/containerd/config.toml
+  rm -rf /var/lib/containerd/*
   bb-flag-set containerd-need-restart
+  bb-flag-set need-local-images-import
+  bb-flag-unset ctr-major-version-changed
+  bb-log-info "finish containerd migration"
 }
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
@@ -441,6 +444,8 @@ pull-image-on-create: false
 EOF
 {{- end }}
 
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 if bb-flag? ctr-major-version-changed; then
   migrate
 fi
+{{- end }}
