@@ -4,7 +4,7 @@
 resource "vcd_vapp_network" "network" {
   org                   = var.providerClusterConfiguration.organization
   vapp_name             = var.providerClusterConfiguration.virtualApplicationName
-  name                  = var.providerClusterConfiguration.virtualApplicationName
+  name                  = var.vappName
   org_network_name      = var.providerClusterConfiguration.mainNetwork
   gateway               = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length         = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
