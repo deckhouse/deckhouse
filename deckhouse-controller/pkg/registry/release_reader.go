@@ -19,6 +19,7 @@ package registry
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -47,6 +48,7 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 			continue
 		}
 
+		fmt.Println("hdr.Name", hdr.Name)
 		switch strings.ToLower(hdr.Name) {
 		case "version.json":
 			_, err = io.Copy(rr.versionReader, tr)
@@ -59,7 +61,8 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 				return err
 			}
 		case "module.yaml":
-			_, err = io.Copy(rr.moduleReader, tr)
+			debwr, err := io.Copy(rr.moduleReader, tr)
+			fmt.Println("Debug case module.yaml: bebwr, err: ", debwr, err)
 			if err != nil {
 				return err
 			}
