@@ -27,11 +27,11 @@ import (
 )
 
 const (
-	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
-	cgroupV2MetricName       = "d8_node_cgroup_v2_support_status"
+	containerdV2SupportLabel     = "node.deckhouse.io/containerd-v2-unsupported"
+	cntrdV2UnsupportedMetricName = "nodes_cntrdv2_unsupported"
 )
 
-// set d8_node_cgroup_v2_support_status=1 if node has label node.deckhouse.io/containerd-v2-unsupported
+// set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
 		ExecutionMinInterval: 60 * time.Second,
@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/cgroupv2_support_metrics",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "nodes_ctrv2_unsupported",
+			Name:       "nodes_cntrdv2_unsupported",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterNodeForCgroupV2Support,
 		},
 	},
-}, handleCtrV2SupportMetrics)
+}, handlecntrdV2SupportMetrics)
 
 type cgroupV2SupportNode struct {
 	Name      string
@@ -75,9 +75,9 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func handleCtrV2SupportMetrics(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_ctrv2_unsupported"]
-
+func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
+	snap := input.Snapshots["nodes_cntrdv2_unsupported"]
+	input.MetricsCollector.Expire(cntrdV2UnsupportedMetricName)
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
 
@@ -88,7 +88,7 @@ func handleCtrV2SupportMetrics(input *go_hook.HookInput) error {
 			"node_group": nodeInfo.NodeGroup,
 		}
 
-		input.MetricsCollector.Set(cgroupV2MetricName, metricValue, labels)
+		input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels)
 	}
 
 	return nil

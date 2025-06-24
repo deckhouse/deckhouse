@@ -28,7 +28,7 @@ migrate() {
   rm -rf /var/lib/containerd/*
   bb-flag-set containerd-need-restart
   bb-flag-set need-local-images-import
-  bb-flag-unset ctr-major-version-changed
+  bb-flag-unset cntrd-major-version-changed
   bb-flag-unset disruption
   bb-log-info "finish containerd migration"
 }
@@ -446,7 +446,7 @@ EOF
 {{- end }}
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
-if bb-flag? ctr-major-version-changed; then
+if bb-flag? cntrd-major-version-changed; then
   migrate
 fi
 {{- end }}

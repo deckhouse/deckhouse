@@ -183,7 +183,7 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 			FilterFunc: applyInstanceTypesCatalog,
 		},
 		{
-			Name:       "nodes_ctrv2_unsupported",
+			Name:       "nodes_cntrdv2_unsupported",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &metav1.LabelSelector{
@@ -484,7 +484,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 		case CRITypeContainerdV2:
-			snap := input.Snapshots["nodes_ctrv2_unsupported"]
+			snap := input.Snapshots["nodes_cntrdv2_unsupported"]
 			newCRIType = handleContainerdV2Supoprt(snap, nodeGroup)
 		}
 
