@@ -100,9 +100,9 @@ function main() {
   local support_status err_json
   err_json=$(check_containerd_v2_support)
   support_status=$?
-  {{ if eq .runType "Normal" }}
+  if [ -f /etc/kubernetes/kubelet.conf ] ; then
     set_labels "$support_status" "$err_json"
-  {{ end }}
+  fi
   fail_fast "$support_status"
 }
 
