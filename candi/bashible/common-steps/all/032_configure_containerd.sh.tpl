@@ -14,6 +14,18 @@
 
 {{- if eq .cri "Containerd" }}
 
+# _has_registry_field:
+# Checks whether a containerd TOML configuration file contains custom
+# registry sections: `plugins."io.containerd.grpc.v1.cri".registry`
+#
+# Input:
+#   $1: Path to the containerd configuration file (TOML format)
+#
+# Output:
+#   0: A registry configuration exists
+#   1: No registry configuration found
+#   >1: Parsing failed
+#
 _has_registry_field() {
   local path="$1"
   local has_registry_field
