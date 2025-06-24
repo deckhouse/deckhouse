@@ -95,11 +95,14 @@ spec:
                       help: "VPA container minimal allowed memory according to VPA rules"
                       each:
                         type: Gauge
-                        gauge:
+                        foreach:
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                          valueFrom: [minAllowed, memory]
+                        gauge:
+                          valueFrom:
+                            path: [minAllowed, memory]
+                            ifExists: true
                       commonLabels:
                         resource: "memory"
                         unit: "byte"
@@ -107,11 +110,14 @@ spec:
                       help: "VPA container minimal allowed cpu according to VPA rules"
                       each:
                         type: Gauge
-                        gauge:
+                        foreach:
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                          valueFrom: [minAllowed, cpu]
+                        gauge:
+                          valueFrom:
+                            path: [minAllowed, cpu]
+                            ifExists: true
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
@@ -135,7 +141,7 @@ spec:
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                          valueFrom: [maxAllowed, cpu]   
+                          valueFrom: [maxAllowed, cpu]
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
