@@ -26,27 +26,27 @@ shell:
   - apt update
   - apt full-upgrade --quiet --assume-yes
   - apt install --quiet --assume-yes --no-install-recommends \
-        autoconf \
-        automake \
-        bison \
-        build-essential \
-        curl \
-        file \
-        flex \
-        gawk \
-        git \
-        gperf \
-        help2man \
-        libexpat1-dev \
-        libncurses5-dev \
-        libtool \
-        libtool-bin \
-        python3 \
-        python3-dev \
-        subversion \
-        texinfo \
-        unzip \
-        wget; \
+      autoconf \
+      automake \
+      bison \
+      build-essential \
+      curl \
+      file \
+      flex \
+      gawk \
+      git \
+      gperf \
+      help2man \
+      libexpat1-dev \
+      libncurses5-dev \
+      libtool \
+      libtool-bin \
+      python3 \
+      python3-dev \
+      subversion \
+      texinfo \
+      unzip \
+      wget; \
     apt install --reinstall --quiet --assume-yes ca-certificates; \
     update-ca-certificates -f; \
     apt autoremove --purge --quiet --assume-yes; \
