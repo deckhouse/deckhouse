@@ -915,7 +915,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
              [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
                auth = "$AUTH_STRING"
        EOF_TOML
-   EOF  
+   EOF
    ```
 
   Дождитесь появления файла `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` на узлах и завершения синхронизации bashible. Чтобы отследить статус синхронизации, проверьте значение `UPTODATE` (число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
