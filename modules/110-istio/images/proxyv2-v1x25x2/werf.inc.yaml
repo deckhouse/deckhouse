@@ -147,7 +147,7 @@ shell:
   - mkdir /src/proxy/bin
   - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
   - rm -rf /src/proxy/.git
-  - sleep 5 && rm -rf /root/.cache/go-build /tmp/bazel-cache
+  - rm -rf /tmp/bazel-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
