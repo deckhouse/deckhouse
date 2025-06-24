@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/cgroupv2_support_metrics",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "nodes_with_group",
+			Name:       "nodes_ctrv2_unsupported",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterNodeForCgroupV2Support,
 		},
 	},
-}, handleCgroupV2SupportMetrics)
+}, handleCtrV2SupportMetrics)
 
 type cgroupV2SupportNode struct {
 	Name      string
@@ -75,8 +75,8 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func handleCgroupV2SupportMetrics(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_with_group"]
+func handleCtrV2SupportMetrics(input *go_hook.HookInput) error {
+	snap := input.Snapshots["nodes_ctrv2_unsupported"]
 
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
