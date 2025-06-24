@@ -21,11 +21,11 @@ import:
   before: install
 shell:
   beforeInstall:
-  - set -ex; \
-    export DEBIAN_FRONTEND=noninteractive; \
-    apt update; \
-    apt full-upgrade --quiet --assume-yes; \
-    apt install --quiet --assume-yes --no-install-recommends \
+  - set -ex
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update
+  - apt full-upgrade --quiet --assume-yes
+  - apt install --quiet --assume-yes --no-install-recommends \
         autoconf \
         automake \
         bison \
