@@ -15,14 +15,12 @@
 package config
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -66,14 +64,6 @@ type MetaConfig struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
-}
-
 type providerApiDiscoverMap map[string]func(*MetaConfig) (any, error)
 
 var providerApiDiscoverer = providerApiDiscoverMap{
@@ -101,22 +91,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
-
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
-			return nil, err
-		}
-		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-		m.Registry.CA = m.DeckhouseConfig.RegistryCA
-		if err := validateHTTPRegistryScheme(m.Registry.Scheme, m.Registry.CA); err != nil {
-			return nil, err
-		}
+		m.Registry.Process(m.DeckhouseConfig)
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -263,68 +238,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
-	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-	m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
-	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-	m.Registry.Address = parts[0]
-	if len(parts) == 2 {
-		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-	}
-
 	return m, nil
-}
-
-func validateRegistryDockerCfg(cfg string, repo string) error {
-	if cfg == "" {
-		return fmt.Errorf("can't be empty")
-	}
-
-	regcrd, err := base64.StdEncoding.DecodeString(cfg)
-	if err != nil {
-		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
-	}
-
-	var creds struct {
-		Auths map[string]interface{} `json:"auths"`
-	}
-
-	if err = json.Unmarshal(regcrd, &creds); err != nil {
-		return fmt.Errorf("unable to unmarshal docker credentials: %w", err)
-	}
-
-	// The regexp match string with this pattern:
-	// ^([a-z]|\d)+ - string starts with a [a-z] letter or a number
-	// (\.?|\-?) - next symbol might be '.' or '-' and repeated zero or one times
-	// (([a-z]|\d)+(\.|\-|))* - middle part of string might have [a-z] letters, numbers, '.' or ':',
-	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
-	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
-	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
-	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
-	if err != nil {
-		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
-	}
-
-	for k := range creds.Auths {
-		if !regx.MatchString(k) {
-			return fmt.Errorf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", k)
-		}
-	}
-
-	for k := range creds.Auths {
-		if k == repo {
-			return nil
-		}
-	}
-	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
-}
-
-func validateHTTPRegistryScheme(scheme string, CA string) error {
-	if strings.ToLower(scheme) == "http" && len(CA) > 0 {
-		return fmt.Errorf("registry CA is not allowed for HTTP scheme")
-	}
-	return nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -455,7 +369,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.Registry.KubeadmTemplatesCtx()
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +422,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.Registry.BashibleBundleTemplateCtx()
 	if err != nil {
 		return nil, err
 	}
@@ -662,23 +576,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
-}
-
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
 		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
@@ -770,56 +667,6 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 	}
 
 	return 0
-}
-
-func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
-	}
-}
-
-func (r *RegistryData) Auth() (string, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
-	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
-	if err != nil {
-		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-	}
-
-	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-	err = json.Unmarshal(bytes, &dc)
-	if err != nil {
-		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-	}
-
-	if registry, ok := dc.Auths[r.Address]; ok {
-		switch {
-		case registry.Auth != "":
-			registryAuth = registry.Auth
-		case registry.Username != "" && registry.Password != "":
-			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-		default:
-			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
-		}
-	}
-
-	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
