@@ -28,7 +28,7 @@ import (
 
 const (
 	containerdV2SupportLabel     = "node.deckhouse.io/containerd-v2-unsupported"
-	cntrdV2UnsupportedMetricName = "nodes_cntrdv2_unsupported"
+	cntrdV2UnsupportedMetricName = "d8_nodes_cntrd_v2_unsupported"
 )
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
