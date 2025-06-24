@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
-from: builder/golang-bookworm
+fromImage: builder/golang-bookworm
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -75,7 +75,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
-from: builder/golang-bookworm
+fromImage: builder/golang-bookworm
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
