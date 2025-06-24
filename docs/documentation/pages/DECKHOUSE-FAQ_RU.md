@@ -859,7 +859,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - Для коммерческих изданий вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости) с поддержкой нужного издания.
 - Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В редакциях Deckhouse CE/BE/SE/SE+ не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` (VSphere поддерживается в редакции SE+) и ряда модулей, подробное сравнение в [документации](revision-comparison.html).
-- Все команды выполняются на master-узле существующего кластера.
+- Все команды выполняются на master-узле существующего кластера под пользователем `root`.
 {% endalert %}
 
 Ниже описаны шаги для переключения кластера с любой редакцию на одну из поддерживаемых: Community Edition, Basic Edition, Standard Edition, Standard Edition+, Enterprise Edition.
@@ -996,15 +996,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Проверьте, не осталось ли в кластере подов со старым адресом registry:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.ru/deckhouse/$NEW_EDITION"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/$NEW_EDITION"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
-
-   > Если в процессе был отключён модуль, включите его обратно:
-   >
-   > ```shell
-   > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
-   > ```
 
 1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 

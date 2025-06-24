@@ -868,8 +868,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - CE, the variable should be `ce`;
 - BE, the variable should be `be`;
 - SE, the variable should be `se`;
-- SE+, it should be `se-plus`;
-- EE, it should be `ee`.
+- SE+, the variable should be `se-plus`;
+- EE, the variable should be `ee`.
   {% endalert %}
 
    ```shell
@@ -991,15 +991,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.io/deckhouse/$NEW_EDITION"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/$NEW_EDITION"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
-
-   > If the module was disabled in the process, enable it again:
-   >
-   > ```shell
-   > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
-   > ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
