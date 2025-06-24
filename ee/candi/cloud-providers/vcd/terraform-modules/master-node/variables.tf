@@ -39,10 +39,21 @@ variable "resourceManagementTimeout" {
   default = "10m"
 }
 
+variable "virtualApplicationName" {
+  type = string
+  default = ""
+}
+
+variable "networkName" {
+  type = string
+  default = ""
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
-  vapp_name = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   main_ip_addresses = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
-  main_network_name = var.providerClusterConfiguration.mainNetwork
+
+  vapp_name = var.providerClusterConfiguration.layout == "Standard" ? var.providerClusterConfiguration.virtualApplicationName : var.virtualApplicationName
+  main_network_name = var.providerClusterConfiguration.layout == "Standard" ? var.providerClusterConfiguration.mainNetwork : var.networkName
 }
