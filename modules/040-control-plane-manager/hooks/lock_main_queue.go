@@ -30,8 +30,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 /*
@@ -154,8 +152,7 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	readyCount := 0
 	for pod, err := range sdkobjectpatch.SnapshotIter[controlPlaneManagerPod](podsSnaps) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over 'cpm_pods' snapshots", log.Err(err))
-			continue
+			return fmt.Errorf("failed to iterate over 'cpm_pods' snapshots: %v", err)
 		}
 
 		if pod.NodeName == "" || pod.Generation != dsGenerationStr {

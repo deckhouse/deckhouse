@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -176,9 +177,14 @@ func handleDiscoveryDataVolumeTypes(
 
 	// TODO: review this, looks like deadcode
 	storageClassSnapshots := make(map[string]storage.StorageClass)
-	for _, snapshot := range input.Snapshots["storage_classes"] {
-		s := snapshot.(storage.StorageClass)
-		storageClassSnapshots[s.Name] = s
+
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](input.NewSnapshots.Get("storage_classes")) {
+		if err != nil {
+			input.Logger.Error("failed to iterate over 'storage_classes' snapshots", log.Err(err))
+			return
+		}
+
+		storageClassSnapshots[snapshot.Name] = snapshot
 	}
 
 	storageClasses := make([]storageClass, 0, len(dvpStorageClassList))

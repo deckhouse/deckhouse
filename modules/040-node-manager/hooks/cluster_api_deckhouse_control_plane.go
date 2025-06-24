@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -24,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(
@@ -74,8 +74,7 @@ func updateControlPlane(input *go_hook.HookInput) error {
 	}
 	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.NewSnapshots.Get("control_plane")) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over 'control_plane' classes", log.Err(err))
-			continue
+			return fmt.Errorf("failed to iterate over 'control_plane' classes: %w", err)
 		}
 
 		// patch status

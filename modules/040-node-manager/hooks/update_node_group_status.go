@@ -42,7 +42,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // cache for event messages to avoid event spamming
@@ -276,7 +275,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	if len(snaps) > 0 {
 		err := snaps[0].UnmarshalTo(&defaultZonesNum)
 		if err != nil {
-			input.Logger.Error("failed to unmarshal start 'zones_count' snapshot", log.Err(err))
+			return fmt.Errorf("failed to unmarshal start 'zones_count' snapshot: %w", err)
 		}
 	}
 

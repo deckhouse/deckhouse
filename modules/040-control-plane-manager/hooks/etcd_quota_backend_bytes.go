@@ -155,16 +155,13 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 	}, nil
 }
 
-func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
+func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string, error) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
 	etcdEndpointsSnapshots := input.NewSnapshots.Get("etcd_endpoints")
 	for endpoint, err := range sdkobjectpatch.SnapshotIter[etcdInstance](etcdEndpointsSnapshots) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over 'etcd_endpoints' snapshot", log.Err(err))
-			currentQuotaBytes = defaultEtcdMaxSize
-			nodeWithMaxQuota = "default"
-			break
+			return currentQuotaBytes, nodeWithMaxQuota, fmt.Errorf("cannot iterate over 'etcd_endpoints' snapshot: %w", err)
 		}
 		quotaForInstance := endpoint.MaxDbSize
 		if quotaForInstance > currentQuotaBytes {
@@ -178,7 +175,7 @@ func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 		nodeWithMaxQuota = "default"
 	}
 
-	return currentQuotaBytes, nodeWithMaxQuota
+	return currentQuotaBytes, nodeWithMaxQuota, nil
 }
 
 func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
@@ -236,8 +233,11 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 }
 
 func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
-	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
-
+	currentQuotaBytes, nodeWithMaxQuota, err := getCurrentEtcdQuotaBytes(input)
+	if err != nil {
+		input.Logger.Warn("Cannot get current etcd quota bytes", log.Err(err))
+		return currentQuotaBytes
+	}
 	input.Logger.Debug("Current etcd quota. Getting from node with max quota", slog.Int64("quota", currentQuotaBytes), slog.String("from", nodeWithMaxQuota))
 
 	masterNodeSnapshots := input.NewSnapshots.Get("master_nodes")

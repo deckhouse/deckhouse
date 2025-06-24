@@ -133,8 +133,7 @@ func handleNodes(input *go_hook.HookInput) error {
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
 		for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
 			if err != nil {
-				input.Logger.Error("failed to iterate over 'nodes' snapshots", log.Err(err))
-				continue
+				return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
 			}
 
 			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]

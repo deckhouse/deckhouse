@@ -140,9 +140,10 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 			return fmt.Errorf("'legacy_mode' snapshot is empty")
 		}
 		legacyMode := snaps[0]
-		// legacyMode is set in the provider cluster configuration secret
-		input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyMode)
-
+		if legacyMode {
+			// legacyMode is set in the provider cluster configuration secret
+			input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyMode)
+		}
 		return nil
 	}
 
