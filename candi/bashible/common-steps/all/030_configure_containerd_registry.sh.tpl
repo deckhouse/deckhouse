@@ -27,7 +27,7 @@
 # ```
 # .
 # ├── deckhouse_hosts_state.json
-# ├── embedded-registry.d8-system.svc:5001
+# ├── registry.d8-system.svc:5001
 # │   ├── ca.crt
 # │   └── hosts.toml
 # └── registry.deckhouse.ru

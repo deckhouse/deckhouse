@@ -15,9 +15,9 @@
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
 
-# Description:
-#   Checks whether a containerd TOML configuration file contains custom
-#   registry sections: `plugins."io.containerd.grpc.v1.cri".registry`
+# _has_registry_field:
+# Checks whether a containerd TOML configuration file contains custom
+# registry sections: `plugins."io.containerd.grpc.v1.cri".registry`
 #
 # Input:
 #   $1: Path to the containerd configuration file (TOML format)
@@ -26,19 +26,6 @@
 #   0: A registry configuration exists
 #   1: No registry configuration found
 #   >1: Parsing failed
-#
-# Example input (TOML format):
-#   [plugins]
-#     [plugins."io.containerd.grpc.v1.cri"]
-#       [plugins."io.containerd.grpc.v1.cri".registry]
-#         [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."my.registry"]
-#             endpoint = ["http://my.registry"]
-#         [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".auth]
-#             auth = "token"
-#           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".tls]
-#             insecure_skip_verify = true
 #
 _has_registry_field() {
   local path="$1"
