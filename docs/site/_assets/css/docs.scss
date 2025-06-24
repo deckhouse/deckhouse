@@ -414,7 +414,9 @@
     flex: 1;
 
     @media screen and (width < 1500px) {
+      &:not(.layout-sidebar__content--guides) {
         max-width: 720px;
+      }
     }
 
     @media screen and (max-width: 1000px) {
@@ -425,7 +427,7 @@
     &--tile {
       @media screen and (width < 1500px) {
         max-width: 100%;
-    }
+      }
     }
 }
 
