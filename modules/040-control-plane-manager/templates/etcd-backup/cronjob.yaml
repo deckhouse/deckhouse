@@ -3,7 +3,11 @@ cpu: 25m
 memory: 40Mi
 {{- end }}
 
-{{- $backupEnabled := (((.Values.controlPlaneManager).etcd).backup).enabled | default true -}}
+{{- $backupEnabled := true -}}
+{{- if hasKey (((.Values.controlPlaneManager).etcd).backup "enabled") -}}
+  {{- $backupEnabled = (((.Values.controlPlaneManager).etcd).backup).enabled -}}
+{{- end -}}
+
 {{- $backupSchedule := (((.Values.controlPlaneManager).etcd).backup).cronSchedule | default "0 0 * * *" -}}
 {{- $backupHostPath := (((.Values.controlPlaneManager).etcd).backup).hostPath | default "/var/lib/etcd" -}}
 {{- $etcdQuotaBackendBytes := (.Values.controlPlaneManager.internal).etcdQuotaBackendBytes | default "2147483648" -}}
