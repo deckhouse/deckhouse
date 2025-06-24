@@ -47,6 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduleTypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -669,6 +670,7 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
+	moduleReader    *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.Reader) error {
@@ -691,6 +693,11 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 			}
 		case "changelog.yaml", "changelog.yml":
 			_, err = io.Copy(rr.changelogReader, tr)
+			if err != nil {
+				return err
+			}
+		case "module.yaml":
+			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
 				return err
 			}
@@ -723,6 +730,7 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -751,6 +759,18 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		}
 
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var module moduleTypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
+		if err != nil {
+			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
+			// TODO: empty module yaml
+		}
+		fmt.Println("debug module.yaml", module) // debug
+		// TODO: meta.Module processing
+		// meta.Module = module
 	}
 
 	cooldown := f.fetchCooldown(img)

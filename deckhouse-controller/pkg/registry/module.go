@@ -20,8 +20,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
+
+	moduleTypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -129,6 +132,7 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -157,6 +161,18 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 		}
 
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var module moduleTypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
+		if err != nil {
+			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
+			// TODO: empty module yaml
+		}
+		svc.logger.Debug("Debug module.yaml", slog.Any("module", module)) // debug
+		// TODO: meta.Module processing
+		meta.Module = &module
 	}
 
 	return meta, nil
