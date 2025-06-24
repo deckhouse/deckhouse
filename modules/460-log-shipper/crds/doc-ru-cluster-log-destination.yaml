@@ -478,15 +478,15 @@ spec:
                               targetField:
                                 description: Имя поля, в которое помещается структурированное сообщение.
                               depth:
-                                description: "Глубина разбора JSON"
+                                description: "Глубина разбора JSON. Нулевое значение отключает."
                           json:
                             properties:
                               depth:
-                                description: "Глубина разбора JSON"
+                                description: "Глубина разбора JSON. Нулевое значение отключает."
                           klog:
                             properties:
                               depth:
-                                description: "Глубина разбора JSON"
+                                description: "Глубина разбора JSON. Нулевое значение отключает."
                       dropLabels:
                         description: "Удаление заданных лейблов"
                         properties:

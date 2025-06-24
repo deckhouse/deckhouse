@@ -943,6 +943,7 @@ spec:
                                 enum:
                                   - JSON
                             required:
+                              - json
                               - sourceFormat
                           - properties:
                               klog: {}
@@ -950,6 +951,7 @@ spec:
                                 enum:
                                   - Klog
                             required:
+                              - klog
                               - sourceFormat
                         properties:
                           sourceFormat:
@@ -967,25 +969,28 @@ spec:
                                 description: "The target field into which wrapped string is placed"
                               depth:
                                 type: integer
-                                minimum: 1
-                                maximum: 127
-                                description: "The depth for parsing JSON"
+                                default: 2
+                                minimum: 0
+                                maximum: 128
+                                description: "The depth for parsing JSON. A value of zero turns it off."
                           json:
                             type: object
                             properties:
                               depth:
                                 type: integer
-                                minimum: 1
-                                maximum: 127
-                                description: "The depth for parsing JSON"
+                                default: 2
+                                minimum: 0
+                                maximum: 128
+                                description: "The depth for parsing JSON. A value of zero turns it off."
                           klog:
                             type: object
                             properties:
                               depth:
                                 type: integer
-                                minimum: 1
-                                maximum: 127
-                                description: "The depth for parsing JSON"
+                                default: 2
+                                minimum: 0
+                                maximum: 128
+                                description: "The depth for parsing JSON. A value of zero turns it off."
                       dropLabels:
                         type: object
                         description: "Removes the specified labels"

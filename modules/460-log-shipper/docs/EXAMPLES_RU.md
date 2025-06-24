@@ -530,9 +530,9 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: String
-          string:
-            targetField: msg
-            depth: 1
+        string:
+          targetField: msg
+          depth: 1
 ```
 
 ```bash
@@ -561,8 +561,8 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: Klog
-          klog:
-            depth: 1
+        klog:
+          depth: 1
 ```
 
 ```bash
@@ -591,8 +591,8 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: JSON
-          json:
-            depth: 1
+        json:
+          depth: 1
 ```
 
 ```bash
@@ -666,6 +666,8 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: JSON
+        json:
+          depth: 0
     - action: DropLabels
       dropLabels:
         labels:
