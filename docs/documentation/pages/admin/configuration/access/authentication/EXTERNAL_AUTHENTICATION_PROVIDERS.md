@@ -22,7 +22,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
 ## General integration workflow
 
 1. Create an OAuth application in the authentication provider:
-   - Set the redirect URI to `https://dex.<publicDomainTemplate>/callback`;
+   - Set the redirect URI to `https://dex.<publicDomainTemplate>/callback`.
    - Obtain the `clientID` and `clientSecret`.
 
    > **Important**: When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
@@ -37,7 +37,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
 
 1. Create a DexProvider resource tailored to the specifics of your selected identity provider.
 
-1. Enable the user-authn module (if it is currently disabled).
+1. Enable the `user-authn` module (if it is currently disabled).
 
    This can be done either via the Deckhouse admin web interface or through the CLI.  
    Below is an example using the CLI (requires [`kubectl`](https://kubernetes.io/docs/tasks/tools/#kubectl) configured to access the cluster):
@@ -48,10 +48,9 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    kubectl get module user-authn
    ```
 
-   Example output::
+   Example output:
 
    ```console
-   kubectl get module user-authn
    NAME         WEIGHT   SOURCE     PHASE   ENABLED   READY
    user-authn   150      Embedded   Ready   True      True
    ```
@@ -62,18 +61,18 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
    ```
 
-1. Configure the user-authn module.
+1. Configure the `user-authn` module.
 
-   - Open the user-authn module settings (create a ModuleConfig resource named `user-authn` if it doesn't exist):
+   - Open the `user-authn` module settings (create a ModuleConfig resource named `user-authn` if it doesn't exist):
 
      ```shell
      kubectl edit mc user-authn
      ```
 
-   - Specify the required module parameters in the `spec.settings` section.  
-     For more details about the user-authn module settings, refer to the [module reference](../../reference/mc/user-authn/).
+   - Specify the required module parameters in the `spec.settings` section.
+     For more details about the `user-authn` module settings, refer to the [module reference](/modules/user-authn/).
 
-     Example user-authn configuration:
+     Example `user-authn` configuration:
 
      ```yaml
      apiVersion: deckhouse.io/v1alpha1
@@ -110,8 +109,8 @@ This guarantees that the user will be prompted to re-enter credentials during su
 
 To configure fine-grained access control for users in applications:
 
-- add the `allowedUserGroups` parameter to the ModuleConfig of the target application;
-- assign the appropriate groups to the user, using identical group names on both the provider and Deckhouse sides.
+- Add the `allowedUserGroups` parameter to the ModuleConfig of the target application.
+- Assign the appropriate groups to the user, using identical group names on both the provider and Deckhouse sides.
 
 #### Keycloak
 
@@ -196,7 +195,7 @@ spec:
 ```
 
 After enabling integration with Okta, you can use Okta user groups to manage access rights.
-For example, you can specify a list of groups whose members are allowed to access [Grafana](../../../user/web/grafana.html).
+For example, you can specify a list of groups whose members are allowed to access [Grafana](../../../../user/web/grafana.html).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -271,13 +270,13 @@ You need to create a new application in your GitHub organization.
 
 To do this, follow these steps:
 
-- Go to "Settings → Developer settings → OAuth Apps → New OAuth App", and set the "Authorization callback URL" to `https://dex.<publicDomainTemplate>/callback`;
-- Use the generated `Client ID` and `Client Secret` in the DexProvider resource.
+1. Go to "Settings → Developer settings → OAuth Apps → New OAuth App", and set the "Authorization callback URL" to `https://dex.<publicDomainTemplate>/callback`.
+1. Use the generated `Client ID` and `Client Secret` in the DexProvider resource.
 
 If the GitHub organization is managed by a client:
 
-- Go to "Settings → Applications → Authorized OAuth Apps → `<name of created OAuth App>`" and click "Send Request" to submit an approval request;
-- Ask the client to approve the request that will be sent to their email.
+1. Go to "Settings → Applications → Authorized OAuth Apps → `<name of created OAuth App>`" and click "Send Request" to submit an approval request.
+1. Ask the client to approve the request that will be sent to their email.
 
 Example configuration for integrating with GitHub:
 
@@ -300,8 +299,8 @@ You need to create a new application in your GitLab project.
 
 To do this, follow these steps:
 
-1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`;
-1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`;
+1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
+1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
 1. Use the obtained `Application ID` and secret in the DexProvider resource.
 
 {% alert level="info" %}
@@ -334,8 +333,8 @@ In the relevant Atlassian Crowd project, you need to create a new Generic applic
 
 To do this, follow these steps:
 
-1. Go to "Applications → Add application";
-1. Specify the obtained "Application Name" and "Password" in the DexProvider resource;
+1. Go to "Applications → Add application".
+1. Specify the obtained "Application Name" and "Password" in the DexProvider resource.
 1. When specifying groups in the DexProvider resource, make sure their names are written in lowercase.  
    This is necessary for correct group matching between Crowd and Deckhouse.
 
@@ -365,9 +364,9 @@ To configure authentication, you need to create a new OAuth consumer in the Bitb
 
 Follow these steps:
 
-1. Go to "Personal settings → Access management → OAuth consumers → Add consumer", and specify `https://dex.<publicDomainTemplate>/callback` as the "Callback URL";
+1. Go to "Personal settings → Access management → OAuth consumers → Add consumer", and specify `https://dex.<publicDomainTemplate>/callback` as the "Callback URL".
 1. Grant access:  
-   - "Account: Read" → allows retrieval of basic user information (e.g., email, username);  
+   - "Account: Read" → allows retrieval of basic user information (e.g., email, username).
    - "Workspace membership: Read" → allows retrieval of user workspace membership information.
 1. Use the obtained `Key` and secret in the DexProvider resource.
 

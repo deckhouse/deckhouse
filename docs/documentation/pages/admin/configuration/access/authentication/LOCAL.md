@@ -30,11 +30,11 @@ spec:
 Come up with a password and specify its hashed value in the `password` field. The password is stored in encrypted form (bcrypt).  
 You can generate the hash using the following command:
 
-```console
+```shell
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
-## Adding a User to a Group
+## Adding a user to a group
 
 To group static users together, create a Group resource.
 

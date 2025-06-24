@@ -7,7 +7,7 @@ permalink: en/architecture/authentication.html
 
 ![Interaction scheme when connecting to the Kubernetes API using a generated kubeconfig](../images/user-authn/kubeconfig_dex.svg)
 
-1. **Initialization**. Before the `kube-apiserver` starts, it requests the configuration endpoint of the OIDC provider (in this case — Dex) to retrieve the `issuer` and JWKS endpoint settings for token validation.
+1. **Initialization**. Before the kube-apiserver starts, it requests the configuration endpoint of the OIDC provider (in this case — Dex) to retrieve the `issuer` and JWKS endpoint settings for token validation.
 
 1. **Kubeconfig generation**. The DKP web interface generates a kubeconfig file that includes an `ID token` and a `refresh token`. This file is used by `kubectl` or other Kubernetes clients.
 
@@ -36,11 +36,11 @@ Each user is allowed a maximum of 20 login attempts. Once this limit is reached,
 
 Deckhouse Kubernetes Platform uses a modified version of Dex that supports:
 
-* groups for static user accounts and the Bitbucket Cloud provider (via the [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud) parameter);
-* passing the `group` claim to clients;
-* the `obsolete tokens` mechanism, which helps prevent race conditions when refreshing tokens in OIDC clients.
+* Groups for static user accounts and the Bitbucket Cloud provider (via the [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud) parameter).
+* Passing the `group` claim to clients.
+* The `obsolete tokens` mechanism, which helps prevent race conditions when refreshing tokens in OIDC clients.
 
-## High Availability mode
+## High availability mode
 
 DKP supports a high-availability mode via the `highAvailability` setting.  
 When enabled, multiple authenticator instances are deployed with redundancy to ensure continuous service.  

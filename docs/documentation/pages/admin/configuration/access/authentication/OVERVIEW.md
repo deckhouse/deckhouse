@@ -7,12 +7,12 @@ permalink: en/admin/configuration/access/authentication/
 The platform implements end-to-end authentication, allowing a unified mechanism to be applied both to internal components and user applications.
 
 The core of the authentication mechanism is a federated OpenID Connect (OIDC) provider — `Dex`.  
-Learn more about how authentication works in the [Architecture](../architecture/authentication.html) section.
+Learn more about how authentication works in the [Architecture](../../../../architecture/authentication.html) section.
 
 Depending on the configuration, DKP supports two authentication approaches:
 
-- [Local authentication](./local.html) — users and groups are created directly in the cluster and stored as `User` and `Group` resources.  
-  The `User` resource stores a hashed version of the password (bcrypt), not the plain-text password.
+- [Local authentication](./local.html) — users and groups are created directly in the cluster and stored as User and Group resources.  
+  The User resource stores a hashed version of the password (bcrypt), not the plain-text password.
 - [Integration with external providers](./external-authentication-providers.html) — enables connection to systems like LDAP, GitLab, GitHub, and others to support single sign-on across multiple DKP clusters.
 
 From the perspective of a cluster user or application developer, the method chosen by the administrator to configure authentication in DKP does not matter — the authentication interface and integration steps are the same.

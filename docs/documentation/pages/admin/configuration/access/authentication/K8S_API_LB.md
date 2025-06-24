@@ -20,7 +20,7 @@ To configure access, follow these steps:
          enabled: true
    ```
 
-1. Open the [kubeconfig](../../../user/web/kubeconfig.html) web interface.  
+1. Open the [kubeconfig](../../../../user/web/kubeconfig.html) web interface.  
    The kubeconfig generation interface in DKP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
    This web interface is available at the following URL:
 
@@ -50,19 +50,19 @@ To configure access, follow these steps:
 
 ## How API access protection works in Kubernetes
 
-In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.  
+In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
 API exposure and authentication configuration are handled via the `user-authn` module. You can configure:
 
-- A list of trusted IP addresses or networks allowed to access the API;
-- A list of user groups permitted to authenticate;
+- A list of trusted IP addresses or networks allowed to access the API.
+- A list of user groups permitted to authenticate.
 - The Ingress controller through which access will be provided.
 
 To configure:
 
 1. Enable API publishing as shown in the example above.
 1. Configure access restrictions. In the module configuration, you can specify:
-   - A list of IP addresses or networks allowed to access (`allowedSourceRanges`);
-   - A list of user groups allowed to connect to the Kubernetes API (`allowedUserGroups`);
+   - A list of IP addresses or networks allowed to access (`allowedSourceRanges`).
+   - A list of user groups allowed to connect to the Kubernetes API (`allowedUserGroups`).
    - The Ingress controller to be used for publishing (`ingressClass`).
 1. Use the kubeconfig web interface.  
    Users will be able to securely access the API using the kubeconfig generated via the web interface (`https://kubeconfig.<publicDomainTemplate>`).  
@@ -70,6 +70,6 @@ To configure:
 
 The following will be automatically configured when API publishing is enabled:
 
-- Deckhouse will set the required arguments for the kube-apiserver;
-- A CA certificate will be generated and added to the kubeconfig;
+- Deckhouse will set the required arguments for the kube-apiserver.
+- A CA certificate will be generated and added to the kubeconfig.
 - Login via Dex with OIDC support will be configured.
