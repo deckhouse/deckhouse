@@ -31,8 +31,8 @@ shell:
   - apt clean --quiet --assume-yes
   - rm -rf /var/lib/apt/lists/*
   install:
-  - export CROSSTOOL_SHA512SUM=45736acb5ead4e50b7565d328739108cd0200838b9d6e4437d1718ec93bc12c404a3c3780386a409a7 ebf4418c6c18844bd4bfd1ad17c9301533d5e89b1a50e2
-  - export CROSSTOOL_URL=https://github.com/crosstool-ng/crosstool-ng/archive/ed12fa68402f58e171a6f79500f73f4781fdc9e5.tar.gz
+  - export CROSSTOOL_SHA512SUM=5297954cfdf7e59493e91060c996b8fe7843d155378066faa1d26a23a417b17cc4d008ed93d6408db89cf1b8c336729e22b5a104d6ccec096bdc2b958977ec41
+  - export CROSSTOOL_URL=https://github.com/crosstool-ng/crosstool-ng/archive/c5a17024a9af713a218d533fe78b7cf9a02ec67e.tar.gz
   - cd /root; set -ex
   - mkdir -p crosstool-ng
   - wget $CROSSTOOL_URL -O crosstool-ng.tar.gz
