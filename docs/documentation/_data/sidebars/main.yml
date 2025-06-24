@@ -43,14 +43,24 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: TODO Обзор
-                  url: /admin/configuration/access/
-                  draft: true
+                    ru: Обзор
+                  url: /admin/configuration/access/overview.html
                 - title:
                     en: Connection
                     ru: Подключение
-                  url: /admin/configuration/access/connection.html
-                  draft: true
+                  folders:
+                    - title:
+                        en: OpenVPN
+                        ru: OpenVPN
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/configuration/access/connection/openvpn/overview.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/configuration/access/connection/openvpn/configuration.html
                 - title:
                     en: Access to API
                     ru: TODO Доступ к API
@@ -464,7 +474,7 @@ entries:
                 - title:
                     en: Pod restart on configuration change
                     ru: Перезапуск подов при изменении конфигурации
-                  url: /admin/configuration/app-scaling/pod-restart.html  
+                  url: /admin/configuration/app-scaling/pod-restart.html
                 - title:
                     en: Load distribution management
                     ru: Управление распределением нагрузки
