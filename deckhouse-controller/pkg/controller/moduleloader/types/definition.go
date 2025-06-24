@@ -47,7 +47,7 @@ type Definition struct {
 	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
-	Path           string                         `yaml:"-"`
+	Path           string                         `json:"-" yaml:"-"`
 }
 
 type ModuleDescriptions struct {
