@@ -49,5 +49,6 @@ bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetes
 if bb-flag? need-local-images-import; then
   post-install-import pause
   post-install-import kubernetes-api-proxy
+  bb-flag-unset need-local-images-import
 fi
 {{- end }}
