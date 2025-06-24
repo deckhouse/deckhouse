@@ -29,6 +29,7 @@ migrate() {
   bb-flag-set containerd-need-restart
   bb-flag-set need-local-images-import
   bb-flag-unset ctr-major-version-changed
+  bb-flag-unset disruption
   bb-log-info "finish containerd migration"
 }
 
