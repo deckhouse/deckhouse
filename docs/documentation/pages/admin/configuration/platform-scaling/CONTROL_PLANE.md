@@ -356,6 +356,179 @@ After completing these steps, the node will no longer be considered a master nod
 
 1. Proceed to updating the next master node.
 
+### Changing the OS image in a single-master cluster
+
+1. Convert the single-master cluster into a multi-master one according to the [instructions](#how-to-add-master-nodes-in-a-cloud-cluster).
+1. Update the master nodes as described in the [instructions](#changing-the-os-image-of-master-nodes-in-a-multi-master-cluster).
+1. Convert the multi-master cluster back to a single-master one following the [instructions](#how-to-add-master-nodes-in-a-cloud-cluster).
+
+## How to add master nodes in a cloud cluster
+
+This section describes how to convert a single-master cluster into a multi-master cluster.
+
+> Before adding nodes, make sure the required quotas are available.
+>
+> It's important to have an odd number of master nodes to maintain etcd quorum.
+
+1. Create a [backup of `etcd`](/admin/backup/backup-and-restore.html) and the `/etc/kubernetes` directory.
+1. Copy the resulting archive outside the cluster (e.g., to a local machine).
+1. Ensure there are no active alerts in the cluster that may interfere with adding new master nodes.
+1. Make sure the Deckhouse queue is empty:
+
+   ```console
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. On the local machine, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
+
+   ```console
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. In the installer container, run the following command to verify the state before proceeding:
+
+   ```console
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   The output should confirm that Terraform found no differences and no changes are needed.
+
+1. In the installer container, run the following command and set the desired number of master nodes in the `masterNodeGroup.replicas` parameter:
+
+   ```console
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For Yandex Cloud, if public IPs are assigned to master nodes, the number of elements in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using the Auto value (automatic public IP assignment), the number of items in the array must still match.
+   >
+   >For example, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic IP assignment, the `externalIPAddresses` section would look like:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. In the installer container, run the following command to trigger scaling:
+
+   ```console
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+1. Wait until the required number of master nodes reaches the `Ready` status and all control-plane-manager pods become ready:
+
+   ```console
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   ```
+
+## How to reduce the number of master nodes in a cloud cluster
+
+This section describes the process of converting a multi-master cluster into a single-master cluster.
+
+{% alert level="warning" %}
+The following steps must be performed starting from the first master node (master-0) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove master-0 and master-1 while leaving master-2.
+{% endalert %}
+
+1. Create a [backup of `etcd`](/admin/backup/backup-and-restore.html) and the `/etc/kubernetes` directory.
+1. Copy the resulting archive outside the cluster (e.g., to a local machine).
+1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. Make sure the Deckhouse queue is empty:
+
+   ```console
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. On the **local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if needed):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **In the installer container**, run the following command and set `masterNodeGroup.replicas` to `1`:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For Yandex Cloud, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+   >
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) with automatic public IPs::
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. Remove the following labels from the master nodes you plan to delete:
+   * `node-role.kubernetes.io/control-plane`
+   * `node-role.kubernetes.io/master`
+   * `node.deckhouse.io/group`
+
+   Command to remove the labels:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Make sure the nodes to be removed are no longer part of the etcd cluster:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+1. Drain the nodes to be removed:
+
+   ```bash
+   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Power off the corresponding VMs, delete their instances from the cloud, and detach any associated disks (e.g., `kubernetes-data-master-<N>`).
+
+1. Delete any remaining pods on the removed nodes:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   ```
+
+1. Delete the `Node` objects for the removed nodes:
+
+   ```bash
+   kubectl delete node <MASTER-NODE-N-NAME>
+   ```
+
+1. **In the installer container**, run the following command to trigger the scaling operation:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+## Recovery from Failures
+
+During its operation, the `control-plane-manager` automatically creates backups of configuration and data that may be useful in case of problems. These backups are saved in the `/etc/kubernetes/deckhouse/backup` directory. If any issues or unexpected situations occur during operation, you can use these backups to restore the system to a previously healthy state.
+
+## What to do if the etcd cluster is not functioning
+
+If the etcd cluster is not functioning and cannot be restored from a backup, you can attempt to recover it from scratch by following the steps below.
+
+1. On all nodes that are part of your etcd cluster, **except one**, delete the `etcd.yaml` manifest located in `/etc/kubernetes/manifests/`. This will leave only one active node, from which the multi-master cluster state will be restored.
+1. On the remaining node, open the `etcd.yaml` manifest and add the `--force-new-cluster` flag under `spec.containers.command`.
+1. After the cluster is successfully restored, remove the `--force-new-cluster` flag.
+
+{% alert level="warning" %}
+This operation is destructive: it completely wipes the existing data and initializes a new cluster based on the state preserved on the remaining node. All pending records will be lost.
+{% endalert %}
+
+
 ## High Availability
 
 If any component of the control plane becomes unavailable, the cluster temporarily maintains its current state but cannot process new events. For example:
@@ -501,12 +674,138 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 
 ### How to speed up pod rescheduling when a node becomes unreachable
 
-1. Shorten the time for a node to transition to the `Unreachable` state.  
-   Adjust the `nodeMonitorGracePeriodSeconds` parameter (default is 40 seconds).  
-   For example, set it to 10 seconds.
+By default, if a node does not report its status within 40 seconds, it is marked as `Unreachable`. Then, after another 5 minutes, the pods on that node begin to be restarted on other nodes. As a result, the total application downtime can reach approximately 6 minutes.
 
-1. Speed up Pod eviction from an unreachable node.  
-   Adjust the `failedNodePodEvictionTimeoutSeconds` parameter (default is 300 seconds).  
-   For example, set it to 50 seconds.
+In specific cases where an application cannot run in multiple instances, there is a way to reduce the downtime period:
 
-> **Important.** Shorter timeouts cause system components to check node states and reschedule pods more frequently. This increases the load on the control plane, so choose values that balance fault tolerance and system performance according to your needs.
+1. Reduce the time before a node is marked as `Unreachable` by configuring the `nodeMonitorGracePeriodSeconds` parameter.
+1. Set a shorter timeout for evicting pods from the unreachable node using the `failedNodePodEvictionTimeoutSeconds` parameter.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    nodeMonitorGracePeriodSeconds: 10
+    failedNodePodEvictionTimeoutSeconds: 50
+```
+
+## Configuring custom audit policies
+
+1. Enable the `auditPolicyEnabled` parameter:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 1
+     settings:
+       apiserver:
+         auditPolicyEnabled: true
+   ```
+
+1. Create a secret `kube-system/audit-policy` containing the policy YAML file encoded in Base64:
+
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: audit-policy
+     namespace: kube-system
+   data:
+     audit-policy.yaml: <base64>
+   ```
+
+   A minimal working example of `audit-policy.yaml`:
+
+   ```yaml
+   apiVersion: audit.k8s.io/v1
+   kind: Policy
+   rules:
+   - level: Metadata
+     omitStages:
+     - RequestReceived
+   ```
+
+   For more details on configuring the content of `audit-policy.yaml`, see:
+   * [Official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
+   * [GCE helper script source code](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+
+### Disabling built-in audit policies
+
+Set the `apiserver.basicAuditPolicyEnabled` parameter to `false`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      basicAuditPolicyEnabled: false
+```
+
+### Output audit log to stdout instead of files
+
+Set the `apiserver.auditLog.output` parameter to `Stdout`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      auditLog:
+        output: Stdout
+```
+
+### Working with the audit log
+
+It is assumed that a log scraper is installed on master nodes (`log-shipper`, `promtail`, or `filebeat`) to monitor the audit log file:
+
+```bash
+/var/log/kube-audit/audit.log
+```
+
+The log rotation parameters for this file are predefined and cannot be changed:
+
+* Maximum disk space: `1000 МБ`.
+* Maximum retention period: `7 дней`.
+
+Depending on the policy settings and the number of requests to the `apiserver`, logs may accumulate rapidly. In such cases, the actual retention period may be less than 30 minutes.
+
+{% alert level="warning" %}
+This feature does not guarantee safety. If the secret contains unsupported options or typos, the `apiserver` may fail to start.
+{% endalert %}
+
+If problems arise with launching the `apiserver`, you need to manually remove the `--audit-log-*` parameters from `/etc/kubernetes/manifests/kube-apiserver.yaml` and restart the apiserver:
+
+```bash
+docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
+# Or, depending on the CRI.
+crictl stop $(crictl pods --name=kube-apiserver -q)
+```
+
+After restarting, you will have time to fix or delete the secret:
+
+```bash
+kubectl -n kube-system delete secret audit-policy
+```

@@ -699,7 +699,7 @@ spec:
 
 ## Настройка дополнительных политик аудита
 
-1. Включите параметр auditPolicyEnabled:
+1. Включите параметр `auditPolicyEnabled`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -713,7 +713,7 @@ spec:
          auditPolicyEnabled: true
    ```
 
-2. Создайте секрет `kube-system/audit-policy` с YAML-файлом политик, закодированным в Base64:
+1. Создайте секрет `kube-system/audit-policy` с YAML-файлом политик, закодированным в Base64:
 
    ```yaml
    apiVersion: v1
@@ -743,7 +743,7 @@ spec:
 
 ### Как исключить встроенные политики аудита
 
-Установите параметр [apiserver.basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) модуля в `false`.
+Установите параметр `apiserver.basicAuditPolicyEnabled` в `false`.
 
 Пример:
 
@@ -762,7 +762,7 @@ spec:
 
 ### Как вывести аудит-лог в стандартный вывод вместо файлов
 
-Установите параметр apiserver.auditLog.output в значение `Stdout`.
+Установите параметр `apiserver.auditLog.output` в значение `Stdout`.
 
 Пример:
 
