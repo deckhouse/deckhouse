@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"time"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -33,8 +31,11 @@ const (
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Settings: &go_hook.HookConfigSettings{
-		ExecutionMinInterval: 60 * time.Second,
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "sync",
+			Crontab: "*/3 * * * *",
+		},
 	},
 	Queue: "/modules/node-manager/cgroupv2_support_metrics",
 	Kubernetes: []go_hook.KubernetesConfig{
