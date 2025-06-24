@@ -49,8 +49,7 @@ shell:
   - mkdir /opt/cross
   - cp /src/DCGM/dcgmbuild/crosstool-ng/x86_64.config /home/builder/x86_64/.config && chown -R builder:builder /home/builder/
   - chown builder:builder /opt/cross
-  - cd /home/builder/x86_64/
-  - CT_PREFIX=/opt/cross /opt/crosstool-ng/bin/ct-ng build
+  - su - builder -c 'cd /home/builder/x86_64/ && CT_PREFIX=/opt/cross /opt/crosstool-ng/bin/ct-ng build'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
