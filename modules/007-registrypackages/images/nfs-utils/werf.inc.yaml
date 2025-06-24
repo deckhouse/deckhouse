@@ -42,7 +42,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache patchelf file
+  - apk add --no-cache patchelf file findutils
   install:
   - mkdir -p /opt/deckhouse/bin
   - cp -pr /src/sbin/* /src/usr/bin/* /src/usr/sbin/* /src/usr/libexec/* /opt/deckhouse/bin
@@ -52,6 +52,7 @@ shell:
     for i in $(find . -type f); do
       if file $i | grep -q "ELF"; then
         patchelf --set-interpreter /opt/deckhouse/lib/libc.so $i
+        patchelf --set-rpath /opt/deckhouse/lib $i
       fi
     done
   - cd /opt/deckhouse/lib
