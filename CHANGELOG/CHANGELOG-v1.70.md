@@ -189,6 +189,8 @@
  - **[ingress-nginx]** Enabled `HSTS` for all module's Ingresses. [#12705](https://github.com/deckhouse/deckhouse/pull/12705)
  - **[ingress-nginx]** Added `ingress-nginx` version `1.12`. The `defaultControllerVersion` is set to `1.10`, all ingress controllers without specified version will restart. [#12609](https://github.com/deckhouse/deckhouse/pull/12609)
  - **[monitoring-ping]** The exporter was rewritten in go. [#12745](https://github.com/deckhouse/deckhouse/pull/12745)
+ - **[openvpn]** The logic of clearing expired certificates has been changed. [#14103](https://github.com/deckhouse/deckhouse/pull/14103)
+ - **[openvpn]** The logic of clearing expired certificates has been changed. [#14033](https://github.com/deckhouse/deckhouse/pull/14033)
  - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
  - **[operator-trivy]** Set proxy env for updater and operator. [#13337](https://github.com/deckhouse/deckhouse/pull/13337)
  - **[runtime-audit-engine]** Removed deprecated `falco_events` metric. [#13228](https://github.com/deckhouse/deckhouse/pull/13228)
