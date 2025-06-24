@@ -1,23 +1,6 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-locals {
-  useNSXT = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
-  edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
-}
-
-data "vcd_nsxt_edgegateway" "gateway" {
-  count = local.useNSXT ? 1 : 0
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
-}
-
-data "vcd_edgegateway" "gateway" {
-  count = local.useNSXT ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
-}
-
 data "vcd_network" "parent" {
   org  = var.providerClusterConfiguration.organization
   vdc  = var.providerClusterConfiguration.virtualDataCenter
@@ -27,7 +10,7 @@ data "vcd_network" "parent" {
 resource "vcd_vapp_network_routed" "network" {
   org                = var.providerClusterConfiguration.organization
   vdc                = var.providerClusterConfiguration.virtualDataCenter
-  name               = "${var.providerClusterConfiguration.mainNetwork}-vapp"
+  name               = var.providerClusterConfiguration.prefix
   parent_network_id  = data.vcd_network.parent.id
   gateway             = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length      = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
