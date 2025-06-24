@@ -99,6 +99,7 @@
                 background-position: 50%;
                 background-repeat: no-repeat;
                 background-size: 12px 10px;
+                transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
             }
 
             &:checked + label::before {
@@ -133,10 +134,21 @@
         background-position: calc(100% - 50px) center;
         background-repeat: no-repeat;
         cursor: pointer;
+        transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
 
         &__en {
             font-size: 18px;
             background-position: calc(100% - 75px) center;
+        }
+
+        &:hover {
+            border-color: #222a5e;
+            background-color: #f5f5fb;
+        }
+
+        &:active {
+            opacity: 0.8;
+            transform: scale(0.95);
         }
     }
 }
