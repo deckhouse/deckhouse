@@ -945,6 +945,7 @@ spec:
                             required:
                               - sourceFormat
                           - properties:
+                              klog: {}
                               sourceFormat:
                                 enum:
                                   - Klog
