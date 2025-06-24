@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_replaceDotKeys"
       ],
-      "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
+      "source": ".message = parse_json(.message, max_depth: 2) ?? { \"text\": .message }\n",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON": {
@@ -37,7 +37,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON"
       ],
-      "source": ".message = parse_json(.message) ?? parse_klog!(.message)\n",
+      "source": ".message = parse_json(.message, max_depth: 2) ?? parse_klog!(.message)\n",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/04_tf_dropLabels": {
