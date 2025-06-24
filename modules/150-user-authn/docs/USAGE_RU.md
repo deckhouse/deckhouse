@@ -360,6 +360,7 @@ data:
 ```shell
 echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
 ```
+Если команад `htpasswd` не найдена, Вам необходимо устаноить `apache2-utils` пакет для Debian-основанных дистрибутивов и `httpd-utils` для CentOS-основанных дистрибутивов.
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 

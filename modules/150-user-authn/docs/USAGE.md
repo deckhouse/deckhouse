@@ -356,6 +356,8 @@ Use the command below to calculate the password hash:
 echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
 ```
 
+If `htpasswd` command not found, you need install `apache2-utils` package for Debian-based distribution and `httpd-utils` for CentOS-based distribution.
+
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
 Note that in the below example the [`ttl`](cr.html#user-v1-spec-ttl) parameter is set.
