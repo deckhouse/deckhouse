@@ -855,8 +855,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
-- Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, то используйте документацию для вашей версии.
-- Для коммерческих изданий вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости) с поддержкой нужного издания.
+- Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, используйте соответствующую ей документацию.
+- Для коммерческих изданий требуется действующий лицензионный ключ с поддержкой нужного издания. При необходимости можно [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html).
 - Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В редакциях Deckhouse CE/BE/SE/SE+ не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` (VSphere поддерживается в редакции SE+) и ряда модулей, подробное сравнение в [документации](revision-comparison.html).
 - Все команды выполняются на master-узле существующего кластера под пользователем `root`.
@@ -867,7 +867,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Подготовьте переменные с токеном лицензии и названием новой редакции:
 
     > Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию Deckhouse CE не требуется.
-    > Значение переменной `NEW_EDITION` должно быть равно вашей желаемой редакции Deckhouse, например для переключения на редакцию:
+    > Значение переменной `NEW_EDITION` должно быть равно желаемой редакции Deckhouse, например для переключения на редакцию:
     > - CE, переменная должна быть `ce`;
     > - BE, переменная должна быть `be`;
     > - SE, переменная должна быть `se`;
@@ -989,7 +989,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
     ```
 
-1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` название вашей прошлой редакции:
+1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
 
     ```shell
     kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
@@ -1020,7 +1020,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     EOF
     ```
 
-    После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup), удалите созданный ресурс NodeGroupConfiguration:
+    После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
     ```shell
     kubectl delete ngc del-temp-config.sh
