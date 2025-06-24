@@ -1,0 +1,7 @@
+docs:
+  fixes:
+    - summary: >-
+        Delete the mention that addresses are allocated starting from 10 from internalNetworkCIDR in
+        vcd cloud-provider
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14091
+
