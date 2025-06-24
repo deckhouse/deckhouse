@@ -46,7 +46,6 @@ import (
 const (
 	CRITypeDocker           = "Docker"
 	CRITypeContainerd       = "Containerd"
-	CRITypeContainerdV2     = "ContainerdV2"
 	NodeGroupDefaultCRIType = CRITypeContainerd
 
 	errorStatusField       = "error"
@@ -181,24 +180,6 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 				MatchNames: []string{v1alpha1.CloudDiscoveryDataResourceName},
 			},
 			FilterFunc: applyInstanceTypesCatalog,
-		},
-		{
-			Name:       "nodes_cntrdv2_unsupported",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      nodeGroupLabel,
-						Operator: metav1.LabelSelectorOpExists,
-					},
-					{
-						Key:      containerdV2SupportLabel,
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				},
-			},
-			FilterFunc: filterNodeForCgroupV2Support,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -486,10 +467,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if effectiveKubeVer.LessThan(v1_19_0) {
 				return fmt.Errorf("cri type Containerd is allowed only for kubernetes 1.19+")
 			}
-
-		case CRITypeContainerdV2:
-			snap := input.Snapshots["nodes_cntrdv2_unsupported"]
-			newCRIType = handleContainerdV2Supoprt(snap, nodeGroup)
 		}
 
 		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
@@ -539,16 +516,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
-}
-
-func handleContainerdV2Supoprt(snap []go_hook.FilterResult, ng NodeGroupCrdInfo) string {
-	for _, s := range snap {
-		nodeInfo := s.(cgroupV2SupportNode)
-		if nodeInfo.NodeGroup == ng.Name {
-			return "Containerd"
-		}
-	}
-	return "ContainerdV2"
 }
 
 func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{} {

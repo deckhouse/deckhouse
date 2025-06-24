@@ -112,14 +112,14 @@ apiVersions:
       defaultCRI:
         type: string
         description: |
-          The container runtime type that used on cluster nodes (NodeGroups) by default.
+          Deprecated: the parameter is no longer used. todo
 
           If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
         enum:
         - "Containerd"
         - "NotManaged"
-        - "ContainerdV2"
+        x-doc-deprecated: true
         default: "Containerd"
       kubernetesVersion:
         type: string
