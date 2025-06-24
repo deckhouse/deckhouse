@@ -348,12 +348,12 @@ data:
 
 ## An example of creating a static user
 
-Create a password and enter its hash in the `password` field.
+Create a password and enter its hash encoded in base64 in the `password` field.
 
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
 ```
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
@@ -369,7 +369,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
+  password: 'JDJ5JDEwJHJxN2J2Yi9YUm5RTUlkS0xaQ1JWZS5QejVVdVJCY0dJNUNwcGw4ZDZVNm1iNi9HNFoyQTd1Cg=='
   ttl: 24h
 ```
 

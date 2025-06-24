@@ -353,12 +353,12 @@ data:
 
 ## Пример создания статического пользователя
 
-Придумайте пароль и укажите его хэш-сумму в поле `password`.
+Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
 
-Для вычисления хэш-суммы пароля воспользуйтесь командой:
+Для вычисления хэш-суммы пароля воспользуйтесь конструкцией:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
 ```
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
@@ -374,7 +374,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
+  password: 'JDJ5JDEwJHJxN2J2Yi9YUm5RTUlkS0xaQ1JWZS5QejVVdVJCY0dJNUNwcGw4ZDZVNm1iNi9HNFoyQTd1Cg=='
   ttl: 24h
 ```
 
