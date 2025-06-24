@@ -52,12 +52,15 @@ func (r *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
 	return gcr_name.NewRepository(r.Address, opts...)
 }
 
-type stateModel struct {
-	Queues map[string]registryQueue `json:"queues,omitempty"`
-
+type Status struct {
 	Version string `json:"version,omitempty"`
 	Ready   bool   `json:"ready"`
 	Message string `json:"message,omitempty"`
+}
+
+type stateModel struct {
+	Status
+	Queues map[string]registryQueue `json:"queues,omitempty"`
 }
 
 type registryQueue struct {

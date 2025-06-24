@@ -113,16 +113,14 @@ var _ = sdk.RegisterFunc(
 		},
 	},
 	func(input *go_hook.HookInput) error {
-		paramsAccessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
 		stateAccessor := helpers.NewValuesAccessor[stateModel](input, "systemRegistry.internal.checker.state")
-
 		state := stateAccessor.Get()
 
-		params, err := prepareParams(paramsAccessor.Get())
+		params, err := prepareParams(GetParams(input))
 		if err != nil {
 			return fmt.Errorf("cannot prepare params: %w", err)
 		}
-		paramsAccessor.Set(params) // testing
+		SetParams(input, params) // testing
 
 		inputs := inputsModel{
 			Params: params,
