@@ -213,7 +213,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    EOF
    ```
 
-   > If it is necessary to add nodes to an existing node group, specify the desired number in the `.spec.count` field of the NodeGroup.   
+   > If it is necessary to add nodes to an existing node group, specify the desired number in the `.spec.count` field of the NodeGroup.
 
 ### Using Cluster API Provider Static for multiple node groups
 
