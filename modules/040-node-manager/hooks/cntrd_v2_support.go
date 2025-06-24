@@ -18,15 +18,18 @@ package hooks
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
-	containerdV2SupportLabel     = "node.deckhouse.io/containerd-v2-unsupported"
-	cntrdV2UnsupportedMetricName = "d8_nodes_cntrd_v2_unsupported"
+	containerdV2SupportLabel          = "node.deckhouse.io/containerd-v2-unsupported"
+	cntrdV2UnsupportedMetricName      = "d8_nodes_cntrd_v2_unsupported"
+	cntrdV2UnsupportedMetricGroupName = "cntrd_v2"
 )
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
@@ -81,18 +84,17 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 
 func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
 	snap := input.Snapshots["nodes_cntrdv2_unsupported"]
-	input.MetricsCollector.Expire(cntrdV2UnsupportedMetricName)
+	input.MetricsCollector.Expire(cntrdV2UnsupportedMetricGroupName)
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
 
-		var metricValue float64 = 1.0
+		metricValue := 1.0
 		if nodeInfo.HasUnsupportedLabel {
 			labels := map[string]string{
 				"node":       nodeInfo.Name,
 				"node_group": nodeInfo.NodeGroup,
 			}
-
-			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels)
+			input.MetricsCollector.Set("cntrdV2UnsupportedMetricName", metricValue, labels, metrics.WithGroup(cntrdV2UnsupportedMetricGroupName))
 		}
 	}
 
