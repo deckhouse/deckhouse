@@ -62,6 +62,7 @@ func discoverCloudProviderHandler(input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
+
 	input.Values.Set("nodeManager.internal.cloudProvider", data)
 
 	return nil
