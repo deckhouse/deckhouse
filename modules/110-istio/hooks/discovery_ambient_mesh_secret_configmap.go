@@ -52,7 +52,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "ambientmode_configmap",
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
-			// Use proper field names from the go_hook package
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"istio-ambientmode"},
 			},
@@ -61,8 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-istio"},
 				},
 			},
-			FilterFunc: applyConfigMapFilter,
-			// Explicitly enable hook execution on events and synchronization
+			FilterFunc:                   applyConfigMapFilter,
 			ExecuteHookOnEvents:          go_hook.Bool(true),
 			ExecuteHookOnSynchronization: go_hook.Bool(true),
 		},
