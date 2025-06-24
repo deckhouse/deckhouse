@@ -3,7 +3,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: builder/scratch
-fromCacheVersion: "2025-06-24 12:00"
+fromCacheVersion: "2025-06-24 13:00"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -56,6 +56,6 @@ shell:
       fi
     done
   - cd /opt/deckhouse/lib
-  - find . -type f -name *.la -delete
-  - find . -type f -name *.a -delete
+  - find . -type f -name "*.la" -exec rm -f \{} \;
+  - find . -type f -name "*.a" -exec rm -f \{} \;
   - chown -R 64535:64535 /opt/deckhouse
