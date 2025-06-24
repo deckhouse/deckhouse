@@ -24,7 +24,7 @@ type TransformationSpec struct {
 	DropLabels              DropLabelsSpec              `json:"dropLabels,omitempty"`
 }
 type ReplaceDotKeysSpec struct {
-	Labels []string `json:"labels,omitempty"`
+	Labels []string `json:"labels"`
 }
 type EnsureStructuredMessageSpec struct {
 	SourceFormat string                 `json:"sourceFormat"`

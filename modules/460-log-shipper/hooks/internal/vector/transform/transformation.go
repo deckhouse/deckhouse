@@ -37,25 +37,28 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 	for _, tm := range tms {
 		switch tm.Action {
 		case "ReplaceDotKeys":
-			if len(tm.ReplaceDotKeys.Labels) > 0 {
-				transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
-				if err != nil {
-					return nil, err
-				}
+			if len(tm.ReplaceDotKeys.Labels) == 0 {
+				continue
+			}
+			transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
+			if err != nil {
+				return nil, err
 			}
 		case "EnsureStructuredMessage":
-			if tm.EnsureStructuredMessage.SourceFormat != "" {
-				transformation, err = ensureStructuredMessage(tm.EnsureStructuredMessage)
-				if err != nil {
-					return nil, err
-				}
+			if tm.EnsureStructuredMessage.SourceFormat == "" {
+				continue
+			}
+			transformation, err = ensureStructuredMessage(tm.EnsureStructuredMessage)
+			if err != nil {
+				return nil, err
 			}
 		case "DropLabels":
-			if len(tm.DropLabels.Labels) > 0 {
-				transformation, err = dropLabels(tm.DropLabels)
-				if err != nil {
-					return nil, err
-				}
+			if len(tm.DropLabels.Labels) == 0 {
+				continue
+			}
+			transformation, err = dropLabels(tm.DropLabels)
+			if err != nil {
+				return nil, err
 			}
 		default:
 			return nil, fmt.Errorf("transformions: action %s not valide", tm.Action)
