@@ -81,6 +81,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
+fromCacheVersion: "2025-06-24.1"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -103,6 +104,9 @@ shell:
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
   - git apply /patches/*.patch --verbose
+  - cd /src/scripts
+  - cp install_v{{ $major_version }} install
+  - rm -rf install_v1 install_v2
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromImage: builder/golang-bookworm
@@ -128,8 +132,6 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /out
-  - mv /src/scripts/install_v{{ $major_version }} /src/scripts/install
-  - rm -rf /src/scripts/install_v1 /src/scripts/install_v2
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out
   - chmod 755 /out/*
