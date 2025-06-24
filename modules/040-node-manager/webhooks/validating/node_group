@@ -304,7 +304,7 @@ EOF
       ')"
       if [[ -n "${unsupportedNodes}" ]]; then
          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"It is forbidden for NodeGroup \"${nodeGroupName}\" to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-not-supported,node.deckhouse.io/group=${nodeGroupName}"}
+{"allowed":false, "message":"It is forbidden for NodeGroup \"${nodeGroupName}\" to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
 EOF
         return 0
       fi
