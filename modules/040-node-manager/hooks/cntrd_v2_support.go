@@ -48,10 +48,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      nodeGroupLabel,
 						Operator: v1.LabelSelectorOpExists,
 					},
-					{
-						Key:      containerdV2SupportLabel,
-						Operator: v1.LabelSelectorOpExists,
-					},
 				},
 			},
 			FilterFunc: filterNodeForCgroupV2Support,
@@ -60,8 +56,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handlecntrdV2SupportMetrics)
 
 type cgroupV2SupportNode struct {
-	Name      string
-	NodeGroup string
+	Name                string
+	NodeGroup           string
+	HasUnsupportedLabel bool
 }
 
 func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -72,10 +69,12 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	nodeGroup := node.Labels[nodeGroupLabel]
+	_, hasLabel := node.Labels[containerdV2SupportLabel]
 
 	return cgroupV2SupportNode{
-		Name:      node.Name,
-		NodeGroup: nodeGroup,
+		Name:                node.Name,
+		NodeGroup:           nodeGroup,
+		HasUnsupportedLabel: hasLabel,
 	}, nil
 }
 
@@ -86,13 +85,14 @@ func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
 		nodeInfo := s.(cgroupV2SupportNode)
 
 		var metricValue float64 = 1.0
+		if nodeInfo.HasUnsupportedLabel {
+			labels := map[string]string{
+				"node":       nodeInfo.Name,
+				"node_group": nodeInfo.NodeGroup,
+			}
 
-		labels := map[string]string{
-			"node":       nodeInfo.Name,
-			"node_group": nodeInfo.NodeGroup,
+			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels)
 		}
-
-		input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels)
 	}
 
 	return nil
