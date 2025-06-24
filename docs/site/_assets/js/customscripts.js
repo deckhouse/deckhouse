@@ -453,8 +453,8 @@ document.addEventListener("DOMContentLoaded", function() {
       unwrap: 'Unwrap',
     },
     ru: {
-      wrap: 'Не переносить строки',
-      unwrap: 'Переносить строки',
+      wrap: 'Переносить строки',
+      unwrap: 'Не переносить строки',
     }
   };
   const texts = textTooltip[lang];
