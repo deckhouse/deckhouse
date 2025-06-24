@@ -76,7 +76,7 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # Secret с сертификатом и ключем, который должен быть создан в d8-ingress-istio namespace.
+        # Secret с сертификатом и ключом, который должен быть создан в d8-ingress-istio namespace.
         # Поддерживаемые форматы Secret'ов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
         credentialName: app-tls-secrets
       hosts:

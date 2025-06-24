@@ -11,7 +11,7 @@ lang: ru
 
 ## Авторизация
 
-Управление авторизацией осуществляется с помощью ресурса [AuthorizationPolicy](#ресурс-authorizationpolicy) от istio.io. В момент, когда для сервиса создается этот ресурс, начинает работать следующий алгоритм принятия решения о судьбе запроса:
+Управление авторизацией осуществляется с помощью ресурса [AuthorizationPolicy](#ресурс-authorizationpolicy) от istio.io. Когда для сервиса создается этот ресурс, применяются следующие правила принятия решения о запросах:
 
 * Если запрос попадает под политику DENY — запретить запрос.
 * Если для данного сервиса нет политик ALLOW — разрешить запрос.
@@ -32,19 +32,14 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#authorizationpolicy -->
 
-[Reference](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+Подробнее ознакомиться с AuthorizationPolicy можно в документации [istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
 
-Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила. Как только у workload появляется хотя бы одна политика, начинает работать следующий приоритет:
-
-* Если запрос попадает под политику DENY — запретить запрос.
-* Если для данного приложения нет политик ALLOW — разрешить запрос.
-* Если запрос попадает под политику ALLOW — разрешить запрос.
-* Все остальные запросы — запретить.
+Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила, описанные выше.
 
 Аргументы для принятия решения об авторизации:
 * source:
   * namespace;
-  * principal (читай — идентификатор юзера, полученный после аутентификации);
+  * principal (идентификатор юзера, полученный после аутентификации);
   * IP.
 * destination:
   * метод (GET, POST...);
@@ -52,7 +47,7 @@ lang: ru
   * порт;
   * URI.
 * [conditions](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
-  * HTTP-заголовки
-  * аргументы source
-  * аргументы destination
-  * JWT-токены
+  * HTTP-заголовки;
+  * аргументы source;
+  * аргументы destination;
+  * JWT-токены.

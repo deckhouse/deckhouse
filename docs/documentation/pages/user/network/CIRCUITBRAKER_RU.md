@@ -8,15 +8,15 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B8-%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D0%B5-%D1%80%D0%B5%D1%88%D0%B0%D0%B5%D1%82-istio -->
 
-* временное исключение эндпоинта из балансировки, если превышен лимит ошибок;
-* настройка лимитов на количество TCP-соединений и количество запросов в сторону одного эндпоинта;
+* временное исключение эндпойнта из балансировки, если превышен лимит ошибок;
+* настройка лимитов на количество TCP-соединений и количество запросов в сторону одного эндпойнта;
 * выявление зависших запросов и обрывание их с кодом ошибки (HTTP request timeout).
 
 ## Пример настройки Circuit Breaker
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#circuit-breaker -->
 
-Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](../user/managing_request_between_service_istio.html#ресурс-destinationrule).
+Для выявления проблемных эндпойнтов используются настройки `outlierDetection` в кастомном ресурсе [DestinationRule](../network/managing_request_between_service_istio.html#ресурс-destinationrule).
 Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 Пример:
@@ -31,16 +31,16 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов.
+        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпойнтов.
       http:
         maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться.
     outlierDetection:
       consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
       interval: 5m            # в течение пяти минут,
-      baseEjectionTime: 15m   # после которых эндпоинт будет исключен из балансировки на 15 минут.
+      baseEjectionTime: 15m   # после которых эндпойнт будет исключен из балансировки на 15 минут.
 ```
 
-А также для настройки HTTP-таймаутов используется ресурс [VirtualService](../user/retry_istio.html#ресурс-virtualservice). Эти таймауты также учитываются при подсчете статистики ошибок на эндпоинтах.
+Также для настройки HTTP-таймаутов используется ресурс [VirtualService](../network/retry_istio.html#ресурс-virtualservice). Эти таймауты учитываются и при подсчёте статистики ошибок на эндпойнтах.
 
 Пример:
 
