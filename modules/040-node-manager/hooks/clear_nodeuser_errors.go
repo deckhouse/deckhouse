@@ -25,11 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -146,6 +146,7 @@ func hasIncorrectNodeUserErrors(
 	return result
 }
 
+//nolint:unparam
 func clearNodeUserIncorrectErrors(
 	nodeUserName string,
 	incorrectNodes []string,
