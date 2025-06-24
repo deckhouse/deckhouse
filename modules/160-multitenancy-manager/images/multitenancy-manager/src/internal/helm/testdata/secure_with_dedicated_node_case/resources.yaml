@@ -17,7 +17,6 @@ metadata:
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -34,7 +33,6 @@ spec:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -51,7 +49,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
