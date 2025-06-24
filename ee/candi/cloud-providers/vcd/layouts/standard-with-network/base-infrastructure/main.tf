@@ -10,7 +10,7 @@ module "vapp" {
   providerClusterConfiguration = var.providerClusterConfiguration
 }
 
-module "network" {
+module "vapp-network" {
   source                       = "../../../terraform-modules/vapp-network"
   providerClusterConfiguration = var.providerClusterConfiguration
 }
