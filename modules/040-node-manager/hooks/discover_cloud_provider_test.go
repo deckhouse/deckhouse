@@ -65,8 +65,8 @@ metadata:
 
 			It("`nodeManager.internal.cloudProvider must be filled with data from secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64String").String()).To(Equal("abc"))
-				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64JSON.parse").String()).To(Equal("me"))
+				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()).To(Equal("abc"))
+				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64JSON.parse").String()).To(Equal("me"))
 			})
 		})
 	})
@@ -79,8 +79,10 @@ metadata:
 
 		It("`nodeManager.internal.cloudProvider must be filled with data from secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64String").String()).To(Equal("abc"))
-			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64JSON.parse").String()).To(Equal("me"))
+			tst := f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()
+			print(tst)
+			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()).To(Equal("abc"))
+			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64JSON.parse").String()).To(Equal("me"))
 		})
 
 		Context("Secret d8-node-manager-cloud-provider was modified", func() {
@@ -91,8 +93,8 @@ metadata:
 
 			It("`nodeManager.internal.cloudProvider must be filled with data from secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64String").String()).To(Equal("xyz"))
-				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.Wrapped.b64JSON.parse").String()).To(Equal("yourself"))
+				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()).To(Equal("xyz"))
+				Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64JSON.parse").String()).To(Equal("yourself"))
 			})
 		})
 	})

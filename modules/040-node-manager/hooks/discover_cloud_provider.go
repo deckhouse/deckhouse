@@ -57,6 +57,12 @@ func discoverCloudProviderHandler(input *go_hook.HookInput) error {
 		}
 		return nil
 	}
-	input.Values.Set("nodeManager.internal.cloudProvider", secret[0])
+	var data map[string]interface{}
+	err := secret[0].UnmarshalTo(&data)
+	if err != nil {
+		return err
+	}
+	input.Values.Set("nodeManager.internal.cloudProvider", data)
+
 	return nil
 }
