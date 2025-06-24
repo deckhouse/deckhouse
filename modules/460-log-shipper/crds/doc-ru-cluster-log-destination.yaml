@@ -421,7 +421,7 @@ spec:
                     
                     Возможные варианты:
 
-                      - `ReplaceDotKeys` — заменяет точки на нижние подчеркивания в заданых лейблах.
+                      - `ReplaceDotKeys` — заменяет точки на нижние подчеркивания в заданных лейблах.
 
                         Пример:
 
@@ -462,33 +462,33 @@ spec:
                   items:
                     properties:
                       action:
-                        description: "Тип трансформации"
+                        description: "Тип трансформации."
                       replaceDotKeys:
-                        description: "Замена точек подчеркиванием в ключах"
+                        description: "Замена точек на нижние подчеркивания в ключах."
                         properties:
                           labels:
-                            description: "Список лейблов для замены точек в ключах"
+                            description: "Список лейблов для замены точек на нижние подчеркивания в ключах."
                       ensureStructuredMessage:
-                        description: "Гарантирует, что поле сообщения содержит объект JSON"
+                        description: "Гарантирует, что поле сообщения содержит объект JSON."
                         properties:
                           sourceFormat:
-                            description: "Формат message для преобразования в JSON"
+                            description: "Формат сообщения для преобразования в JSON."
                           string:
                             properties:
                               targetField:
                                 description: Имя поля, в которое помещается структурированное сообщение.
                               depth:
-                                description: "Глубина разбора JSON. Нулевое значение отключает."
+                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
                           json:
                             properties:
                               depth:
-                                description: "Глубина разбора JSON. Нулевое значение отключает."
+                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
                           klog:
                             properties:
                               depth:
-                                description: "Глубина разбора JSON. Нулевое значение отключает."
+                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
                       dropLabels:
-                        description: "Удаление заданных лейблов"
+                        description: "Удаление заданных лейблов."
                         properties:
                           labels:
                             description: Список лейблов, которые необходимо удалить.

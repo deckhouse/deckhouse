@@ -517,13 +517,17 @@ spec:
 
 ## Преобразование логов
 
-### Преобразование смешанных логов, JSON или строк к JSON. Парсинг JSON и уменьшение вложенности
+### Преобразование смешанных форматов логов (JSON и строки) в структурированный JSON и уменьшение вложенности
+
+Вы можете использовать трансформацию `EnsureStructuredMessage`,
+чтобы парсить или оборачивать записи в логах в смешанных форматах (JSON и строки) в структурированный JSON-объект.
+Также вы можете контролировать глубину вложенности с помощью параметра `depth`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: string-to-json
 spec:
   ...
   transformations:
@@ -535,26 +539,31 @@ spec:
           depth: 1
 ```
 
-```bash
-# Логи:
+Пример изначальной записи в логе:
 
+```text
 /docker-entrypoint.sh: Configuration complete; ready for start up
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
-
-# Результат преобразования:
-
-{... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
-{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
-
 ```
 
-### Преобразование смешанных логов, JSON или Klog к JSON. Парсинг JSON и уменьшение вложенности
+Результат преобразования:
+
+```json
+{... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
+```
+
+### Преобразование смешанных форматов логов (JSON и Klog) в структурированный JSON и уменьшение вложенности
+
+Вы можете использовать трансформацию `EnsureStructuredMessage`,
+чтобы парсить или оборачивать записи в логах в смешанных форматах (JSON и Klog) в структурированный JSON-объект.
+Также вы можете контролировать глубину вложенности с помощью параметра `depth`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: klog-to-json
 spec:
   ...
   transformations:
@@ -565,26 +574,30 @@ spec:
           depth: 1
 ```
 
-```bash
-# Логи:
+Пример изначальной записи в логе:
 
+```text
 I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
+```
 
-# Результат преобразования:
+Результат преобразования:
 
+```json
 {... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
 {... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
-
 ```
 
 ### Парсинг JSON и уменьшение вложенности
+
+Вы можете использовать трансформацию `EnsureStructuredMessage`, чтобы парсить записи в логах в формате JSON.
+С помощью параметра `depth` можно контролировать глубину вложенности.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: parse-json
   ...
 spec:
   transformations:
@@ -595,26 +608,32 @@ spec:
           depth: 1
 ```
 
-```bash
-# Лог:
+Пример изначальной записи в логе:
 
+```text
 {"level" : { "severity": "info" },"msg" : "fetching.module.release"}
-
-# Результат преобразования:
-
-{... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
-
 ```
 
-### Замена точек на подчеркивания в ключах лейбла
+Результат преобразования:
 
-- При применении трансформации к лейблам в message необходимо предварительно выполнить трансформацию esureStructuredMessage для парсинга json
+```json
+{... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
+```
+
+### Замена точек на подчеркивания в ключах лейблов
+
+Вы можете использовать трансформацию `ReplaceDotKeys`, чтобы заменить точки на нижние подчеркивания в заданных ключах лейблов.
+
+{% alert level="info" %}
+Перед применением трансформации `ReplaceDotKeys` необходимо преобразовать запись лога в структурированный JSON
+с помощью трансформации `EnsureStructuredMessage`.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: replace-dot
 spec:
   ...
   transformations:
@@ -624,26 +643,32 @@ spec:
           - pod_labels
 ```
 
-```bash
-# Лог:
+Пример изначальной записи в логе:
 
+```text
 {"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
+```
 
-# Результат преобразования:
+Результат преобразования:
 
+```json
 {... "message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
-
 ```
 
 ### Удаление лейблов
 
-- При применении трансформации к лейблам в message необходимо предварительно выполнить трансформацию esureStructuredMessage для парсинга json
+Вы можете использовать трансформацию `DropLabels`, чтобы удалить заданные лейблы из записей логов.
+
+{% alert level="info" %}
+Перед применением трансформации `DropLabels` необходимо преобразовать запись лога в структурированный JSON
+с помощью трансформации `EnsureStructuredMessage`.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: drop-label
 spec:
   ...
   transformations:
@@ -653,13 +678,17 @@ spec:
           - example
 ```
 
-### Пример удаления лейбла из message
+#### Пример удаления заданного лейбла из структурированного сообщения
+
+В этом примере показано как вы можете удалить лейбл из структурированного JSON-сообщения.
+Сначала применяется трансформация `EnsureStructuredMessage` для парсинга сообщения,
+после чего применяется `DropLabels` для удаления указанного лейбла.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: string to json
+  name: drop-label
 spec:
   ...
   transformations:
@@ -674,15 +703,16 @@ spec:
           - message.example
 ```
 
-```bash
-# Лог:
+Пример изначальной записи в логе:
 
+```text
 {"msg" : "fetching.module.release", "example": "test"}
+```
 
-# Результат преобразования:
+Результат преобразования:
 
+```json
 {... "message": {"msg" : "fetching.module.release"}}
-
 ```
 
 ## Настройка сборки логов с продуктовых пространств имен, используя опцию namespace label selector

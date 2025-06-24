@@ -841,43 +841,43 @@ spec:
 
                     Available options:
 
-                          - `ReplaceDotKeys`: Replaces dots with underscores in the labels.
+                      - `ReplaceDotKeys`: Replaces dots with underscores in the specified labels.
 
-                            Example:
+                        Example:
 
-                            ```yaml
-                            transformations:
-                            - action: ReplaceDotKeys
-                              replaceDotKeys:
-                                labels:
-                                  - pod_labels
-                            ```
+                        ```yaml
+                        transformations:
+                        - action: ReplaceDotKeys
+                          replaceDotKeys:
+                            labels:
+                              - pod_labels
+                        ```
 
-                          - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                      - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
                             
-                            Example:
+                        Example:
 
-                            ```yaml
-                            transformations:
-                            - action: EnsureStructuredMessage
-                              ensureStructuredMessage:
-                                sourceFormat: String
-                                string:
-                                  targetField: msg
-                            ```
+                        ```yaml
+                        transformations:
+                        - action: EnsureStructuredMessage
+                          ensureStructuredMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
 
-                          - `DropLabels`: Removes the specified labels.
+                      - `DropLabels`: Removes the specified labels.
                             
-                            Example:
+                        Example:
 
-                            ```yaml
-                            transformations:
-                            - action: DropLabels
-                              dropLabels:
-                                labels:
-                                  - first
-                                  - second
-                            ```
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - first
+                              - second
+                        ```
 
                   items:
                     type: object
@@ -910,22 +910,22 @@ spec:
                       action:
                         type: string
                         enum: ["ReplaceDotKeys", "EnsureStructuredMessage", "DropLabels"]
-                        description: Type of transformations.
+                        description: Type of a transformation.
                       replaceDotKeys:
                         type: object
-                        description: "Normalizes names with a dot, replacing dots with underscores"
+                        description: "Replaces dots with underscores in the specified labels."
                         required:
                           - labels
                         properties:
                           labels:
                             type: array
-                            description: "List of labels for relace dot in key"
+                            description: "List of labels where dots will be replaced with underscores."
                             items:
                               type: string
                               pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                       ensureStructuredMessage:
                         type: object
-                        description: "Ensures that the message field contains a JSON object"
+                        description: "Ensures that the message field contains a JSON object."
                         required:
                           - sourceFormat
                         oneOf:
@@ -957,7 +957,7 @@ spec:
                           sourceFormat:
                             type: string
                             enum: ["String", "JSON", "Klog"]
-                            description: "Format message for parsing in JSON"
+                            description: "Message format for parsing in JSON."
                           string:
                             type: object
                             required:
@@ -966,13 +966,13 @@ spec:
                               targetField:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
-                                description: "The target field into which wrapped string is placed"
+                                description: "Target field where the wrapped string is placed."
                               depth:
                                 type: integer
                                 default: 2
                                 minimum: 0
                                 maximum: 128
-                                description: "The depth for parsing JSON. A value of zero turns it off."
+                                description: "Depth for JSON parsing. A value of zero disables parsing."
                           json:
                             type: object
                             properties:
@@ -981,7 +981,7 @@ spec:
                                 default: 2
                                 minimum: 0
                                 maximum: 128
-                                description: "The depth for parsing JSON. A value of zero turns it off."
+                                description: "Depth for JSON parsing. A value of zero disables parsing."
                           klog:
                             type: object
                             properties:
@@ -990,16 +990,16 @@ spec:
                                 default: 2
                                 minimum: 0
                                 maximum: 128
-                                description: "The depth for parsing JSON. A value of zero turns it off."
+                                description: "Depth for JSON parsing. A value of zero disables parsing."
                       dropLabels:
                         type: object
-                        description: "Removes the specified labels"
+                        description: "Removes the specified labels."
                         required:
                           - labels
                         properties:
                           labels:
                             type: array
-                            description: "List of labels to remove"
+                            description: "List of labels to remove."
                             items:
                               type: string
                               pattern: '^[a-zA-Z0-9_\\\.\-]+$'
