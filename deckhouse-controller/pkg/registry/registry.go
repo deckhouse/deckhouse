@@ -241,7 +241,6 @@ func handleGetModuleInfoInChannel(ctx context.Context, svc *moduleReleaseService
 		return nil
 	}
 
-	fmt.Println("debug meta module", "meta.Module", meta.Module) // debug
 	b, err := json.MarshalIndent(meta, "", "    ")
 	if err != nil {
 		return fmt.Errorf("marshall indent: %w", err)

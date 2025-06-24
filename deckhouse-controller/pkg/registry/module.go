@@ -162,7 +162,6 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 		meta.Changelog = changelog
 	}
 
-	fmt.Println("Debug modulereader length", "rr.moduleReader.Len()", rr.moduleReader.Len()) // debug
 	if rr.moduleReader.Len() > 0 {
 		var module moduleTypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
@@ -170,7 +169,6 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
 			// TODO: empty module yaml
 		}
-		fmt.Println("Debug module.yaml", "module", module) // debug
 		// TODO: meta.Module processing
 		meta.Module = &module
 	}
