@@ -624,10 +624,8 @@ Transformed result:
 
 You can use the `ReplaceDotKeys` transformation to replace dots in specified label keys with underscores.
 
-{% alert level="info" %}
-To apply the `ReplaceDotKeys` transformation,
-the message must first be parsed into a structured JSON using the `EnsureStructuredMessage` transformation.
-{% endalert %}
+> To apply the `ReplaceDotKeys` transformation,
+> the message must first be parsed into a structured JSON using the `EnsureStructuredMessage` transformation.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -659,10 +657,8 @@ Transformed result:
 
 You can use the `DropLabels` transformation to remove specific labels from log messages.
 
-{% alert level="info" %}
-To apply the `DropLabels` transformation,
-the message must first be parsed into a structured JSON using the `EnsureStructuredMessage` transformation.
-{% endalert %}
+> To apply the `DropLabels` transformation,
+> the message must first be parsed into a structured JSON using the `EnsureStructuredMessage` transformation.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
