@@ -431,6 +431,7 @@ spec:
                         codec:
                           type: string
                           enum: ["JSON", "CEF"]
+                          description: "Available encoding formats."
                         cef:
                           type: object
                           description: |
@@ -439,12 +440,15 @@ spec:
                             deviceVendor:
                               type: string
                               minLength: 1
+                              default: "Deckhouse"
                             deviceProduct:
                               type: string
                               minLength: 1
+                              default: "log-shipper-agent"
                             deviceVersion:
                               type: string
                               minLength: 1
+                              default: "1"
                       oneOf:
                         - properties:
                             codec:
@@ -618,6 +622,7 @@ spec:
                         codec:
                           type: string
                           enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
+                          description: "Available encoding formats."
                         cef:
                           type: object
                           description: |
@@ -626,12 +631,15 @@ spec:
                             deviceVendor:
                               type: string
                               minLength: 1
+                              default: "Deckhouse"
                             deviceProduct:
                               type: string
                               minLength: 1
+                              default: "log-shipper-agent"
                             deviceVersion:
                               type: string
                               minLength: 1
+                              default: "1"
                       oneOf:
                         - properties:
                             codec:
