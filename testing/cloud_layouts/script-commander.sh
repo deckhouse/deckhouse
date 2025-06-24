@@ -411,46 +411,11 @@ function bootstrap_static() {
   done
 
 
-  tar -cvf $cwd/registry-mirror.tar registry-mirror
-  testRunAttempts=20
-
-  # emulate using local registry
-  LOCAL_REGISTRY_MIRROR_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
-  LOCAL_REGISTRY_CLUSTER_PASSWORD=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 20; echo)
-  LOCAL_REGISTRY_CLUSTER_DOCKERCFG=$(echo -n "cluster:${LOCAL_REGISTRY_CLUSTER_PASSWORD}" | base64 | tr -d '\n')
-  IMAGES_REPO="${bastion_ip}:5000/sys/deckhouse-oss"
-  LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${bastion_ip}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 | tr -d '\n')
-
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    # Install http/https proxy on bastion node
-    $scp_command $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
-    if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-      apt-get update
-      apt-get install -y docker.io docker-compose wget curl
-
-      tar -xvf /tmp/registry-mirror.tar
-      cd registry-mirror
-      ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
-      ./gen-ssl.sh
-      env bastion_ip=${bastion_ip} envsubst '\$bastion_ip' < registry-config.tpl.yaml > registry-config.yaml
-      docker-compose up -d
-      cd -
-ENDSSH
-
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
-    fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
-
   D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
   D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+  E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  IMAGES_REPO="e2e-registry.foxtrot-dev.ru"
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
@@ -474,15 +439,11 @@ mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
 d8 --version
 
-# Debug
-echo "IMAGES_REPO = ${IMAGES_REPO}"
-echo "LOCAL_REGISTRY_MIRROR_PASSWORD = ${LOCAL_REGISTRY_MIRROR_PASSWORD}"
-
 # pull
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
-d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD --insecure
+d8 mirror push d8 "${IMAGES_REPO}" --registry-login $E2E_REGISTRY_USER --registry-password $E2E_REGISTRY_PASSWORD
 
 # Checking that it's FE-UPGRADE
 # Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
@@ -512,7 +473,7 @@ if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor
     d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
     --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
     # push
-    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login mirror --registry-password ${LOCAL_REGISTRY_MIRROR_PASSWORD}
+    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login $E2E_REGISTRY_USER --registry-password $E2E_REGISTRY_PASSWORD
 fi
 
 set +x
