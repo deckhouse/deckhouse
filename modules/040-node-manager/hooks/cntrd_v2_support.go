@@ -48,6 +48,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      nodeGroupLabel,
 						Operator: v1.LabelSelectorOpExists,
 					},
+					{
+						Key:      containerdV2SupportLabel,
+						Operator: v1.LabelSelectorOpExists,
+					},
 				},
 			},
 			FilterFunc: filterNodeForCgroupV2Support,

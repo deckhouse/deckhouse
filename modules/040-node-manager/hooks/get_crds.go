@@ -192,6 +192,10 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 						Key:      nodeGroupLabel,
 						Operator: metav1.LabelSelectorOpExists,
 					},
+					{
+						Key:      containerdV2SupportLabel,
+						Operator: metav1.LabelSelectorOpExists,
+					},
 				},
 			},
 			FilterFunc: filterNodeForCgroupV2Support,
