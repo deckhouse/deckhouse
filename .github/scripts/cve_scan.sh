@@ -52,10 +52,10 @@ cat > "${WORKDIR}/docker/config.json" << EOL
 {
         "auths": {
                 "${PROD_REGISTRY}": {
-                        "auth": "$(echo "${PROD_REGISTRY_USER}:${PROD_REGISTRY_PASSWORD}" | base64)"
+                        "auth": "$(echo -n "${PROD_REGISTRY_USER}:${PROD_REGISTRY_PASSWORD}" | base64)"
                 },
                 "${DEV_REGISTRY}": {
-                        "auth": "$(echo "${DEV_REGISTRY_USER}:${DEV_REGISTRY_PASSWORD}" | base64)"
+                        "auth": "$(echo -n "${DEV_REGISTRY_USER}:${DEV_REGISTRY_PASSWORD}" | base64)"
                 }
         }
 }
