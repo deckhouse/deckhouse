@@ -408,7 +408,7 @@ func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
 }
 
 func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.MirrorHost) {
-	host, _ := getRegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, _ := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
 	return host, []bashible.MirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -421,7 +421,7 @@ func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.MirrorHost) {
 }
 
 func (p *DirectModeParams) hostMirrors() (string, []bashible.MirrorHost) {
-	host, path := getRegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, path := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
 	return registry_const.Host, []bashible.MirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -476,7 +476,7 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 		if isStop {
 			fmt.Fprintf(&msg, "All %d node(s) use the Unmanaged config.\n", total)
 		} else {
-			fmt.Fprintf(&msg, "All %d node(s) updated to version %s.\n", total, trimWithEllipsis(version))
+			fmt.Fprintf(&msg, "All %d node(s) updated to version %s.\n", total, helpers.TrimWithEllipsis(version))
 		}
 		return Result{Ready: true, Message: msg.String()}
 	}
@@ -492,20 +492,11 @@ func buildResult(inputs Inputs, isStop bool, version string) Result {
 		}
 		currentVersion := inputs.NodeStatus[name].Version
 		if isStop {
-			fmt.Fprintf(&msg, "- %s: %q → Unmanaged\n", name, trimWithEllipsis(currentVersion))
+			fmt.Fprintf(&msg, "- %s: %q → Unmanaged\n", name, helpers.TrimWithEllipsis(currentVersion))
 		} else {
-			fmt.Fprintf(&msg, "- %s: %q → %q\n", name, trimWithEllipsis(currentVersion), trimWithEllipsis(version))
+			fmt.Fprintf(&msg, "- %s: %q → %q\n", name, helpers.TrimWithEllipsis(currentVersion), helpers.TrimWithEllipsis(version))
 		}
 	}
 
 	return Result{Ready: false, Message: msg.String()}
-}
-
-func trimWithEllipsis(value string) string {
-	const limit = 15
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
-	}
-	return string(slices.Clone(runes[:limit])) + "…"
 }

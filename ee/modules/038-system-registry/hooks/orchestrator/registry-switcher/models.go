@@ -148,7 +148,7 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.C
 }
 
 func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Config, error) {
-	address, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
+	address, path := helpers.RegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
 
 	dockerCfg, err := helpers.DockerCfgFromCreds(params.Username, params.Password, address)
 	if err != nil {

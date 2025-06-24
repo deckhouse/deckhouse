@@ -185,7 +185,7 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 		upstreamCA = string(pki.EncodeCertificate(params.Upstream.CA))
 	}
 
-	host, path := getRegistryAddressAndPathFromImagesRepo(params.Upstream.ImagesRepo)
+	host, path := helpers.RegistryAddressAndPathFromImagesRepo(params.Upstream.ImagesRepo)
 	*cfg = InclusterProxyConfig{
 		CACert:           string(pki.EncodeCertificate(params.CA.Cert)),
 		TokenCert:        string(pki.EncodeCertificate(params.Token.Cert)),

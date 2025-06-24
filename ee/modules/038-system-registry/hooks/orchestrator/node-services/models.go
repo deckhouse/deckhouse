@@ -81,7 +81,7 @@ func (result ProcessResult) GetConditionMessage() string {
 		case !node.PodReady:
 			nodeMessages[name] = fmt.Sprintf(
 				"services pod(s) is not Ready or config version mismatch (!= %q)",
-				trimWithEllipsis(node.ConfigVersion),
+				helpers.TrimWithEllipsis(node.ConfigVersion),
 			)
 		default:
 			continue
@@ -240,7 +240,7 @@ func (nsc *NodeServicesConfig) processLocalMode(params LocalModeParams, nodeIP s
 }
 
 func (nsc *NodeServicesConfig) processProxyMode(params ProxyModeParams) {
-	host, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
+	host, path := helpers.RegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
 
 	cfg := nodeservices.ProxyMode{
 		Upstream: nodeservices.UpstreamRegistry{
