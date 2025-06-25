@@ -157,7 +157,9 @@ func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion 
 	res.Checksum = imageInfo.Digest.String()
 	res.ModuleVersion = moduleVersion
 	res.Changelog = imageInfo.Metadata.Changelog
-	res.ModuleDefinition = imageInfo.Metadata.ModuleDefinition
+	if imageInfo.Metadata.ModuleDefinition != nil {
+		res.ModuleDefinition = imageInfo.Metadata.ModuleDefinition
+	}
 
 	return res, nil
 }
