@@ -30,6 +30,7 @@ import (
 
 	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -136,6 +137,21 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		}
 
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var ModuleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
+		if err != nil {
+			// if module.yaml decode failed - warn about it but don't fail the release
+			fmt.Printf("Unmarshal module yaml failed: %s\n", err)
+
+			meta.ModuleDefinition = nil
+
+			return meta, nil
+		}
+
+		meta.ModuleDefinition = &ModuleDefinition
 	}
 
 	return meta, nil

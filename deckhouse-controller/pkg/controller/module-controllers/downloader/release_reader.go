@@ -55,6 +55,11 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 			if err != nil {
 				return err
 			}
+		case "module.yaml":
+			_, err := io.Copy(rr.moduleReader, tr)
+			if err != nil {
+				return err
+			}
 
 		default:
 			continue

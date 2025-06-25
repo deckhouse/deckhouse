@@ -476,14 +476,14 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 	}
 
 	if rr.moduleReader.Len() > 0 {
-		var module moduletypes.Definition
-		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
+		var ModuleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
 		if err != nil {
-			meta.Module = nil
+			meta.ModuleDefinition = nil
 			return meta, nil
 		}
 
-		meta.Module = &module
+		meta.ModuleDefinition = &ModuleDefinition
 	}
 
 	return meta, err
@@ -535,8 +535,8 @@ func isRel(candidate, target string) bool {
 type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
-	Changelog map[string]any          `json:"-"`
-	Module    *moduletypes.Definition `json:"module,omitempty"`
+	Changelog        map[string]any          `json:"-"`
+	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 }
 
 const (

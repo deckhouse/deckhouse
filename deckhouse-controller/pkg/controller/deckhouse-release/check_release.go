@@ -762,17 +762,17 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.moduleReader.Len() > 0 {
-		var module moduletypes.Definition
-		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
+		var moduleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
 		if err != nil {
 			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
 
-			meta.Module = nil
+			meta.ModuleDefinition = nil
 
 			return meta, nil
 		}
 
-		meta.Module = &module
+		meta.ModuleDefinition = &moduleDefinition
 	}
 
 	cooldown := f.fetchCooldown(img)
@@ -1031,8 +1031,8 @@ type ReleaseMetadata struct {
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
 
-	Changelog map[string]interface{}  `json:"-"`
-	Module    *moduletypes.Definition `json:"module,omitempty"`
+	Changelog        map[string]interface{}  `json:"-"`
+	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 
 	Cooldown *metav1.Time `json:"-"`
 }
