@@ -40,10 +40,12 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8080
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - mountPath: /app/en/modules
               name: modules-docs-en
@@ -84,10 +86,12 @@ spec:
             httpGet:
               path: /healthz
               port: 8081
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /readyz
               port: 8081
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - mountPath: "/mount/public/en/modules"
               name: modules-docs-en
@@ -109,10 +113,12 @@ spec:
             httpGet:
               path: /health
               port: 8082
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /health
               port: 8082
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - name: release-channels
               mountPath: /app/release-channels
