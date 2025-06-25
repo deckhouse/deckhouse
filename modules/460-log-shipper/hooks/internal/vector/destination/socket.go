@@ -81,6 +81,20 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		encoding.Codec = "text"
 		// the main encoding is done by the vrl rule
 	case v1alpha1.EncodingCodecCEF:
+		deviceVendor := "Deckhouse"
+		if spec.Encoding.CEF.DeviceVendor != "" {
+			deviceVendor = spec.Encoding.CEF.DeviceVendor
+		}
+
+		deviceProduct := "log-shipper-agent"
+		if spec.Encoding.CEF.DeviceProduct != "" {
+			deviceProduct = spec.Encoding.CEF.DeviceProduct
+		}
+
+		deviceVersion := "1"
+		if spec.Encoding.CEF.DeviceVersion != "" {
+			deviceVersion = spec.Encoding.CEF.DeviceVersion
+		}
 		extensions := map[string]string{
 			"message":   "message",
 			"timestamp": "timestamp",
@@ -107,9 +121,9 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
 			Version:            "V1",
-			DeviceVendor:       spec.Encoding.CEF.DeviceVendor,
-			DeviceProduct:      spec.Encoding.CEF.DeviceProduct,
-			DeviceVersion:      spec.Encoding.CEF.DeviceVersion,
+			DeviceVendor:       deviceVendor,
+			DeviceProduct:      deviceProduct,
+			DeviceVersion:      deviceVersion,
 			DeviceEventClassID: "Log event",
 			Name:               "cef.name",
 			Severity:           "cef.severity",
