@@ -141,4 +141,6 @@ shell:
   - cp -a /tmp/x86_64-linux-gnu/* /opt/cross/x86_64-linux-gnu/
   - rm -rf /tmp/x86_64-linux-gnu/*
   - cd /src/DCGM
+  - export ARCHITECTURE=x86_64
+  - export TARGET=x86_64-linux-gnu
   - DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p
