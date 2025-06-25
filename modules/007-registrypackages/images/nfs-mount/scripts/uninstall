@@ -15,4 +15,4 @@
 
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/mount.nfs* /opt/deckhouse/bin/umount.nfs*
-rm -f /usr/sbin/mount.nfs
+rm -f /sbin/mount.nfs /sbin/mount.nfs4 /sbin/umount.nfs /sbin/umount.nfs4
