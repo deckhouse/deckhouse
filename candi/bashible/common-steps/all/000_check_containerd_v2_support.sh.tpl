@@ -47,7 +47,9 @@ function check_containerd_v2_support() {
   if ((${#errors[@]})); then
     err_json=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
     printf "%s" "$err_json"
+    return 1
   fi
+  return 0
 }
 
 function set_labels() {
