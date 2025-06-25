@@ -197,7 +197,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 		// if parent version is empty, we think that module is not deployed
 		if parentVersion == "" {
-			validateErr = multierror.Append(validateErr, fmt.Errorf(`the "%s" module dependency is not deployed`, parentModule))
+			validateErr = multierror.Append(validateErr, fmt.Errorf(`the "%s" module dependency "%s" is not deployed`, moduleName, parentModule))
 			continue
 		}
 
