@@ -98,8 +98,10 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: parca
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.6.2
-  weight: 900
+  weight: 2
 status:
   approved: false
   message: ""
@@ -128,8 +130,10 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: parca
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.7.1
-  weight: 900
+  weight: 2
 status:
   approved: false
   message: ""
