@@ -148,26 +148,16 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion string) (ModuleDownloadResult, error) {
 	var res ModuleDownloadResult
 
-	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
+	// moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
+	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
 	if err != nil {
 		return res, err
 	}
 
-	res.Checksum = checksum
+	res.Checksum = imageInfo.Digest.String()
 	res.ModuleVersion = moduleVersion
-	res.Changelog = changelog
-
-	img, err := md.fetchImage(moduleName, moduleVersion)
-	if err != nil {
-		return res, err
-	}
-
-	def, err := md.fetchModuleDefinitionFromImage(moduleName, img)
-	if err != nil {
-		return res, err
-	}
-
-	res.ModuleDefinition = def
+	res.Changelog = imageInfo.Metadata.Changelog
+	res.ModuleDefinition = imageInfo.Metadata.ModuleDefinition
 
 	return res, nil
 }
@@ -365,33 +355,44 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return imageInfo, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion string) (
-	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion string) (*ImageInfo, error) {
+	imageInfo := &ImageInfo{}
+
+	// fill imageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
+		return imageInfo, fmt.Errorf("fetch release image error: %v", err)
 	}
 
 	img, err := regCli.Image(context.TODO(), moduleVersion)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
+		return imageInfo, fmt.Errorf("fetch image error: %v", err)
 	}
 
+	imageInfo.Image = img
+
+	// fill imageInfo.Digest
 	digest, err := img.Digest()
 	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch digest error: %v", err)
+		return imageInfo, fmt.Errorf("fetch digest error: %v", err)
 	}
 
+	imageInfo.Digest = digest
+
+	// fill imageInfo.Metadata
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
 	if err != nil {
-		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
+		return imageInfo, fmt.Errorf("fetch release metadata error: %v", err)
 	}
+
+	imageInfo.Metadata = &moduleMetadata
 
 	if moduleMetadata.Version == nil {
-		return "", digest.String(), nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+		return imageInfo, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
-	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
+	// return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
+	return imageInfo, nil
 }
 
 func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *moduletypes.Definition {
