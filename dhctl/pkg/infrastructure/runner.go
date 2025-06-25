@@ -819,7 +819,6 @@ func deleteLockFile(fileForDelete, logPrefix, nextActionLogString string, logger
 		return true, nil
 	}
 
-	// terraform lock file was found. Hence, we are using terraform, and we do not need to try to delete tofu lock file
 	logger.LogDebugF("%s file %s was found and deleted. \n", logPrefix, fileForDelete)
 	return false, nil
 }

@@ -16,7 +16,6 @@ package infrastructure
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"os"
 	"runtime"
 	"testing"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
