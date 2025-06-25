@@ -7,8 +7,8 @@ In Deckhouse Kubernetes Platform, cloud nodes can be of the following types:
 
 - **CloudEphemeral** — temporary nodes that are automatically created and deleted;
 - **CloudPermanent** — permanent nodes managed manually via `replicas`;
-- (optional) **CloudStatic** — nodes created outside of Deckhouse but integrated into the cluster;
-- (optional) **CloudHybrid** — nodes managed in coordination with external systems.
+- **CloudStatic** — nodes created outside of Deckhouse but integrated into the cluster;
+- **CloudHybrid** — nodes managed in coordination with external systems.
 
 Below are instructions for adding and configuring each type.
 
@@ -163,9 +163,9 @@ Now let’s increase the number of replicas to 5. Two Pods will end up in `Pendi
 - Two new VMs will be created in the cloud and automatically join the cluster;
 - The Pods will be scheduled onto the new nodes.
 
-## Example NodeGroup definition
+### Example NodeGroup definition
 
-### Cloud nodes
+#### Cloud nodes
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -570,7 +570,7 @@ To add master nodes in a cloud cluster:
      --ssh-agent-private-keys /tmp/.ssh/<key>
    ```
 
-## How to interpret Node Group states?
+## How to interpret Node Group states
 
 **Ready** — the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
 
