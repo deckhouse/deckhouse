@@ -366,7 +366,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
-	// return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 	return imageInfo, nil
 }
 
@@ -409,7 +408,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 		return imageInfo, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
-	// return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 	return imageInfo, nil
 }
 
