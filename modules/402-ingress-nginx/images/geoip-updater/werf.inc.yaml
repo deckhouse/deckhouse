@@ -16,7 +16,7 @@ git:
       - 'go.sum'
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -24,15 +24,13 @@ import:
     to: /src
     before: install
 mount:
-{{ include "mount points for golang builds" . }}
-secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
   - cd /src
   - go mod download
-  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o geoip-updater
+  - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o geoip-updater
   - chown -R 64535:64535 geoip-updater
   - chmod 0700 geoip-updater
 ---
@@ -43,6 +41,5 @@ import:
   add: /src/geoip-updater
   to: /geoip-updater
   before: setup
-imageSpec:
-  config:
-    entrypoint: ["/geoip-updater"]
+docker:
+  ENTRYPOINT: ["/geoip-updater"]
