@@ -81,7 +81,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
-from: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
