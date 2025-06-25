@@ -111,7 +111,7 @@ func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleNam
 		return nil, fmt.Errorf("fetch module release metadata error: %w", err)
 	}
 
-	if moduleMetadata.Version == "" {
+	if moduleMetadata.Version == nil {
 		return nil, fmt.Errorf("module release %q metadata malformed: no version found", moduleName)
 	}
 
