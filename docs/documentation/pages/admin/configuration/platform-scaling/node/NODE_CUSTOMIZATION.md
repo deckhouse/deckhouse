@@ -8,24 +8,24 @@ To automate actions on node groups, Deckhouse provides the `NodeGroupConfigurati
 - Installing and configuring additional OS packages.  
 
   Examples:  
-  - [Installing the kubectl plugin](node-management.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах)
-  - [Configuring containerd with Nvidia GPU support](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)
+  - [Installing the cert-manager plugin for kubectl on master nodes](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
+  - [Configuring containerd with Nvidia GPU support](node-customization.html#how-to-use-containerd-with-nvidia-gpu-support)
 
 - Updating the OS kernel to a specific version.
 
   Examples:
-  - [Debian kernel update](cloud-node.html#для-дистрибутивов-основанных-на-debian)
-  - [CentOS kernel update](cloud-node.html#для-дистрибутивов-основанных-на-centos)
+  - [Debian kernel update](node-customization.html#debian-based-distros)  
+  - [CentOS kernel update](node-customization.html#centos-based-distros)
 
 - Modifying OS parameters.
 
   Examples:  
-  - [Tuning a sysctl parameter](cloud-node.html#задание-параметра-sysctl)
-  - [Adding a root certificate](cloud-node.html#добавление-корневого-сертификата-в-хост)
+  - [Tuning a sysctl parameter](node-customization.html#setting-a-sysctl-parameter)  
+  - [Adding a root certificate](node-customization.html#adding-a-root-certificate-to-the-host)
 
 - Collecting information on the node and performing similar tasks.
 
-The `NodeGroupConfiguration` resource allows you to define execution priority for scripts, limit execution to specific node groups or OS types.
+The NodeGroupConfiguration resource allows you to define execution priority for scripts, limit execution to specific node groups or OS types.
 
 The script code is specified in the `content` field of the resource. When a script is created on a node, the content passes through the [Go Template](https://pkg.go.dev/text/template) templating engine, which adds a layer of logic to script generation. A dynamic context with a set of variables is available in the template.
 
@@ -304,7 +304,7 @@ spec:
 
 After the configurations are applied, you need to perform a bootstrap and reboot the nodes to apply the settings and install the drivers.
 
-## How to verify everything is working correctly
+### How to verify everything is working correctly
 
 Create the following Job in your cluster:
 
