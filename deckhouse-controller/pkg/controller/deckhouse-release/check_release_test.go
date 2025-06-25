@@ -417,6 +417,8 @@ global:
 name: deckhouse
 weight: 2
 stage: "General Availability"
+requirements:
+  kubernetes: ">= 1.27"
 subsystems:
   - deckhouse
 namespace: d8-system
