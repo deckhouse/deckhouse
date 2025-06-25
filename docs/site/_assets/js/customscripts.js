@@ -453,8 +453,8 @@ document.addEventListener("DOMContentLoaded", function() {
       unwrap: 'Unwrap',
     },
     ru: {
-      wrap: 'Свернуть',
-      unwrap: 'Развернуть',
+      wrap: 'Переносить строки',
+      unwrap: 'Не переносить строки',
     }
   };
   const texts = textTooltip[lang];
@@ -473,7 +473,7 @@ document.addEventListener("DOMContentLoaded", function() {
     lines.forEach(line => {
       const trimLine = line.trim();
 
-      if(trimLine.length === 0 || /^<\/span\s*>$/.test(trimLine)) {
+      if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
         return;
       }
       newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
@@ -524,7 +524,7 @@ document.addEventListener("DOMContentLoaded", function() {
       arrow: false,
       animation: 'scale',
       theme: 'light',
-      content: texts.unwrap,
+      content: texts.wrap,
       hideOnClick: false,
       delay: [300, 50],
       offset: [0, 10],
@@ -536,7 +536,7 @@ document.addEventListener("DOMContentLoaded", function() {
       arrow: false,
       animation: 'scale',
       theme: 'light',
-      content: texts.wrap,
+      content: texts.unwrap,
       hideOnClick: false,
       delay: [300, 50],
       offset: [0, 10],

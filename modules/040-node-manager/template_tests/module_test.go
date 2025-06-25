@@ -1912,7 +1912,6 @@ internal:
 					} else {
 						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
 					}
-
 				}
 
 				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
@@ -2206,8 +2205,8 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
 					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
 
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2217,7 +2216,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-71610da1",
+					templateName: "worker-75eea1e8",
 				})
 			})
 		})

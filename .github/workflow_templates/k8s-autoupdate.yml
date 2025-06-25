@@ -97,14 +97,14 @@ jobs:
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
-      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
+      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' && github.repository == 'deckhouse/deckhouse' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
-      if: failure()
+      if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |

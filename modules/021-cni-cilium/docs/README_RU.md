@@ -51,10 +51,16 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 ## Использование CiliumClusterwideNetworkPolicies
 
-Для использования CiliumClusterwideNetworkPolicies следует применить:
+{% alert level="danger" %}
+Использование CiliumClusterwideNetworkPolicies при отсутствии опции `policyAuditMode` в настройках модуля cni-cilium может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH.
+{% endalert %}
 
-1. Первичный набор объектов `CiliumClusterwideNetworkPolicy`, поставив конфигурационную опцию `policyAuditMode` в `true`. Отсутствие опции может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH. Опция может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
-2. Правило политики сетевой безопасности:
+Для использования CiliumClusterwideNetworkPolicies выполните следующие шаги:
+
+1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](../cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+Опция `policyAuditMode` может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
+
+1. Примените правило политики сетевой безопасности:
 
    ```yaml
    apiVersion: "cilium.io/v2"
@@ -70,7 +76,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
          node-role.kubernetes.io/control-plane: ""
    ```
 
-В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
+В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет избежать проблемы.
 
 ## Смена режима работы Cilium
 

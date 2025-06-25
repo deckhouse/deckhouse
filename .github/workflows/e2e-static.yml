@@ -57,7 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.0"
+  WERF_VERSION: "v2.36.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -193,6 +193,10 @@ jobs:
               prNum = context.payload.inputs.issue_number;
             }
 
+            if (!branchName) {
+              branchName = githubAction.GetBranchNameFromContext(context);
+            }
+
             if (branchName) {
               let infoText = `Check build workflow is completed for branch: ${branchName}`;
               if (prNum) {
@@ -236,6 +240,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -696,7 +701,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_28
@@ -1211,7 +1216,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_29
@@ -1726,7 +1731,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_30
@@ -2241,7 +2246,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_31
@@ -2756,7 +2761,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_32
@@ -3271,7 +3276,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_1_33
@@ -3786,7 +3791,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_static_containerd_Automatic

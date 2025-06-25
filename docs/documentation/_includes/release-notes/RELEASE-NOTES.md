@@ -1,3 +1,78 @@
+## Version 1.70
+
+### Important
+
+- The `ceph-csi` module has been removed. Use the `csi-ceph` module instead. Deckhouse will not be updated as long as `ceph-csi` is enabled in the cluster. For `csi-ceph` migration instructions, refer to the [module documentation](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/).
+
+- Version 1.12 of the NGINX Ingress Controller has been added. The default controller version has been changed to 1.10. All Ingress controllers that do not have an explicitly specified version (via the [`controllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) parameter in the IngressNginxController resource or the [`defaultControllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) parameter in the `ingress-nginx` module) will be restarted.
+
+- The `falco_events` metric (from the `runtime-audit-engine` module) has been removed. The `falco_events` metric was considered deprecated since DKP 1.68. Use the [`falcosecurity_falcosidekick_falco_events_total`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/runtime-audit-engine/faq.html#how-to-create-an-alert) metric instead. Dashboards and alerts based on the `falco_events` metric may stop working.
+
+- All DKP components will be restarted during the update.
+
+### Major changes
+
+- In the `Auto` [update mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/configuration.html#parameters-update-mode), patch version updates (for example, from `v1.70.1` to `v1.70.2`) are now applied taking into account the update windows, if they are set. Previously, in this update mode, only minor version updates (for example, from `v1.69.x` to `v1.70.x`) were applied with consideration to update windows, while patch version updates were applied as they appeared on a release channel.
+- A node can now be rebooted if the corresponding Node object has the `update.node.deckhouse.io/reboot` annotation set.
+- When cleaning up a static node, any local users created by Deckhouse Kubernetes Platform are now also removed.
+- Added synchronization monitoring for Istio in multi-cluster configurations. A new alert [`D8IstioRemoteClusterNotSynced`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#istio-d8istioremoteclusternotsynced) has been introduced and triggers in the following cases:
+  - The remote cluster is offline.
+  - The remote API endpoint is not reachable.
+  - The remote `ServiceAccount` token is invalid or expired.
+  - There is a TLS or certificate issue between the clusters.
+
+- The `deckhouse-controller collect-debug-info` command now also collects [debug information](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/deckhouse/faq.html#how-to-collect-debug-info) for `Istio`, including:
+  - Resources in the `d8-istio` namespace.
+  - CRDs from the `istio.io` and `gateway.networking.k8s.io` groups.
+  - `Istio` logs.
+  - `Sidecar` logs of a single randomly selected user application.
+
+- A new monitoring dashboard has been added to display OpenVPN certificate status. Upon expiration, server certificates will now be reissued, and client certificates will be removed. The following alerts have been added: \
+  - [`OpenVPNClientCertificateExpired`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnclientcertificateexpired): Warns about expired client certificates.
+  - [`OpenVPNServerCACertificateExpired`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercacertificateexpired): Warns about an expired OpenVPN CA certificate.
+  - [`OpenVPNServerCACertificateExpiringSoon`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercacertificateexpiringsoon) and [`OpenVPNServerCACertificateExpiringInAWeek`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercacertificateexpiringinaweek): Warn when an OpenVPN CA certificate is expiring in less than 30 or 7 days, respectively.
+  - [`OpenVPNServerCertificateExpired`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercertificateexpired): Warns about an expired OpenVPN server certificate.
+  - [`OpenVPNServerCertificateExpiringSoon`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercertificateexpiringsoon) and [`OpenVPNServerCertificateExpiringInAWeek`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/alerts.html#openvpn-openvpnservercertificateexpiringinaweek): Warn when an OpenVPN server certificate is expiring in less than 30 or 7 days, respectively.
+
+- Monitoring dashboards have been renamed and updated:
+  - "L2LoadBalancer" renamed to "MetalLB L2"; pool and column filtering added.
+  - "Metallb" renamed to "MetalLB BGP"; pool and column filtering added. The ARP request panel has been removed.
+  - "L2LoadBalancer / Pools" renamed to "MetalLB / Pools".
+
+- The `upmeter` module’s PVC size has been increased to accommodate data retention for 13 months. In some cases, the previous PVC size was insufficient.
+
+- The [ModuleSource](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/cr.html#modulesource) resource status now includes information about module versions in the source.
+
+- The [Module](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/cr.html#module) resource status now includes information about the module’s lifecycle stage. A module can move through the following stages in its lifecycle: Experimental, Preview, General Availability, and Deprecated. For details on module lifecycle stages and how to evaluate its stability, refer to the [corresponding section in the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/module-development/versioning/#how-do-i-figure-out-how-stable-a-module-is).
+
+- It is now possible to use stronger or more modern encryption algorithms (such as `RSA-3072`, `RSA-4096`, or `ECDSA-P256`) for control plane cluster certificates instead of the default `RSA-2048`. You can use the [`encryptionAlgorithm`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/installing/configuration.html#clusterconfiguration-encryptionalgorithm) parameter in the ClusterConfiguration resource to configure this.
+
+- The `descheduler` module can now be configured to evict pods that are using local storage. Use the [`evictLocalStoragePods`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/descheduler/cr.html#descheduler-v1alpha2-spec-evictlocalstoragepods) parameter in the module configuration to adjust this.
+
+- You can now adjust the logging level of the Ingress controller using the [`controllerLogLevel`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerloglevel) parameter in the IngressNginxController resource. The default log level is `Info`. Controlling the logging level can help prevent log collector overload during Ingress controller restarts.
+
+### Security
+
+- The severity level of alerts indicating security policy violations has been raised from 7 to 3.
+
+- The configuration for `Yandex Cloud`, `Zvirt`, and `Dynamix` providers now uses `OpenTofu` instead of `Terraform`. This enables easier provider updates, such as applying fixes for known vulnerabilities (CVEs).
+
+- CVE vulnerabilities have been fixed in the following modules: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, and `vertical-pod-autoscaler`.
+
+### Component version updates
+
+The following DKP components have been updated:
+
+- `containerd`: 1.7.27
+- `runc`: 1.2.5
+- `go`: 1.24.2, 1.23.8
+- `golang.org/x/net`: v0.38.0
+- `mcm`: v0.36.0-flant.23
+- `ingress-nginx`: 1.12.1
+- `terraform-provider-aws`: 5.83.1
+- `Deckhouse CLI`: 0.12.1
+- `etcd`: v3.5.21
+
 ## Version 1.69
 
 ### Important

@@ -1,0 +1,48 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compare external modules
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      versions_to_compare:
+        description: 'Versions to compare'
+        required: true
+        default: 1
+        type: number
+
+concurrency:
+  group: compare-external-modules
+
+jobs:
+  compare-external-modules:
+    name: Compare external modules
+    runs-on: [self-hosted, regular]
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
+      - name: Install dependencies
+        run: pip install pyyaml
+      - name: Compare modules
+        env:
+          DECKHOUSE_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          EDITIONS_FILE: "./editions.yaml"
+          VERSIONS_TO_COMPARE : ${{ inputs.versions_to_compare || 1 }}
+        run: python .github/scripts/python/compare_external_modules.py
