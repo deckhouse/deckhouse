@@ -76,7 +76,8 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	return &filteredUseBinding{
-		Subjects: binding.Subjects,
+		Namespace: binding.Namespace,
+		Subjects:  binding.Subjects,
 	}, nil
 }
 
@@ -93,6 +94,9 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		}
 
 		for _, subject := range parsed.Subjects {
+			if subject.Kind == "ServiceAccount" && subject.Namespace == "" {
+				subject.Namespace = parsed.Namespace
+			}
 			subjects[stringBySubject(subject)] = subject
 		}
 	}

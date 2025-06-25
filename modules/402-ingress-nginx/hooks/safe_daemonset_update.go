@@ -147,7 +147,7 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 					},
 				},
 			}
-			input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
 			continue
 		}
 
@@ -159,7 +159,7 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+		input.PatchCollector.PatchWithMerge(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
 	}
 
 	return nil

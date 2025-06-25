@@ -3,9 +3,9 @@ weight: 302
 subsystems:
   - infrastructure
 namespace: kube-system
-
 requirements:
   bootstrapped: true
   modules:
     prometheus: ">= 0.0.0"
     prometheus-metrics-adapter: ">= 0.0.0"
+stage: General Availability

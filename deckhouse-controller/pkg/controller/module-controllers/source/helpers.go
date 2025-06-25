@@ -188,7 +188,7 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 		return false
 	}
 
-	return sourceModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !releaseExists)
+	return sourceModule.Checksum != meta.Checksum || !releaseExists
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {

@@ -17,6 +17,7 @@ limitations under the License.
 package tls_certificate
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/net"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -204,7 +207,12 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 
 		cn, sans := conf.CN, conf.SANs(input)
 
-		if len(input.Snapshots[SnapshotKey]) == 0 {
+		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, SnapshotKey)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal secret snapshot: %w", err)
+		}
+
+		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
 			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
@@ -213,7 +221,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 		} else {
 			// Certificate is in the snapshot => load it.
-			cert = input.Snapshots[SnapshotKey][0].(certificate.Certificate)
+			cert = certs[0]
 			// update certificate if less than 6 month left. We create certificate for 10 years, so it looks acceptable
 			// and we don't need to create Crontab schedule
 			caOutdated, err := isOutdatedCA(cert.CA)

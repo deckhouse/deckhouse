@@ -60,3 +60,20 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca-unsuitable
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'ModuleRelease could not be applied, not met requirements: see details
+      in the module release v1.4.3'
+    reason: ReleaseRequirementsCheck
+    status: "False"
+    type: LastReleaseDeployed

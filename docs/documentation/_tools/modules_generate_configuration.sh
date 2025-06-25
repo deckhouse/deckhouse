@@ -66,6 +66,14 @@ if [ -d /src/global ]; then
   cp -f /src/global/cluster_configuration.yaml _data/schemas/global/cluster_configuration.yaml
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/cluster_configuration.yaml
   cat /src/global/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/cluster_configuration.yaml
+  # dhctl SSHConfiguration OpenAPI spec
+  cp -f /src/global/ssh_configuration.yaml _data/schemas/global/ssh_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/ssh_configuration.yaml
+  cat /src/global/doc-ru-ssh_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/ssh_configuration.yaml
+  # dhctl SSHHostConfiguration OpenAPI spec
+  cp -f /src/global/ssh_host_configuration.yaml _data/schemas/global/ssh_host_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/ssh_host_configuration.yaml
+  cat /src/global/doc-ru-ssh_host_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/ssh_host_configuration.yaml
   # InitConfiguration OpenAPI spec
   cp -f /src/global/init_configuration.yaml _data/schemas/global/init_configuration.yaml
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/init_configuration.yaml
