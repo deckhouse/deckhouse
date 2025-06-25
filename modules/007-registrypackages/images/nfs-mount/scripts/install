@@ -17,3 +17,4 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
 cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
 cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
+ln -s /opt/deckhouse/bin/mount.nfs /usr/sbin/mount.nfs
