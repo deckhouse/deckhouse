@@ -39,4 +39,4 @@ case "$kubernetes_version" in
     ;;
 esac
 
-exec "/usr/local/bin/kubectl-$kubectl_version" "$@"
+exec "/usr/bin/kubectl-$kubectl_version" "$@"
