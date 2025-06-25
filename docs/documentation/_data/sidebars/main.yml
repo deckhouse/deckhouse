@@ -1146,6 +1146,10 @@ entries:
             ru: Аутентификация
           url: /architecture/authentication.html
         - title:
+            en: Node management
+            ru: Управление узлами
+          url: /architecture/node.html
+        - title:
             en: Monitoring
             ru: Мониторинг
           url: /architecture/monitoring/

@@ -198,29 +198,6 @@ spec:
   nodeType: Static
 ```
 
-## Settings for Static and CloudStatic NodeGroups
-
-Node groups with types `Static` and `CloudStatic` are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DKP automation). These nodes are connected manually or via `StaticInstance` and do not support automatic updates or scaling.
-
-Configuration specifics:
-
-- All update operations (e.g., kubelet updates, node restarts, replacements) must be performed manually or through external automation tools outside of DKP.
-
-- It is recommended to explicitly set the desired `kubelet` version to ensure consistency across nodes, especially if they are added with different versions manually:
-
-  ```yaml
-  nodeTemplate:
-     kubelet:
-       version: "1.28"
-  ```
-
-- Node registration to the cluster can be performed either manually or automatically, depending on the configuration:
-  - **Manual** — the user downloads the bootstrap script, configures the server, and runs the script manually.
-  - **Automatic (CAPS)** — when using `StaticInstance` and `SSHCredentials`, DKP automatically connects and configures the nodes.
-  - **Hybrid approach** — a manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
-
-If the Cluster API Provider Static (CAPS) is enabled, the `NodeGroup` resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on `StaticInstance` and `SSHCredentials` resources.
-
 ## How to change CRI for a NodeGroup
 
 {% alert level="warning" %} 
@@ -262,26 +239,6 @@ When changing the `cri.type` for a NodeGroup created using `dhctl`, you must als
 
 After changing the CRI for a NodeGroup, the `node-manager` module will sequentially reboot the nodes, applying the new CRI.  
 Node updates involve disruption. Depending on the `disruption` settings for the NodeGroup, the `node-manager` module will either automatically update the nodes or require manual approval.
-
-## How to automatically assign custom labels to a node
-
-1. On the node, create the directory `/var/lib/node_labels`.
-
-1. Inside that directory, create one or more files containing the desired labels. You can use any number of files and any level of nested subdirectories.
-
-1. Add the required labels to the files in `key=value` format. For example:
-
-   ```console
-   example-label=test
-   ```
-
-1. Save the files.
-
-When the node is added to the cluster, the labels specified in these files will be automatically applied to the node.
-
-{% alert level="warning" %}  
-Note that it is not possible to assign DKP-reserved labels using this method. It only works with custom labels that do not conflict with those reserved by Deckhouse.
-{% endalert %}
 
 ## How to change the NodeGroup for a static node
 
