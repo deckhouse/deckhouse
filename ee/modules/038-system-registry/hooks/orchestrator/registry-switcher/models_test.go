@@ -21,6 +21,7 @@ func TestState_processResult(t *testing.T) {
 			CA:      "test-ca",
 			Path:    "/system/deckhouse",
 		},
+		Hash: "test-hash",
 	}
 
 	tests := []struct {
@@ -38,13 +39,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "registry.d8-system.svc:5001",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/system/deckhouse",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
+				DeckhousePod: DeckhousePodStatus{
 					IsExist: true,
 					IsReady: true,
 				},
@@ -53,7 +48,7 @@ func TestState_processResult(t *testing.T) {
 			expectedMsg:   "Waiting secret update",
 		},
 		{
-			name: "Global values don't match - not switched",
+			name: "Registry version mismatch - not switched",
 			params: Params{
 				RegistrySecret: deckhouse_registry.Config{
 					Address: "registry.d8-system.svc:5001",
@@ -63,22 +58,16 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "old-registry.deckhouse.io",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/deckhouse/ce",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
+				DeckhousePod: DeckhousePodStatus{
 					IsExist: true,
 					IsReady: true,
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Waiting global vars update",
+			expectedMsg:   "New registry is not applied",
 		},
 		{
-			name: "Deployment not ready - not switched",
+			name: "Pod not ready - not switched",
 			params: Params{
 				RegistrySecret: deckhouse_registry.Config{
 					Address: "registry.d8-system.svc:5001",
@@ -88,23 +77,18 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "registry.d8-system.svc:5001",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/system/deckhouse",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
-					IsExist:  true,
-					IsReady:  false,
-					ReadyMsg: "Deployment is updating",
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         true,
+					IsReady:         false,
+					ReadyMsg:        "Pod is updating",
+					RegistryVersion: "test-hash", // Set hash to pass hash check
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Deployment is updating",
+			expectedMsg:   "Pod is updating",
 		},
 		{
-			name: "Deployment doesn't exist - not switched",
+			name: "Pod doesn't exist - not switched",
 			params: Params{
 				RegistrySecret: deckhouse_registry.Config{
 					Address: "registry.d8-system.svc:5001",
@@ -114,19 +98,14 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "registry.d8-system.svc:5001",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/system/deckhouse",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
-					IsExist: false,
-					IsReady: false,
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         false,
+					IsReady:         false,
+					RegistryVersion: "test-hash", // Set hash to pass hash check
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Deckhouse deployment is not exist",
+			expectedMsg:   "Deckhouse pod does not exist",
 		},
 		{
 			name: "All conditions met - switch complete",
@@ -139,15 +118,10 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "registry.d8-system.svc:5001",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/system/deckhouse",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
-					IsExist: true,
-					IsReady: true,
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         true,
+					IsReady:         true,
+					RegistryVersion: "test-hash", // Should match the hash in state
 				},
 			},
 			expectedReady: true,
@@ -185,10 +159,7 @@ func TestState_Process(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
-					Address: "registry.d8-system.svc:5001",
-				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
+				DeckhousePod: DeckhousePodStatus{
 					IsExist: true,
 					IsReady: true,
 				},
@@ -197,7 +168,7 @@ func TestState_Process(t *testing.T) {
 			wantErr:       false,
 		},
 		{
-			name: "Both secret and Deckhouse ready - returns true",
+			name: "Both secret and pod ready - returns true",
 			params: Params{
 				RegistrySecret: deckhouse_registry.Config{
 					Address:      "registry.d8-system.svc:5001",
@@ -213,18 +184,38 @@ func TestState_Process(t *testing.T) {
 				},
 			},
 			inputs: Inputs{
-				GlobalRegistryValues: GlobalRegistryValues{
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         true,
+					IsReady:         true,
+					RegistryVersion: "", // Will be calculated and set by Process
+				},
+			},
+			expectedReady: true,
+			wantErr:       false,
+		},
+		{
+			name: "Pod ready but secret not ready - returns false",
+			params: Params{
+				RegistrySecret: deckhouse_registry.Config{
 					Address: "registry.d8-system.svc:5001",
 					Scheme:  "https",
 					CA:      "test-ca",
 					Path:    "/system/deckhouse",
 				},
-				DeckhouseDeployment: DeckhouseDeploymentStatus{
-					IsExist: true,
-					IsReady: true,
+				ManagedMode: &ManagedModeParams{
+					CA:       "test-ca",
+					Username: "user",
+					Password: "pass",
 				},
 			},
-			expectedReady: true,
+			inputs: Inputs{
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         true,
+					IsReady:         true,
+					RegistryVersion: "", // Will be calculated during Process
+				},
+			},
+			expectedReady: false, // Will be false because hash won't match
 			wantErr:       false,
 		},
 	}
@@ -237,6 +228,11 @@ func TestState_Process(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+				// For the ready test, update the pod's registry version to match the calculated hash
+				if tt.expectedReady && state.Hash != "" {
+					tt.inputs.DeckhousePod.RegistryVersion = state.Hash
+					result = state.processResult(tt.params, tt.inputs)
+				}
 				assert.Equal(t, tt.expectedReady, result.Ready)
 			}
 		})

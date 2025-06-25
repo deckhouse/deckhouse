@@ -231,14 +231,6 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecretModule snapshot error: %w", err)
 	}
 
-	// Get global registry values for registry-secret module
-	inputs.RegistrySwitcher.GlobalRegistryValues = registryswither.GlobalRegistryValues{
-		Address: input.Values.Get("global.modulesImages.registry.address").String(),
-		Scheme:  input.Values.Get("global.modulesImages.registry.scheme").String(),
-		CA:      input.Values.Get("global.modulesImages.registry.CA").String(),
-		Path:    input.Values.Get("global.modulesImages.registry.path").String(),
-	}
-
 	values.Hash, err = helpers.ComputeHash(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
@@ -258,7 +250,7 @@ func handle(input *go_hook.HookInput) error {
 	newRegistrySecret := values.State.RegistrySecret.Config
 	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
 		input.PatchCollector.PatchWithMerge(
-			map[string]interface{}{"data": newRegistrySecret.ToBase64SecretData()},
+			map[string]any{"data": newRegistrySecret.ToBase64SecretData()},
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 	return nil

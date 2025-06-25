@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -105,5 +106,21 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)
 	input.Values.Set("global.modulesImages.registry.address", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registry.path", registrySecretRaw.Path)
+
+	// Create registry config and calculate hash
+	registryConfig := deckhouse_registry.Config{
+		Address:      registrySecretRaw.Address,
+		Path:         registrySecretRaw.Path,
+		Scheme:       registrySecretRaw.Scheme,
+		CA:           registrySecretRaw.CA,
+		DockerConfig: registrySecretRaw.RegistryDockercfg,
+	}
+
+	hash, err := registryConfig.Hash()
+	if err != nil {
+		return fmt.Errorf("failed to calculate registry config hash: %w", err)
+	}
+
+	input.Values.Set("global.modulesImages.registry.hash", hash)
 	return nil
 }

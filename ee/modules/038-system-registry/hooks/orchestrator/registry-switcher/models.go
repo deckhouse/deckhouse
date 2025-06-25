@@ -30,21 +30,14 @@ type Params struct {
 }
 
 type Inputs struct {
-	DeckhouseDeployment  DeckhouseDeploymentStatus
-	GlobalRegistryValues GlobalRegistryValues
+	DeckhousePod DeckhousePodStatus
 }
 
-type GlobalRegistryValues struct {
-	Address string
-	Scheme  string
-	CA      string
-	Path    string
-}
-
-type DeckhouseDeploymentStatus struct {
-	IsExist  bool
-	IsReady  bool
-	ReadyMsg string
+type DeckhousePodStatus struct {
+	IsExist         bool
+	IsReady         bool
+	ReadyMsg        string
+	RegistryVersion string
 }
 
 type ManagedModeParams struct {
@@ -62,7 +55,8 @@ type UnmanagedModeParams struct {
 }
 
 type State struct {
-	Config deckhouse_registry.Config `json:"-"`
+	Config deckhouse_registry.Config
+	Hash   string
 }
 
 type Result struct {
@@ -76,6 +70,14 @@ func (s *State) Process(params Params, inputs Inputs) (Result, error) {
 		return failedResult, fmt.Errorf("cannot build deckhouse-registry secret: %w", err)
 	}
 	s.Config = newSecret
+
+	hash, err := newSecret.Hash()
+	if err != nil {
+		return failedResult, fmt.Errorf("failed to calculate registry config hash: %w", err)
+	}
+
+	// Store calculated hash inside state for external tests / reuse
+	s.Hash = hash
 	return s.processResult(params, inputs), nil
 }
 
@@ -89,30 +91,27 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 		}
 	}
 
-	// Compare global values with expected values
-	if inputs.GlobalRegistryValues.Address != s.Config.Address ||
-		inputs.GlobalRegistryValues.Scheme != s.Config.Scheme ||
-		inputs.GlobalRegistryValues.CA != s.Config.CA ||
-		inputs.GlobalRegistryValues.Path != s.Config.Path {
+	// Compare applied registry version
+	if inputs.DeckhousePod.RegistryVersion != s.Hash {
 		return Result{
 			Ready:   false,
-			Message: "Waiting global vars update",
+			Message: "New registry is not applied",
 		}
 	}
 
-	// Check deployment exist
-	if !inputs.DeckhouseDeployment.IsExist {
+	// Check pod exist
+	if !inputs.DeckhousePod.IsExist {
 		return Result{
 			Ready:   false,
-			Message: "Deckhouse deployment is not exist",
+			Message: "Deckhouse pod does not exist",
 		}
 	}
 
-	// Check deployment ready
-	if !inputs.DeckhouseDeployment.IsReady {
+	// Check pod ready
+	if !inputs.DeckhousePod.IsReady {
 		return Result{
 			Ready:   false,
-			Message: inputs.DeckhouseDeployment.ReadyMsg,
+			Message: inputs.DeckhousePod.ReadyMsg,
 		}
 	}
 	return Result{

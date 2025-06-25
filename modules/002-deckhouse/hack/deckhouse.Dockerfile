@@ -28,7 +28,22 @@ RUN mkdir -p /artifacts/registry && \
       --exclude='settings-conversion/**/*.go' \
       --exclude='hack/**/*.go' \
       --exclude='.dmtlint.yaml' \
-      /deckhouse/ee/modules/038-system-registry/ /artifacts/registry/
+      /deckhouse/ee/modules/038-system-registry/ /artifacts/registry/ && \
+    rsync -a --prune-empty-dirs \
+      --exclude='docs' \
+      --exclude='charts/helm_lib' \
+      --exclude='README.md' \
+      --exclude='images' \
+      --exclude='hooks/**.go' \
+      --exclude='template_tests' \
+      --exclude='.namespace' \
+      --exclude='values_matrix_test.yaml' \
+      --exclude='apis/**/*.go' \
+      --exclude='requirements/**/*.go' \
+      --exclude='settings-conversion/**/*.go' \
+      --exclude='hack/**/*.go' \
+      --exclude='.dmtlint.yaml' \
+      /deckhouse/modules/002-deckhouse/ /artifacts/deckhouse/
 
 
 FROM --platform=linux/amd64 golang:1.24 AS build
@@ -74,8 +89,11 @@ RUN cp /usr/bin/deckhouse-controller /usr/bin/caps-deckhouse-controller && \
 RUN rm -r \
   /deckhouse/modules/038-system-registry/templates \
   /deckhouse/modules/038-system-registry/openapi \
-  /deckhouse/modules/038-system-registry/monitoring
+  /deckhouse/modules/038-system-registry/monitoring \
+  /deckhouse/modules/002-deckhouse/templates \
+  /deckhouse/modules/002-deckhouse/openapi 
 
 USER deckhouse
 
 COPY --from=src /artifacts/registry /deckhouse/modules/038-system-registry
+COPY --from=src /artifacts/deckhouse /deckhouse/modules/002-deckhouse
