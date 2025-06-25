@@ -46,3 +46,8 @@ status:
   pullDuration: 307.070601ms
   size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: deckhouse-commander
