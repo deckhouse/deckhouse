@@ -71,7 +71,8 @@ shell:
   - apt clean --quiet --assume-yes
   - rm -rf /var/lib/apt/lists/*
   install:
-  - cp -r /src/DCGM/dcgmbuild/scripts/host /tmp/scripts/host
+  - mkdir -p /tmp/scripts
+  - cp -a /src/DCGM/dcgmbuild/scripts/host /tmp/scripts/host
   - |
     set -ex
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
