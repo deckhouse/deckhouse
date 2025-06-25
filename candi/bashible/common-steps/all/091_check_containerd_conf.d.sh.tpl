@@ -15,6 +15,26 @@
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
 
+{{/*
+Detect and label containerd configuration type for the current node.
+
+This code inspects the /etc/containerd/conf.d/*.toml configuration directory
+to determine whether the node uses a custom containerd configuration
+and whether a custom registry configuration is present.
+
+It writes the following node labels:
+
+  1. node.deckhouse.io/containerd-config:
+    - "default" — if no .toml files found in /etc/containerd/conf.d/
+    - "custom"  — if one or more files exist
+    This annotation is required for the transition to containerd v2.
+
+  2. node.deckhouse.io/containerd-config-registry:
+    - "default" — if no registry section found in custom config files
+    - "custom"  — if at least one file contains plugins."io.containerd.grpc.v1.cri".registry
+    This annotation is required for the registry module.
+*/}}
+
 mkdir -p /var/lib/node_labels
 
 config_label_path="/var/lib/node_labels/containerd-conf"
