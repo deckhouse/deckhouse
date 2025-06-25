@@ -101,7 +101,7 @@ spec:
   requirements:
     kubernetes: '>= 1.27'
   version: 1.6.2
-  weight: 2
+  weight: 900
 status:
   approved: false
   message: ""
@@ -133,7 +133,7 @@ spec:
   requirements:
     kubernetes: '>= 1.27'
   version: 1.7.1
-  weight: 2
+  weight: 900
 status:
   approved: false
   message: ""

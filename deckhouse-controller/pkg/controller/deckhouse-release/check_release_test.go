@@ -413,7 +413,7 @@ global:
 	})
 
 	suite.Run("Release with module.yaml", func() {
-		module := `
+		moduleYaml := `
 name: deckhouse
 weight: 2
 stage: "General Availability"
@@ -426,9 +426,6 @@ disable:
   confirmation: true
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
 `
-
-		// module := fmt.Sprintf(moduleTemplate, "`control-plane`") // global.features[0].description
-
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
@@ -437,7 +434,7 @@ disable:
 					&fakeLayer{},
 					&fakeLayer{FilesContent: map[string]string{
 						"version.json": `{"version": "v1.16.0"}`,
-						"module.yaml":  module,
+						"module.yaml":  moduleYaml,
 					}},
 				}, nil
 			},

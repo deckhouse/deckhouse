@@ -129,7 +129,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
-			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
+			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
 			meta.Changelog = make(map[string]any)
 
@@ -144,7 +144,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
 		if err != nil {
 			// if module.yaml decode failed - warn about it but don't fail the release
-			fmt.Printf("Unmarshal module yaml failed: %s\n", err)
+			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
 
 			meta.ModuleDefinition = nil
 

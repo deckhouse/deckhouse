@@ -147,7 +147,7 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
 	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch module release: %w", err)
 	}
 
 	res := &ModuleDownloadResult{
@@ -162,7 +162,7 @@ func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, modu
 
 	def, err := md.fetchModuleDefinitionFromImage(moduleName, imageInfo.Image)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
 	res.ModuleDefinition = def
 
@@ -321,7 +321,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 }
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ImageInfo, error) {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
 	defer span.End()
 
 	log.Info("fetching module release metadata",
@@ -333,8 +333,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		slog.String("module", moduleName),
 	)
 
-	imageInfo := &ImageInfo{}
-
 	// fill imageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
@@ -345,14 +343,50 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
-	imageInfo.Image = img
 
 	// fill imageInfo.Diest
 	digest, err := img.Digest()
 	if err != nil {
 		return nil, fmt.Errorf("fetch digest error: %w", err)
 	}
-	imageInfo.Digest = digest
+
+	// fill imageInfo.Metadata
+	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release metadata error: %w", err)
+	}
+	if moduleMetadata.Version == nil {
+		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+	}
+
+	imageInfo := &ImageInfo{
+		Image:    img,
+		Digest:   digest,
+		Metadata: &moduleMetadata,
+	}
+	return imageInfo, nil
+}
+
+func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
+	defer span.End()
+
+	// fill imageInfo.Image
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release image error: %w", err)
+	}
+
+	img, err := regCli.Image(context.TODO(), moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image error: %w", err)
+	}
+
+	// fill imageInfo.Digest
+	digest, err := img.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("fetch digest error: %w", err)
+	}
 
 	// fill imageInfo.Metadata
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
@@ -360,54 +394,15 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("fetch release metadata error: %w", err)
 	}
 
-	imageInfo.Metadata = &moduleMetadata
-
 	if moduleMetadata.Version == nil {
 		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
-	return imageInfo, nil
-}
-
-func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
-	defer span.End()
-
-	imageInfo := &ImageInfo{}
-
-	// fill imageInfo.Image
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
-	if err != nil {
-		return imageInfo, fmt.Errorf("fetch release image error: %v", err)
+	imageInfo := &ImageInfo{
+		Image:    img,
+		Digest:   digest,
+		Metadata: &moduleMetadata,
 	}
-
-	img, err := regCli.Image(context.TODO(), moduleVersion)
-	if err != nil {
-		return imageInfo, fmt.Errorf("fetch image error: %v", err)
-	}
-
-	imageInfo.Image = img
-
-	// fill imageInfo.Digest
-	digest, err := img.Digest()
-	if err != nil {
-		return imageInfo, fmt.Errorf("fetch digest error: %v", err)
-	}
-
-	imageInfo.Digest = digest
-
-	// fill imageInfo.Metadata
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
-	if err != nil {
-		return imageInfo, fmt.Errorf("fetch release metadata error: %v", err)
-	}
-
-	imageInfo.Metadata = &moduleMetadata
-
-	if moduleMetadata.Version == nil {
-		return imageInfo, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
-	}
-
 	return imageInfo, nil
 }
 
@@ -467,7 +462,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 }
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (ModuleReleaseMetadata, error) {
-	_, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadata")
+	_, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadata")
 	defer span.End()
 
 	var meta ModuleReleaseMetadata
@@ -569,12 +564,6 @@ type ModuleReleaseMetadata struct {
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 }
 
-const (
-	metricUpdatingFailedGroup = "d8_updating_is_failed"
-	serviceName               = "check-release"
-	ltsChannelName            = "lts"
-)
-
 type ImageInfo struct {
 	Metadata *ModuleReleaseMetadata
 	Image    crv1.Image
@@ -582,7 +571,7 @@ type ImageInfo struct {
 }
 
 func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)

@@ -525,7 +525,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 
 			moduleYaml := `
 name: ` + module + `
-weight: 2
+weight: 900
 stage: "General Availability"
 requirements:
   kubernetes: ">= 1.27"
