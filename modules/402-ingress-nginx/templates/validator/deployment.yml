@@ -2,6 +2,7 @@
 {{- $ctx := index . 0 }}
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
+{{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $version := $crd.spec.controllerVersion | default $ctx.Values.ingressNginx.defaultControllerVersion }}
 {{- $resources := $crd.spec.resourcesRequests | default dict }}
@@ -116,6 +117,12 @@ spec:
             - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
             - --healthz-port=10254
             - --healthz-host=0.0.0.0
+            {{- if $geoIP2.maxmindLicenseKey }}
+            - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+            {{- if $geoIP2.maxmindEditionIDs }}
+            - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+            {{- end }}
+            {{- end }}
             - --validating-webhook=:8443
             - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
             - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
