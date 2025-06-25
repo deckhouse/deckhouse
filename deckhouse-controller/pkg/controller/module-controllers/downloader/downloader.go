@@ -29,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
@@ -137,7 +136,7 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	}
 
 	res.Checksum = ImageInfo.Digest.String()
-	res.ModuleVersion = "v" + ImageInfo.Metadata.Version.String()
+	res.ModuleVersion = "v" + ImageInfo.Metadata.Version
 	res.Changelog = ImageInfo.Metadata.Changelog
 
 	return res, nil
@@ -349,7 +348,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 
 	imageInfo.Metadata = &moduleMetadata
 
-	if moduleMetadata.Version == nil {
+	if moduleMetadata.Version == "" {
 		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
@@ -389,7 +388,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, modu
 
 	imageInfo.Metadata = &moduleMetadata
 
-	if moduleMetadata.Version == nil {
+	if moduleMetadata.Version == "" {
 		return imageInfo, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
@@ -546,7 +545,7 @@ func isRel(candidate, target string) bool {
 }
 
 type ModuleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
+	Version string `json:"version"`
 
 	Changelog        map[string]any          `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
@@ -588,7 +587,7 @@ func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, mod
 		return nil, fmt.Errorf("fetch image metadata: %w", err)
 	}
 
-	if releaseMeta.Version == nil {
+	if releaseMeta.Version == "" {
 		return nil, fmt.Errorf("version not found, probably image is broken or layer does not exist")
 	}
 
