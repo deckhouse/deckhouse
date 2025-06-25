@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,7 +30,6 @@ import (
 
 	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -114,8 +114,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
 	for nuForClear, err := range sdkobjectpatch.SnapshotIter[nodeUsersForClear](nodeUserSnap) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over node_users_for_clear snapshot", log.Err(err))
-			return err
+			return fmt.Errorf("failed to iterate over node_users_for_clear snapshot: %w", err)
 		}
 
 		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))

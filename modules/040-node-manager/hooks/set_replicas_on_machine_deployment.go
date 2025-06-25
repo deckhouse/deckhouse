@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -151,11 +150,10 @@ func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func calculateReplicasAndPatchMachineDeployment(
-	input *go_hook.HookInput, snaps []pkg.Snapshot, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) {
+	input *go_hook.HookInput, snaps []pkg.Snapshot, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) error {
 	for md, err := range sdkobjectpatch.SnapshotIter[setReplicasMachineDeployment](snaps) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over snapshot", log.Err(err))
-			continue
+			return fmt.Errorf("failed to iterate over snapshot: %w", err)
 		}
 		ng, ok := nodeGroups[md.NodeGroup]
 		if !ok {
@@ -192,6 +190,7 @@ func calculateReplicasAndPatchMachineDeployment(
 
 		input.PatchCollector.PatchWithMerge(patch, apiGroup, "MachineDeployment", "d8-cloud-instance-manager", md.Name)
 	}
+	return nil
 }
 
 func handleSetReplicas(input *go_hook.HookInput) error {
@@ -206,8 +205,15 @@ func handleSetReplicas(input *go_hook.HookInput) error {
 		nodeGroups[ng.Name] = ng
 	}
 
-	calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("mds"), nodeGroups, "machine.sapcloud.io/v1alpha1")
-	calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
+	err := calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("mds"), nodeGroups, "machine.sapcloud.io/v1alpha1")
+	if err != nil {
+		return err
+	}
+
+	err = calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

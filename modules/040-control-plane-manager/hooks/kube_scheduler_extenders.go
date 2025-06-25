@@ -70,8 +70,7 @@ func handleExtenders(input *go_hook.HookInput) error {
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
 	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.NewSnapshots.Get("kube_scheduler_extenders")) {
 		if err != nil {
-			input.Logger.Error("failed to iterate over 'nodes' snapshot", log.Err(err))
-			continue
+			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
 		for _, config := range snapshot {

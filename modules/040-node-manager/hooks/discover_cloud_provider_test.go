@@ -79,8 +79,6 @@ metadata:
 
 		It("`nodeManager.internal.cloudProvider must be filled with data from secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			tst := f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()
-			print(tst)
 			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64String").String()).To(Equal("abc"))
 			Expect(f.ValuesGet("nodeManager.internal.cloudProvider.b64JSON.parse").String()).To(Equal("me"))
 		})
