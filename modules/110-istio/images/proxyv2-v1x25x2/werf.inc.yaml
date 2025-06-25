@@ -272,12 +272,4 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
-  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
-  - rm -rf /src/llvm/.git
-
-  # getting rid of unused vulnerable code
-  - rm -rf /src/llvm/llvm/utils/git
-  - rm -rf /src/llvm/mlir/utils/vscode
-  - rm -rf /src/llvm/third-party/benchmark && mkdir /src/llvm/third-party/benchmark
-  - touch /src/llvm/third-party/benchmark/placeholder.txt
 ---

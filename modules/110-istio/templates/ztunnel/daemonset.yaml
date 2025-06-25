@@ -1,8 +1,3 @@
-{{- define "istio_ztunnel_resources" }}
-cpu: 200m
-memory: 512Mi
-{{- end }}
-
 {{- if and ($.Values.istio.internal.enableAmbientMode) (eq (first $.Values.istio.internal.operatorVersionsToInstall) "1.25") }}
     {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
     {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
