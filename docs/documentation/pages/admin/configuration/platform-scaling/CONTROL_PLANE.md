@@ -816,7 +816,7 @@ It is assumed that a log scraper is installed on master nodes (`log-shipper`, `p
 The log rotation parameters for this file are predefined and cannot be changed:
 
 * Maximum disk space: `1000 МБ`.
-* Maximum retention period: `7 дней`.
+* Maximum retention period: `30 days`.
 
 Depending on the policy settings and the number of requests to the `apiserver`, logs may accumulate rapidly. In such cases, the actual retention period may be less than 30 minutes.
 
