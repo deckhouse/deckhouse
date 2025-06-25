@@ -414,7 +414,9 @@
     flex: 1;
 
     @media screen and (width < 1500px) {
+      &:not(.layout-sidebar__content--guides) {
         max-width: 720px;
+      }
     }
 
     @media screen and (max-width: 1000px) {
@@ -425,7 +427,7 @@
     &--tile {
       @media screen and (width < 1500px) {
         max-width: 100%;
-    }
+      }
     }
 }
 
@@ -2011,7 +2013,15 @@ select#contact-select {
 
 .tippy-box {
   min-width: 255px;
-}
+
+  &:has(.tippy-content) {
+      min-width: 0;
+  }
+
+  &:has(.icon--copy) {
+    min-width: 0;
+  }
+} 
 
 .tippy-box[data-theme~='light'] {
   border: 1px solid #C4CAD4;
@@ -2021,6 +2031,11 @@ select#contact-select {
   .tippy-content {
     text-align: start;
     color: #00122C;
+  }
+
+  .tippy-content pre::before {
+    content: none;
+    // display: none;
   }
 
   .tippy-content code {

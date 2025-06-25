@@ -139,3 +139,8 @@ spec:
   moduleName: echo
   version: 0.4.54
   weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: echo

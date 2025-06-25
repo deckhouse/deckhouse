@@ -172,6 +172,7 @@ config=config.yaml
 volumesRoot=$(pwd)
 printf "%s\n" "$CONFIG_YAML" > "$volumesRoot/$config"
 dockerExit=0
+docker pull ${REGISTRY}/deckhouse/ee/install:stable
 cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/candi/bashible:/deckhouse/candi/bashible \
   -v ${volumesRoot}/candi/cloud-providers:/deckhouse/candi/cloud-providers \

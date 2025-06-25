@@ -171,6 +171,11 @@ func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, modu
 
 // DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
 func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduletypes.Definition, error) {
+	log.Info("fetching module release",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+	)
+
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
@@ -319,7 +324,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
 	defer span.End()
 
-	log.Info("fetching module release",
+	log.Info("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("releasechannel", releaseChannel),
 	)

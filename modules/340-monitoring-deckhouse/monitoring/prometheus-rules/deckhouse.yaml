@@ -545,3 +545,25 @@
         ```
 
         A new suitable policy will be detected automatically.
+  - alert: D8DeckhouseModuleValidationError
+    expr: |
+      deckhouse_module_configuration_error > 0
+    for: 3m
+    labels:
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+      severity_level: "5"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Module configuration failed for module {{ $labels.module }}.
+      description: |
+        Initial config for module {{ $labels.module }} is not valid. 
+        
+        You can get more details via
+         
+        ```bash
+        kubectl get mr -l module={{ $labels.module }}
+        ```
+
+        Provided error: {{ $labels.error }}

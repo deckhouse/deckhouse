@@ -55,9 +55,9 @@ type ciliumConfigStruct struct {
 }
 
 type cniSecretStruct struct {
-	cni     string
-	flannel flannelConfigStruct
-	cilium  ciliumConfigStruct
+	CNI     string
+	Flannel flannelConfigStruct
+	Cilium  ciliumConfigStruct
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -105,14 +105,14 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 		// d8-cni-configuration secret does not contain "cni" field
 		return nil, nil
 	}
-	cniSecret.cni = string(cniBytes)
-	switch cniSecret.cni {
+	cniSecret.CNI = string(cniBytes)
+	switch cniSecret.CNI {
 	case "simple-bridge":
 		return cniSecret, nil
 	case "flannel":
 		flannelConfigJSON, ok := secret.Data["flannel"]
 		if ok {
-			err = json.Unmarshal(flannelConfigJSON, &cniSecret.flannel)
+			err = json.Unmarshal(flannelConfigJSON, &cniSecret.Flannel)
 			if err != nil {
 				return nil, fmt.Errorf("cannot unmarshal flannel config json: %v", err)
 			}
@@ -121,7 +121,7 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 	case "cilium":
 		ciliumConfigJSON, ok := secret.Data["cilium"]
 		if ok {
-			err = json.Unmarshal(ciliumConfigJSON, &cniSecret.cilium)
+			err = json.Unmarshal(ciliumConfigJSON, &cniSecret.Cilium)
 			if err != nil {
 				return nil, fmt.Errorf("cannot unmarshal cilium config json: %v", err)
 			}
@@ -188,7 +188,7 @@ func checkCni(input *go_hook.HookInput) error {
 	// Secret d8-cni-configuration exist but key "cni" does not equal "cilium".
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
 	cniSecret := cniSecrets[0]
-	if cniSecret.cni != cni {
+	if cniSecret.CNI != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -224,10 +224,10 @@ func checkCni(input *go_hook.HookInput) error {
 	}
 
 	// Skip comparison if in secret d8-cni-configuration key "cilium" does not exist or empty.
-	if cniSecret.cilium != (ciliumConfigStruct{}) {
+	if cniSecret.Cilium != (ciliumConfigStruct{}) {
 		// Secret d8-cni-configuration exist, key "cni" eq "cilium" and key "cilium" does not empty.
 		// Let's compare secret with module configuration.
-		switch cniSecret.cilium.Mode {
+		switch cniSecret.Cilium.Mode {
 		case "VXLAN":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "VXLAN" {
@@ -254,13 +254,13 @@ func checkCni(input *go_hook.HookInput) error {
 		default:
 			setCNIMiscMetricAndReq(input, true)
 			input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-			return fmt.Errorf("unknown cilium mode %s", cniSecret.cilium.Mode)
+			return fmt.Errorf("unknown cilium mode %s", cniSecret.Cilium.Mode)
 		}
-		switch cniSecret.cilium.MasqueradeMode {
+		switch cniSecret.Cilium.MasqueradeMode {
 		case "Netfilter", "BPF":
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-			if !ok || value.String() != cniSecret.cilium.MasqueradeMode {
-				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.cilium.MasqueradeMode
+			if !ok || value.String() != cniSecret.Cilium.MasqueradeMode {
+				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.Cilium.MasqueradeMode
 				needUpdateMC = true
 			}
 		case "":
@@ -272,7 +272,7 @@ func checkCni(input *go_hook.HookInput) error {
 		default:
 			setCNIMiscMetricAndReq(input, true)
 			input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-			return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.cilium.MasqueradeMode)
+			return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.Cilium.MasqueradeMode)
 		}
 	}
 

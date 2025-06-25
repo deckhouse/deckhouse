@@ -49,3 +49,8 @@ spec:
   releaseChannel: Alpha
   update:
     mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
