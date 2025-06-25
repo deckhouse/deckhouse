@@ -96,6 +96,10 @@ spec:
                   fieldPath: metadata.namespace
             - name: POD_IP
               value: "127.0.0.1"
+            {{- if $geoIP2.maxmindLicenseKey }}
+            - name: LUA_USE_GEOIP2
+              value: "true"
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
