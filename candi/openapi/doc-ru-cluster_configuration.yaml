@@ -54,10 +54,7 @@ apiVersions:
 
           > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](../modules/kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
       defaultCRI:
-        x-doc-deprecated: true
         description: |
-          Deprecated: the parameter is no longer used. todo
-          
           Тип container runtime, используемый на узлах кластера (в NodeGroup'ах) по умолчанию.
 
           Если используется значение `NotManaged`, то Deckhouse не будет управлять (устанавливать и настраивать) container runtime.
