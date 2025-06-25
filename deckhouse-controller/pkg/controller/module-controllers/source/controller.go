@@ -403,7 +403,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, metricModuleGroup, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
 				availableModule.PullError = err.Error()

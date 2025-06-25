@@ -120,45 +120,52 @@ func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleN
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (ModuleDownloadResult, error) {
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ModuleDownloadResult, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	var res ModuleDownloadResult
-
 	// moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel)
 	ImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	res.Checksum = ImageInfo.Digest.String()
-	res.ModuleVersion = "v" + ImageInfo.Metadata.Version
-	res.Changelog = ImageInfo.Metadata.Changelog
+	res := &ModuleDownloadResult{
+		Checksum:      ImageInfo.Digest.String(),
+		ModuleVersion: "v" + ImageInfo.Metadata.Version,
+		Changelog:     ImageInfo.Metadata.Changelog,
+	}
 
 	return res, nil
 }
 
-// DownloadMetadataByVersion downloads only module release image with metadata: version.json
+// DownloadImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion string) (ModuleDownloadResult, error) {
-	var res ModuleDownloadResult
+func (md *ModuleDownloader) DownloadImageInfoByVersion(moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
 
-	// moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
 	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	res.Checksum = imageInfo.Digest.String()
-	res.ModuleVersion = moduleVersion
-	res.Changelog = imageInfo.Metadata.Changelog
+	res := &ModuleDownloadResult{
+		Checksum:      imageInfo.Digest.String(),
+		ModuleVersion: moduleVersion,
+		Changelog:     imageInfo.Metadata.Changelog,
+	}
 	if imageInfo.Metadata.ModuleDefinition != nil {
 		res.ModuleDefinition = imageInfo.Metadata.ModuleDefinition
+		return res, nil
 	}
+
+	def, err := md.fetchModuleDefinitionFromImage(moduleName, imageInfo.Image)
+	if err != nil {
+		return nil, err
+	}
+	res.ModuleDefinition = def
 
 	return res, nil
 }

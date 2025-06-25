@@ -269,14 +269,14 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				slog.String("name", f.moduleName),
 				slog.String("source_name", f.source.Name))
 
-			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
+			m, err := f.moduleDownloader.DownloadImageInfoByVersion(f.moduleName, "v"+ver.String())
 			if err != nil {
 				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
 				return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
 			}
 
-			err = f.ensureModuleRelease(ctx, &m, "step-by-step")
+			err = f.ensureModuleRelease(ctx, m, "step-by-step")
 			if err != nil {
 				f.logger.Error("ensure module release", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
