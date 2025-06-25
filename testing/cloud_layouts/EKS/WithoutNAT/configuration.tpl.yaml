@@ -96,5 +96,5 @@ kind: ModuleConfig
 metadata:
   name: istio
 spec:
-  version: 2
+  version: 3
   enabled: true

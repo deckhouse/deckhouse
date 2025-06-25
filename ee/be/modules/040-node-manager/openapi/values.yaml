@@ -261,6 +261,18 @@ properties:
               type: string
               description: |
                 Value of NodeGroup's annotation "manual-rollout-id".
+            serializedLabels:
+              type: string
+              description: |
+                Labels from node template in the format: key1=value1,key2=value2. If labels does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
+            serializedTaints:
+              type: string
+              description: |
+                Taints from node template in the format: key1=value1:NoSchedule,key2=value2:NoExecute. If taints does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
             static:
               type: object
               description: |

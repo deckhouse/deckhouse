@@ -27,10 +27,10 @@ import (
 )
 
 type Secret struct {
-	apiVersion string
-	kind       string
-	namespace  string
-	name       string
+	APIVersion string
+	Kind       string
+	Namespace  string
+	Name       string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,10 +59,10 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}
 
 	return &Secret{
-		name:       secret.Name,
-		namespace:  secret.Namespace,
-		kind:       secret.Kind,
-		apiVersion: secret.APIVersion,
+		Name:       secret.Name,
+		Namespace:  secret.Namespace,
+		Kind:       secret.Kind,
+		APIVersion: secret.APIVersion,
 	}, nil
 }
 
@@ -70,8 +70,8 @@ func removeSecretGrfana(input *go_hook.HookInput) error {
 	if secretSnapshot := input.Snapshots["secret"]; len(secretSnapshot) > 0 {
 		for _, snap := range secretSnapshot {
 			secret := snap.(*Secret)
-			log.Debug("Deleting secret", slog.String("namespace", secret.namespace), slog.String("name", secret.name))
-			input.PatchCollector.Delete(secret.apiVersion, secret.kind, secret.namespace, secret.name)
+			log.Debug("Deleting secret", slog.String("namespace", secret.Namespace), slog.String("name", secret.Name))
+			input.PatchCollector.Delete(secret.APIVersion, secret.Kind, secret.Namespace, secret.Name)
 		}
 	} else {
 		log.Debug("Secrets not found")

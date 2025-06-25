@@ -14,6 +14,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -37,7 +39,7 @@ type apiResponse struct {
 	Versions []string `json:"versions"`
 }
 
-func setAPIHostMetric(mc go_hook.MetricsCollector, name, apiHost string, isError float64) {
+func setAPIHostMetric(mc sdkpkg.MetricsCollector, name, apiHost string, isError float64) {
 	labels := map[string]string{
 		"multicluster_name": name,
 		"api_host":          apiHost,

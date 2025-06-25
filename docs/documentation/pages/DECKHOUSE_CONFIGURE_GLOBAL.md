@@ -2,16 +2,21 @@
 title: "Global configuration"
 permalink: en/deckhouse-configure-global.html
 description: "Deckhouse Kubernetes Platform global settings."
+module-kebab-name: "global"
 ---
 
 The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)).
 
 {% alert %}
-The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter defines the DNS names template some Deckhouse modules use to create Ingress resources.
+The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a DNS name template used by some Deckhouse modules to create Ingress resources. If this parameter is not specified, Ingress resources will not be created.
 
-You can use the [sslip.io](https://sslip.io/) service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
 
-Domain used in the template must not match the domain specified in the [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](./installing/configuration.html#clusterconfiguration-clusterdomain) parameter. We do not recommend changing the `clusterDomain` value unless absolutely necessary.
+
+For the template to work correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which access to the service web interfaces is required.
+
+If the template matches the domain of the node network (for example, if the nodes are in the zone `company.my` and the template is `%s.company.my`), use only the A records of the frontend node addresses to assign the platform's web interfaces.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:
@@ -36,6 +41,8 @@ spec:
         - dedicated.example.com
       storageClass: 'default-fast'
 ```
+
+{% include module-conversion.liquid %}
 
 ## Parameters
 
