@@ -1,4 +1,4 @@
-{{- $version := "4.45.1" }}
+{{- $version := .CandiVersionMap.yq.version }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -14,30 +14,30 @@ import:
   before: setup
 imageSpec:
   config:
-    labels:
-      distro: all
-      version: all
-      yq: {{ $version }}
-
+    labels: { "distro": "all", "version": "all", "yq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
+  includePaths:
+  - install
+  - uninstall
   stageDependencies:
     setup:
     - '**/*'
+import:
+- image: tools/yq-v{{ $version }}
+  add: /usr/bin/yq
+  to: /yq
+  before: setup
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client git make bash gnupg
-  install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $version }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/mikefarah/yq.git src && cd ./src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /yq ./
+  setup:
+  - chmod +x /yq /install /uninstall
