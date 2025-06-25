@@ -325,32 +325,32 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	// fill imageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
-		return imageInfo, fmt.Errorf("fetch release image error: %w", err)
+		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
 	img, err := regCli.Image(context.TODO(), strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return imageInfo, fmt.Errorf("fetch image error: %w", err)
+		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
 	imageInfo.Image = img
 
 	// fill imageInfo.Diest
 	digest, err := img.Digest()
 	if err != nil {
-		return imageInfo, fmt.Errorf("fetch digest error: %w", err)
+		return nil, fmt.Errorf("fetch digest error: %w", err)
 	}
 	imageInfo.Digest = digest
 
 	// fill imageInfo.Metadata
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
 	if err != nil {
-		return imageInfo, fmt.Errorf("fetch release metadata error: %w", err)
+		return nil, fmt.Errorf("fetch release metadata error: %w", err)
 	}
 
 	imageInfo.Metadata = &moduleMetadata
 
 	if moduleMetadata.Version == nil {
-		return imageInfo, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
 	// return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
