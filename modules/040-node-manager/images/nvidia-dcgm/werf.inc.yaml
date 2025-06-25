@@ -103,6 +103,7 @@ shell:
     rm -rf /var/lib/apt/lists/*
   install:
   - |
+    export ARCHITECTURE=x86_64
     export TARGET=x86_64-linux-gnu
     cp -a /src/DCGM/dcgmbuild/cmake/$TARGET-toolchain.cmake /tmp/$TARGET.cmake
     export CC=/opt/cross/bin/$TARGET-gcc
