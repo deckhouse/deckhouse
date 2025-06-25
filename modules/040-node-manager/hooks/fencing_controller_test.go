@@ -36,7 +36,7 @@ type testCaseParams struct {
 	Name               string // The name of resource (nodegroup, namespace, lease, pod)
 	FencingEnabled     bool
 	MaintanenceEnabled bool
-	RenewTime          time.Time
+	RenewTime          func() time.Time
 }
 
 type testCaseResult struct {
@@ -104,7 +104,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			},
 			Spec: v1coord.LeaseSpec{
 				HolderIdentity: &testCase.Name,
-				RenewTime:      &metav1.MicroTime{Time: testCase.RenewTime},
+				RenewTime:      &metav1.MicroTime{Time: testCase.RenewTime()},
 			}}
 
 		var err error
@@ -140,7 +140,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Name:               "everything-ok",
 			FencingEnabled:     true,
 			MaintanenceEnabled: false,
-			RenewTime:          time.Now(),
+			RenewTime:          func() time.Time { return time.Now() },
 		}, testCaseResult{
 			nodeExists: true,
 			podExists:  true,
@@ -149,7 +149,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Name:               "rotten-lease-time",
 			FencingEnabled:     true,
 			MaintanenceEnabled: false,
-			RenewTime:          time.Now().Add(-time.Hour),
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
 		}, testCaseResult{
 			nodeExists: false,
 			podExists:  false,
@@ -158,7 +158,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Name:               "disabled-fencing",
 			FencingEnabled:     false,
 			MaintanenceEnabled: false,
-			RenewTime:          time.Now().Add(-time.Hour),
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
 		}, testCaseResult{
 			nodeExists: true,
 			podExists:  true,
@@ -167,7 +167,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Name:               "maintenance-mode",
 			FencingEnabled:     true,
 			MaintanenceEnabled: true,
-			RenewTime:          time.Now().Add(-time.Hour),
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
 		}, testCaseResult{
 			nodeExists: true,
 			podExists:  true,
