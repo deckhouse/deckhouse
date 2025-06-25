@@ -447,6 +447,23 @@ entries:
                     en: Node management
                     ru: Управление узлами
                   url: /admin/configuration/platform-scaling/node.html
+                  folders:
+                    - title:
+                        en: Node management basics in Deckhouse
+                        ru: Основы управления узлами в Deckhouse
+                      url: /admin/configuration/platform-scaling/node/node-management.html
+                    - title:
+                        en: Adding and managing cloud nodes
+                        ru: Добавление и управление облачными узлами
+                      url: /admin/configuration/platform-scaling/node/cloud-node.html
+                    - title:
+                        en: Adding and managing bare-metal nodes
+                        ru: Добавление и управление bare-metal узлами
+                      url: /admin/configuration/platform-scaling/node/bare-metal-node.html
+                    - title:
+                        en: Custom node configuration
+                        ru: Пользовательские настройки на узлах
+                      url: /admin/configuration/platform-scaling/node/node-customization.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
