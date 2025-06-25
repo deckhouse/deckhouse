@@ -78,3 +78,42 @@ shell:
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
     do $SCRIPT /tmp/scripts/host/urls.txt
     done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
+final: false
+from: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+shell:
+  beforeInstall:
+  - |
+    set -ex
+    export DEBIAN_FRONTEND=noninteractive
+    apt update
+    apt install --quiet --assume-yes autoconf automake libtool
+    apt autoremove --purge --quiet --assume-yes
+    apt clean --quiet --assume-yes
+    rm -rf /var/lib/apt/lists/*
+  install:
+  - |
+    export TARGET=x86_64-linux-gnu
+    cp -a /src/DCGM/dcgmbuild/cmake/$TARGET-toolchain.cmake /tmp/$TARGET.cmake
+    export CC=/opt/cross/bin/$TARGET-gcc
+    export CPP=/opt/cross/bin/$TARGET-cpp
+    export CXX=/opt/cross/bin/$TARGET-g++
+    export LD=/opt/cross/bin/$TARGET-ld
+    export AS=/opt/cross/bin/$TARGET-as
+    export CMAKE_INSTALL_PREFIX=/tmp/$TARGET
+    export CMAKE_BUILD_TYPE=RelWithDebInfo
+    export CMAKE_TOOLCHAIN_FILE=/tmp/$TARGET.cmake
+    cp -a /src/DCGM/dcgmbuild/scripts/target /tmp/scripts/target
+    set -ex
+    echo $CC
+    $CC --version
+    mkdir --parents $CMAKE_INSTALL_PREFIX
+    export MAKEFLAGS="--jobs=${JOBS:-$(nproc)}"
+    find /tmp/scripts/target -name '*.sh' | sort | while read -r SCRIPT
+    do $SCRIPT /tmp/scripts/target/urls.txt
+    done
