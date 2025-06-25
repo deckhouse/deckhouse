@@ -59,7 +59,7 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross/x86_64-linux-gnu/
+  add: /opt/cross/
   to: /opt/cross/
   before: install
 shell:
@@ -79,6 +79,10 @@ shell:
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
     do $SCRIPT /tmp/scripts/host/urls.txt
     done
+  - mkdir -p /tmp/cross
+  - cp -a /opt/cross/x86_64-linux-gnu/* /tmp/cross/
+  - rm -rf /opt/cross/*
+  - cp -a /tmp/cross/* /opt/cross/
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
@@ -86,10 +90,6 @@ fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross/x86_64-linux-gnu/
-  to: /opt/cross/
   before: install
 shell:
   beforeInstall:
