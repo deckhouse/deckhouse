@@ -34,6 +34,8 @@ metadata:
   resourceVersion: "1"
 spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.0
+  requirements:
+    kubernetes: '>= 1.27'
   version: v1.16.0
 status:
   approved: false

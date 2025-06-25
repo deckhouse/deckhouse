@@ -773,6 +773,12 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		}
 
 		meta.ModuleDefinition = &moduleDefinition
+		if moduleDefinition.Requirements != nil {
+			if meta.Requirements == nil {
+				meta.Requirements = make(map[string]string, 1)
+			}
+			meta.Requirements["kubernetes"] = moduleDefinition.Requirements.Kubernetes
+		}
 	}
 
 	cooldown := f.fetchCooldown(img)
@@ -1025,16 +1031,16 @@ func getLatestDeployedRelease(releases []*v1alpha1.DeckhouseRelease) (int, *v1al
 }
 
 type ReleaseMetadata struct {
-	Version      string                    `json:"version"`
+	Version          string                  `json:"version"`
+	Changelog        map[string]interface{}  `json:"-"`
+	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
+
+	// TODO: review fields below. it can be useless now
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
-
-	Changelog        map[string]interface{}  `json:"-"`
-	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
-
-	Cooldown *metav1.Time `json:"-"`
+	Cooldown     *metav1.Time              `json:"-"`
 }
 
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {
