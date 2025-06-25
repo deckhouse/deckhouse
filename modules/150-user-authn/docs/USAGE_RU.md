@@ -355,12 +355,15 @@ data:
 
 Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
 
-Для вычисления хэш-суммы пароля воспользуйтесь конструкцией:
+Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
 ```shell
-echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
-Если команад `htpasswd` не найдена, Вам необходимо устаноить `apache2-utils` пакет для Debian-основанных дистрибутивов и `httpd-utils` для CentOS-основанных дистрибутивов.
+
+{% alert level="info" %}
+Если команда `htpasswd` не найдена установите пакет `apache2-utils` для Debian-основанных дистрибутивов и `httpd-utils` для CentOS-основанных дистрибутивов.
+{% endalert %}
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
@@ -375,8 +378,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
-  password: 'JDJ5JDEwJHJxN2J2Yi9YUm5RTUlkS0xaQ1JWZS5QejVVdVJCY0dJNUNwcGw4ZDZVNm1iNi9HNFoyQTd1Cg=='
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 

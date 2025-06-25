@@ -353,10 +353,12 @@ Create a password and enter its hash encoded in base64 in the `password` field.
 Use the command below to calculate the password hash:
 
 ```shell
-echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
-If `htpasswd` command not found, you need install `apache2-utils` package for Debian-based distribution and `httpd-utils` for CentOS-based distribution.
+{% alert level="info" %}
+If `htpasswd` command not found, you need to install `apache2-utils` package for Debian-based distribution and `httpd-utils` for CentOS-based distribution.
+{% endalert %}
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
@@ -371,8 +373,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | head -1 | cut -d: -f2 | base64 -w0; echo
-  password: 'JDJ5JDEwJHJxN2J2Yi9YUm5RTUlkS0xaQ1JWZS5QejVVdVJCY0dJNUNwcGw4ZDZVNm1iNi9HNFoyQTd1Cg=='
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 
