@@ -107,6 +107,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)

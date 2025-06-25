@@ -26,6 +26,7 @@ import (
 type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
+	moduleReader    *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
