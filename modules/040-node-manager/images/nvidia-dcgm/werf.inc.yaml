@@ -137,9 +137,8 @@ import:
   add: /tmp/x86_64-linux-gnu
   before: install
 shell:
-  beforeInstall:
+  install:
   - cp -a /tmp/x86_64-linux-gnu/* /opt/cross/x86_64-linux-gnu/
   - rm -rf /tmp/x86_64-linux-gnu/*
-  install:
   - cd /src/DCGM
   - DCGM_BUILD_INSIDE_DOCKER=1 ./build -r -p
