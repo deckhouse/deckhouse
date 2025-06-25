@@ -58,7 +58,7 @@ func TestVersionHandling(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper that includes prerelease and metadata
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0", nil
 	})
 
@@ -75,7 +75,7 @@ func TestVersionEmptyHandling(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper that includes prerelease and metadata
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "", nil
 	})
 
@@ -98,7 +98,7 @@ func TestAddConstraintAndGetTopologicalHints(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper for testing
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0", nil
 	})
 
@@ -157,7 +157,7 @@ func TestValidateReleaseWithLoopDetection(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0", nil
 	})
 
@@ -213,7 +213,7 @@ func TestValidateReleaseWithUnparsableVersion(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper that returns unparsable version
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "not.a.valid.version", nil
 	})
 
@@ -231,7 +231,7 @@ func TestValidateReleaseWithVersionConstraintFailure(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper that returns a version that doesn't meet constraint
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0", nil
 	})
 
@@ -288,7 +288,7 @@ func TestFilter(t *testing.T) {
 				"dep2": ">= 1.0.0",
 			},
 			enabledModules: []string{"dep1", "dep2"},
-			versionHelper: func(moduleName string) (string, error) {
+			versionHelper: func(_ string) (string, error) {
 				return "1.0.0", nil
 			},
 			expectedAllow:   true,
@@ -314,7 +314,7 @@ func TestFilter(t *testing.T) {
 				"disabledDep": ">= 1.0.0",
 			},
 			enabledModules: []string{}, // Empty list means disabledDep is disabled
-			versionHelper: func(moduleName string) (string, error) {
+			versionHelper: func(_ string) (string, error) {
 				return "1.0.0", nil
 			},
 			expectedAllow:   false,
@@ -327,7 +327,7 @@ func TestFilter(t *testing.T) {
 				"errorDep": ">= 1.0.0",
 			},
 			enabledModules: []string{"errorDep"},
-			versionHelper: func(moduleName string) (string, error) {
+			versionHelper: func(_ string) (string, error) {
 				return "", fmt.Errorf("internal error")
 			},
 			expectedAllow:   false,
@@ -340,7 +340,7 @@ func TestFilter(t *testing.T) {
 				"badVersionDep": ">= 1.0.0",
 			},
 			enabledModules: []string{"badVersionDep"},
-			versionHelper: func(moduleName string) (string, error) {
+			versionHelper: func(_ string) (string, error) {
 				return "not.a.version", nil
 			},
 			expectedAllow:   false,
@@ -353,7 +353,7 @@ func TestFilter(t *testing.T) {
 				"constraintDep": ">= 2.0.0",
 			},
 			enabledModules: []string{"constraintDep"},
-			versionHelper: func(moduleName string) (string, error) {
+			versionHelper: func(_ string) (string, error) {
 				return "1.0.0", nil
 			},
 			expectedAllow:   false,
@@ -407,7 +407,7 @@ func TestVersionHandlingWithPrereleaseAndMetadata(t *testing.T) {
 	extender := moduledependency.Instance()
 
 	// Set up version helper that includes prerelease and metadata
-	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0-beta+build", nil
 	})
 
