@@ -1,7 +1,6 @@
 ---
 title: "Node management basics in Deckhouse"
-permalink: ru/admin/configuration/platform-scaling/node/node-management.html
-lang: ru
+permalink: en/admin/configuration/platform-scaling/node/node-management.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node management:
