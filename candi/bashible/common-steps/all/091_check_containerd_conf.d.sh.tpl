@@ -15,29 +15,6 @@
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
 
-# _has_registry_field:
-# Checks whether a containerd TOML configuration file contains custom
-# registry sections: `plugins."io.containerd.grpc.v1.cri".registry`
-#
-# Input:
-#   $1: Path to the containerd configuration file (TOML format)
-#
-# Output:
-#   0: A registry configuration exists
-#   1: No registry configuration found
-#   >1: Parsing failed
-#
-_has_registry_field() {
-  local path="$1"
-  local has_registry_field
-  if ! has_registry_field=$(/opt/deckhouse/bin/yq -ptoml -oy \
-    '.plugins["io.containerd.grpc.v1.cri"] | has("registry")' "$path" 2>/dev/null); then
-    >&2 echo "ERROR: Failed to parse TOML config: $path"
-    exit 1
-  fi
-  echo "$has_registry_field" | grep -q "true"
-}
-
 mkdir -p /var/lib/node_labels
 
 config_label_path="/var/lib/node_labels/containerd-conf"
@@ -51,7 +28,7 @@ if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
 
   # Check each additional config file for a registry block
   for path in /etc/containerd/conf.d/*.toml; do
-    if _has_registry_field "${path}"; then
+    if bb-ctrd-has-registry-fields "${path}"; then
       registry_label_value="custom"
       break
     fi
