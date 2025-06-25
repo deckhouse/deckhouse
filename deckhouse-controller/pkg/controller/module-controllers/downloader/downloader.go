@@ -122,14 +122,13 @@ func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleN
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ModuleDownloadResult, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	// moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel)
-	ImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel)
+	ImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -145,9 +144,8 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 
 // DownloadImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadImageInfoByVersion(moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
-
-	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
+func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
+	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +315,10 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	}
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel string) (*ImageInfo, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ImageInfo, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
+	defer span.End()
+
 	log.Info("fetching module release",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("releasechannel", releaseChannel),
@@ -349,7 +350,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	imageInfo.Digest = digest
 
 	// fill imageInfo.Metadata
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
+	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata error: %w", err)
 	}
@@ -364,7 +365,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return imageInfo, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion string) (*ImageInfo, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
+	defer span.End()
+
 	imageInfo := &ImageInfo{}
 
 	// fill imageInfo.Image
@@ -389,7 +393,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, modu
 	imageInfo.Digest = digest
 
 	// fill imageInfo.Metadata
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
+	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
 	if err != nil {
 		return imageInfo, fmt.Errorf("fetch release metadata error: %v", err)
 	}
@@ -459,7 +463,10 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleReleaseMetadata, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (ModuleReleaseMetadata, error) {
+	_, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleReleaseMetadata")
+	defer span.End()
+
 	var meta ModuleReleaseMetadata
 
 	rc, err := cr.Extract(img)
@@ -572,7 +579,7 @@ type ImageInfo struct {
 }
 
 func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
-	_, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
@@ -590,7 +597,7 @@ func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, mod
 		return nil, fmt.Errorf("get image digest: %w", err)
 	}
 
-	releaseMeta, err := md.fetchModuleReleaseMetadata(image)
+	releaseMeta, err := md.fetchModuleReleaseMetadata(ctx, image)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image metadata: %w", err)
 	}

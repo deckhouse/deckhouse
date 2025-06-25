@@ -269,7 +269,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				slog.String("name", f.moduleName),
 				slog.String("source_name", f.source.Name))
 
-			m, err := f.moduleDownloader.DownloadImageInfoByVersion(f.moduleName, "v"+ver.String())
+			m, err := f.moduleDownloader.DownloadImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
 			if err != nil {
 				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
