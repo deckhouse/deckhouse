@@ -390,10 +390,6 @@ Done
 
 ## How to deploy a custom containerd configuration file
 
-{% alert level="info" %}
-The `NodeGroupConfiguration` example is based on the logic implemented in the [032_configure_containerd.sh](./#script-writing-guidelines) script.
-{% endalert %}
-
 {% alert level="danger" %}
 Adding custom settings will trigger a restart of the `containerd` service.
 {% endalert %}
