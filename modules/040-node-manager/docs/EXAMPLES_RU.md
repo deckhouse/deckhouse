@@ -516,17 +516,6 @@ spec:
 
 ### Добавление сертификата в ОС и containerd
 
-{% alert level="warning" %}
-Данный пример приведен для ОС Ubuntu.  
-Способ добавления сертификатов в хранилище может отличаться в зависимости от ОС.
-  
-При адаптации скрипта под другую ОС измените параметры [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) и [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content).
-{% endalert %}
-
-{% alert level="info" %}
-Пример NodeGroupConfiguration основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
-{% endalert %}
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration

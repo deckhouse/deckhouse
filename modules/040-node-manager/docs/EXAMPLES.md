@@ -603,17 +603,6 @@ spec:
 
 ### Adding the ability to download images from insecure container registry to containerd
 
-{% alert level="warning" %}
-Example is given for Ubuntu OS.  
-The method of adding certificates to the store may differ depending on the OS.  
-
-Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
-{% endalert %}
-
-{% alert level="info" %}
-The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
-{% endalert %}
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
