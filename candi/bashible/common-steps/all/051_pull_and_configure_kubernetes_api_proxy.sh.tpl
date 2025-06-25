@@ -20,7 +20,6 @@ bb-set-proxy
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
-mkdir -p /etc/kubernetes/manifests
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
