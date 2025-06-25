@@ -19,6 +19,7 @@ package registry
 import (
 	"testing"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,12 +44,12 @@ func TestDeckhouseRegistrySecretToRegistryData(t *testing.T) {
 				Mode:                 "unmanaged",
 				ImagesBase:           "example.com/base",
 				Version:              "unknown",
-				Hosts: map[string]registryHosts{
+				Hosts: map[string]bashible.ContextHosts{
 					"example.com": {
-						Mirrors: []registryMirrorHost{
+						Mirrors: []bashible.ContextMirrorHost{
 							{
 								Host:   "example.com",
-								Auth:   registryAuth{Auth: "dXNlcjpwYXNz"},
+								Auth:   bashible.ContextAuth{Auth: "dXNlcjpwYXNz"},
 								Scheme: "https",
 							},
 						},
@@ -60,7 +61,7 @@ func TestDeckhouseRegistrySecretToRegistryData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
+			err := tt.input.validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
 					assert.Fail(t, "Internal validation error: %w", e.InternalError())
@@ -72,7 +73,7 @@ func TestDeckhouseRegistrySecretToRegistryData(t *testing.T) {
 			assert.NoError(t, err, "Expected no error in ToRegistryData")
 			assert.Equal(t, tt.wantRegistryData, *registryData, "RegistryData does not match expected")
 
-			err = registryData.Validate()
+			err = registryData.validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
 					assert.Fail(t, "Internal validation error: %w", e.InternalError())

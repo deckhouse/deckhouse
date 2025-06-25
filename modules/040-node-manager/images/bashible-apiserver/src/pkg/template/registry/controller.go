@@ -94,7 +94,7 @@ func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, fmt.Errorf("cannot create registry data: %w", err)
 	}
 
-	err = rData.Validate()
+	err = rData.validate()
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("validation error for registry data: %w", err)
 	}
@@ -120,11 +120,11 @@ func (sc *StateController) loadDeckhouseRegistrySecret(ctx context.Context) (dec
 		return ret, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
-	if err := ret.Decode(&secret); err != nil {
+	if err := ret.decode(&secret); err != nil {
 		return ret, fmt.Errorf("cannot decode from secret: %w", err)
 	}
 
-	if err := ret.Validate(); err != nil {
+	if err := ret.validate(); err != nil {
 		return ret, fmt.Errorf("validation error: %w", err)
 	}
 
@@ -150,7 +150,7 @@ func (sc *StateController) loadBashibleCfgSecret(ctx context.Context) (*bashible
 		return nil, fmt.Errorf("cannot decode from secret: %w", err)
 	}
 
-	if err := ret.Validate(); err != nil {
+	if err := ret.validate(); err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 

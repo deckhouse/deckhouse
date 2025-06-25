@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,247 +31,6 @@ func validRegistryData() RegistryData {
 		Scheme:    "https",
 		CA:        "==exampleCA==",
 		DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
-	}
-}
-
-func validBashibleCtxRegistry() *BashibleCtxRegistry {
-	return &BashibleCtxRegistry{
-		Mode:       "managed",
-		ImagesBase: "example.com/base",
-		Version:    "1.0",
-		Hosts: map[string]BashibleCtxRegistryHosts{
-			"host1": validBashibleCtxRegistryHosts(),
-		},
-	}
-}
-
-func validBashibleCtxRegistryHosts() BashibleCtxRegistryHosts {
-	return BashibleCtxRegistryHosts{
-		Mirrors: []BashibleCtxRegistryMirrorHost{
-			validBashibleCtxRegistryMirrorHost(),
-		},
-	}
-}
-
-func validBashibleCtxRegistryMirrorHost() BashibleCtxRegistryMirrorHost {
-	return BashibleCtxRegistryMirrorHost{
-		Host:     "mirror1.example.com",
-		Scheme:   "https",
-		Auth:     BashibleCtxRegistryAuth{},
-		Rewrites: []BashibleCtxRegistryRewrite{},
-	}
-}
-
-func TestBashibleCtxRegistryValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   *BashibleCtxRegistry
-		wantErr bool
-	}{
-		{
-			name:    "Valid config",
-			input:   validBashibleCtxRegistry(),
-			wantErr: false,
-		},
-		{
-			name: "Missing required hosts",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.Hosts = map[string]BashibleCtxRegistryHosts{}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required mirror hosts",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.Hosts = map[string]BashibleCtxRegistryHosts{"host1": {}}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Mode",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.Mode = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required ImagesBase",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.ImagesBase = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Version",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.Version = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Empty ProxyEndpoint is invalid",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				cfg.ProxyEndpoints = []string{""}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Host is invalid",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				host := validBashibleCtxRegistryHosts()
-				mirror := validBashibleCtxRegistryMirrorHost()
-				mirror.Host = ""
-				host.Mirrors = []BashibleCtxRegistryMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Scheme is invalid",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				host := validBashibleCtxRegistryHosts()
-				mirror := validBashibleCtxRegistryMirrorHost()
-				mirror.Scheme = ""
-				host.Mirrors = []BashibleCtxRegistryMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Duplicate Mirrors",
-			input: func() *BashibleCtxRegistry {
-				cfg := validBashibleCtxRegistry()
-				host := validBashibleCtxRegistryHosts()
-				mirror := validBashibleCtxRegistryMirrorHost()
-				host.Mirrors = []BashibleCtxRegistryMirrorHost{mirror, mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
-			if err != nil {
-				if e, ok := err.(validation.InternalError); ok {
-					assert.Fail(t, "Internal validation error: %w", e.InternalError())
-				}
-			}
-
-			if tt.wantErr {
-				assert.Error(t, err, "Expected errors but got none")
-			} else {
-				assert.NoError(t, err, "Expected no errors but got some")
-			}
-		})
-	}
-}
-
-func TestBashibleCtxRegistryToMap(t *testing.T) {
-	type result struct {
-		toMap map[string]interface{}
-		err   bool
-	}
-
-	tests := []struct {
-		name   string
-		input  BashibleCtxRegistry
-		result result
-	}{
-		{
-			name: "Valid registry data: with auth",
-			input: func() BashibleCtxRegistry {
-				ret := BashibleCtxRegistry{
-					RegistryModuleEnable: true,
-					Mode:                 "unmanaged",
-					Version:              "unknown",
-					ImagesBase:           "registry.d8-system.svc/deckhouse/system",
-					ProxyEndpoints:       []string{"192.168.1.1"},
-					Hosts: map[string]BashibleCtxRegistryHosts{
-						"registry.d8-system.svc": {
-							Mirrors: []BashibleCtxRegistryMirrorHost{{
-								Host:   "r.example.com",
-								Scheme: "https",
-								CA:     "==exampleCA==",
-								Auth: BashibleCtxRegistryAuth{
-									Username: "user",
-									Password: "password",
-									Auth:     "auth"},
-								Rewrites: []BashibleCtxRegistryRewrite{{
-									From: "^deckhouse/system",
-									To:   "deckhouse/ce"}}},
-							},
-						},
-					},
-				}
-				return ret
-			}(),
-			result: result{
-				toMap: func() map[string]interface{} {
-
-					ret := map[string]interface{}{
-						"registryModuleEnable": true,
-						"mode":                 "unmanaged",
-						"version":              "unknown",
-						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
-						"proxyEndpoints":       []interface{}{"192.168.1.1"},
-						"hosts": map[string]interface{}{
-							"registry.d8-system.svc": map[string]interface{}{
-								"mirrors": []interface{}{
-									map[string]interface{}{
-										"host":   "r.example.com",
-										"scheme": "https",
-										"ca":     "==exampleCA==",
-										"auth": map[string]interface{}{
-											"username": "user",
-											"password": "password",
-											"auth":     "auth",
-										},
-										"rewrites": []interface{}{
-											map[string]interface{}{
-												"from": "^deckhouse/system",
-												"to":   "deckhouse/ce",
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-					return ret
-				}(),
-				err: false,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			toMap, err := tt.input.toMap()
-			if tt.result.err {
-				assert.Error(t, err, "Expected errors but got none")
-			} else {
-				assert.NoError(t, err, "Expected no errors but got some")
-				require.Equal(t, tt.result.toMap, toMap)
-			}
-		})
 	}
 }
 
@@ -522,7 +281,7 @@ func TestRegistryDataToMap(t *testing.T) {
 
 func TestRegistryDataToBashibleCtx(t *testing.T) {
 	type result struct {
-		bashibleCtx *BashibleCtxRegistry
+		bashibleCtx *bashible.Context
 		err         bool
 	}
 
@@ -546,20 +305,20 @@ func TestRegistryDataToBashibleCtx(t *testing.T) {
 				return ret
 			}(),
 			result: result{
-				bashibleCtx: func() *BashibleCtxRegistry {
-					ret := BashibleCtxRegistry{
+				bashibleCtx: func() *bashible.Context {
+					ret := bashible.Context{
 						RegistryModuleEnable: false,
 						Mode:                 "unmanaged",
 						Version:              "unknown",
 						ImagesBase:           "r.example.com/deckhouse/ce",
 						ProxyEndpoints:       []string{},
-						Hosts: map[string]BashibleCtxRegistryHosts{
+						Hosts: map[string]bashible.ContextHosts{
 							"r.example.com": {
-								Mirrors: []BashibleCtxRegistryMirrorHost{{
+								Mirrors: []bashible.ContextMirrorHost{{
 									Host:   "r.example.com",
 									Scheme: "https",
 									CA:     "==exampleCA==",
-									Auth: BashibleCtxRegistryAuth{
+									Auth: bashible.ContextAuth{
 										Auth: dockerCfgAuth("username", "password")}},
 								},
 							},
