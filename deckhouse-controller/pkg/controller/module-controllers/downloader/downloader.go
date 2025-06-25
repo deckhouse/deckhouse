@@ -451,6 +451,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	if err = rr.untarMetadata(rc); err != nil {
@@ -472,6 +473,17 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 			return meta, nil
 		}
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var module moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&module)
+		if err != nil {
+			meta.Module = nil
+			return meta, nil
+		}
+
+		meta.Module = &module
 	}
 
 	return meta, err
@@ -525,4 +537,51 @@ type ModuleReleaseMetadata struct {
 
 	Changelog map[string]any          `json:"-"`
 	Module    *moduletypes.Definition `json:"module,omitempty"`
+}
+
+const (
+	metricUpdatingFailedGroup = "d8_updating_is_failed"
+	serviceName               = "check-release"
+	ltsChannelName            = "lts"
+)
+
+type ImageInfo struct {
+	Metadata *ModuleReleaseMetadata
+	Image    crv1.Image
+	Digest   crv1.Hash
+}
+
+func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, moduleVersion, previousImageHash string) (*ImageInfo, error) {
+	_, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
+	defer span.End()
+
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release image error: %v", err)
+	}
+
+	image, err := regCli.Image(context.TODO(), moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image error: %v", err)
+	}
+
+	imageDigest, err := image.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	releaseMeta, err := md.fetchModuleReleaseMetadata(image)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image metadata: %w", err)
+	}
+
+	if releaseMeta.Version == nil {
+		return nil, fmt.Errorf("version not found, probably image is broken or layer does not exist")
+	}
+
+	return &ImageInfo{
+		Image:    image,
+		Digest:   imageDigest,
+		Metadata: &releaseMeta,
+	}, nil
 }
