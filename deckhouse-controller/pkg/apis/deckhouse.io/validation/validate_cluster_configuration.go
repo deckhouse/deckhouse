@@ -22,17 +22,17 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
-	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const containerdV2UnsupportedLabel = "node.deckhouse.io/containerd-v2-unsupported"
@@ -62,17 +62,24 @@ func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating
 }
 
 func checkNodesLabel(cli client.Client) (*kwhvalidating.ValidatorResult, error) {
-	nodes := &v1.NodeList{}
-	if err := cli.List(context.Background(), nodes); err != nil {
-		return nil, fmt.Errorf("list nodes: %w", err)
+	selector, err := labels.Parse(containerdV2UnsupportedLabel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse label selector: %w", err)
 	}
 
-	for _, node := range nodes.Items {
-		labels := node.GetLabels()
-		if _, found := labels[containerdV2UnsupportedLabel]; found {
-			return rejectResult("Cluster has nodes that don't support ContainerdV2")
-		}
+	unsupportedNodes := &v1.NodeList{}
+	listOpts := &client.ListOptions{
+		LabelSelector: selector,
 	}
+
+	if err := cli.List(context.Background(), unsupportedNodes, listOpts); err != nil {
+		return nil, fmt.Errorf("failed to list nodes with :%s label: %w", containerdV2UnsupportedLabel, err)
+	}
+
+	if len(unsupportedNodes.Items) > 0 {
+		return rejectResult("Cluster has nodes that don't support ContainerdV2")
+	}
+
 	return allowResult("")
 }
 

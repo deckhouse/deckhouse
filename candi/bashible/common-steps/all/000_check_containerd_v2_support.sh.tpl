@@ -30,7 +30,7 @@ can_load_erofs() {
 }
 
 function check_containerd_v2_support() {
-  local errors=() err_json
+  local errors=() errs
   local kv=$(uname -r | cut -d- -f1)
   version_ge "$kv" "$MIN_KERNEL" || errors+=("kernel")
 
@@ -45,16 +45,14 @@ function check_containerd_v2_support() {
   can_load_erofs || errors+=("erofs")
 
   if ((${#errors[@]})); then
-    err_json=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
-    printf "%s" "$err_json"
-    return 1
+    errs=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
+    printf "%s" "$errs"
   fi
-  return 0
 }
 
 function set_labels() {
   local unsupported=$1
-  local err_json=$2
+  local errs=$2
   local retries=0
 
   while true; do
@@ -65,8 +63,8 @@ function set_labels() {
     fi
     local label_status=$?
 
-    if [[ -n $err_json ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$err_json"
+    if [[ -n $errs ]]; then
+      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
     else
       kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
@@ -96,11 +94,14 @@ function fail_fast() {
 }
 
 function main() {
-  local support_status err_json
-  err_json=$(check_containerd_v2_support)
-  support_status=$?
+  local support_status errs
+  if errs=$(check_containerd_v2_support); then
+    support_status=0
+  else
+    support_status=$?
+  fi
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$support_status" "$err_json"
+    set_labels "$support_status" "$errs"
   fi
   fail_fast "$support_status"
 }
