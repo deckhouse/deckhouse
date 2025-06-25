@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -37,7 +38,7 @@ type deckhouseRegistrySecret struct {
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
 }
 
-func (d *deckhouseRegistrySecret) Decode(secret *corev1.Secret) error {
+func (d *deckhouseRegistrySecret) decode(secret *corev1.Secret) error {
 	if v, ok := secret.Data["address"]; ok {
 		d.Address = string(v)
 	}
@@ -59,11 +60,11 @@ func (d *deckhouseRegistrySecret) Decode(secret *corev1.Secret) error {
 	return nil
 }
 
-func (d deckhouseRegistrySecret) Validate() error {
+func (d deckhouseRegistrySecret) validate() error {
 	return nil
 }
 
-func (d deckhouseRegistrySecret) Auth() (string, error) {
+func (d deckhouseRegistrySecret) auth() (string, error) {
 	if len(d.DockerConfig) == 0 {
 		return "", nil
 	}
@@ -102,7 +103,7 @@ func (d deckhouseRegistrySecret) toRegistryData() (*RegistryData, error) {
 		imagesBase = d.Address + "/" + path
 	}
 
-	auth, err := d.Auth()
+	auth, err := d.auth()
 	if err != nil {
 		return nil, err
 	}
@@ -112,12 +113,12 @@ func (d deckhouseRegistrySecret) toRegistryData() (*RegistryData, error) {
 		Mode:                 "unmanaged",
 		Version:              "unknown",
 		ImagesBase:           imagesBase,
-		Hosts: map[string]registryHosts{d.Address: {
-			Mirrors: []registryMirrorHost{{
+		Hosts: map[string]bashible.ContextHosts{d.Address: {
+			Mirrors: []bashible.ContextMirrorHost{{
 				Host:   d.Address,
 				Scheme: d.Scheme,
 				CA:     d.CA,
-				Auth: registryAuth{
+				Auth: bashible.ContextAuth{
 					Auth: auth,
 				},
 			}},

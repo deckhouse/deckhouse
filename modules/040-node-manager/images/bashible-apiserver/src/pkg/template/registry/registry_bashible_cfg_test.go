@@ -19,160 +19,10 @@ package registry
 import (
 	"testing"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
 )
-
-func validBashibleConfigSecret() *bashibleConfigSecret {
-	return &bashibleConfigSecret{
-		Mode:       "managed",
-		ImagesBase: "example.com/base",
-		Version:    "1.0",
-		Hosts: map[string]bashibleConfigHosts{
-			"host1": validbashibleConfigHost(),
-		},
-	}
-}
-
-func validbashibleConfigHost() bashibleConfigHosts {
-	return bashibleConfigHosts{
-		Mirrors: []bashibleConfigMirrorHost{
-			validbashibleConfigMirrorHost(),
-		},
-	}
-}
-
-func validbashibleConfigMirrorHost() bashibleConfigMirrorHost {
-	return bashibleConfigMirrorHost{
-		Host:     "mirror1.example.com",
-		Scheme:   "https",
-		Auth:     bashibleConfigAuth{},
-		Rewrites: []bashibleConfigRewrite{},
-	}
-}
-
-func TestBashibleConfigSecretValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   *bashibleConfigSecret
-		wantErr bool
-	}{
-		{
-			name:    "Valid config",
-			input:   validBashibleConfigSecret(),
-			wantErr: false,
-		},
-		{
-			name: "Missing required hosts",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.Hosts = map[string]bashibleConfigHosts{}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required mirror hosts",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.Hosts = map[string]bashibleConfigHosts{"host1": {}}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Mode",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.Mode = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required ImagesBase",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.ImagesBase = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Version",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.Version = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Empty ProxyEndpoint is invalid",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				cfg.ProxyEndpoints = []string{""}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Host is invalid",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				host := validbashibleConfigHost()
-				mirror := validbashibleConfigMirrorHost()
-				mirror.Host = ""
-				host.Mirrors = []bashibleConfigMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Scheme is invalid",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				host := validbashibleConfigHost()
-				mirror := validbashibleConfigMirrorHost()
-				mirror.Scheme = ""
-				host.Mirrors = []bashibleConfigMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Duplicate Mirrors",
-			input: func() *bashibleConfigSecret {
-				cfg := validBashibleConfigSecret()
-				host := validbashibleConfigHost()
-				mirror := validbashibleConfigMirrorHost()
-				host.Mirrors = []bashibleConfigMirrorHost{mirror, mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
-			if err != nil {
-				if e, ok := err.(validation.InternalError); ok {
-					assert.Fail(t, "Internal validation error: %w", e.InternalError())
-				}
-			}
-
-			if tt.wantErr {
-				assert.Error(t, err, "Expected validation errors but got none")
-			} else {
-				assert.NoError(t, err, "Expected no validation errors but got some")
-			}
-		})
-	}
-}
 
 func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 	tests := []struct {
@@ -187,19 +37,19 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 				ImagesBase:     "example.com/base",
 				Version:        "1.0",
 				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
-				Hosts: map[string]bashibleConfigHosts{
+				Hosts: map[string]bashible.ConfigHosts{
 					"host1.example.com": {
-						Mirrors: []bashibleConfigMirrorHost{
+						Mirrors: []bashible.ConfigMirrorHost{
 							{
 								Host:   "mirror1.example.com",
 								Scheme: "https",
 								CA:     "ca1",
-								Auth: bashibleConfigAuth{
+								Auth: bashible.ConfigAuth{
 									Username: "username",
 									Password: "password",
 									Auth:     "auth",
 								},
-								Rewrites: []bashibleConfigRewrite{{
+								Rewrites: []bashible.ConfigRewrite{{
 									From: "from",
 									To:   "to",
 								}},
@@ -215,19 +65,19 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 				ImagesBase:           "example.com/base",
 				Version:              "1.0",
 				ProxyEndpoints:       []string{"endpoint-1", "endpoint-2"},
-				Hosts: map[string]registryHosts{
+				Hosts: map[string]bashible.ContextHosts{
 					"host1.example.com": {
-						Mirrors: []registryMirrorHost{
+						Mirrors: []bashible.ContextMirrorHost{
 							{
 								Host:   "mirror1.example.com",
 								Scheme: "https",
 								CA:     "ca1",
-								Auth: registryAuth{
+								Auth: bashible.ContextAuth{
 									Username: "username",
 									Password: "password",
 									Auth:     "auth",
 								},
-								Rewrites: []registryRewrite{{
+								Rewrites: []bashible.ContextRewrite{{
 									From: "from",
 									To:   "to",
 								}},
@@ -241,7 +91,7 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
+			err := tt.input.validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
 					assert.Fail(t, "Internal validation error: %w", e.InternalError())
@@ -253,7 +103,7 @@ func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 			assert.NoError(t, err, "Expected no error in ToRegistryData")
 			assert.Equal(t, tt.wantRegistryData, *registryData, "RegistryData does not match expected")
 
-			err = registryData.Validate()
+			err = registryData.validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
 					assert.Fail(t, "Internal validation error: %w", e.InternalError())
