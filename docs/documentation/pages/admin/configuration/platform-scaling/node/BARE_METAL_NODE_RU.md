@@ -1,0 +1,306 @@
+---
+title: "Добавление и управление bare-metal узлами"
+permalink: ru/admin/configuration/platform-scaling/node/bare-metal-node.html
+lang: ru
+---
+
+## Добавление узлов в bare-metal кластере
+
+### Ручной способ
+
+1. Включите модуль `node-manager`.
+
+1. Создайте объект NodeGroup с типом `Static`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+   ```
+
+   В спецификации этого ресурса укажем тип узлов `Static`. Для всех объектов NodeGroup в кластере автоматически будет создан скрипт `bootstrap.sh`, с помощью которого узлы добавляются в группы. Когда узлы добавляются вручную, необходимо скопировать этот скрипт на сервер и выполнить.
+
+   Скрипт можно получить в веб-интерфейсе Deckhouse на вкладке «Группы узлов → Скрипты» или командой kubectl:
+
+   ```console
+   kubectl -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
+   ```
+
+   Скрипт нужно раскодировать из Base64, а затем выполнить от `root`.
+
+1. Когда скрипт выполнится, сервер добавится в кластер в качестве узла той группы, для которой был использован скрипт.
+
+### Автоматический способ
+
+В DKP возможно автоматическое добавление физических (bare-metal) серверов в кластер без ручного запуска установочного скрипта на каждом узле. Для этого необходимо:
+
+1. Подготовить сервер (ОС, сеть):
+   - Установить поддерживаемую ОС;
+   - Настроить сеть и убедиться, что сервер доступен по SSH;
+   - Создать системного пользователя (например, ubuntu), от имени которого будет выполняться подключение по SSH;
+   - Убедиться, что пользователь может выполнять команды через `sudo`.
+
+1. Создать объект `SSHCredentials` с доступом к серверу. DKP использует объект `SSHCredentials` для подключения к серверам по SSH. В нём указывается:
+   - Приватный ключ;
+   - Пользователь ОС;
+   - Порт SSH;
+   - (опционально) пароль для `sudo`, если требуется.
+
+   Пример:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: SSHCredentials
+   metadata:
+     name: static-nodes
+   spec:
+     privateSSHKey: |
+       -----BEGIN OPENSSH PRIVATE KEY-----
+       LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
+       -----END OPENSSH PRIVATE KEY-----
+     sshPort: 22
+     sudoPassword: password
+     user: ubuntu
+   ```
+
+   > **Важно**. Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+
+1. Создать объект StaticInstance для каждого сервера:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-0
+     labels:
+       static-node: auto
+   spec:
+     address: 192.168.1.10
+     credentialsRef:
+       apiVersion: deckhouse.io/v1alpha1
+       kind: SSHCredentials
+       name: static-nodes
+   ```
+
+   Под каждый сервер необходимо создавать отдельный ресурс StaticInstance, но можно использовать одни и те же `SSHCredentials` для доступа на разные серверы.
+
+   Возможные состояния ресурсов StaticInstance:
+
+   - `Pending` — сервер ещё не настроен, в кластере отсутствует соответствующий узел.
+   - `Bootstrapping` — выполняется настройка сервера и подключение узла в кластер.
+   - `Running` — сервер успешно настроен, узел подключён к кластеру.
+   - `Cleaning` — выполняется очистка сервера и удаление узла из кластера.
+
+     Эти состояния отображают текущий этап управления узлом. CAPS автоматически переводит StaticInstance между этими состояниями в зависимости от необходимости добавить или удалить узел из группы.
+
+1. Создать NodeGroup с описанием, как DKP будет использовать эти серверы:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 3
+       labelSelector:
+         matchLabels:
+           static-node: auto
+     nodeTemplate:
+       labels:
+         node-role.deckhouse.io/worker: ""
+   ```
+
+   Здесь добавляются параметры, которые описывают использование StaticInstances: `count` указывает, сколько узлов будет добавлено в эту группу; в `labelSelector` прописываются правила для создания выборки узлов.
+
+   При использовании Cluster API Provider Static (CAPS) важно правильно задать параметры `nodeType`: `Static` и секцию `staticInstances` в объекте NodeGroup:
+   - Если параметр labelSelector не задан, CAPS будет использовать любые ресурсы StaticInstance, доступные в кластере.
+   - Один и тот же StaticInstance может быть использован в разных группах узлов, если соответствует фильтрам.
+   - CAPS будет автоматически поддерживать количество узлов в группе, заданное в параметре count.
+   - При удалении узла CAPS выполнит его очистку и отключение, а соответствующий StaticInstance перейдёт в статус Pending и может быть использован повторно.
+
+После того как группа узлов будет создана, появится скрипт для добавления серверов в эту группу. DKP будет ждать, пока в кластере появится необходимое количество объектов StaticInstance, которые подходят под выборку по лейблам. Как только такой объект появится, DKP получит из созданных ранее манифестов IP-адрес сервера и параметры для подключения по SSH, подключится к серверу и выполнит на нём скрипт `bootstrap.sh`. После этого сервер добавится в заданную группу в качестве узла.
+
+## Перемещение узла между NodeGroup
+
+{% alert level="warning" %}
+В процессе переноса узлов между NodeGroup будет выполнена очистка и повторный бутстрап узла, объект `Node` будет пересоздан.
+{% endalert %}
+
+1. Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`:
+
+   ```yaml
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: front
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: front
+   ```
+
+1. Измените лейбл `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
+
+   ```console
+   kubectl label staticinstance static-worker-1 role=front --overwrite
+   ```
+
+1. Обновите ресурс NodeGroup `worker`, уменьшив значение параметра `count` с `1` до `0`:
+
+   ```console
+   kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+   ```
+
+### Ручная очистка статического узла
+
+Для отключения узла кластера и очистки сервера (виртуальной машины) нужно выполнить скрипт `/var/lib/bashible/cleanup_static_node.sh`, который уже находится на каждом статическом узле.
+
+Пример отключения узла кластера и очистки сервера:
+
+```console
+bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+```
+
+{% alert level="info" %}
+Инструкция справедлива как для узла, настроенного вручную (с помощью бутстрап-скрипта), так и для узла, настроенного с помощью CAPS.
+{% endalert %}
+
+## Пример описания NodeGroup
+
+### Статические узлы
+
+Для виртуальных машин на гипервизорах или физических серверов используйте статические узлы, указав `nodeType: Static` в NodeGroup.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+```
+
+Узлы в такую группу добавляются вручную с помощью подготовленных скриптов или автоматически с помощью Cluster API Provider Static (CAPS).
+
+## Настройки для групп с узлами Static и CloudStatic
+
+Группы узлов с типами Static и CloudStatic предназначены для управления вручную созданными узлами — как физическими (bare-metal), так и виртуальными (в облаке, но без участия автоматических контроллеров DKP). Эти узлы подключаются вручную или через StaticInstance и не поддерживают автоматическое обновление и масштабирование.
+
+Особенности конфигурации:
+
+- Все действия по обновлению (обновление kubelet, перезапуск, замена узлов) выполняются вручную или через внешние автоматизации вне DKP.
+
+- Рекомендуется явно указывать желаемую версию kubelet, чтобы обеспечить единообразие между узлами, особенно если они подключаются с разными версиями вручную:
+  
+  ```yaml
+  nodeTemplate:
+     kubelet:
+       version: "1.28"
+  ```
+
+- Подключение узлов к кластеру может выполняться вручную или автоматически, в зависимости от конфигурации:
+  - Вручную — пользователь скачивает bootstrap-скрипт, настраивает сервер, запускает скрипт вручную.
+  - Автоматически (CAPS) — при использовании StaticInstance и SSHCredentials, DKP автоматически подключает и настраивает узлы.
+  - Смешанный подход — вручную добавленный узел можно передать под управление CAPS, используя аннотацию `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
+
+Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию staticInstances. Это позволяет DKP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
+
+## Как изменить CRI для NodeGroup
+
+{% alert level="warning" %}
+Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
+{% endalert %}
+
+Для изменения CRI для NodeGroup, установите параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
+
+Пример YAML-манифеста NodeGroup:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  cri:
+    type: Containerd
+```
+
+Также эту операцию можно выполнить с помощью патча:
+
+* Для `Containerd`:
+
+  ```shell
+  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  ```
+
+* Для `NotManaged`:
+
+  ```shell
+  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  ```
+
+{% alert level="warning" %}
+ При изменении `cri.type` для NodeGroup, созданных с помощью `dhctl`, необходимо обновить это значение в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
+{% endalert %}
+
+После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
+
+## Как автоматически проставить на узел кастомные лейблы
+
+1. На узле создайте каталог `/var/lib/node_labels`.
+
+1. Создайте в нём файл или файлы, содержащие необходимые лейблы. Количество файлов может быть любым, как и вложенность подкаталогов, их содержащих.
+
+1. Добавьте в файлы нужные лейблы в формате `key=value`. Например:
+
+   ```console
+   example-label=test
+   ```
+
+1. Сохраните файлы.
+
+При добавлении узла в кластер указанные в файлах лейблы будут автоматически проставлены на узел.
+
+{% alert level="warning" %}
+Обратите внимание, что добавить таким образом лейблы, использующиеся в DKP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
+{% endalert %}
+
+## Как изменить NodeGroup у статического узла
+
+Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к `NodeGroup` у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+
+Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
+
+```shell
+kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+```
+
+Применение изменений потребует некоторого времени.
+
+## Как изменить IP-адрес StaticInstance
+
+Изменить IP-адрес в ресурсе StaticInstance нельзя. Если в `StaticInstance` указан ошибочный адрес, то нужно [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+
+## Можно ли удалить StaticInstance
+
+StaticInstance, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
+
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
+
+1. Добавьте метку `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
+1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+1. Удалите StaticInstance.
+1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
