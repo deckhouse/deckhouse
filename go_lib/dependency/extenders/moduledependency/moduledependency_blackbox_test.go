@@ -90,7 +90,7 @@ func TestVersionEmptyHandling(t *testing.T) {
 		"moduleB": ">= 1.0.0",
 	})
 
-	assert.Error(t, err, "ValidateRelease should failed to handle not deployed module")
+	assert.Error(t, err, "ValidateRelease should fail to handle not deployed module")
 }
 
 // TestAddConstraintAndGetTopologicalHints tests adding constraints and getting hints
