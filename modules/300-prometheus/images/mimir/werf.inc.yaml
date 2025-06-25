@@ -1,4 +1,4 @@
-{{- $MimirVersion := "2.14.2" }}
+{{- $MimirVersion := "2.15.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
