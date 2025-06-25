@@ -30,7 +30,7 @@ import:
   add: /
   to: /src
   includePaths:
-  - lib
+  - usr/lib
   - sbin
   before: install
 git:
