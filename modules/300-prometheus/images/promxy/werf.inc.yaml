@@ -1,4 +1,4 @@
-{{- $PromxyVersion := "v0.0.91" }}
+{{- $PromxyVersion := "v0.0.93" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
