@@ -431,6 +431,7 @@ spec:
                         codec:
                           type: string
                           enum: ["JSON", "CEF"]
+                          default: "JSON"
                           description: "Available encoding formats."
                         cef:
                           type: object
@@ -622,6 +623,7 @@ spec:
                         codec:
                           type: string
                           enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
+                          default: "JSON"
                           description: "Available encoding formats."
                         cef:
                           type: object
