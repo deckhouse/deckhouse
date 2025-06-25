@@ -125,3 +125,21 @@ shell:
     find /tmp/scripts/target -name '*.sh' | sort | while read -r SCRIPT
     do $SCRIPT /tmp/scripts/target/urls.txt
     done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
+  add: /tmp/x86_64-linux-gnu
+  before: install
+shell:
+  beforeInstall:
+  - cp -a /tmp/x86_64-linux-gnu/* /opt/cross/x86_64-linux-gnu/
+  - rm -rf /tmp/x86_64-linux-gnu/*
+  install:
+  - cd /src/DCGM
+  - DCGM_BUILD_INSIDE_DOCKER=1 ./build -r -p
