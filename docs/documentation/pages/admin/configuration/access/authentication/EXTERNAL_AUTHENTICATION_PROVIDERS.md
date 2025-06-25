@@ -143,6 +143,10 @@ spec:
       - groups
 ```
 
+{% alert level="warning" %}
+If using Keycloak as an Identity Provider, remove the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers") on the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking). This is necessary for correct processing when [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) is set to `true` and correct permission granting to non-verified users.
+{% endalert %}
+
 #### Blitz Identity Provider
 
 Example configuration of a provider for integration with Blitz Identity Provider:

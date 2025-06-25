@@ -3,7 +3,7 @@ title: Authentication
 permalink: en/architecture/authentication.html
 ---
 
-## How authentication with a generated kubeconfig qorks
+## Connecting to Kubernetes API using a generated kubeconfig
 
 ![Interaction scheme when connecting to the Kubernetes API using a generated kubeconfig](../images/user-authn/kubeconfig_dex.svg)
 

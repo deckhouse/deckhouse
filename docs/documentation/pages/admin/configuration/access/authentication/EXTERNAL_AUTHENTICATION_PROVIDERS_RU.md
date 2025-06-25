@@ -269,7 +269,7 @@ spec:
 
 Если организация GitHub находится под управлением клиента:
 
-1. Перейдите в «Settings» → «Applications» → «Authorized OAuth Apps» → `<name of created OAuth App>` и нажмите «Send Request» для подтверждения.
+1. Перейдите в «Settings» → «Applications» → «Authorized OAuth Apps» → `<имя созданного OAuth-приложения>` и нажмите «Send Request» для подтверждения.
 1. Попросите клиента подтвердить запрос, который придет к нему на email.
 
 Пример настройки провайдера для интеграции с GitHub:
@@ -293,8 +293,8 @@ spec:
 
 Для этого выполните следующие шаги:
 
-1. self-hosted: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
-1. cloud gitlab.com: под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
+1. Self-hosted-версия GitLab: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
+1. GitLab Cloud (gitlab.com): под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
 1. Полученные `Application ID` и секрет укажите в ресурсе DexProvider.
 
 {% alert level="info" %}
