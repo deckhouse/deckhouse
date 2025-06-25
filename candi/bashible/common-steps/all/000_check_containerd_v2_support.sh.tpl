@@ -95,15 +95,20 @@ function fail_fast() {
 
 function main() {
   local unsupported errs
-  if errs=$(check_containerd_v2_support); then
+  errs=$(check_containerd_v2_support)
+
+  if [[ -n "$errs" ]]; then
     unsupported=1
   else
     unsupported=0
   fi
+
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
     set_labels "$unsupported" "$errs"
   fi
+  {{- if eq .cri "ContainerdV2" }}
   fail_fast "$unsupported"
+  {{ end }}
 }
 
 {{- if ne .cri "ContainerdV2" }}
