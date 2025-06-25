@@ -13,7 +13,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v3.5.21 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
+  - git clone -b v3.6.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf tools
@@ -32,6 +32,7 @@ import:
   includePaths:
   - etcd
   - etcdctl
+  - etcdutl
   before: setup
 imageSpec:
   config:
@@ -57,3 +58,4 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
+    - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
