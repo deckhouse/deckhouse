@@ -956,8 +956,8 @@ Deckhouse Kubernetes Platform uses IP addresses for kubelet API requests. The ku
 Kubelet handles server certificates using the following logic:
 
 * If `tlsCertFile` and `tlsPrivateKeyFile` are not empty, kubelet will use them as the default certificate and key.
-  * When a client requests the kubelet API by specifying an IP address (e.g. [https://10.1.1.2:10250/](https://10.1.1.2:10250/)), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
-  * When a client requests the kubelet API by specifying a host name (e.g. [https://k8s-node:10250/](https://k8s-node:10250/)), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
+  * When a client requests the kubelet API by specifying an IP address (e.g., `https://10.1.1.2:10250/`), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
+  * When a client requests the kubelet API by specifying a host name (e.g., `https://k8s-node:10250/`), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
 
 * If `tlsCertFile` and `tlsPrivateKeyFile` are empty, a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish the TLS connection. In this case, certificate rotation will work.
 {% endofftopic %}
