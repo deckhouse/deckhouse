@@ -163,6 +163,44 @@ spec:
 - В облаке появятся 2 новые VM, которые автоматически подключатся к кластеру.
 - Поды будут размещены на новых узлах.
 
+### Как выделить узлы под специфические нагрузки
+
+{% alert level="warning" %}
+Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов Deckhouse. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
+{% endalert %}
+
+Для решений данной задачи существуют два механизма:
+
+1. Установка меток в `NodeGroup` `spec.nodeTemplate.labels` для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
+1. Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
+
+{% alert level="info" %}
+Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
+
+Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
+{% endalert %}
+
+### Как ускорить заказ узлов в облаке при горизонтальном масштабировании приложений
+
+Самое действенное — держать в кластере некоторое количество предварительно подготовленных узлов, которые позволят новым репликам ваших приложений запускаться мгновенно. Очевидным минусом данного решения будут дополнительные расходы на содержание этих узлов.
+
+Необходимые настройки целевой `NodeGroup` будут следующие:
+
+1. Указать абсолютное количество предварительно подготовленных узлов (или процент от максимального количества узлов в этой группе) в параметре `cloudInstances.standby`.
+1. При наличии на узлах дополнительных служебных компонентов, не обслуживаемых Deckhouse (например, DaemonSet `filebeat`), задать их процентное потребление ресурсов узла можно в параметре `standbyHolder.overprovisioningRate`.
+1. Для работы этой функции требуется, чтобы как минимум один узел из группы уже был запущен в кластере. Иными словами, либо должна быть доступна одна реплика приложения, либо количество узлов для этой группы `cloudInstances.minPerZone` должно быть `1`.
+
+Пример:
+
+```yaml
+cloudInstances:
+  maxPerZone: 10
+  minPerZone: 1
+  standby: 10%
+  standbyHolder:
+    overprovisioningRate: 30%
+```
+
 ## Пример описания NodeGroup
 
 ### Облачные узлы
@@ -387,6 +425,104 @@ spec:
       ${CONFIG_TMP_FILE} 
 ```
 
+### Как обновить ядро на узлах
+
+#### Для дистрибутивов, основанных на Debian
+
+Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` shell-скрипта (параметр `spec.content` ресурса) желаемую версию ядра:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    desired_version="5.15.0-53-generic"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+
+    version_in_use="$(uname -r)"
+
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+
+    bb-deckhouse-get-disruptive-update-approval
+    bb-apt-install "linux-image-${desired_version}"
+```
+
+#### Для дистрибутивов, основанных на CentOS
+
+Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` shell-скрипта (параметр `spec.content` ресурса) желаемую версию ядра:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    desired_version="3.10.0-1160.42.2.el7.x86_64"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+
+    version_in_use="$(uname -r)"
+
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+
+    bb-deckhouse-get-disruptive-update-approval
+    bb-dnf-install "kernel-${desired_version}"
+```
+
 ## Добавление CloudPermanent-узлов в облачном кластере
 
 Чтобы добавить узлы типа `CloudPermanent` в облачный кластер DKP:
@@ -479,3 +615,141 @@ Deckhouse Kubernetes Platform может работать поверх серв�
      --ssh-agent-private-keys /tmp/.ssh/<ключ>
    ```
 
+## Как использовать NodeGroup с приоритетом?
+
+С помощью параметра [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) кастомного ресурса `NodeGroup` можно задавать порядок заказа узлов в кластере.
+Например, можно сделать так, чтобы сначала заказывались узлы типа *spot-node*, а если они закончились — обычные узлы. Или чтобы при наличии ресурсов в облаке заказывались узлы большего размера, а при их исчерпании — узлы меньшего размера.
+
+Пример создания двух `NodeGroup` с использованием узлов типа spot-node:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 50
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 30
+  nodeType: CloudEphemeral
+```
+
+В приведенном выше примере, `cluster-autoscaler` сначала попытается заказать узел типа *_spot-node*. Если в течение 15 минут его не получится добавить в кластер, NodeGroup `worker-spot` будет поставлен на паузу (на 20 минут) и `cluster-autoscaler` начнет заказывать узлы из NodeGroup `worker`.
+Если через 30 минут в кластере возникнет необходимость развернуть еще один узел, `cluster-autoscaler` сначала попытается заказать узел из NodeGroup `worker-spot` и только потом — из NodeGroup `worker`.
+
+После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
+
+Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или как минимум подходить для той нагрузки, которая запускает процесс увеличения кластера.
+
+## Как интерпретировать состояние группы узлов?
+
+**Ready** — группа узлов содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.
+
+Пример 1. Группа узлов в состоянии `Ready`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+Пример 2. Группа узлов в состоянии `Not Ready`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+**Updating** — группа узлов содержит как минимум один узел, в котором присутствует аннотация с префиксом `update.node.deckhouse.io` (например, `update.node.deckhouse.io/waiting-for-approval`).
+
+**WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в котором присутствует аннотация `update.node.deckhouse.io/disruption-required` и
+отсутствует аннотация `update.node.deckhouse.io/disruption-approved`.
+
+**Scaling** — рассчитывается только для групп узлов с типом `CloudEphemeral`. Состояние `True` может быть в двух случаях:
+
+1. Когда число узлов меньше *желаемого числа узлов в группе, то есть когда нужно увеличить число узлов в группе*.
+1. Когда какой-то узел помечается к удалению или число узлов больше *желаемого числа узлов*, то есть когда нужно уменьшить число узлов в группе.
+
+*Желаемое число узлов* — это сумма всех реплик, входящих в группу узлов.
+
+Пример. Желаемое число узлов равно 2:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+...
+  desired: 2
+...
+```
+
+**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.

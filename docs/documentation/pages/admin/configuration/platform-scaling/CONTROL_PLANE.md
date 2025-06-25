@@ -605,6 +605,34 @@ The control plane update process in DKP is fully automated.
 
 1. Save the changes.
 
+## How do I restore the master node if kubelet cannot load the control plane components
+
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+
+Below is an instruction on how you can restore the master node.
+
+### containerd
+
+Execute the following command to restore the master node in any cluster running under Deckhouse:
+
+```shell
+kubectl -n d8-system get secrets deckhouse-registry -o json |
+jq -r '.data.".dockerconfigjson"' | base64 -d |
+jq -r '.auths."registry.deckhouse.io".auth'
+```
+
+Copy the command's output and use it for setting the `AUTH` variable on the corrupted master.
+
+Next, you need to pull images of `control plane` components to the corrupted master:
+
+```shell
+for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+  crictl pull --auth $AUTH $image
+done
+```
+
+You need to restart `kubelet` after pulling the images.
+
 ## etcd restore
 
 ### Viewing etcd cluster members

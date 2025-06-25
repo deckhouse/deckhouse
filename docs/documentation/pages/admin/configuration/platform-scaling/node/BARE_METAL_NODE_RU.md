@@ -219,10 +219,10 @@ spec:
 ## Как изменить CRI для NodeGroup
 
 {% alert level="warning" %}
-Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
+Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр `cri.type`).
 {% endalert %}
 
-Для изменения CRI для NodeGroup, установите параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
+Для изменения CRI для NodeGroup, установите параметр `cri.type` в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 

@@ -126,10 +126,69 @@ Deckhouse Kubernetes Platform (DKP) поддерживает полный цик
 - `Automatic` — режим автоматического разрешения disruptive-обновлений.
   
   В этом режиме по умолчанию выполняется автоматический drain узла перед применением обновления.
-  Поведение можно изменить с помощью [параметра `disruptions.automatic.drainBeforeApproval`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) в настройках узла.
+  Поведение можно изменить с помощью параметра `disruptions.automatic.drainBeforeApproval` в настройках узла.
 
 - `RollingUpdate` — режим, при котором будет создан новый узел с обновлёнными настройками, а старый будет удалён.
   Применим только к облачным узлам.
 
   В этом режиме на время обновления в кластере создаётся дополнительный узел.
   Это может быть удобно, если в кластере нет ресурсов для временного размещения нагрузки с обновляемого узла.
+
+## Пример системной NodeGroup
+
+Системные узлы — это узлы, предназначенные для запуска системных компонентов. Обычно они выделяются с помощью меток и taint'ов, чтобы туда не попадали пользовательские поды. Системные узлы могут быть как статическими, так и облачными.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: system
+  nodeType: Static
+```
+
+## Примеры описания NodeGroupConfiguration
+
+### Установка плагина cert-manager для kubectl на master-узлах
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: add-cert-manager-plugin.sh
+spec:
+  weight: 100
+  bundles:
+  - "*"
+  nodeGroups:
+  - "master"
+  content: |
+    if [ -x /usr/local/bin/kubectl-cert_manager ]; then
+      exit 0
+    fi
+    curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
+    mv kubectl-cert_manager /usr/local/bin
+```
+
+## Как заставить werf игнорировать состояние Ready в группе узлов
+
+[werf](https://ru.werf.io) проверяет состояние `Ready` у ресурсов и в случае его наличия дожидается, пока значение станет `True`.
+
+Создание (обновление) ресурса NodeGroup в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD) развертывание может завершиться по превышении времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние NodeGroup, необходимо добавить к NodeGroup следующие аннотации:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+```
+
