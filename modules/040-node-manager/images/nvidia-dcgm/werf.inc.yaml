@@ -86,6 +86,9 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
+  add: /opt/cross
+  before: install
 shell:
   beforeInstall:
   - |
