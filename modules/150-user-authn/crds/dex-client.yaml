@@ -76,8 +76,8 @@ spec:
                         pattern: '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$'
                       maxProperties: 100
                       x-kubernetes-validations:
-                        - rule: "self.all(key, key.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'))"
-                          message: "Label key must match the pattern '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'"
+                        - rule: "self.all(key, key.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'))"
+                          message: "Label key must match the pattern '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'"
                     annotations:
                       type: object
                       additionalProperties:
