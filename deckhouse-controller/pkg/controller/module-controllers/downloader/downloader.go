@@ -562,7 +562,7 @@ type ImageInfo struct {
 	Digest   crv1.Hash
 }
 
-func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, moduleVersion, previousImageHash string) (*ImageInfo, error) {
+func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
 	_, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
