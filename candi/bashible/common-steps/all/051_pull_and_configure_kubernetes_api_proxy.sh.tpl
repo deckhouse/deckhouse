@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+mkdir -p /etc/kubernetes/manifests
+
 bb-set-proxy
 
 {{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
