@@ -7,11 +7,11 @@ The web interface for cluster network stack visualization is intended for operat
 
 ## Accessing the web interface
 
-To access the web interface for visualizing the cluster network stack, open the URL: `hubble.<CLUSTER_NAME_TEMPLATE>`, where `<CLUSTER_NAME_TEMPLATE>` is the string matching the cluster’s DNS name template, as specified by the global parameter `modules.publicDomainTemplate`.
+To access the web interface for visualizing the cluster network stack, open the URL `hubble.<CLUSTER_NAME_TEMPLATE>`, where `<CLUSTER_NAME_TEMPLATE>` is the string matching the cluster’s DNS name template, as specified by the global parameter `modules.publicDomainTemplate`.
 
 When you navigate to `hubble.<CLUSTER_NAME_TEMPLATE>`, you will see a namespace selection screen to choose which namespace’s network stack will be displayed.
 
-![Web interface Hubble](../../images/hubble/hubble-choose-namespace.png)
+![Hubble web interface](../../images/hubble/hubble-choose-namespace.png)
 
 Select a namespace using the dropdown in the top-left corner or by clicking the desired namespace name in the list at the center of the screen.
 
@@ -21,7 +21,7 @@ After selecting a namespace, you will see the network stack visualization and an
 - Network flow diagram. For more information on working with the visual flow diagram, see [Working with the network flow diagram](#working-with-the-network-flow-diagram).
 - Network flows and events table. For details on using the table, see [Working with the network flows and events table](#working-with-the-network-flows-and-events-table).
 
-![Web interface Hubble (main window)](../../images/hubble/hubble-main.png)
+![Hubble web interface (main window)](../../images/hubble/hubble-main.png)
 
 Data in the diagram and the network flows table is displayed in real time.
 
@@ -29,14 +29,21 @@ Data in the diagram and the network flows table is displayed in real time.
 
 To filter the displayed information about the network stack and flows, use the top panel with filters. This panel contains:
 
-- Namespace selector (dropdown on the left side of the panel);  
+- Namespace selector (dropdown on the left side of the panel).
+
   ![Namespace selection](../../images/hubble/choose-ns-hubble.png)
-- Resource selector (input field in the center of the panel) to choose which namespace resources’ flows to display;  
+
+- Resource selector (input field in the center of the panel) to choose which namespace resources’ flows to display.
+
   ![Resource selection](../../images/hubble/choose-resouces-hubble.png)
-- Flow verdict selector, based on the decision (“verdict”) made by Cilium for each flow;  
+
+- Flow verdict selector, based on the decision (“verdict”) made by Cilium for each flow.
+
   ![Flow selection](../../images/hubble/choose-flows-hubble.png)
-- Diagram element selector for choosing which elements in the namespace to show on the diagram.  
-  ![Diagram Element Selection](../../images/hubble/choose-scheme-elems-hubble.png)
+
+- Diagram element selector for choosing which elements in the namespace to show on the diagram.
+
+  ![Diagram element selection](../../images/hubble/choose-scheme-elems-hubble.png)
 
 ## Working with the network flow diagram
 
