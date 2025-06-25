@@ -14,5 +14,5 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/mkfs.xfs
-rm -f /opt/deckhouse/bin/xfs_*
+rm -f /opt/deckhouse/bin/mount.nfs* /opt/deckhouse/bin/umount.nfs*
+rm -f /usr/sbin/mount.nfs

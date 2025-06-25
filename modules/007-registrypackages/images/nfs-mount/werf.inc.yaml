@@ -31,8 +31,7 @@ import:
   to: /src
   includePaths:
   - lib
-  - sbin
-  - usr
+  - usr/bin/*mount.nfs*
   before: install
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -45,7 +44,7 @@ shell:
   - apk add --no-cache patchelf file findutils
   install:
   - mkdir -p /opt/deckhouse/bin
-  - cp -pr /src/sbin/* /src/usr/bin/* /src/usr/sbin/* /src/usr/libexec/* /opt/deckhouse/bin
+  - cp -pr /src/usr/bin/* /opt/deckhouse/bin
   - cp -pr /src/usr/lib /opt/deckhouse
   - cd /opt/deckhouse/bin
   - |
