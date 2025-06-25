@@ -27,14 +27,13 @@ bb-d8-node-ip() {
 {{- define "bb-discover-node-name" -}}
 bb-discover-node-name() {
   local discovered_name_file="/var/lib/bashible/discovered-node-name"
-  local discovered_ip_file="/var/lib/bashible/discovered-node-ip"
+  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
 
   if [ ! -s "$discovered_name_file" ]; then
-    if [[ -s "$discovered_ip_file" && -s /etc/kubernetes/kubelet.conf ]]; then
-      kubectl get node --kubeconfig /etc/kubernetes/kubelet.conf -o wide \
-        | awk '{print $1, $6}' \
-        | grep "$(cat "$discovered_ip_file")" \
-        | awk '{print $1}' > "$discovered_name_file"
+    if [[ -s "$kubelet_crt" ]]; then
+      openssl x509 -in "$kubelet_crt" \
+        -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
     else
     {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
       if [[ "$(hostname)" != "$(hostname -s)" ]]; then

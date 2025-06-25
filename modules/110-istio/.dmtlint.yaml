@@ -20,12 +20,6 @@ linters-settings:
         - kind: Deployment
           name: kiali
       readiness-probe:
-        - kind: DaemonSet
-          name: istio-cni-node
-          container: kube-rbac-proxy
-        - kind: Deployment
-          name: kiali
-          container: kube-rbac-proxy
         - kind: Deployment
           name: operator-1x21
           container: operator
@@ -33,9 +27,6 @@ linters-settings:
           name: metadata-exporter
           container: metadata-discovery
       liveness-probe:
-        - kind: DaemonSet
-          name: istio-cni-node
-          container: kube-rbac-proxy
         - kind: Deployment
           name: operator-1x21
           container: operator

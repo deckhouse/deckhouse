@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     heritage: deckhouse
-    module: deckhouse
+    module: multitenancy-manager
     backup.deckhouse.io/cluster-config: "true"
   name: projecttemplates.deckhouse.io
 spec:

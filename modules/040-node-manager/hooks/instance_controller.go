@@ -220,7 +220,7 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
@@ -249,7 +249,7 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
@@ -275,7 +275,7 @@ func instanceController(input *go_hook.HookInput) error {
 		_, clusterAPIMachineExists := clusterAPIMachines[ic.Name]
 
 		if !machineExists && !clusterAPIMachineExists {
-			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
+			input.PatchCollector.PatchWithMerge(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
 			ds := ic.DeletionTimestamp
 			if ds == nil || ds.IsZero() {

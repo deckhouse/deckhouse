@@ -5,7 +5,7 @@ sectionPagesMenu: main
 
 # Language settings
 defaultContentLanguage: 'en'
-defaultContentLanguageInSubdir: false
+defaultContentLanguageInSubdir: true
 
 uglyURLs: true
 #relativeURLs: true
@@ -19,6 +19,7 @@ markup:
     ordered: false
     startLevel: 2
   goldmark:
+    duplicateResourceFiles: true
     extensions:
       definitionList: true
       footnote: true

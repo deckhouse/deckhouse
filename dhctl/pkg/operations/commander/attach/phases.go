@@ -26,9 +26,3 @@ type (
 	}
 	OnPhaseFunc = phases.OnPhaseFunc[PhaseData]
 )
-
-const (
-	ScanPhase    phases.OperationPhase = "Scan"
-	CapturePhase phases.OperationPhase = "Capture"
-	CheckPhase   phases.OperationPhase = "Check"
-)
