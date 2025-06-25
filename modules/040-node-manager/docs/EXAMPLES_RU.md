@@ -219,6 +219,8 @@ spec:
    EOF
    ```
 
+   > Если необходимо добавить узлы в уже существующую группу узлов, укажите их желаемое количество в поле `.spec.count` NodeGroup.
+
 ### С помощью Cluster API Provider Static для нескольких групп узлов
 
 Пример использования фильтров в [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
@@ -326,7 +328,7 @@ spec:
 `StaticInstance` static-0:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-worker-1

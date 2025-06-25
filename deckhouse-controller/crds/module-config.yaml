@@ -62,7 +62,7 @@ spec:
                       - The `ModuleIsInMaintenanceMode` alert is triggered.
                     
                       If Deckhouse restarts, the module reapplies its last known state once and then continues in unmanaged mode.
-                  x-doc-examples: ['false']
+                  x-doc-examples: ['NoResourceReconciliation']
                 version:
                   type: number
                   description: |

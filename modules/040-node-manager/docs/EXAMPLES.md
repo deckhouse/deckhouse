@@ -213,6 +213,8 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    EOF
    ```
 
+   > If it is necessary to add nodes to an existing node group, specify the desired number in the `.spec.count` field of the NodeGroup.
+
 ### Using Cluster API Provider Static for multiple node groups
 
 This example shows how you can use filters in the StaticInstance [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
@@ -324,7 +326,7 @@ spec:
 **`StaticInstance` static-worker-1:**
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-worker-1

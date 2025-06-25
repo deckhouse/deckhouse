@@ -25,6 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type FlannelConfig struct {
@@ -72,23 +74,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setPodNetworkMode)
 
 func setPodNetworkMode(input *go_hook.HookInput) error {
-	cniConfigurationSecrets, ok := input.Snapshots["cni_configuration_secret"]
-	var flannelConfig FlannelConfig
-	if ok && len(cniConfigurationSecrets) > 0 {
-		flannelConfig, ok = cniConfigurationSecrets[0].(FlannelConfig)
-		if !ok {
-			return fmt.Errorf("cannot convert Kubernetes Secret to FlannelConfig")
-		}
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal cni_configuration_secret to FlannelConfig: %w", err)
 	}
 
-	var podNetworkMode = "host-gw"
+	var flannelConfig FlannelConfig
+	if len(cniConfigurationSecrets) > 0 {
+		flannelConfig = cniConfigurationSecrets[0]
+	}
+
+	podNetworkMode := "host-gw"
 
 	if input.ConfigValues.Exists("cniFlannel.podNetworkMode") {
 		configPodNetworkMode := input.ConfigValues.Get("cniFlannel.podNetworkMode").String()
 		switch configPodNetworkMode {
 		case "HostGW":
 			podNetworkMode = "host-gw"
-
 		case "VXLAN":
 			podNetworkMode = "vxlan"
 		}
@@ -99,6 +101,5 @@ func setPodNetworkMode(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("cniFlannel.internal.podNetworkMode", podNetworkMode)
-
 	return nil
 }

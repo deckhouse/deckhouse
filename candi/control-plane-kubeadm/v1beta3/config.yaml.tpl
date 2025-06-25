@@ -133,7 +133,7 @@ apiServer:
     {{- if eq .apiserver.auditLog.output "File" }}
     audit-log-path: "{{ .apiserver.auditLog.path }}/audit.log"
     audit-log-truncate-enabled: "true"
-    audit-log-maxage: "7"
+    audit-log-maxage: "30"
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
     {{- else }}

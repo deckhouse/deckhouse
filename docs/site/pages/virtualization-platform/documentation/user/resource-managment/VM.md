@@ -15,6 +15,35 @@ For creating a virtual machine, the [VirtualMachine](../../../reference/cr/virtu
 
 ## Creating a virtual machine
 
+### CPU and coreFraction Settings
+
+When creating a virtual machine, you can configure the amount of CPU resources it will use by specifying the `cores` and `coreFraction` parameters. The `cores` parameter defines the number of virtual CPU cores allocated to the VM. The `coreFraction` parameter sets the guaranteed minimum share of computational power allocated per core.
+
+> Allowed values for `coreFraction` may be defined in the `VirtualMachineClass` resource for a given range of `cores`, and only those values are permitted.
+
+For example, if you set `cores: 2`, the VM will be allocated two virtual CPU cores, which correspond to two physical cores on the hypervisor. With `coreFraction: 20%`, the VM is guaranteed at least 20% of the processing power of each core, regardless of the hypervisor node load. If additional resources are available on the node, the VM can use up to 100% of each core’s capacity, achieving maximum performance. In this case, the VM is guaranteed 0.2 CPU per physical core but may utilize up to 2 CPUs if the node has idle resources.
+
+> If the `coreFraction` parameter is not specified, each virtual core receives 100% of the corresponding physical core’s processing power.
+
+Configuration example:
+
+```yaml
+spec:
+  cpu:
+    cores: 2
+    coreFraction: 20%
+```
+
+This approach ensures stable VM performance even under high load in oversubscription scenarios, where more CPU cores are allocated to VMs than are physically available on the hypervisor.
+
+The cores and coreFraction parameters are taken into account during VM placement. The guaranteed CPU share is used when selecting a node to ensure the necessary performance can be delivered for all VMs. If a node cannot satisfy the required guarantees, the VM will not be scheduled on it.
+
+Below is a visualization of two virtual machines with different CPU configurations placed on the same node:
+
+![image](/../../../../images/virtualization-platform/vm-corefraction.png)
+
+### Creating VM
+
 Below is an example of a simple virtual machine configuration that runs Ubuntu 22.04. The example uses a cloud-init script that installs the `qemu-guest-agent` and `nginx` services, as well as creates the user `cloud` with the password `cloud`.
 
 The password in this example was generated using the command `mkpasswd --method=SHA-512 --rounds=4096 -S saltsalt`. You can change it to your own if needed.
@@ -93,6 +122,42 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
 
 After creation, the virtual machine will automatically receive an IP address from the range specified in the module settings (block `virtualMachineCIDRs`).
+
+### Virtual Machine resource configuration and sizing policy
+
+The sizing policy in a VirtualMachineClass, defined under `.spec.sizingPolicies`, sets the rules for configuring virtual machine resources, including the number of CPU cores, memory size, and core usage fraction (`coreFraction`). This policy is optional. If it is not defined, you can specify arbitrary values for VM resources without strict constraints. However, if a sizing policy is present, the VM configuration must strictly conform to it. Otherwise, the configuration cannot be saved.
+
+The policy divides the number of CPU cores into ranges, such as 1–4 cores or 5–8 cores. For each range, you can specify how much memory is allowed per core and/or which `coreFraction` values are permitted.
+
+If a VM’s configuration (CPU cores, memory, or `coreFraction`) does not match the policy, the status will include a condition:
+`type: SizingPolicyMatched, status: False`.
+
+If you update the sizing policy in the VirtualMachineClass, existing virtual machines may need to be adjusted to comply with the new policy. VMs that do not match the updated policy will continue to run, but their configurations cannot be modified until they are updated to comply.
+
+Example:
+
+```yaml
+spec:
+  sizingPolicies:
+    - cores:
+        min: 1
+        max: 4
+      memory:
+        min: 1Gi
+        max: 8Gi
+      coreFractions: [5, 10, 20, 50, 100]
+    - cores:
+        min: 5
+        max: 8
+      memory:
+        min: 5Gi
+        max: 16Gi
+      coreFractions: [20, 50, 100]
+```
+
+If a VM is configured with 2 cores, it falls into the 1–4 cores range. In that case, the memory size must be between 1 GiB and 8 GiB, and the `coreFraction` must be one of: 5%, 10%, 20%, 50%, or 100%. If it has 6 cores, it falls into the 5–8 cores range, where memory must be between 5 GiB and 16 GiB, and `coreFraction` must be 20%, 50%, or 100%.
+
+In addition to VM sizing, the policy also helps enforce the desired maximum CPU oversubscription. For example, specifying `coreFraction: 20%` in the policy ensures that each VM gets at least 20% of CPU time per core, effectively allowing up to 5:1 oversubscription.
 
 ## Virtual Machine Life Cycle
 
