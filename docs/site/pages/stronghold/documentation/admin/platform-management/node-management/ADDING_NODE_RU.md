@@ -99,7 +99,7 @@ CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
 
 ```shell
 d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: static-0-access
@@ -115,7 +115,7 @@ metadata:
 
 ```shell
 d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-0
