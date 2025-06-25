@@ -59,8 +59,8 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross/x86_64-linux-gnu
-  to: /opt/cross
+  add: /opt/cross/x86_64-linux-gnu/
+  to: /opt/cross/
   before: install
 shell:
   beforeInstall:
@@ -86,6 +86,10 @@ fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
+  add: /opt/cross/x86_64-linux-gnu/
+  to: /opt/cross/
   before: install
 shell:
   beforeInstall:
