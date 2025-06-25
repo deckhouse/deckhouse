@@ -51,3 +51,7 @@ spec:
     - kind: User
       name: admin
 ```
+
+Members: List of users included in the group (specified as `kind`: User and username).
+
+Once the group is created and includes all necessary users, proceed by configuring [authorization](../../access/authorization/).
