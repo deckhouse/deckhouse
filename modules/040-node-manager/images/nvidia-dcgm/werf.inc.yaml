@@ -59,7 +59,8 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross
+  add: /opt/cross/x86_64-linux-gnu
+  to: /opt/cross
   before: install
 shell:
   beforeInstall:
@@ -86,9 +87,6 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross
-  before: install
 shell:
   beforeInstall:
   - |
@@ -112,6 +110,8 @@ shell:
     export CMAKE_BUILD_TYPE=RelWithDebInfo
     export CMAKE_TOOLCHAIN_FILE=/tmp/$TARGET.cmake
     cp -a /src/DCGM/dcgmbuild/scripts/target /tmp/scripts/target
+    sed -E -i "s#(cuda11-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-debian11-11-8-local_11.8.0-520.61.05-1_amd64.deb d0f173c6ec89fa2f8e3b73fac711ffcd7ed19b0f556fd9a803354d0c94e04385c63f5cc6be1d09d245052bedd412034567b59964418341656667d35faf5512b7#" /tmp/scripts/target/urls.txt
+    sed -E -i "s#(cuda12-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-debian12-12-8-local_12.8.0-570.86.10-1_amd64.deb aa4e02e39bbc9c764446aa774b6cca0a81f432c0306f6dc2d61fd5e8c2f013834f0951a43e184743310921b75fbd9086bc7176ddc7ab92b7461c9d387b68de65#" /tmp/scripts/target/urls.txt
     set -ex
     echo $CC
     $CC --version
