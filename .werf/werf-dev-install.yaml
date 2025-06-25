@@ -17,4 +17,4 @@ import:
 
 {{ include "controller_and_install_image_labels" . }}
     user: "0:0"
-    command: ["/bin/bash"]
+    cmd: ["/bin/bash"]
