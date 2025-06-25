@@ -76,7 +76,7 @@ function set_labels() {
 
     ((retries++))
     if [[ $retries -ge $MAX_RETRIES ]]; then
-      >&2 echo "ERROR: can't set containerd-v2-not-supported label or error annotation on Node."
+      bb-log-error "ERROR: can't set containerd-v2-not-supported label or error annotation on Node."
       return 1
     fi
     sleep 5
@@ -86,24 +86,24 @@ function set_labels() {
 }
 
 function fail_fast() {
-  local status=$1
-  if (( status != 0 )); then
-    >&2 echo "ERROR: containerd V2 not supported"
+  local unsupported=$1
+  if (( unsupported )); then
+    bb-log-error "ERROR: containerd V2 not supported"
     exit 1
   fi
 }
 
 function main() {
-  local support_status errs
+  local unsupported errs
   if errs=$(check_containerd_v2_support); then
-    support_status=0
+    unsupported=1
   else
-    support_status=$?
+    unsupported=0
   fi
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$support_status" "$errs"
+    set_labels "$unsupported" "$errs"
   fi
-  fail_fast "$support_status"
+  fail_fast "$unsupported"
 }
 
 {{- if ne .cri "ContainerdV2" }}
