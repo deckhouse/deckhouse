@@ -140,7 +140,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Name:               "everything-ok",
 			FencingEnabled:     true,
 			MaintanenceEnabled: false,
-			RenewTime:          func() time.Time { return time.Now() },
+			RenewTime:          time.Now,
 		}, testCaseResult{
 			nodeExists: true,
 			podExists:  true,
