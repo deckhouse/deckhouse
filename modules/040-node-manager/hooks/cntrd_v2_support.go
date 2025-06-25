@@ -17,8 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"fmt"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,10 +31,11 @@ import (
 )
 
 const (
-	containerdV2SupportLabel          = "node.deckhouse.io/containerd-v2-unsupported"
-	cntrdV2UnsupportedMetricName      = "d8_nodes_cntrd_v2_unsupported"
-	cntrdV2UnsupportedMetricGroupName = "cntrd_v2"
+	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
+	cntrdV2GroupName         = "nodes_cntrd_v2"
 )
+
+var cntrdV2UnsupportedMetricName = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -40,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/3 * * * *",
 		},
 	},
-	Queue: "/modules/node-manager/cgroupv2_support_metrics",
+	Queue: "/modules/node-manager/nodes_cntrdv2_unsupported_metric",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "nodes_cntrdv2_unsupported",
@@ -84,7 +89,10 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 
 func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
 	snap := input.Snapshots["nodes_cntrdv2_unsupported"]
-	input.MetricsCollector.Expire(cntrdV2UnsupportedMetricGroupName)
+	input.MetricsCollector.Expire(cntrdV2GroupName)
+	options := []sdkpkg.MetricCollectorOption{
+		metrics.WithGroup(cntrdV2GroupName),
+	}
 	for _, s := range snap {
 		nodeInfo := s.(cgroupV2SupportNode)
 
@@ -94,7 +102,7 @@ func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
 				"node":       nodeInfo.Name,
 				"node_group": nodeInfo.NodeGroup,
 			}
-			input.MetricsCollector.Set("cntrdV2UnsupportedMetricName", metricValue, labels, metrics.WithGroup(cntrdV2UnsupportedMetricGroupName))
+			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 		}
 	}
 
