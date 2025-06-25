@@ -1087,10 +1087,6 @@ entries:
                 en: Development and debugging
                 ru: Разработка и отладка
               url: /architecture/module-development/development/
-        - title:
-            en: Authentication
-            ru: Аутентификация
-          url: /architecture/authentication/
           draft: true
         - title:
             en: Disaster resilience
@@ -1120,6 +1116,10 @@ entries:
             en: VPA
             ru: VPA
           url: /architecture/vpa.html
+        - title:
+            en: Authentication
+            ru: Аутентификация
+          url: /architecture/authentication.html
         - title:
             en: Monitoring
             ru: Мониторинг
