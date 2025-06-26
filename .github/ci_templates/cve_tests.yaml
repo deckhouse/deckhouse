@@ -89,7 +89,7 @@ remove_labels:
     SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
-    ./.github/scripts/cve_scan.sh -r
+    ./.github/scripts/cve_scan.sh
 # </template: cve_scan_deckhouse_images>
 {!{- end -}!}
 

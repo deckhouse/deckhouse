@@ -10,7 +10,7 @@ automountServiceAccountToken: false
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: validator-role
+  name: validator
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
@@ -18,7 +18,7 @@ rules:
     resources: [ "configmaps", "endpoints", "nodes", "pods", "secrets" ]
     verbs: [ "list", "watch" ]
   - apiGroups: [ "" ]
-    resources: [ "nodes", "pods" ]
+    resources: [ "nodes", "pods", "configmaps" ]
     verbs: [ "get" ]
   - apiGroups: [ "" ]
     resources: [ "services" ]
@@ -36,13 +36,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: validator-role-binding
+  name: validator
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: validator-role
+  name: validator
 subjects:
   - kind: ServiceAccount
     name: validator
