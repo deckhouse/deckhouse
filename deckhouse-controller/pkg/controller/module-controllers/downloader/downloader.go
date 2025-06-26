@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.opentelemetry.io/otel"
@@ -423,7 +424,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 }
 
 func (md *ModuleDownloader) getImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ImageInfo, error) {
-	img, err := regCli.Image(context.TODO(), imageTag)
+	img, err := regCli.Image(context.TODO(), strcase.ToKebab(imageTag))
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
