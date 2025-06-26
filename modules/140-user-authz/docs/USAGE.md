@@ -495,7 +495,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
 1. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
 
-    > In the `request` field, specify the contents of the CSR created in the previous step, encoded in `Base64`.
+    > In the `request` field, specify the contents of the CSR created in the previous step, encoded in Base64.
 
     ```yaml
     apiVersion: certificates.k8s.io/v1
