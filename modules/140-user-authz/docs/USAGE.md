@@ -511,7 +511,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
       - "client auth"
     ```
   
-4. Apply the manifest to create a certificate signing request:
+1. Apply the manifest to create a certificate signing request:
   
     ```shell
     kubectl apply -f csr.yaml
