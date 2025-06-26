@@ -493,7 +493,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
     openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
     ```
 
-3. Create a manifest for the CertificateSigningRequest object and save it to a file (csr.yaml in this example):
+1. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
 
     > In the `request` field, specify the contents of the CSR created in the previous step, encoded in `Base64`.
 
