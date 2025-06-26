@@ -428,12 +428,28 @@ oom_score = 0
 EOF
 {{- end }}
 
+
+additional_configs() {
+  local conf_dir="$1"
+  local other_conf_dir="$2"
+  local root_path="/etc/containerd"
+  local full_conf_path="$root_path/$conf_dir"
+
+  rm -rf "$root_path/$other_conf_dir/"
+  
+  if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
+    toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
+  else
+    cat "$root_path/deckhouse.toml"
+  fi
+}
+
 # Check additional configs
-if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/conf.d/*.toml -)"
-else
-  containerd_toml="$(cat /etc/containerd/deckhouse.toml)"
-fi
+{{- if eq .cri "ContainerdV2" }}
+containerd_toml=additional_configs conf2.d conf.d
+{{- else if eq .cri "Containerd" }}
+containerd_toml=additional_configs conf.d conf2.d
+{{- end }}
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
 
