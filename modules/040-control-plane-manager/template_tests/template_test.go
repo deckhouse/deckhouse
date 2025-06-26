@@ -107,6 +107,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     effectiveKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
+    mastersNode:
+      - master-0
     pkiChecksum: checksum
     rolloutEpoch: 1857
 `
@@ -656,6 +658,20 @@ resources:
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).ToNot(ContainSubstring("--service-account-issuer"))
+			})
+		})
+		Context("cluster is bootstrapped", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("cronjob for etcd backup should be exist by default", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Cronjob", "kube-system", "d8-etcd-backup-039d00b17e10d07f52111429fc7d82e2c")
+				Expect(s.Exists()).To(BeTrue())
 			})
 		})
 	})
