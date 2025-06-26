@@ -179,9 +179,9 @@ func handleDiscoveryDataVolumeTypes(
 	}
 
 	// TODO: review this, looks like deadcode
-	storageClassSnapshots := make(map[string]storage.StorageClass)
+	storageClassSnapshots := make(map[string]*storage.StorageClass)
 
-	for snapshot, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](input.NewSnapshots.Get("storage_classes")) {
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[*storage.StorageClass](input.NewSnapshots.Get("storage_classes")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %w", err)
 		}
