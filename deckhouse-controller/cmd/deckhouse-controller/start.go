@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -94,6 +95,16 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		ctx := context.Background()
 
 		operator := addonoperator.NewAddonOperator(ctx, addonoperator.WithLogger(logger.Named("addon-operator")))
+
+		go func() {
+			for {
+				buf := make([]byte, 1<<16)
+				runtime.Stack(buf, true)
+				fmt.Printf("for-nelm-traces: %s", buf)
+
+				time.Sleep(time.Second * time.Duration(10))
+			}
+		}()
 
 		operator.StartAPIServer()
 
