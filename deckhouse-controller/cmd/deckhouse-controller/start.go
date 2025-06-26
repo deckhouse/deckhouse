@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -100,7 +101,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			for {
 				buf := make([]byte, 1<<16)
 				runtime.Stack(buf, true)
-				fmt.Printf("for-nelm-traces: %s", buf)
+				log.Warn("for-nelm-traces", slog.String("trace", string(buf)))
 
 				time.Sleep(time.Second * time.Duration(10))
 			}
