@@ -344,7 +344,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
 
-	// fill imageInfo.Diest
+	// fill imageInfo.Digest
 	digest, err := img.Digest()
 	if err != nil {
 		return nil, fmt.Errorf("fetch digest error: %w", err)
@@ -393,7 +393,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata error: %w", err)
 	}
-
 	if moduleMetadata.Version == nil {
 		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}

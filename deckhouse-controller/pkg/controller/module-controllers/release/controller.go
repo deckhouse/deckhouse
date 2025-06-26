@@ -1087,7 +1087,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			logger.Debug("successfully updated module conditions")
 		}
 
-		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+		if err := r.updateReleaseStatus(ctx, release, status); err != nil {
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
