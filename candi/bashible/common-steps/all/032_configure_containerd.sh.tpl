@@ -446,9 +446,9 @@ additional_configs() {
 
 # Check additional configs
 {{- if eq .cri "ContainerdV2" }}
-containerd_toml=additional_configs conf2.d conf.d
+containerd_toml=$(additional_configs conf2.d conf.d)
 {{- else if eq .cri "Containerd" }}
-containerd_toml=additional_configs conf.d conf2.d
+containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
