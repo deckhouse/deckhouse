@@ -113,9 +113,9 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
-В рамках текущей ролевой модели для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имен `d8-runtime-audit-engine`.
+В рамках [текущей](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#%D1%82%D0%B5%D0%BA%D1%83%D1%89%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C) ролевой модели для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имен `d8-runtime-audit-engine`.
 
-В рамках экспериментальной ролевой модели потребуется роль `d8:manage:security:manager`.
+В рамках [экспериментальной](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#%D1%8D%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D0%B8%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C) ролевой модели потребуется роль `d8:manage:security:manager`.
 
 Настроить список встроенных правил можно с помощью параметра [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 

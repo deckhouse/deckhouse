@@ -112,9 +112,9 @@ To view all `falco` audit rules, you can use the following command:
 kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
-Under the current role model, you must have the `PrivilegedUser` role or higher on the `d8-runtime-audit-engine` namespace to run this command.
+Under the [current](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/#current-role-based-model) role model, you must have the `PrivilegedUser` role or higher on the `d8-runtime-audit-engine` namespace to run this command.
 
-Under the experimental role model, you will need the `d8:manage:security:manager` role.
+Under the [experimental](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/#experimental-role-based-model) role model, you will need the `d8:manage:security:manager` role.
 
 You can customize the list of built-in rules with [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
