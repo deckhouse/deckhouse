@@ -580,10 +580,12 @@ var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.Hoo
 	secretInfoSnapshots := input.NewSnapshots.Get("cloud_provider_secret")
 
 	if len(secretInfoSnapshots) > 0 {
-		var secretInfo map[string]string
+		var secretInfo map[string]interface{}
 		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
 		if err == nil {
-			fromSecret = secretInfo["instanceClassKind"]
+			if kind, ok := secretInfo["instanceClassKind"].(string); ok {
+				fromSecret = kind
+			}
 		}
 	}
 
