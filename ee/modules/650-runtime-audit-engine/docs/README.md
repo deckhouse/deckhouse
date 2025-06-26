@@ -106,6 +106,16 @@ There is also an additional set of built-in rules:
 
 - a rule placed in the custom resource format [FalcoAuditRules](cr.html#falcoauditrules).
 
+To view all `falco` audit rules, you can use the following command:
+
+```shell
+kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+```
+
+Under the current role model, you must have the `PrivilegedUser` role or higher on the `d8-runtime-audit-engine` namespace to run this command.
+
+Under the experimental role model, you will need the `d8:manage:security:manager` role.
+
 You can customize the list of built-in rules with [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
 ### Custom audit rules
