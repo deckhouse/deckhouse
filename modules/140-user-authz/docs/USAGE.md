@@ -472,7 +472,7 @@ EOF
 
 #### Creating a user by issuing a certificate via the Kubernetes API
 
-This is a more secure method because a special kubernetes API is used to sign the certificate and direct access to ca.key is not required.
+This is a more secure method because a special kubernetes API is used to sign the certificate and direct access to `ca.key` is not required.
 
 The features of this method are:
 
