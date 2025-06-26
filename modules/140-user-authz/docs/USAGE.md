@@ -261,7 +261,7 @@ There are two types of users in Kubernetes:
 
 * Service accounts managed by Kubernetes via the API;
 * Regular users and groups managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
-  * Via the user-authn module. The module supports the following external providers and authentication protocols: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. More details - in the documentation of the [user-authn](../../modules/user-authn/) module.
+  * Via the `user-authn` module. The module supports the following external providers and authentication protocols: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. More details — in the documentation of the [`user-authn`](../../modules/user-authn/) module.
   * Via the [certificates](#how-to-create-a-user-using-a-client-certificate).
 
 When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a bastion node.
