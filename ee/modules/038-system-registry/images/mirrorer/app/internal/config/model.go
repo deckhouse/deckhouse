@@ -11,16 +11,16 @@ import (
 	"os"
 
 	validation "github.com/go-ozzo/ozzo-validation"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 type Config struct {
-	CAFile          string   `yaml:"ca,omitempty"`
-	Users           Users    `yaml:"users"`
-	LocalAddress    string   `yaml:"local"`
-	RemoteAddresses []string `yaml:"remote"`
-	SleepInterval   int      `yaml:"sleep,omitempty"`
-	Parallelizm     int      `yaml:"parallelizm,omitempty"`
+	CAFile          string   `json:"ca,omitempty"`
+	Users           Users    `json:"users"`
+	LocalAddress    string   `json:"local"`
+	RemoteAddresses []string `json:"remote"`
+	SleepInterval   int      `json:"sleep,omitempty"`
+	Parallelizm     int      `json:"parallelizm,omitempty"`
 }
 
 func (config *Config) Validate() error {
@@ -32,8 +32,8 @@ func (config *Config) Validate() error {
 }
 
 type Users struct {
-	Puller UserInfo `yaml:"puller"`
-	Pusher UserInfo `yaml:"pusher"`
+	Puller UserInfo `json:"puller"`
+	Pusher UserInfo `json:"pusher"`
 }
 
 func (u *Users) Validate() error {
@@ -44,8 +44,8 @@ func (u *Users) Validate() error {
 }
 
 type UserInfo struct {
-	Name     string `yaml:"name"`
-	Password string `yaml:"password"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
 }
 
 func (ui *UserInfo) Validate() error {
@@ -55,26 +55,28 @@ func (ui *UserInfo) Validate() error {
 	)
 }
 
-func FromFile(filePath string) (config Config, err error) {
+func FromFile(filePath string) (Config, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		err = fmt.Errorf("failed to open file: %w", err)
-		return
+		return Config{}, err
 	}
 	defer file.Close()
 
-	config, err = parse(file)
-	return
+	return parse(file)
 }
 
-func parse(reader io.Reader) (config Config, err error) {
-	decoder := yaml.NewDecoder(reader)
-	err = decoder.Decode(&config)
-
+func parse(reader io.Reader) (Config, error) {
+	buf, err := io.ReadAll(reader)
 	if err != nil {
-		err = fmt.Errorf("failed to decode YAML: %w", err)
-		return
+		return Config{}, fmt.Errorf("cannot read config: %w", err)
 	}
 
-	return
+	var config Config
+	err = yaml.Unmarshal(buf, &config)
+	if err != nil {
+		return config, fmt.Errorf("failed to decode YAML: %w", err)
+	}
+
+	return config, nil
 }

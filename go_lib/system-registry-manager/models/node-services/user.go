@@ -22,9 +22,9 @@ import (
 
 // User represents a user with a name and a password hash
 type User struct {
-	Name         string `json:"name" yaml:"name"`
-	Password     string `json:"password" yaml:"password"`
-	PasswordHash string `json:"password_hash" yaml:"password_hash"`
+	Name         string `json:"name"`
+	Password     string `json:"password"`
+	PasswordHash string `json:"password_hash"`
 }
 
 func (user User) Validate() error {

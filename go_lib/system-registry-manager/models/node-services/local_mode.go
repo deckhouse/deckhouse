@@ -21,12 +21,12 @@ import (
 )
 
 type LocalMode struct {
-	UserRW     User     `json:"user_rw" yaml:"user_rw"`
-	UserPuller User     `json:"user_puller" yaml:"user_puller"`
-	UserPusher User     `json:"user_pusher" yaml:"user_pusher"`
-	Upstreams  []string `json:"upstreams,omitempty" yaml:"upstreams,omitempty"`
+	UserRW     User     `json:"user_rw"`
+	UserPuller User     `json:"user_puller"`
+	UserPusher User     `json:"user_pusher"`
+	Upstreams  []string `json:"upstreams,omitempty"`
 
-	IngressClientCACert string `json:"ingress_client_ca,omitempty" yaml:"ingress_client_ca,omitempty"`
+	IngressClientCACert string `json:"ingress_client_ca,omitempty"`
 }
 
 func (localModel LocalMode) Validate() error {

@@ -27,21 +27,21 @@ import (
 
 // Config represents the configuration
 type Config struct {
-	CACert           string `json:"ca,omitempty" yaml:"ca"`
-	AuthCert         string `json:"auth_cert" yaml:"auth_cert"`
-	AuthKey          string `json:"auth_key" yaml:"auth_key"`
-	TokenCert        string `json:"token_cert" yaml:"token_cert"`
-	TokenKey         string `json:"token_key" yaml:"token_key"`
-	DistributionCert string `json:"distribution_cert" yaml:"distribution_cert"`
-	DistributionKey  string `json:"distribution_key" yaml:"distribution_key"`
+	CACert           string `json:"ca,omitempty"`
+	AuthCert         string `json:"auth_cert"`
+	AuthKey          string `json:"auth_key"`
+	TokenCert        string `json:"token_cert"`
+	TokenKey         string `json:"token_key"`
+	DistributionCert string `json:"distribution_cert"`
+	DistributionKey  string `json:"distribution_key"`
 
-	UserRO     User   `json:"user_ro" yaml:"user_ro"`
-	HTTPSecret string `json:"http_secret" yaml:"http_secret"`
+	UserRO     User   `json:"user_ro"`
+	HTTPSecret string `json:"http_secret"`
 
-	LocalMode *LocalMode `json:"local_mode,omitempty" yaml:"local_mode,omitempty"`
-	ProxyMode *ProxyMode `json:"proxy_mode,omitempty" yaml:"proxy_mode,omitempty"`
+	LocalMode *LocalMode `json:"local_mode,omitempty"`
+	ProxyMode *ProxyMode `json:"proxy_mode,omitempty"`
 
-	ProxyConfig *ProxyConfig `json:"proxy_config,omitempty" yaml:"proxy,omitempty"`
+	ProxyConfig *ProxyConfig `json:"proxy_config,omitempty"`
 }
 
 func (config Config) Validate() error {

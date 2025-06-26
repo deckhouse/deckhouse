@@ -21,9 +21,9 @@ import (
 )
 
 type ProxyConfig struct {
-	HTTP    string `json:"http,omitempty" yaml:"http,omitempty"`
-	HTTPS   string `json:"https,omitempty" yaml:"https,omitempty"`
-	NoProxy string `json:"no_proxy,omitempty" yaml:"no_proxy,omitempty"`
+	HTTP    string `json:"http,omitempty"`
+	HTTPS   string `json:"https,omitempty"`
+	NoProxy string `json:"no_proxy,omitempty"`
 }
 
 func (proxyConfig ProxyConfig) Validate() error {

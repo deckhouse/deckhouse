@@ -21,9 +21,9 @@ import (
 )
 
 type ProxyMode struct {
-	Upstream UpstreamRegistry `json:"upstream" yaml:"upstream"`
+	Upstream UpstreamRegistry `json:"upstream"`
 
-	UpstreamRegistryCACert string `json:"upstream_registry_ca,omitempty" yaml:"upstream_registry_ca,omitempty"`
+	UpstreamRegistryCACert string `json:"upstream_registry_ca,omitempty"`
 }
 
 func (proxyMode ProxyMode) Validate() error {
@@ -34,12 +34,12 @@ func (proxyMode ProxyMode) Validate() error {
 
 // UpstreamRegistry holds upstream registry configuration details
 type UpstreamRegistry struct {
-	Scheme   string  `json:"scheme,omitempty" yaml:"scheme,omitempty"`
-	Host     string  `json:"host,omitempty" yaml:"host,omitempty"`
-	Path     string  `json:"path,omitempty" yaml:"path,omitempty"`
-	User     string  `json:"user,omitempty" yaml:"user,omitempty"`
-	Password string  `json:"password,omitempty" yaml:"password,omitempty"`
-	TTL      *string `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+	Scheme   string  `json:"scheme,omitempty"`
+	Host     string  `json:"host,omitempty"`
+	Path     string  `json:"path,omitempty"`
+	User     string  `json:"user,omitempty"`
+	Password string  `json:"password,omitempty"`
+	TTL      *string `json:"ttl,omitempty"`
 }
 
 func (upstream UpstreamRegistry) Validate() error {
