@@ -61,7 +61,7 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("transformions: action %s not valide", tm.Action)
+			return nil, fmt.Errorf("transformations action: %s not valide", tm.Action)
 		}
 		transforms = append(transforms, transformation)
 	}
@@ -74,7 +74,7 @@ func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 	labels := checkFixDotPrefix(r.Labels)
 	for _, l := range labels {
 		if !validLabel(l) {
-			return nil, fmt.Errorf("transformions replaceDotKeys label: %s not valide", l)
+			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valide", l)
 		}
 		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
 			"-> |key| { replace(key, \".\", \"_\")}\n}\n", vrl, l, l, l)
@@ -88,7 +88,7 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 	switch e.SourceFormat {
 	case "String":
 		if e.String.TargetField == "" {
-			return nil, fmt.Errorf("transformions ensureStructuredMessage string: TargetField is empty")
+			return nil, fmt.Errorf("transformations ensureStructuredMessage string: TargetField is empty")
 		}
 		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? { \"%s\": .message }\n",
 			addMaxDepth(e.String.Depth), e.String.TargetField)
@@ -97,7 +97,7 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 	case "Klog":
 		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? parse_klog!(.message)\n", addMaxDepth(e.Klog.Depth))
 	default:
-		return nil, fmt.Errorf("transformions ensureStructuredMessage: sourceFormat %s not valide", e.SourceFormat)
+		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valide", e.SourceFormat)
 	}
 	return NewTransformation(name, vrl), nil
 }
@@ -108,7 +108,7 @@ func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	labels := checkFixDotPrefix(d.Labels)
 	for _, l := range labels {
 		if !validLabel(l) {
-			return nil, fmt.Errorf("transformions dropLabels label: %s not valide", l)
+			return nil, fmt.Errorf("transformations dropLabels label: %s not valide", l)
 		}
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
