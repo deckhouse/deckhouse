@@ -2,7 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXT = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
+  useNSXT       = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
   edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
 }
 
