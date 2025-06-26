@@ -21,7 +21,6 @@ PROTOC_GEN_GO_VERSION = 1.32
 PROTOC_GEN_GO_GROC_VERSION = 1.3
 
 # Build versions
-GO_VERSION=1.19.3
 GOARCH=amd64
 
 DHCTL_BIN_NAME=bin/dhctl
@@ -109,13 +108,16 @@ generate: protoc
 	go generate ./...
 
 build: check-vars
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test: check-vars
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test: check-vars
 	go test -p 1 ./...
+
+test-race: check-vars
+	go test -race -p 1 ./...
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
