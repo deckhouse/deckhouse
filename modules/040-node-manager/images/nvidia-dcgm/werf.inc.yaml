@@ -141,4 +141,4 @@ shell:
   - cd /src/DCGM
   - export ARCHITECTURE=x86_64
   - export TARGET=x86_64-linux-gnu
-  - DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p -n
+  - DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p -n -c
