@@ -438,7 +438,7 @@ To create a user using a client certificate issued through OpenSSL, follow these
     openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
     ```
 
-1. Upload the CSR created in the previous step (myuser.csr in this example) to the master node and sign it with the cluster root certificate. Example command to sign the CSR on the master node (make sure that the paths to myuser.csr, ca.crt and ca.key are correct for your case):
+1. Upload the CSR created in the previous step (`myuser.csr` in this example) to the master node and sign it with the cluster root certificate. Example command to sign the CSR on the master node (make sure that the paths to `myuser.csr`, `ca.crt` and `ca.key` are correct for your case):
 
     ```shell
     openssl x509 -req -in myuser.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out myuser.crt -days 10
