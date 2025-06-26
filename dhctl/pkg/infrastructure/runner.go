@@ -835,15 +835,18 @@ func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModu
 	terraformLockFile := filepath.Join(dhctlDir, lockFile)
 	logger.LogDebugF("Terraform lock file %s\n", terraformLockFile)
 
-	pursue, err := deleteLockFile(terraformLockFile, "Terraform lock", "Try to delete tofu lock files.", logger)
+	_, err := deleteLockFile(terraformLockFile, "Terraform lock", "", logger)
 	if err != nil {
 		return err
 	}
 
-	if !pursue {
-		logger.LogDebugF("Terraform lock file %s was deleted. Hence we work with terraform and we do not need delete tofu locks.\n", terraformLockFile)
-		return nil
-	}
+	// we need to continue processing for tofu because commander can work in next sequence
+	// - converge tofu cluster
+	// - converge terraform cluster
+	// - converge tofu cluster
+	// in this case we release lock from terraform because terraform lock was present, but tofu lock presents from
+	// first run also present and is not deleted. So, we should continue to delete tofu locks in all cases
+	log.DebugLn("Try to delete tofu lock files regardless of existing terraform lock.")
 
 	// next, we will process tofu case. Latest terraform version and opentofu can save lock in modules dir (not in desired
 	// module where tofu will run) and in desired module. I do not understand because this behavior happens
@@ -851,7 +854,7 @@ func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModu
 	tofuModulesLockFile := filepath.Join(modulesDir, module, lockFile)
 	logger.LogDebugF("Tofu modules lock file %s\n", tofuModulesLockFile)
 
-	pursue, err = deleteLockFile(tofuModulesLockFile, "Tofu modules lock", "Try to delete tofu lock file in module.", logger)
+	pursue, err := deleteLockFile(tofuModulesLockFile, "Tofu modules lock", "Try to delete tofu lock file in module.", logger)
 	if err != nil {
 		return err
 	}
