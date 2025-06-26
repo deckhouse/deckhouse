@@ -838,7 +838,9 @@ func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModu
 	pursue, err := deleteLockFile(terraformLockFile, "Terraform lock", "Try to delete tofu lock files.", logger)
 	if err != nil {
 		return err
-	} else if !pursue {
+	}
+
+	if !pursue {
 		logger.LogDebugF("Terraform lock file %s was deleted. Hence we work with terraform and we do not need delete tofu locks.\n", terraformLockFile)
 		return nil
 	}
@@ -852,7 +854,9 @@ func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModu
 	pursue, err = deleteLockFile(tofuModulesLockFile, "Tofu modules lock", "Try to delete tofu lock file in module.", logger)
 	if err != nil {
 		return err
-	} else if !pursue {
+	}
+
+	if !pursue {
 		logger.LogDebugF("Tofu modules lock file %s was deleted. Hence we do not need delete tofu 'in module' lock file.\n", tofuModulesLockFile)
 		return nil
 	}
