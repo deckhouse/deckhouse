@@ -26,8 +26,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 /*
@@ -70,15 +68,16 @@ func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func handlePKIChecksum(input *go_hook.HookInput) error {
-	snaps, err := sdkobjectpatch.UnmarshalToStruct[secretData](input.NewSnapshots, "pki_checksum")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'pki_checksum' snapshot: %w", err)
-	}
+	snaps := input.NewSnapshots.Get("pki_checksum")
 	if len(snaps) == 0 {
 		return fmt.Errorf(`there is no Secret named "d8-pki" in NS "kube-system"`)
 	}
 
-	sData := snaps[0]
+	var sData secretData
+	err := snaps[0].UnmarshalTo(&sData)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'pki_checksum' snapshot: %w", err)
+	}
 
 	keys := make([]string, 0, len(sData))
 

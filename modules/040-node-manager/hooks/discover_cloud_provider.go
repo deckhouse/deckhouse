@@ -59,7 +59,7 @@ func discoverCloudProviderHandler(input *go_hook.HookInput) error {
 		}
 		return nil
 	}
-	var data map[string]interface{}
+	data := make(map[string]interface{})
 	err := secret[0].UnmarshalTo(&data)
 	if err != nil {
 		return fmt.Errorf("failder to unmarshal first 'cloud_provider_secret' snapshot: %w", err)
