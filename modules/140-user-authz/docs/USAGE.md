@@ -476,7 +476,7 @@ This is a more secure method because a special kubernetes API is used to sign th
 
 The features of this method are:
 
-- API-based certificate signing: CSRs are processed through the Kubernetes API without requiring access to the CA’s private key (ca.key).
+- API-based certificate signing: CSRs are processed through the Kubernetes API without requiring access to the CA’s private key (`ca.key`).
 - Not only the cluster administrator can issue client certificates. The right to create CSRs and sign them can be assigned to a specific user.
 
 To create a user using a client certificate issued through the Kubernetes API, follow these steps:
