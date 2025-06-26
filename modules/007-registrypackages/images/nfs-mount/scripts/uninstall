@@ -15,4 +15,8 @@
 
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/mount.nfs* /opt/deckhouse/bin/umount.nfs*
-rm -f /sbin/mount.nfs /sbin/mount.nfs4 /sbin/umount.nfs /sbin/umount.nfs4
+for f in mount.nfs mount.nfs4 umount.nfs umount.nfs4; do
+  if readlink -f /sbin/${f} | grep -q "/opt/deckhouse/bin" ; then
+    rm -f /sbin/${f}
+  fi
+done
