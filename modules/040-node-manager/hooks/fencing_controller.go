@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -107,7 +108,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	nodesToKill := set.New()
 	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.NewSnapshots.Get(nodesSnapshot)) {
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
 		}
 
 		nodeLease, err := kubeClient.CoordinationV1().Leases("kube-node-lease").Get(context.TODO(), node.Name, metav1.GetOptions{})

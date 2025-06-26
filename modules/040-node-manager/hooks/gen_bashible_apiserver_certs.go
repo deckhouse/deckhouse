@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,7 +81,7 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 
 		err = secrets[0].UnmarshalTo(&cert)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal first 'secret' snapshot")
 		}
 	}
 

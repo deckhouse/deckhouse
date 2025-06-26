@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -138,7 +139,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	dNodes := input.NewSnapshots.Get("nodes_for_draining")
 	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to iterate over 'nodes_for_draining' snapshots: %w", err)
 		}
 
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]

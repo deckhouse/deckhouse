@@ -137,8 +137,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 	snaps := input.NewSnapshots.Get("ngs")
 	for usedIC, err := range sdkobjectpatch.SnapshotIter[ngUsedInstanceClass](snaps) {
 		if err != nil {
-			// not ephemeral
-			continue
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
 
 		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)

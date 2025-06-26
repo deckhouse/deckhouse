@@ -78,7 +78,7 @@ func handleSetPriorities(input *go_hook.HookInput) error {
 	snaps := input.NewSnapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[setPriorityNodeGroup](snaps) {
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
 
 		if ng.Priority != nil {
