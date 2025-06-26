@@ -295,7 +295,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
-	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, opts)
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, r.logger.Named("downloader"), opts)
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)

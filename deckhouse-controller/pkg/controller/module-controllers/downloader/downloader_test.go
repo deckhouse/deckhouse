@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
@@ -46,7 +47,7 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 		},
 	}, nil)
 
-	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil)
 	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "commander", "stable")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no version found")
@@ -76,7 +77,7 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 		},
 	}, nil)
 
-	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil)
 	meta, err := md.DownloadImageInfoByVersion(context.TODO(), "commander", "v1.2.3")
 	require.NoError(t, err)
 	require.Equal(t, "v1.2.3", meta.ModuleVersion)

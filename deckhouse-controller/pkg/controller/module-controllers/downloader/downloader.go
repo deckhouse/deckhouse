@@ -59,14 +59,16 @@ type ModuleDownloader struct {
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
+	logger          *log.Logger
 }
 
-func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
 	return &ModuleDownloader{
 		dc:                   dc,
 		downloadedModulesDir: downloadedModulesDir,
 		ms:                   ms,
 		registryOptions:      registryOptions,
+		logger:               logger,
 	}
 }
 
@@ -160,6 +162,11 @@ func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, modu
 		return res, nil
 	}
 
+	md.logger.Info("can not find module definition in metadata, extracting from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+	)
+
 	def, err := md.fetchModuleDefinitionFromImage(moduleName, imageInfo.Image)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module definition: %w", err)
@@ -167,21 +174,6 @@ func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, modu
 	res.ModuleDefinition = def
 
 	return res, nil
-}
-
-// DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
-func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduletypes.Definition, error) {
-	log.Info("fetching module release",
-		slog.String("module_name", moduleName),
-		slog.String("module_version", moduleVersion),
-	)
-
-	img, err := md.fetchImage(moduleName, moduleVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	return md.fetchModuleDefinitionFromImage(moduleName, img)
 }
 
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
@@ -324,12 +316,12 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
 	defer span.End()
 
-	log.Info("fetching module release metadata",
+	md.logger.Info("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("releasechannel", releaseChannel),
 	)
 
-	log.Debug("module metadata",
+	md.logger.Debug("module metadata",
 		slog.String("module", moduleName),
 	)
 
