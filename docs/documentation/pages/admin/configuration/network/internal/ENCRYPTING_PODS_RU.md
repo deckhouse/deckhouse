@@ -6,7 +6,7 @@ lang: ru
 
 Для шифрования трафика между подами можно использовать mTLS.
 
-Deckhouse Kubernetes Platform mTLS реализуется средствами Istio.
+В Deckhouse Kubernetes Platform mTLS реализуется средствами Istio (модуль [`istio`](../../../../modules/istio/)).
 
 <!-- Перенесено с минорными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#mutual-tls -->
 

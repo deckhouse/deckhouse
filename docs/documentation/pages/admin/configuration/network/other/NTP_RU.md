@@ -50,8 +50,7 @@ spec:
    Module chrony disabled
    ```
 
-1. Создайте ресурс [ресурс NodeGroupConfiguration](../../reference/cr/nodegroupconfiguration.html),
-   чтобы включить NTP-демоны на узлах.
+2. Создайте ресурс NodeGroupConfiguration, чтобы включить NTP-демоны на узлах.
 
    Пример для `systemd-timesyncd`:
 
