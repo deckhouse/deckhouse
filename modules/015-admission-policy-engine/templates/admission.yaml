@@ -3,6 +3,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 kind: ValidatingAdmissionPolicy
 metadata:
   name: "deny-pods-with-skip-pss-label"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
 spec:
   failurePolicy: Fail
   matchConstraints:
@@ -25,6 +26,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: "deny-skip-pss-label-binding"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
 spec:
   policyName: "deny-pods-with-skip-pss-label"
   matchResources:
