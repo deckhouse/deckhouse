@@ -73,22 +73,22 @@ func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
 	}
 
 	var minUbuntuVersion, minDebianVersion *semver.Version
-	for snap, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+	for version, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes_os_version' snapshots: %w", err)
 		}
 
 		switch {
-		case osImageUbuntuRegex.MatchString(snap):
-			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(snap)[1])
+		case osImageUbuntuRegex.MatchString(version):
+			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(version)[1])
 			if err != nil {
 				return err
 			}
 			if minUbuntuVersion == nil || ctrlUbuntuVersion.LessThan(minUbuntuVersion) {
 				minUbuntuVersion = ctrlUbuntuVersion
 			}
-		case osImageDebianRegex.MatchString(snap):
-			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(snap)[1])
+		case osImageDebianRegex.MatchString(version):
+			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(version)[1])
 			if err != nil {
 				return err
 			}

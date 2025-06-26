@@ -162,12 +162,12 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 
 		err := input.NewSnapshots.Get("cabundle")[0].UnmarshalTo(&bundle)
 		if err != nil {
-			return nil
+			return fmt.Errorf("failed to unmarshal first 'cabundle' snapshot: %w", err)
 		}
 
 		err = input.NewSnapshots.Get("sshcredentials")[0].UnmarshalTo(&crd)
 		if err != nil {
-			return nil
+			return fmt.Errorf("failed to unmarshal first 'sshcredentials' snapshot: %w", err)
 		}
 
 		if crd.CABundle == bundle.CA {

@@ -126,7 +126,7 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	snaps := input.NewSnapshots.Get("csr")
 	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
 		if err != nil {
-			continue
+			return fmt.Errorf("failted to iterate over 'csr' snapshots: %w", err)
 		}
 
 		if !csrInfo.Valid {

@@ -145,6 +145,8 @@ func hasIncorrectNodeUserErrors(
 	return result
 }
 
+// TODO (core): fix this linter
+//
 //nolint:unparam
 func clearNodeUserIncorrectErrors(
 	nodeUserName string,
