@@ -1,4 +1,4 @@
-2414
+2421
 1GB
 2GB
 5XX
@@ -55,8 +55,8 @@ APIVersion
 app
 apparmor
 AppArmor
-app’s
 apps
+app’s
 Aps
 aren
 argocd
@@ -262,8 +262,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMap’s
 ConfigMaps
+ConfigMap’s
 configOverrides
 configs
 configurator
@@ -402,8 +402,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfile’s
 Dockerfiles
+Dockerfile’s
 dockerignore
 dockersamples
 documentation
@@ -840,6 +840,7 @@ maxSurgePerZone
 maxUnavailable
 maxUnavailablePerZone
 Mayastor
+Mbps
 mc
 MCM
 mcmEmergencyBrake
@@ -888,6 +889,7 @@ MRA
 MRs
 mTLS
 MTLS
+MTU
 multicluster
 Multicluster
 multiclustering
@@ -934,6 +936,7 @@ NGINX’s
 NIC
 NICs
 NLB
+Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -942,7 +945,6 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
-Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1045,6 +1047,7 @@ passphrase
 passwordHash
 pathPrefix
 PCI
+pcs
 PDB
 PDF
 PeerAuthentication
@@ -1279,6 +1282,7 @@ SomeRegion
 SonarQube
 Sonatype
 sourceRanges
+spellchecker
 Spellchecking
 SPIFFE
 Splunk
@@ -1415,6 +1419,7 @@ UEFI
 UI
 uid
 UID
+un
 uncordoned
 unicode
 uninstall
@@ -1906,6 +1911,7 @@ ZvirtInstanceClass
 майнинг
 маппинг
 маршрутизировать
+маршрутизируемой
 масштабироваться
 масштабируемости
 масштабируемость
@@ -1953,6 +1959,7 @@ ZvirtInstanceClass
 мультитенантности
 мусорку
 мэтчем
+наблюдаемости
 неавторизованный
 невалидным
 недеструктивные
