@@ -356,6 +356,8 @@ apiVersions:
               not: {}
             edgeGatewayName:
               not: {}
+            edgeGatewayType:
+              not: {}
         - required: [layout, internalNetworkDNSServers, edgeGatewayName, edgeGatewayType]
           properties:
             layout:
