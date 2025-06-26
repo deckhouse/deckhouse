@@ -76,11 +76,12 @@ spec:
           {{- if not $.Values.istio.internal.enableAmbientMode }}
           {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 10 }}
           {{- else }}
-          securityContext:
-            privileged: true
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
+          {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
+          # securityContext:
+          #   privileged: true
+          #   runAsGroup: 0
+          #   runAsNonRoot: false
+          #   runAsUser: 0
           {{- end }}
           env:
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
