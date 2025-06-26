@@ -5,13 +5,28 @@ locals {
   useNSXT = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
 }
 
+module "network" {
+  source                       = "../../../terraform-modules/network"
+  providerClusterConfiguration = var.providerClusterConfiguration
+}
+
 module "vapp" {
   source                       = "../../../terraform-modules/vapp"
   providerClusterConfiguration = var.providerClusterConfiguration
 }
 
-module "vapp-network" {
-  source                       = "../../../terraform-modules/vapp-network"
+resource "vcd_vapp_org_network" "vapp_network" {
+  org                    = var.providerClusterConfiguration.organization
+  vdc                    = var.providerClusterConfiguration.virtualDataCenter
+  vapp_name              = module.vapp.name
+  org_network_name       = module.network.name
+  reboot_vapp_on_removal = true
+}
+
+module "firewall-nsx-t" {
+  count = local.useNSXT ? 1 : 0
+  source = "../../../terraform-modules/firewall-nsx-t"
   providerClusterConfiguration = var.providerClusterConfiguration
-  vappName                     = module.vapp.name
+  mainNetworkId = module.network.networkId
+  edgeGatewayId = module.network.edgeGatewayId
 }

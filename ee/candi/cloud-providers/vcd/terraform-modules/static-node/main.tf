@@ -52,7 +52,7 @@ resource "vcd_vapp_vm" "node" {
 
   network {
     name               = local.main_network_name
-    type               = local.vm_network_type
+    type               = "org"
     ip_allocation_mode = local.ip_address == null ? "DHCP" : "MANUAL"
     is_primary         = true
     ip                 = local.ip_address
