@@ -1,4 +1,5 @@
 name: local-path-provisioner
+stage: "General Availability"
 weight: 31
 subsystems:
   - infrastructure
