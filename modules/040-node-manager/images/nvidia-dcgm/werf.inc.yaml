@@ -77,10 +77,10 @@ shell:
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
     do $SCRIPT /tmp/scripts/host/urls.txt
     done
-  - mkdir -p /tmp/cross
-  - cp -a /opt/cross/x86_64-linux-gnu/* /tmp/cross/
-  - rm -rf /opt/cross/*
-  - cp -a /tmp/cross/* /opt/cross/
+    mkdir -p /tmp/cross
+    cp -a /opt/cross/x86_64-linux-gnu/* /tmp/cross/
+    rm -rf /opt/cross/*
+    mv /tmp/cross /opt/cross
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
