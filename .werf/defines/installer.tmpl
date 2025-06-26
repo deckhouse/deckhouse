@@ -306,6 +306,7 @@ shell:
     {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $rootContext.prefix) | nindent 4 }}
     EOD
 
+    ln -s /bin/bash /bin/sh
     cat <<"EOD" > /etc/bashrc
     PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
 
@@ -316,6 +317,7 @@ shell:
     ln -s /etc/bashrc /.bashrc
 
     mkdir -p /etc/vim
+    ln -s /usr/bin/vim /usr/bin/vi
     cat <<"EOD" > /etc/vim/vimrc.local
     {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $rootContext.prefix) | nindent 4 }}
     EOD
