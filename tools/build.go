@@ -148,6 +148,10 @@ func writeSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
+		if strings.Contains(file, "ee/modules/000-common") {
+			return
+		}
+
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include
 		// this include is used in the dev-prebuild image, which does not use the hooks folder
