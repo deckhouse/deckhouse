@@ -86,6 +86,15 @@ var _ = sdk.RegisterFunc(
 						"Cannot unmarshal params data from secret",
 						"error", err,
 					)
+				} else {
+					if err = params.Validate(); err != nil {
+						input.Logger.Warn(
+							"Cannot validate params data from secret",
+							"error", err,
+						)
+
+						params = Params{}
+					}
 				}
 			}
 

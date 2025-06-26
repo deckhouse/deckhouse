@@ -253,7 +253,10 @@ func handle(input *go_hook.HookInput) error {
 	moduleValues.Set(values)
 
 	// Set checker params
-	checker.SetParams(input, values.State.CheckerParams)
+	err = checker.SetParams(input, values.State.CheckerParams)
+	if err != nil {
+		return fmt.Errorf("cannot set checker params: %w", err)
+	}
 
 	// Generate expected RegistrySecret. Apply patch to update
 	newRegistrySecret := values.State.RegistrySecret.Config

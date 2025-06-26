@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	validation "github.com/go-ozzo/ozzo-validation"
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -34,6 +35,12 @@ type Params struct {
 	Version    string                    `json:"version,omitempty"`
 }
 
+func (params Params) Validate() error {
+	return validation.ValidateStruct(&params,
+		validation.Field(&params.Registries),
+	)
+}
+
 type RegistryParams struct {
 	Address  string `json:"address,omitempty"`
 	Scheme   string `json:"scheme,omitempty"`
@@ -42,14 +49,23 @@ type RegistryParams struct {
 	Password string `json:"password,omitempty"`
 }
 
-func (r *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
+func (rp RegistryParams) Validate() error {
+	return validation.ValidateStruct(&rp,
+		validation.Field(&rp.Address, validation.Required),
+		validation.Field(&rp.Scheme, validation.In("HTTP", "HTTPS")),
+		validation.Field(&rp.Username, validation.Required),
+		validation.Field(&rp.Password, validation.Required),
+	)
+}
+
+func (rp *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
 	var opts []gcr_name.Option
 
-	if strings.ToUpper(r.Scheme) == "HTTP" {
+	if strings.ToUpper(rp.Scheme) == "HTTP" {
 		opts = append(opts, gcr_name.Insecure)
 	}
 
-	return gcr_name.NewRepository(r.Address, opts...)
+	return gcr_name.NewRepository(rp.Address, opts...)
 }
 
 type Status struct {

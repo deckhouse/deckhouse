@@ -11,9 +11,15 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
-func SetParams(input *go_hook.HookInput, params Params) {
+func SetParams(input *go_hook.HookInput, params Params) error {
+	if err := params.Validate(); err != nil {
+		return err
+	}
+
 	accessor := helpers.NewValuesAccessor[Params](input, valuesParamsPath)
 	accessor.Set(params)
+
+	return nil
 }
 
 func GetParams(input *go_hook.HookInput) Params {
