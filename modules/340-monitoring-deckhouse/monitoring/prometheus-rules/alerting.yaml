@@ -293,3 +293,18 @@
         ```bash
         kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
+
+  - alert: DeckhouseHighMemoryUsage
+    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.9)
+    for: 1m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
+
+        Please, if possible, get the memory dump for debugging purpose: `curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap?seconds=60" > /tmp/heap` and send this file (/tmp/heap) to the support team.
+      description: |
+        Deckhouse memory usage is too high.
