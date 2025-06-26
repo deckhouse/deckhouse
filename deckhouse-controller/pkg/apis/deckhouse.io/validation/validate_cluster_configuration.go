@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
@@ -35,7 +36,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const containerdV2UnsupportedLabel = "node.deckhouse.io/containerd-v2-unsupported"
+const (
+	containerdV2UnsupportedLabel        = "node.deckhouse.io/containerd-v2-unsupported"
+	customContainerdConfigLabelSelector = "node.deckhouse.io/containerd-config=custom"
+)
 
 type clusterConfig struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
@@ -61,34 +65,47 @@ func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating
 	return allowResult("")
 }
 
-func checkNodesLabel(cli client.Client) (*kwhvalidating.ValidatorResult, error) {
-	selector, err := labels.Parse(containerdV2UnsupportedLabel)
+func checkCntrdV2Support(ctx context.Context, cli client.Client) (*kwhvalidating.ValidatorResult, error) {
+	unsupportedSelector, err := labels.Parse(containerdV2UnsupportedLabel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse label selector: %w", err)
+		return nil, fmt.Errorf("failed to parse label selector for unsupported nodes: %w", err)
 	}
 
 	unsupportedNodes := &v1.NodeList{}
-	listOpts := &client.ListOptions{
-		LabelSelector: selector,
-	}
-
-	if err := cli.List(context.Background(), unsupportedNodes, listOpts); err != nil {
-		return nil, fmt.Errorf("failed to list nodes with :%s label: %w", containerdV2UnsupportedLabel, err)
+	if err := cli.List(ctx, unsupportedNodes, &client.ListOptions{LabelSelector: unsupportedSelector}); err != nil {
+		return nil, fmt.Errorf("failed to list nodes with label %q: %w", containerdV2UnsupportedLabel, err)
 	}
 
 	if len(unsupportedNodes.Items) > 0 {
 		return rejectResult("Cluster has nodes that don't support ContainerdV2")
 	}
 
+	customConfigSelector, err := labels.Parse(customContainerdConfigLabelSelector)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse label selector for custom containerd config: %w", err)
+	}
+
+	customConfigNodes := &v1.NodeList{}
+	if err := cli.List(ctx, customConfigNodes, &client.ListOptions{LabelSelector: customConfigSelector}); err != nil {
+		return nil, fmt.Errorf("failed to list nodes with label %q: %w", customContainerdConfigLabelSelector, err)
+	}
+
+	if len(customConfigNodes.Items) > 0 {
+		return rejectResult("Cluster has nodes with a custom containerd config, which is incompatible with ContainerdV2")
+	}
+
 	return allowResult("")
 }
 
 func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.ValidatorResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	switch defaultCRI {
 	case "Containerd":
 		return allowResult("")
 	case "ContainerdV2":
-		return checkNodesLabel(cli)
+		return checkCntrdV2Support(ctx, cli)
 	case "NotManaged":
 		return allowResult("")
 	default:
