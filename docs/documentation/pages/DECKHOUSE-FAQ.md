@@ -1065,7 +1065,6 @@ spec:
       node-role.deckhouse.io/deckhouse: ""
 ```
 
-
 ### How do I force IPv6 to be disabled on Deckhouse cluster nodes?
 
 > Internal communication between Deckhouse cluster components is performed via IPv4 protocol. However, at the operating system level of the cluster nodes, IPv6 is usually active by default. This leads to automatic assignment of IPv6 addresses to all network interfaces, including Pod interfaces. This results in unwanted network traffic - for example, redundant DNS queries like `AAAAA` - which can affect performance and make debugging network communications more difficult.
@@ -1077,6 +1076,7 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 {% endalert %}
 
 To disable IPv6, use the **NodeGroupConfiguration** resource:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
