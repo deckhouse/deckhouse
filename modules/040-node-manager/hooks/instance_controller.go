@@ -180,36 +180,36 @@ func instanceController(input *go_hook.HookInput) error {
 	machines := make(map[string]*machineForInstance, len(input.NewSnapshots.Get("machines")))
 	clusterAPIMachines := make(map[string]*machineForInstance, len(input.NewSnapshots.Get("cluster_api_machines")))
 	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.NewSnapshots.Get("ngs")))
-	for ins, err := range sdkobjectpatch.SnapshotIter[*instance](input.NewSnapshots.Get("instances")) {
+	for ins, err := range sdkobjectpatch.SnapshotIter[instance](input.NewSnapshots.Get("instances")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'instances' snapshots: %w", err)
 		}
 
-		instances[ins.Name] = ins
+		instances[ins.Name] = &ins
 	}
 
-	for mc, err := range sdkobjectpatch.SnapshotIter[*machineForInstance](input.NewSnapshots.Get("machines")) {
+	for mc, err := range sdkobjectpatch.SnapshotIter[machineForInstance](input.NewSnapshots.Get("machines")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'machines' snapshots: %w", err)
 		}
 
-		machines[mc.Name] = mc
+		machines[mc.Name] = &mc
 	}
 
-	for mc, err := range sdkobjectpatch.SnapshotIter[*machineForInstance](input.NewSnapshots.Get("cluster_api_machines")) {
+	for mc, err := range sdkobjectpatch.SnapshotIter[machineForInstance](input.NewSnapshots.Get("cluster_api_machines")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'cluster_api_machines' snapshots: %w", err)
 		}
 
-		clusterAPIMachines[mc.Name] = mc
+		clusterAPIMachines[mc.Name] = &mc
 	}
 
-	for ng, err := range sdkobjectpatch.SnapshotIter[*nodeGroupForInstance](input.NewSnapshots.Get("ngs")) {
+	for ng, err := range sdkobjectpatch.SnapshotIter[nodeGroupForInstance](input.NewSnapshots.Get("ngs")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
 
-		nodeGroups[ng.Name] = ng
+		nodeGroups[ng.Name] = &ng
 	}
 
 	// first, check mapping from machines to instance
