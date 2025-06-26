@@ -425,7 +425,7 @@ The features of this method are:
 
 To create a user using a client certificate issued through OpenSSL, follow these steps:
 
-1. Get the cluster’s root certificate (ca.crt and ca.key).
+1. Get the cluster’s root certificate (`ca.crt` and `ca.key`).
 1. Generate the user key:
 
     ```shell
