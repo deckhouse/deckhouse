@@ -538,7 +538,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
     Then, confirm that the certificate has been successfully approved.
 
-6. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from `Base64` and save it to the file (myuser.crt in this example) created in step 2:
+1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
 
     ```shell
     kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
