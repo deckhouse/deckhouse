@@ -221,6 +221,10 @@ var (
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},
+		"ee/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
+			// ignore enum values
+			"apiVersions[*].openAPISpec.properties.edgeGatewayType",
+		},
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)
