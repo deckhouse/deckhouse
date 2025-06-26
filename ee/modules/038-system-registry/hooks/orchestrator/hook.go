@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
@@ -231,6 +232,8 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecretModule snapshot error: %w", err)
 	}
 
+	inputs.CheckerStatus = checker.GetStatus(input)
+
 	values.Hash, err = helpers.ComputeHash(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
@@ -239,12 +242,18 @@ func handle(input *go_hook.HookInput) error {
 	// Initialize RegistrySecret before processing
 	values.State.RegistrySecret.Config = inputs.RegistrySecret
 
+	// Load checker params
+	values.State.CheckerParams = checker.GetParams(input)
+
 	// Process the state and update internal values
 	err = values.State.process(input.Logger, inputs)
 	if err != nil {
 		return fmt.Errorf("cannot process: %w", err)
 	}
 	moduleValues.Set(values)
+
+	// Set checker params
+	checker.SetParams(input, values.State.CheckerParams)
 
 	// Generate expected RegistrySecret. Apply patch to update
 	newRegistrySecret := values.State.RegistrySecret.Config

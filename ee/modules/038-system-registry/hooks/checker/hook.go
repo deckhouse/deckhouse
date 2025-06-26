@@ -15,7 +15,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	gcr_name "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -113,17 +112,13 @@ var _ = sdk.RegisterFunc(
 		},
 	},
 	func(input *go_hook.HookInput) error {
+		var err error
+
 		stateAccessor := helpers.NewValuesAccessor[stateModel](input, "systemRegistry.internal.checker.state")
 		state := stateAccessor.Get()
 
-		params, err := prepareParams(GetParams(input))
-		if err != nil {
-			return fmt.Errorf("cannot prepare params: %w", err)
-		}
-		SetParams(input, params) // testing
-
 		inputs := inputsModel{
-			Params: params,
+			Params: GetParams(input),
 		}
 		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
 		inputs.ImagesInfo.DeckhouseImages, err = helpers.SnapshotToSingle[deckhouseImagesModel](input, deckhouseDeploymentSnapName)
@@ -188,42 +183,4 @@ func getModulesImagesDigests(input *go_hook.HookInput) (map[string]string, error
 	}
 
 	return digests, nil
-}
-
-func prepareParams(value Params) (Params, error) {
-	if value.Registries == nil {
-		value.Registries = make(map[string]RegistryParams)
-
-		repoRef1, err := gcr_name.NewRepository("fake-registry.local/flant/deckhouse")
-		if err != nil {
-			return value, fmt.Errorf("cannot parse repo1")
-		}
-
-		repoRef2, err := gcr_name.NewRepository("test-registry.local/flant/dkp")
-		if err != nil {
-			return value, fmt.Errorf("cannot parse repo2")
-		}
-
-		repos := map[string]gcr_name.Repository{
-			"fake": repoRef1,
-			"test": repoRef2,
-		}
-
-		for k, v := range repos {
-			item := value.Registries[k]
-
-			item.Address = v.Registry.Name()
-			item.Scheme = strings.ToUpper(v.Registry.Scheme())
-
-			value.Registries[k] = item
-		}
-
-		value.Version = ""
-		value.Version, err = helpers.ComputeHash(value)
-		if err != nil {
-			return value, fmt.Errorf("cannot compute version: %w", err)
-		}
-	}
-
-	return value, nil
 }

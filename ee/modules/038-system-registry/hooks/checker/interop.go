@@ -11,11 +11,6 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
-func ClearParams(input *go_hook.HookInput) {
-	accessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
-	accessor.Clear()
-}
-
 func SetParams(input *go_hook.HookInput, params Params) {
 	accessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
 	accessor.Set(params)

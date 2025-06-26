@@ -15,6 +15,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/checker"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
@@ -41,6 +43,7 @@ type State struct {
 	RegistryService registryservice.Mode   `json:"registry_service,omitempty"`
 	Bashible        bashible.State         `json:"bashible,omitempty"`
 	RegistrySecret  registryswitcher.State `json:"-"`
+	CheckerParams   checker.Params         `json:"-"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -129,6 +132,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// Preflight Checks
 	if !state.bashiblePreflightCheck(inputs) {
+		state.setReadyCondition(false, inputs)
 		return nil
 	}
 
@@ -256,10 +260,30 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		}
 	}
 
-	// TODO: check images in remote registry
+	// check upstream registry
+	checkerRegistryParams := checker.RegistryParams{
+		Address:  inputs.Params.ImagesRepo,
+		Scheme:   inputs.Params.Scheme,
+		Username: inputs.Params.UserName,
+		Password: inputs.Params.Password,
+	}
+	if inputs.Params.CA != nil {
+		checkerRegistryParams.CA = string(registry_pki.EncodeCertificate(inputs.Params.CA))
+	}
+
+	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
+	if err != nil {
+		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+	}
+
+	if !checkerReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Preflight Checks
 	if !state.bashiblePreflightCheck(inputs) {
+		state.setReadyCondition(false, inputs)
 		return nil
 	}
 
@@ -391,10 +415,30 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 }
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
-	// TODO: check images in remote registry
+	// check upstream registry
+	checkerRegistryParams := checker.RegistryParams{
+		Address:  inputs.Params.ImagesRepo,
+		Scheme:   inputs.Params.Scheme,
+		Username: inputs.Params.UserName,
+		Password: inputs.Params.Password,
+	}
+	if inputs.Params.CA != nil {
+		checkerRegistryParams.CA = string(registry_pki.EncodeCertificate(inputs.Params.CA))
+	}
+
+	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
+	if err != nil {
+		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+	}
+
+	if !checkerReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Preflight Checks
 	if !state.bashiblePreflightCheck(inputs) {
+		state.setReadyCondition(false, inputs)
 		return nil
 	}
 
@@ -530,6 +574,9 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		}
 	}
 
+	// Reset checker
+	state.CheckerParams = checker.Params{}
+
 	if (state.Mode == registry_const.ModeProxy ||
 		state.Mode == registry_const.ModeDirect) &&
 		state.Bashible.UnmanagedParams != nil {
@@ -553,7 +600,24 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 			},
 		}
 
-		// TODO: check images in remote registry
+		// check upstream registry
+		checkerRegistryParams := checker.RegistryParams{
+			Address:  unmanagedParams.ImagesRepo,
+			Scheme:   unmanagedParams.Scheme,
+			CA:       unmanagedParams.CA,
+			Username: unmanagedParams.Username,
+			Password: unmanagedParams.Username,
+		}
+
+		checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
+		if err != nil {
+			return fmt.Errorf("cannot process checkper on upstream: %w", err)
+		}
+
+		if !checkerReady {
+			state.setReadyCondition(false, inputs)
+			return nil
+		}
 
 		// Bashible with actual params
 		processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
@@ -851,6 +915,61 @@ func (state *State) processRegistrySwitcher(params registryswitcher.Params, inpu
 		ObservedGeneration: inputs.Params.Generation,
 	})
 	return true, nil
+}
+
+func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs Inputs) (bool, error) {
+	checkerVersion, err := helpers.ComputeHash(
+		params,
+		state.TargetMode,
+	)
+	if err != nil {
+		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
+	}
+
+	registryAddr, _ := helpers.RegistryAddressAndPathFromImagesRepo(params.Address)
+	state.CheckerParams = checker.Params{
+		Registries: map[string]checker.RegistryParams{
+			registryAddr: params,
+		},
+		Version: checkerVersion,
+	}
+
+	isReady := state.setCheckerCondition(inputs)
+	return isReady, nil
+}
+
+func (state *State) setCheckerCondition(inputs Inputs) bool {
+	if !inputs.CheckerStatus.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeRegistryContainsRequiredImages,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            inputs.CheckerStatus.Message,
+		})
+
+		return false
+	}
+
+	if inputs.CheckerStatus.Version != state.CheckerParams.Version {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeRegistryContainsRequiredImages,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            "Initializing",
+		})
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeRegistryContainsRequiredImages,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+		Reason:             ConditionReasonReady,
+		Message:            inputs.CheckerStatus.Message,
+	})
+
+	return true
 }
 
 func (state *State) cleanupUsupportedConditions() {

@@ -12,15 +12,16 @@ import (
 )
 
 const (
-	ConditionTypeReady                   = "Ready"
-	ConditionTypeNodeServices            = "NodeServicesReady"
-	ConditionTypeNodeServicesCleanup     = "CleanupNodeServices"
-	ConditionTypeInClusterProxy          = "InClusterProxyReady"
-	ConditionTypeInClusterProxyCleanup   = "CleanupInClusterProxy"
-	ConditionTypeBashiblePreflightCheck  = "ContainerdConfigPreflightReady"
-	ConditionTypeBashibleTransitionStage = "TransitionContainerdConfigReady"
-	ConditionTypeBashibleFinalStage      = "FinalContainerdConfigReady"
-	ConditionTypeDeckhouseRegistrySwitch = "DeckhouseRegistrySwitchReady"
+	ConditionTypeReady                          = "Ready"
+	ConditionTypeNodeServices                   = "NodeServicesReady"
+	ConditionTypeNodeServicesCleanup            = "CleanupNodeServices"
+	ConditionTypeInClusterProxy                 = "InClusterProxyReady"
+	ConditionTypeInClusterProxyCleanup          = "CleanupInClusterProxy"
+	ConditionTypeBashiblePreflightCheck         = "ContainerdConfigPreflightReady"
+	ConditionTypeBashibleTransitionStage        = "TransitionContainerdConfigReady"
+	ConditionTypeBashibleFinalStage             = "FinalContainerdConfigReady"
+	ConditionTypeDeckhouseRegistrySwitch        = "DeckhouseRegistrySwitchReady"
+	ConditionTypeRegistryContainsRequiredImages = "RegistryContainsRequiredImages"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"
@@ -28,15 +29,16 @@ const (
 )
 
 var supportedConditions = map[string]struct{}{
-	ConditionTypeReady:                   {},
-	ConditionTypeNodeServices:            {},
-	ConditionTypeNodeServicesCleanup:     {},
-	ConditionTypeInClusterProxy:          {},
-	ConditionTypeInClusterProxyCleanup:   {},
-	ConditionTypeBashiblePreflightCheck:  {},
-	ConditionTypeBashibleTransitionStage: {},
-	ConditionTypeBashibleFinalStage:      {},
-	ConditionTypeDeckhouseRegistrySwitch: {},
+	ConditionTypeReady:                          {},
+	ConditionTypeNodeServices:                   {},
+	ConditionTypeNodeServicesCleanup:            {},
+	ConditionTypeInClusterProxy:                 {},
+	ConditionTypeInClusterProxyCleanup:          {},
+	ConditionTypeBashiblePreflightCheck:         {},
+	ConditionTypeBashibleTransitionStage:        {},
+	ConditionTypeBashibleFinalStage:             {},
+	ConditionTypeDeckhouseRegistrySwitch:        {},
+	ConditionTypeRegistryContainsRequiredImages: {},
 }
 
 var _ error = ErrTransitionNotSupported{}

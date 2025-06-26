@@ -8,6 +8,7 @@ package orchestrator
 import (
 	"crypto/x509"
 
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
@@ -44,6 +45,7 @@ type Inputs struct {
 	RegistryService  registryservice.Inputs
 	Bashible         bashible.Inputs
 	RegistrySwitcher registryswither.Inputs
+	CheckerStatus    checker.Status
 }
 
 type Values struct {
