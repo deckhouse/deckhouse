@@ -598,3 +598,73 @@ spec:
       "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
       ${CONFIG_TMP_FILE} 
 ```
+
+### Adding the ability to download images from insecure container registry to containerd
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-registry.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    REGISTRY_URL=private.registry.example
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+              endpoint = ["http://${REGISTRY_URL}"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+              auth = "AAAABBBCCCDDD=="
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              insecure_skip_verify = true
+    EOF
+  nodeGroups:
+    - "*"
+  weight: 31
+```
+
+Define the following parameters in the `NodeGroupConfiguration` resource:
+
+* `REGISTRY_URL: <ADDITIONAL_REGISTRY_URL>`. Insecure container registry address, for example `REGISTRY_URL=private.registry.example`;
+* `auth: <BASE64>`. Base64-encoded auth credentials of the insecure container registry.
+
+Use the following `auth` if anonymous access to images is allowed in the insecure container registry:
+
+```json
+{"auths": { "<ADDITIONAL_REGISTRY>": {}}}
+```
+
+`auth` must be Base64-encoded.
+
+Use the following `auth` if authentication is required to access images in the insecure container registry:
+
+```json
+{"auths": { "<ADDITIONAL_REGISTRY>": {"username":"<ADDITIONAL_USERNAME>","password":"<ADDITIONAL_PASSWORD>","auth":"<AUTH_BASE64>"}}}
+```
+
+* `<ADDITIONAL_USERNAME>` — auth username for `<ADDITIONAL_REGISTRY>`.
+* `<ADDITIONAL_PASSWORD>` — auth password for `<ADDITIONAL_REGISTRY>`.
+* `<ADDITIONAL_REGISTRY>` — registry address: `<HOSTNAME>[:PORT]`.
+* `<AUTH_BASE64>` — Base64-encoded `<ADDITIONAL_USERNAME>:<ADDITIONAL_PASSWORD>` auth string.
+
+`auth` must be Base64-encoded.
+
+You can use the following script to generate `auth`:
+
+```shell
+declare MYUSER='<ADDITIONAL_USERNAME>'
+declare MYPASSWORD='<ADDITIONAL_PASSWORD>'
+declare MYREGISTRY='<ADDITIONAL_REGISTRY>'
+
+MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
+MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
+
+echo "$MYRESULTSTRING"
+```
