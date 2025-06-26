@@ -517,7 +517,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
     kubectl apply -f csr.yaml
     ```
 
-5. Check that the certificate has been approved and issued:
+1. Check that the certificate has been approved and issued:
 
     ```shell
     kubectl get csr demo-client-cert
