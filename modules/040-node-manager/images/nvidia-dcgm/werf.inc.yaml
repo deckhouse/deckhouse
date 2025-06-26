@@ -80,7 +80,8 @@ shell:
     mkdir -p /tmp/cross
     cp -a /opt/cross/x86_64-linux-gnu/* /tmp/cross/
     rm -rf /opt/cross/*
-    mv /tmp/cross /opt/cross
+    cp -a /tmp/cross/* /opt/cross/
+    rm -rf /tmp/cross
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
