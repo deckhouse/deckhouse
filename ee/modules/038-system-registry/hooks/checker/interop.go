@@ -12,17 +12,17 @@ import (
 )
 
 func SetParams(input *go_hook.HookInput, params Params) {
-	accessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
+	accessor := helpers.NewValuesAccessor[Params](input, valuesParamsPath)
 	accessor.Set(params)
 }
 
 func GetParams(input *go_hook.HookInput) Params {
-	accessor := helpers.NewValuesAccessor[Params](input, "systemRegistry.internal.checker.params")
+	accessor := helpers.NewValuesAccessor[Params](input, valuesParamsPath)
 	return accessor.Get()
 }
 
 func GetStatus(input *go_hook.HookInput) Status {
-	accessor := helpers.NewValuesAccessor[Status](input, "systemRegistry.internal.checker.state")
+	accessor := helpers.NewValuesAccessor[Status](input, valuesStatePath)
 	status := accessor.Get()
 	return status
 }

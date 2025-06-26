@@ -232,8 +232,12 @@ properties:
         type: object
         default: {}
         properties:
+          initialized:
+            type: boolean
+            default: false
           params:
             type: object
+            default: {}
             properties:
               registries:
                 type: object

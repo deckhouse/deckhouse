@@ -939,6 +939,18 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 }
 
 func (state *State) setCheckerCondition(inputs Inputs) bool {
+	if inputs.CheckerStatus.Version != state.CheckerParams.Version {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeRegistryContainsRequiredImages,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            "Initializing",
+		})
+
+		return false
+	}
+
 	if !inputs.CheckerStatus.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeRegistryContainsRequiredImages,
@@ -949,16 +961,6 @@ func (state *State) setCheckerCondition(inputs Inputs) bool {
 		})
 
 		return false
-	}
-
-	if inputs.CheckerStatus.Version != state.CheckerParams.Version {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeRegistryContainsRequiredImages,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            "Initializing",
-		})
 	}
 
 	state.setCondition(metav1.Condition{

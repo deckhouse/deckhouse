@@ -14,4 +14,9 @@ const (
 	processTimeout = time.Second * 30
 
 	showMaxErrItems = 5
+
+	valuesPath            = "systemRegistry.internal.checker"
+	valuesParamsPath      = valuesPath + ".params"
+	valuesStatePath       = valuesPath + ".state"
+	valuesInitializedPath = valuesPath + ".initialized"
 )

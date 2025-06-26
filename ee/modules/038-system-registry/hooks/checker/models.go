@@ -63,6 +63,11 @@ type stateModel struct {
 	Queues map[string]registryQueue `json:"queues,omitempty"`
 }
 
+type stateSecretData struct {
+	Params []byte
+	State  []byte
+}
+
 type registryQueue struct {
 	Processed   int         `json:"processed,omitempty"`
 	Items       []queueItem `json:"items,omitempty"`
@@ -338,7 +343,7 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		)
 	}
 
-	state.Message = msg.String()
+	state.Message = strings.TrimSpace(msg.String())
 	if !hasItems {
 		state.Ready = true
 	}

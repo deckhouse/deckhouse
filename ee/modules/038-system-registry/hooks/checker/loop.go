@@ -16,6 +16,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	deckhouse_types "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -32,7 +33,7 @@ const (
 
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
-		Queue: "/modules/system-registry/checker",
+		Queue: "/modules/system-registry/checker/loop",
 		Schedule: []go_hook.ScheduleConfig{
 			{
 				Name:    "checker loop every 10 sec",
@@ -41,6 +42,36 @@ var _ = sdk.RegisterFunc(
 			},
 		},
 		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:                         stateSnapName,
+				ExecuteHookOnEvents:          go_hook.Bool(false),
+				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				ApiVersion:                   "v1",
+				Kind:                         "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"registry-checker-state"},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{
+						MatchNames: []string{"d8-system"},
+					},
+				},
+				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+					var secret corev1.Secret
+
+					err := sdk.FromUnstructured(obj, &secret)
+					if err != nil {
+						return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
+					}
+
+					stateData, ok := secret.Data["state"]
+					if !ok {
+						return nil, nil
+					}
+
+					return stateData, nil
+				},
+			},
 			{
 				Name:                         modulesSnapName,
 				ExecuteHookOnEvents:          go_hook.Bool(false),
