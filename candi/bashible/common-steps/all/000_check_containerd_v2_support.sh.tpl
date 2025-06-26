@@ -76,7 +76,7 @@ function set_labels() {
 
     ((retries++))
     if [[ $retries -ge $MAX_RETRIES ]]; then
-      bb-log-error "ERROR: can't set containerd-v2-not-supported label or error annotation on Node."
+      bb-log-error "can't set containerd-v2-not-supported label or error annotation on Node."
       return 1
     fi
     sleep 5
@@ -88,7 +88,7 @@ function set_labels() {
 function fail_fast() {
   local unsupported=$1
   if (( unsupported )); then
-    bb-log-error "ERROR: containerd V2 not supported"
+    bb-log-error "containerd V2 not supported"
     exit 1
   fi
 }
