@@ -74,7 +74,7 @@ lang: ru
    export FILE_NAME=kube.config
    ```
 
-1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl. Используйте один из следующих вариантов доступа к API-серверу кластера:
+1. Сгенерируйте секцию `cluster` в файле конфигурации `kubectl`. Используйте один из следующих вариантов доступа к API-серверу кластера:
 
    - Если есть прямой доступ к API-серверу:
      - Получите сертификат CA-кластера Kubernetes:
@@ -93,8 +93,8 @@ lang: ru
        ```
 
    - Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
-     - включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
-     - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+     - включите доступ к API-серверу через Ingress-контроллер (параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [`whitelistSourceRanges`](/modules/user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+     - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [`acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    - **Если используется непубличный CA:**
 
@@ -124,7 +124,7 @@ lang: ru
        --kubeconfig=$FILE_NAME
      ```
 
-1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
+1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации `kubectl`:
 
    ```shell
    kubectl config set-credentials $USER_NAME \
@@ -132,7 +132,7 @@ lang: ru
      --kubeconfig=$FILE_NAME
    ```
 
-1. Сгенерируйте контекст в файле конфигурации kubectl:
+1. Сгенерируйте контекст в файле конфигурации `kubectl`:
 
    ```shell
    kubectl config set-context $CONTEXT_NAME \
@@ -140,10 +140,10 @@ lang: ru
      --kubeconfig=$FILE_NAME
    ```
 
-1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
+1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации `kubectl`:
 
    ```shell
    kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
-Далее можно использовать сгенерированный файл `$FILE_NAME` конфигурации `kubeconfig` для подключения к API-кластера Kubernetes из CI/CD-системы, такой как GitLab Runner или Jenkins.
+Далее можно использовать сгенерированный файл `$FILE_NAME` конфигурации kubeconfig для подключения к API-кластера Kubernetes из CI/CD-системы, такой как GitLab Runner или Jenkins.
