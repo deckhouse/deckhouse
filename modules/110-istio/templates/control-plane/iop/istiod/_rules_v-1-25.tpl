@@ -237,4 +237,22 @@
   - get
   - watch
   - list
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  - httproutes
+  - grpcroutes
+  - gatewayclasses
+  - referencegrants
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  verbs:
+  - update
 {{- end -}}
