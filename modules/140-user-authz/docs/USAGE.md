@@ -413,7 +413,7 @@ If a certificate is compromised, you will need to remove all permissions for tha
 {% alert level="warning" %}
 Consider security risks when using this method.
 
-The ca.crt and ca.key must not leave the master node: sign the CSR only on the master node.
+The `ca.crt` and `ca.key` must not leave the master node: sign the CSR only on the master node.
 
 Signing CSRs outside the master node risks compromising the cluster root certificate.
 {% endalert %}
