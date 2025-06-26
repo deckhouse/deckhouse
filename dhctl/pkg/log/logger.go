@@ -29,11 +29,10 @@ import (
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
-	"k8s.io/klog"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"k8s.io/klog/v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -56,6 +55,20 @@ type debugLogWriter struct {
 	DebugStream io.Writer
 }
 
+type klogWriterWrapper struct {
+	logger Logger
+}
+
+func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
+	return &klogWriterWrapper{logger: logger}
+}
+
+func (l *klogWriterWrapper) Write(p []byte) (n int, err error) {
+	l.logger.LogDebugF("klog: %s", string(p))
+
+	return len(p), nil
+}
+
 func InitLogger(loggerType string) {
 	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
 }
@@ -72,20 +85,37 @@ func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 	return nil
 }
 
+func initKlog(logger Logger) {
+	// we always init klog with maximal log level because we use wrapper for klog output which
+	// redirects all output to our logger and our logger doing all "perfect"
+	// (logs will out in standalone installer and dhctl-server)
+	flags := &flag.FlagSet{}
+	klog.InitFlags(flags)
+	flags.Set("logtostderr", "false")
+	flags.Set("v", "10")
+
+	klog.SetOutput(newKlogWriterWrapper(logger))
+}
+
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
+	l := defaultLogger
 	switch loggerType {
 	case "pretty":
-		defaultLogger = NewPrettyLogger(opts)
+		l = NewPrettyLogger(opts)
 	// todo: add simple logger when our slog implementation will be support not only json formatter
 	// case "simple":
 	// 	defaultLogger = NewSimpleLogger(opts)
 	case "json":
-		defaultLogger = NewJSONLogger(opts)
+		l = NewJSONLogger(opts)
 	case "silent":
-		defaultLogger = emptyLogger
+		l = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
+
+	defaultLogger = l
+
+	initKlog(l)
 
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
@@ -93,16 +123,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		log.Default().SetLevel(log.LevelDebug)
-		klog.InitFlags(nil)
-		_ = flag.CommandLine.Parse([]string{"-v=10"})
-
 		// Wrap them with our default logger
 		log.Default().SetOutput(defaultLogger)
-	} else {
-		klog.SetOutput(io.Discard)
-		flags := &flag.FlagSet{}
-		klog.InitFlags(flags)
-		flags.Set("logtostderr", "false")
 	}
 }
 
@@ -113,6 +135,9 @@ func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 	}
 
 	defaultLogger = l
+
+	initKlog(l)
+
 	return nil
 }
 
