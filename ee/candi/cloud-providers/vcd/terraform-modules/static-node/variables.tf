@@ -63,5 +63,4 @@ locals {
 
   vapp_name = var.providerClusterConfiguration.layout == "Standard" ? var.providerClusterConfiguration.virtualApplicationName : var.virtualApplicationName
   main_network_name = var.providerClusterConfiguration.layout == "Standard" ? var.providerClusterConfiguration.mainNetwork : var.networkName
-  vm_network_type   = var.providerClusterConfiguration.layout == "Standard" ? "org" : "vapp"
 }
