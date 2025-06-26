@@ -144,8 +144,38 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	return res, nil
 }
 
-// DownloadImageInfoByVersion downloads only module release image with metadata: version.json
+// DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
+func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
+	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module release: %w", err)
+	}
+
+	res := &ModuleDownloadResult{
+		Checksum:      imageInfo.Digest.String(),
+		ModuleVersion: moduleVersion,
+		Changelog:     imageInfo.Metadata.Changelog,
+	}
+	if imageInfo.Metadata.ModuleDefinition != nil {
+		res.ModuleDefinition = imageInfo.Metadata.ModuleDefinition
+		return res, nil
+	}
+
+	md.logger.Info("can not find module definition in metadata, extracting from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+	)
+
+	def, err := md.fetchModuleDefinitionFromImage(moduleName, imageInfo.Image)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module definition: %w", err)
+	}
+	res.ModuleDefinition = def
+
+	return res, nil
+}
+
 func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
 	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {

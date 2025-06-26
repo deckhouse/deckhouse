@@ -78,7 +78,7 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 	}, nil)
 
 	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil)
-	meta, err := md.DownloadImageInfoByVersion(context.TODO(), "commander", "v1.2.3")
+	meta, err := md.DownloadReleaseImageInfoByVersion(context.TODO(), "commander", "v1.2.3")
 	require.NoError(t, err)
 	require.Equal(t, "v1.2.3", meta.ModuleVersion)
 	require.Equal(t, map[string]any{"feat": []any{"Added new feature"}}, meta.Changelog)
