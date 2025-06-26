@@ -421,7 +421,7 @@ Signing CSRs outside the master node risks compromising the cluster root certifi
 The features of this method are:
 
 - The client certificate must be signed on the master node to prevent the cluster certificate from being compromised.
-- Access to the cluster CA key (ca.key) is required. Only the cluster administrator can sign certificates.
+- Access to the cluster CA key (`ca.key`) is required. Only the cluster administrator can sign certificates.
 
 To create a user using a client certificate issued through OpenSSL, follow these steps:
 
