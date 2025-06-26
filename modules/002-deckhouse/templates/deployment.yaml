@@ -35,7 +35,7 @@ spec:
         {{- include "deckhouse_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 1000m
-        memory: 1500Mi
+        memory: 2000Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
@@ -273,7 +273,7 @@ spec:
             failureThreshold: 120
           resources:
             limits:
-              memory: 6Gi # heavy load usage ~1.5Gi (x4)
+              memory: 6Gi # heavy load usage ~2Gi (x3)
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
