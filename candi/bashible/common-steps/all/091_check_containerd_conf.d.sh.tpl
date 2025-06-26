@@ -30,10 +30,10 @@ set_containerd_config_label() {
 
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
-    set_containerd_config_label "containerd-config" "containerd-conf" "conf.d"
+    set_containerd_config_label "containerd-config" "conf.d" "containerd-conf"
     rm -f /var/lib/node_labels/containerd-v2-config
   {{- else if eq .cri "ContainerdV2" }}
-    set_containerd_config_label "containerd-v2-config" "containerd-v2-conf" "conf2.d"
+    set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf"
     rm -f /var/lib/node_labels/containerd-conf
   {{- else }}
     rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-config
