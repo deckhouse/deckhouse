@@ -141,4 +141,8 @@ shell:
   - cd /src/DCGM
   - export ARCHITECTURE=x86_64
   - export TARGET=x86_64-linux-gnu
-  - DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p -n -c
+  - |
+    DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p -n -c
+    mkdir -p /out
+    cp /src/DCGM/_out/Linux-amd64-relwithdebinfo/datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz /out
+    rm -rf /src/DCGM/_out
