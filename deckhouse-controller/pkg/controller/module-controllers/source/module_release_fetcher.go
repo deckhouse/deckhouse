@@ -172,7 +172,7 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	imageInfo, err := f.moduleDownloader.DownloadImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
+	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
 	if err != nil {
 		return fmt.Errorf("download module definition: %w", err)
 	}

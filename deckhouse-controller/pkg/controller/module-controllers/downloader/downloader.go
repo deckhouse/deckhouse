@@ -32,7 +32,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
@@ -177,7 +176,7 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 }
 
 func (md *ModuleDownloader) DownloadImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
-	imageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
+	imageInfo, err := md.fetchMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module release: %w", err)
 	}
@@ -342,17 +341,44 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	}
 }
 
+func (md *ModuleDownloader) fetchMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ImageInfo, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
+	defer span.End()
+
+	md.logger.Info("fetching module release metadata",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName)),
+		slog.String("module_version", moduleVersion),
+	)
+
+	md.logger.Debug("module metadata",
+		slog.String("module_name", moduleName),
+	)
+
+	// fill imageInfo.Image
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release image error: %w", err)
+	}
+
+	imageInfo, err := md.getImageInfo(ctx, regCli, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("get image info: %w", err)
+	}
+
+	return imageInfo, nil
+}
+
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ImageInfo, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
 	defer span.End()
 
 	md.logger.Info("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
-		slog.String("releasechannel", releaseChannel),
+		slog.String("release_channel", releaseChannel),
 	)
 
 	md.logger.Debug("module metadata",
-		slog.String("module", moduleName),
+		slog.String("module_name", moduleName),
 	)
 
 	// fill imageInfo.Image
@@ -361,31 +387,11 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	img, err := regCli.Image(context.TODO(), strcase.ToKebab(releaseChannel))
+	imageInfo, err := md.getImageInfo(ctx, regCli, releaseChannel)
 	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %w", err)
+		return nil, fmt.Errorf("get image info: %w", err)
 	}
 
-	// fill imageInfo.Digest
-	digest, err := img.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("fetch digest error: %w", err)
-	}
-
-	// fill imageInfo.Metadata
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
-	if err != nil {
-		return nil, fmt.Errorf("fetch release metadata error: %w", err)
-	}
-	if moduleMetadata.Version == nil {
-		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
-	}
-
-	imageInfo := &ImageInfo{
-		Image:    img,
-		Digest:   digest,
-		Metadata: &moduleMetadata,
-	}
 	return imageInfo, nil
 }
 
@@ -393,13 +399,31 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
 	defer span.End()
 
+	md.logger.Info("fetching module release metadata",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("module_version", moduleVersion),
+	)
+
+	md.logger.Debug("module metadata",
+		slog.String("module_name", moduleName),
+	)
+
 	// fill imageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	img, err := regCli.Image(context.TODO(), moduleVersion)
+	imageInfo, err := md.getImageInfo(ctx, regCli, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("get image info: %w", err)
+	}
+
+	return imageInfo, nil
+}
+
+func (md *ModuleDownloader) getImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ImageInfo, error) {
+	img, err := regCli.Image(context.TODO(), imageTag)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
@@ -416,7 +440,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 		return nil, fmt.Errorf("fetch release metadata error: %w", err)
 	}
 	if moduleMetadata.Version == nil {
-		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+		return nil, fmt.Errorf("metadata malformed: no version found")
 	}
 
 	imageInfo := &ImageInfo{
@@ -424,6 +448,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 		Digest:   digest,
 		Metadata: &moduleMetadata,
 	}
+
 	return imageInfo, nil
 }
 
