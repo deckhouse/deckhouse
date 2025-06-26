@@ -487,13 +487,13 @@ EOF
     openssl genrsa -out myuser.key 2048
     ```
 
-2. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
 
     ```shell
     openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
     ```
 
-3. Создайте манифест объекта CertificateSigningRequest и сохраните его в файл (в этом примере — `csr.yaml`):
+1. Создайте манифест объекта CertificateSigningRequest и сохраните его в файл (в этом примере — `csr.yaml`):
 
     > В поле `request` укажите содержимое CSR, созданного на предыдущем этапе, закодированное в Base64.
 
@@ -511,13 +511,13 @@ EOF
       - "client auth"
     ```
   
-4. Примените манифест, чтобы создать запрос на подпись сертификата:
+1. Примените манифест, чтобы создать запрос на подпись сертификата:
   
     ```shell
     kubectl apply -f csr.yaml
     ```
 
-5. Убедитесь, что сертификат подтвержден:
+1. Убедитесь, что сертификат подтвержден:
 
     ```shell
     kubectl get csr demo-client-cert
@@ -538,7 +538,7 @@ EOF
 
     После этого убедитесь, что сертификат подтвержден.
 
-6. Извлеките закодированный сертификат из CSR с именем `demo-client-cert`, декодируйте его из Base64 и сохраните в файл (в этом примере — `myuser.crt`), созданный на шаге 2:
+1. Извлеките закодированный сертификат из CSR с именем `demo-client-cert`, декодируйте его из Base64 и сохраните в файл (в этом примере — `myuser.crt`), созданный на шаге 2:
 
     ```shell
     kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
