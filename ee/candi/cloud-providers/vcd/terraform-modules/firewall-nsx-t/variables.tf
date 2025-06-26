@@ -15,6 +15,10 @@ variable "providerClusterConfiguration" {
   }
 }
 
-variable "vappName" {
-  type    = string
+variable "edgeGatewayId" {
+  type = string
+}
+
+variable "mainNetworkId" {
+  type = string
 }

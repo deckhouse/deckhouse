@@ -254,12 +254,6 @@ properties:
             type: string
             description: |
               VMware Cloud Director Edge Gateway name (belongs to Virtual Data Center).
-          edgeGatewayType:
-            type: string
-            description: |
-              VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
-            enum: ["NSX-V", "NSX-T"]
-            example: "NSX-T"
           mainNetwork:
             description: |
               Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
