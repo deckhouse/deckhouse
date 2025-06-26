@@ -95,14 +95,12 @@ spec:
                       help: "VPA container minimal allowed memory according to VPA rules"
                       each:
                         type: Gauge
-                        foreach:
+                        gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                        gauge:
-                          valueFrom:
-                            path: [minAllowed, memory]
-                            ifExists: true
+                          valueFrom: [minAllowed, memory]
                       commonLabels:
                         resource: "memory"
                         unit: "byte"
@@ -110,14 +108,12 @@ spec:
                       help: "VPA container minimal allowed cpu according to VPA rules"
                       each:
                         type: Gauge
-                        foreach:
+                        gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                        gauge:
-                          valueFrom:
-                            path: [minAllowed, cpu]
-                            ifExists: true
+                          valueFrom: [minAllowed, cpu]
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
@@ -126,6 +122,7 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
@@ -138,6 +135,7 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
