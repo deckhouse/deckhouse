@@ -142,7 +142,7 @@ var (
 			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
-			"apiVersions[*].openAPISpec.properties.edgeGatewayType",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGatewayType",
 		},
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
 			// ignore internal values
