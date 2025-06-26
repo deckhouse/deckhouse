@@ -49,39 +49,43 @@ type State struct {
 }
 
 func (state *State) setCondition(condition metav1.Condition) {
-	existingCondition := state.findCondition(condition.Type)
+	var existingCondition *metav1.Condition
+	conditions := make([]metav1.Condition, 0, len(state.Conditions)+1)
 
-	if existingCondition == nil {
-		// Condition doesn't exist, add it
+	for _, cond := range state.Conditions {
+		if cond.Type == condition.Type {
+			c := cond // make local copy
+			existingCondition = &c
+			continue
+		}
+
+		conditions = append(conditions, cond)
+	}
+
+	if existingCondition != nil {
+		// Only update if something changed
+		if existingCondition.Status != condition.Status ||
+			existingCondition.Reason != condition.Reason ||
+			existingCondition.ObservedGeneration != condition.ObservedGeneration ||
+			existingCondition.Message != condition.Message {
+			// Status changed, update transition time
+			if existingCondition.Status != condition.Status {
+				condition.LastTransitionTime = metav1.NewTime(time.Now())
+			} else {
+				condition.LastTransitionTime = existingCondition.LastTransitionTime
+			}
+
+			// Replace the existing condition
+			*existingCondition = condition
+		}
+	} else {
+		// Condition doesn't exist, will add it
 		condition.LastTransitionTime = metav1.NewTime(time.Now())
-		state.Conditions = append(state.Conditions, condition)
-		return
+		existingCondition = &condition
 	}
 
-	// Only update if something changed
-	if existingCondition.Status != condition.Status ||
-		existingCondition.Reason != condition.Reason ||
-		existingCondition.ObservedGeneration != condition.ObservedGeneration ||
-		existingCondition.Message != condition.Message {
-		// Status changed, update transition time
-		if existingCondition.Status != condition.Status {
-			condition.LastTransitionTime = metav1.NewTime(time.Now())
-		} else {
-			condition.LastTransitionTime = existingCondition.LastTransitionTime
-		}
-
-		// Replace the existing condition
-		*existingCondition = condition
-	}
-}
-
-func (state *State) findCondition(conditionType string) *metav1.Condition {
-	for i := range state.Conditions {
-		if state.Conditions[i].Type == conditionType {
-			return &state.Conditions[i]
-		}
-	}
-	return nil
+	conditions = append(conditions, *existingCondition)
+	state.Conditions = conditions
 }
 
 func (state *State) clearConditions() {
