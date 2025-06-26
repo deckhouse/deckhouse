@@ -129,15 +129,15 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	ImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
+	imageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ModuleDownloadResult{
-		Checksum:      ImageInfo.Digest.String(),
-		ModuleVersion: "v" + ImageInfo.Metadata.Version.String(),
-		Changelog:     ImageInfo.Metadata.Changelog,
+		Checksum:      imageInfo.Digest.String(),
+		ModuleVersion: "v" + imageInfo.Metadata.Version.String(),
+		Changelog:     imageInfo.Metadata.Changelog,
 	}
 
 	return res, nil
