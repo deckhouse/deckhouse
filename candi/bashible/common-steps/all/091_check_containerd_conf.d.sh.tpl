@@ -15,7 +15,8 @@
 set_containerd_config_label() {
   local label_name="$1"
   local conf_dir="$2"
-  local label_file_path="/var/lib/node_labels/${label_name}"
+  local label_file_name="$3"
+  local label_dir_path="/var/lib/node_labels/"
   local full_conf_path="/etc/containerd/${conf_dir}"
   local label_value="default"
 
@@ -23,18 +24,18 @@ set_containerd_config_label() {
     label_value="custom"
   fi
 
-  mkdir -p "$(dirname "${label_file_path}")"
-  echo "node.deckhouse.io/${label_name}=${label_value}" > "${label_file_path}"
+  mkdir -p /var/lib/node_labels/
+  echo "node.deckhouse.io/${label_name}=${label_value}" > $label_dir_path/$label_file_name
 }
 
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
-    set_containerd_config_label "containerd-config" "conf.d"
+    set_containerd_config_label "containerd-config" "containerd-conf" "conf.d"
     rm -f /var/lib/node_labels/containerd-v2-config
   {{- else if eq .cri "ContainerdV2" }}
-    set_containerd_config_label "containerd-v2-config" "conf2.d"
-    rm -f /var/lib/node_labels/containerd-config
+    set_containerd_config_label "containerd-v2-config" "containerd-v2-conf" "conf2.d"
+    rm -f /var/lib/node_labels/containerd-conf
   {{- else }}
-    rm -f /var/lib/node_labels/containerd-config /var/lib/node_labels/containerd-v2-config
+    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-config
   {{- end }}
 {{- end }}
