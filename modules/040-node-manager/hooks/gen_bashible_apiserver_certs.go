@@ -25,8 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
@@ -78,12 +76,12 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 		}
 	} else {
 		// Certificate is in the snapshot => load it.
-		secrets, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "secret")
+		secrets := input.NewSnapshots.Get("secret")
+
+		err = secrets[0].UnmarshalTo(&cert)
 		if err != nil {
 			return err
 		}
-
-		cert = secrets[0]
 	}
 
 	// Note that []byte values will be encoded in base64. Use strings here!

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -60,7 +62,7 @@ func discoverCloudProviderHandler(input *go_hook.HookInput) error {
 	var data map[string]interface{}
 	err := secret[0].UnmarshalTo(&data)
 	if err != nil {
-		return err
+		return fmt.Errorf("failder to unmarshal first 'cloud_provider_secret' snapshot: %w", err)
 	}
 
 	input.Values.Set("nodeManager.internal.cloudProvider", data)

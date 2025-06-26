@@ -119,14 +119,16 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[*v1.Secret](input.NewSnapshots, "cloud_provider_discovery_data")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'cloud_provider_discovery_data' snapshot: %w", err)
-	}
+	secrets := input.NewSnapshots.Get("cloud_provider_discovery_data")
 	if len(secrets) == 0 {
 		return fmt.Errorf("'cloud_provider_discovery_data' snapshot is empty")
 	}
-	secret := secrets[0]
+
+	secret := new(v1.Secret)
+	err := secrets[0].UnmarshalTo(secret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cloud_provider_discovery_data' snapshot: %w", err)
+	}
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 

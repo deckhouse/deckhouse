@@ -24,8 +24,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -60,12 +58,15 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "ns")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
-	}
+	snaps := input.NewSnapshots.Get("ns")
+
 	if len(snaps) == 1 {
-		name := snaps[0]
+		var name string
+		err := snaps[0].UnmarshalTo(&name)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
+		}
+
 		input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
 	}
 

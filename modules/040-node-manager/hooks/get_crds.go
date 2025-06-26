@@ -297,16 +297,14 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
-	var instanceTypeCatalog capacity.InstanceTypesCatalog
+	instanceTypeCatalog := new(capacity.InstanceTypesCatalog)
 	iCatalogRaws := input.NewSnapshots.Get("instance_types_catalog")
 
 	if len(iCatalogRaws) == 1 {
-		err := iCatalogRaws[0].UnmarshalTo(&instanceTypeCatalog)
+		err := iCatalogRaws[0].UnmarshalTo(instanceTypeCatalog)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
 		}
-	} else {
-		instanceTypeCatalog = *capacity.NewInstanceTypesCatalog(nil)
 	}
 
 	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.NewSnapshots.Get("ngs")) {
@@ -393,7 +391,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
 				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, &instanceTypeCatalog)
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
 						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
@@ -584,12 +582,9 @@ var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.Hoo
 	if len(secretInfoSnapshots) > 0 {
 		var secretInfo map[string]string
 		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
-
-		if err != nil {
-			return config.Kubernetes[0].Kind, fromSecret
+		if err == nil {
+			fromSecret = secretInfo["instanceClassKind"]
 		}
-		fromSecret = secretInfo["instanceClassKind"]
-
 	}
 
 	return config.Kubernetes[0].Kind, fromSecret
