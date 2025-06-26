@@ -472,7 +472,7 @@ EOF
 
 #### Creating a user by issuing a certificate via the Kubernetes API
 
-This is a more secure method because a special kubernetes API is used to sign the certificate and direct access to `ca.key` is not required.
+This is a more secure method because a special kubernetes API is used to sign the certificate.
 
 The features of this method are:
 
@@ -487,13 +487,13 @@ To create a user using a client certificate issued through the Kubernetes API, f
     openssl genrsa -out myuser.key 2048
     ```
 
-1. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
+2. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
 
     ```shell
     openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
     ```
 
-1. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
+3. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
 
     > In the `request` field, specify the contents of the CSR created in the previous step, encoded in Base64.
 
@@ -511,13 +511,13 @@ To create a user using a client certificate issued through the Kubernetes API, f
       - "client auth"
     ```
   
-1. Apply the manifest to create a certificate signing request:
+4. Apply the manifest to create a certificate signing request:
   
     ```shell
     kubectl apply -f csr.yaml
     ```
 
-1. Check that the certificate has been approved and issued:
+5. Check that the certificate has been approved and issued:
 
     ```shell
     kubectl get csr demo-client-cert
@@ -538,7 +538,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
     Then, confirm that the certificate has been successfully approved.
 
-1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
+6. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
 
     ```shell
     kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
