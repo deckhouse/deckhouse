@@ -39,6 +39,10 @@ var (
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
 )
 
+func NodeRegistryAddr(addr string) string {
+	return fmt.Sprintf("%s:%d/%s", addr, Port, strings.TrimLeft(Path, "/"))
+}
+
 func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 	proxyEndpoints := make([]string, 0, len(masterNodesIPs))
 	for _, ip := range masterNodesIPs {

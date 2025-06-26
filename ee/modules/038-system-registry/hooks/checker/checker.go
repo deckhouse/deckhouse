@@ -21,7 +21,7 @@ func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryPar
 	)
 
 	if params.Address == "" {
-		return fmt.Errorf("params addr is %q", params.Address)
+		return fmt.Errorf("invalid address")
 	}
 
 	worker := func(ctx context.Context, done func()) {
@@ -43,12 +43,18 @@ func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryPar
 			queue.Items = queue.Items[1:]
 			mu.Unlock()
 
-			time.Sleep(1 * time.Second)
-			ri := rand.Intn(10)
-			isErr := ri%8 == 0 || ri%9 == 0
+			var isErr bool
+			if params.Address != "dev-registry.deckhouse.io/sys/deckhouse-oss" {
+				isErr = true
+				item.Error = fmt.Sprintf("Unsupported registry %q", params.Address)
+			} else {
+				time.Sleep(1 * time.Second)
+				ri := rand.Intn(10)
+				isErr := ri%8 == 0 || ri%9 == 0
 
-			if isErr {
-				item.Error = fmt.Sprintf("Check error: %v", ri)
+				if isErr {
+					item.Error = fmt.Sprintf("Check error: %v", ri)
+				}
 			}
 
 			mu.Lock()

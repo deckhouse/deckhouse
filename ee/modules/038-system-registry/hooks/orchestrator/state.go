@@ -192,16 +192,30 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	state.IngressEnabled = true
 
 	// NodeServices
-	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
+	nodeServicesResult, err := state.processNodeServices(log, nodeservicesParams, inputs)
 	if err != nil {
 		return err
 	}
-	if !processedNodeServices {
+	if !nodeServicesResult.IsReady() {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
 
-	// TODO: check images in local registry
+	// Check images in nodese registries
+	checkerReady, err := state.processCheckerNodes(
+		inputs,
+		nodeServicesResult,
+		nodeservicesParams.UserRO,
+		nodeservicesParams.CA.Cert,
+	)
+	if err != nil {
+		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+	}
+
+	if !checkerReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Bashible with actual params
 	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
@@ -263,7 +277,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// check upstream registry
 	checkerRegistryParams := checker.RegistryParams{
 		Address:  inputs.Params.ImagesRepo,
-		Scheme:   inputs.Params.Scheme,
+		Scheme:   strings.ToUpper(inputs.Params.Scheme),
 		Username: inputs.Params.UserName,
 		Password: inputs.Params.Password,
 	}
@@ -340,11 +354,11 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// NodeServices
-	processedNodeServices, err := state.processNodeServices(log, nodeservicesParams, inputs)
+	nodeServicesResult, err := state.processNodeServices(log, nodeservicesParams, inputs)
 	if err != nil {
 		return err
 	}
-	if !processedNodeServices {
+	if !nodeServicesResult.IsReady() {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
@@ -418,7 +432,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	// check upstream registry
 	checkerRegistryParams := checker.RegistryParams{
 		Address:  inputs.Params.ImagesRepo,
-		Scheme:   inputs.Params.Scheme,
+		Scheme:   strings.ToUpper(inputs.Params.Scheme),
 		Username: inputs.Params.UserName,
 		Password: inputs.Params.Password,
 	}
@@ -603,7 +617,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		// check upstream registry
 		checkerRegistryParams := checker.RegistryParams{
 			Address:  unmanagedParams.ImagesRepo,
-			Scheme:   unmanagedParams.Scheme,
+			Scheme:   strings.ToUpper(unmanagedParams.Scheme),
 			CA:       unmanagedParams.CA,
 			Username: unmanagedParams.Username,
 			Password: unmanagedParams.Username,
@@ -783,10 +797,10 @@ func (state *State) processBashibleUnmanagedFinalize(registrySecret deckhouse_re
 	return true, nil
 }
 
-func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.Params, inputs Inputs) (bool, error) {
+func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.Params, inputs Inputs) (nodeservices.ProcessResult, error) {
 	result, err := state.NodeServices.Process(log, params, inputs.NodeServices)
 	if err != nil {
-		return false, fmt.Errorf("cannot process NodeServices: %w", err)
+		return result, fmt.Errorf("cannot process NodeServices: %w", err)
 	}
 
 	if !result.IsReady() {
@@ -797,7 +811,7 @@ func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.
 			Reason:             ConditionReasonProcessing,
 			Message:            result.GetConditionMessage(),
 		})
-		return false, nil
+		return result, nil
 	}
 
 	state.setCondition(metav1.Condition{
@@ -805,7 +819,7 @@ func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})
-	return true, nil
+	return result, nil
 }
 
 func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
@@ -932,6 +946,49 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 			registryAddr: params,
 		},
 		Version: checkerVersion,
+	}
+
+	isReady := state.setCheckerCondition(inputs)
+	return isReady, nil
+}
+
+func (state *State) processCheckerNodes(
+	inputs Inputs,
+	nodeServicesResult nodeservices.ProcessResult,
+	user users.User,
+	ca *x509.Certificate,
+) (bool, error) {
+	checkerRegistry := checker.RegistryParams{
+		Scheme:   "HTTPS",
+		Username: user.UserName,
+		Password: user.Password,
+	}
+
+	if ca != nil {
+		checkerRegistry.CA = string(registry_pki.EncodeCertificate(ca))
+	}
+
+	version, err := helpers.ComputeHash(
+		checkerRegistry,
+		state.TargetMode,
+	)
+	if err != nil {
+		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
+	}
+
+	state.CheckerParams = checker.Params{
+		Registries: make(map[string]checker.RegistryParams),
+		Version:    version,
+	}
+
+	for node, result := range nodeServicesResult {
+		if result.Address == "" {
+			continue
+		}
+
+		params := checkerRegistry
+		params.Address = registry_const.NodeRegistryAddr(result.Address)
+		state.CheckerParams.Registries[node] = params
 	}
 
 	isReady := state.setCheckerCondition(inputs)

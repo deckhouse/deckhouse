@@ -58,6 +58,7 @@ type ProcessResultNode struct {
 	Ready         bool
 	PodReady      bool
 	ConfigVersion string
+	Address       string
 }
 
 func (result ProcessResult) IsReady() bool {
@@ -180,6 +181,7 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 			Ready:         node.Ready,
 			PodReady:      isPodReady,
 			ConfigVersion: config.Version,
+			Address:       node.IP,
 		}
 	}
 
