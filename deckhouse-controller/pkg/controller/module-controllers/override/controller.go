@@ -323,8 +323,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if basicModule := r.moduleManager.GetModule(moduleDef.Name); basicModule != nil {
 		values = basicModule.GetConfigValues(false)
 	}
-
-	if err = moduleDef.Validate(values, r.log); err != nil {
+	fmt.Println("\n\n\n\n\n\n\n\n\n\n\n!!!!MPO values", values, "\n\n\n\n\n\n\n\n\n\n\n")
+	// ignore required fields because we are not validating the module config
+	ignoreRequiredFields := true
+	if err = moduleDef.Validate(values, ignoreRequiredFields, r.log); err != nil {
 		mpo.Status.Message = fmt.Sprintf("Validation error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
 			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
