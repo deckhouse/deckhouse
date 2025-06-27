@@ -110,7 +110,26 @@ EOF
 
 ## Creating Virtual Machine Snapshots
 
-To create snapshots of virtual machines, the [VirtualMachineSnapshot](../../../reference/cr/virtualmachinesnapshot.html) resource is used.
+A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The [VirtualMachineSnapshot](../../../reference/cr/virtualmachinesnapshot.html) resource is used to create virtual machine snapshots.
+
+#### Types of snapshots
+Snapshots can be consistent or inconsistent, which is determined by the `requiredConsistency` parameter. By default, the `requiredConsistency` parameter is set to `true`, which requires a consistent snapshot.
+
+A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
+
+- The virtual machine is turned off.
+- `qemu-guest-agent` is installed in the guest system, which temporarily suspends the file system at the time the snapshot is created to ensure its consistency.
+
+  An inconsistent snapshot may not reflect the consistent state of the virtual machine's disks and its components. Such a snapshot is created in the following cases:
+
+- The VM is running, and `qemu-guest-agent` is not installed or running in the guest OS.
+- The VM is running, and `qemu-guest-agent` is not installed in the guest OS, but the snapshot manifest specifies the `requiredConsistency: false` parameter, and you want to avoid suspending the file system.
+
+  {% alert level="warning" %}
+  There is a risk of data loss or integrity violation when restoring from such a snapshot.
+  {% endalert %}
+
+#### Scenarios for using snapshots
 
 Snapshots can be used to realize the following scenarios:
 
@@ -132,22 +151,9 @@ If you plan to use the snapshot as a template, perform the following steps in th
 - Removing unique identifiers (e.g. via `sysprep` for Windows).
 - Optimizing disk space.
 - Resetting initialization configurations (`cloud-init clean`).
+- Create a snapshot with a clear indication not to save the IP address: `keepIPAddress: Never`.
 
-{% alert level="info" %}
-A snapshot contains the configuration of the virtual machine and snapshots of all its disks.
-Restoring a snapshot assumes that the virtual machine is fully restored to the time when the snapshot was created.
-{% endalert %}
-
-The snapshot will be created successfully if:
-
-- The VM is shut down
-- `qemu-guest-agent` is installed and the file system is successfully “frozen”.
-If data integrity is not critical, the snapshot can be created on a running VM without freezing the file system. To do this, specify in the specification:
-
-```yaml
-spec:
-  requiredConsistency: false
-```
+#### Creating snapshots
 
 When creating a snapshot, you need to specify the names of the volume snapshot classes `VolumeSnapshotClass`, which will be used to create snapshots of the volumes attached to the virtual machine.
 

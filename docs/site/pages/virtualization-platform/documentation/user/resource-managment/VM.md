@@ -182,7 +182,7 @@ A virtual machine (VM) goes through several phases in its existence, from creati
   - Possible problems:
     - There is no suitable node to start.
     - There is not enough CPU or memory on suitable nodes.
-    - Neumspace or project quotas have been exceeded.
+    - Namespace or project quotas have been exceeded.
   - Diagnostics:
     - If the startup is delayed, check `.status.conditions`, the `type: Running` condition
 
@@ -224,7 +224,7 @@ A virtual machine (VM) goes through several phases in its existence, from creati
     - Incompatibility of processor instructions (when using host or host-passthrough processor types).
     - Difference in kernel versions on hypervisor nodes.
     - Not enough CPU or memory on eligible nodes.
-    - Neumspace or project quotas have been exceeded.
+    - Namespace or project quotas have been exceeded.
   - Diagnostics:
     - Check the `.status.conditions` condition `type: Migrating` as well as the `.status.migrationState` block
 
@@ -647,13 +647,34 @@ spec:
 
 ## Placement of virtual machines on nodes
 
-To manage the placement of virtual machines on nodes, you can use the following approaches:
+The following methods can be used to manage the placement of virtual machines (placement parameters) across nodes:
 
-- Simple label binding — `nodeSelector`;
-- Preferred binding — `Affinity`;
-- Avoid co-location — `AntiAffinity`.
+- Simple label selection (`nodeSelector`) — the basic method for selecting nodes with specified labels.
+- Preferred selection (`Affinity`):
+- `nodeAffinity` — specifies priority nodes for placement.
+  - `virtualMachineAndPodAffinity` — defines workload co-location rules for VMs or containers.
+- Co-location avoidance (`AntiAffinity`):
+- `virtualMachineAndPodAntiAffinity` — defines workload rules for VMs or containers to be placed on the same node.
 
-> You can change the placement parameters of virtual machines in real time (available only in the Enterprise edition). However, if the new placement parameters do not match the current ones, the virtual machine will be moved to nodes that meet the new requirements.
+All of the above parameters (including the `.spec.nodeSelector` parameter from VirtualMachineClass) are applied together when scheduling VMs. If at least one condition cannot be met, the VM will not be started. To minimize risks, we recommend:
+
+- Creating consistent placement rules.
+- Checking the compatibility of rules before applying them.
+- Consider the types of conditions:
+- Strict (`requiredDuringSchedulingIgnoredDuringExecution`) — require strict compliance.
+- Soft (`preferredDuringSchedulingIgnoredDuringExecution`) — allow partial compliance.
+- Use combinations of labels instead of single restrictions. For example, instead of required for a single label (e.g. env=prod), use several preferred conditions.
+- Consider the order in which interdependent VMs are launched. When using Affinity between VMs (for example, the backend depends on the database), launch the VMs referenced by the rules first to avoid lockouts.
+- Plan backup nodes for critical workloads. For VMs with strict requirements (e.g., AntiAffinity), provide backup nodes to avoid downtime in case of failure or maintenance.
+- Consider existing `taints` on nodes.
+
+{% alert level="info" %}
+When changing placement parameters:
+- If the current location of the VM meets the new requirements, it remains on the current node.
+- If the requirements are violated:
+- In commercial editions: The VM is automatically moved to a suitable node using live migration.
+- In the CE edition: The VM will require a reboot to apply.
+{% endalert %}
 
 ### Simple label binding — `nodeSelector`
 
@@ -667,15 +688,18 @@ spec:
 
 ![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
-In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
+In this example, there are three nodes in the cluster: two with fast disks (`disktype=ssd`) and one with slow disks (`disktype=hdd`). The virtual machine will only be placed on nodes that have the `disktype` label with the value `ssd`.
 
 ### Preferred affinity
 
-`Affinity` provides more flexible and powerful tools compared to `nodeSelector`. It allows defining preferences and requirements for the placement of virtual machines. `Affinity` supports two types: `nodeAffinity` and `virtualMachineAndPodAffinity`.
+Placement requirements can be:
 
-`nodeAffinity` allows specifying on which nodes the virtual machine can be scheduled using label expressions. It can be either preferred (`preferred`) or mandatory (`required`).
+- Strict (`requiredDuringSchedulingIgnoredDuringExecution`) — The VM is placed only on nodes that meet the condition.
+- Soft (`preferredDuringSchedulingIgnoredDuringExecution`) — The VM is placed on suitable nodes, if possible.
 
-Example of using `nodeAffinity`:
+`nodeAffinity` - determines on which nodes a VM can be launched using tag expressions.
+
+Example of using `nodeAffinity` with a strict rule:
 
 ```yaml
 spec:
@@ -692,11 +716,13 @@ spec:
 
 ![nodeAffinity](/../../../../images/virtualization-platform/placement-node-affinity.png)
 
-In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
+In this example, there are three nodes in the cluster, two with fast disks (`disktype=ssd`) and one with slow disks (`disktype=hdd`). The virtual machine will only be deployed on nodes that have the `disktype` label with the value `ssd`.
 
-`virtualMachineAndPodAffinity` manages the placement of virtual machines relative to other virtual machines. It allows setting preferences to place virtual machines on the same nodes where certain virtual machines are already running.
+If you use a soft requirement (`preferredDuringSchedulingIgnoredDuringExecution`), then if there are no resources to start the VM on nodes with disks labeled `disktype=ssd`, it will be scheduled on a node with disks labeled `disktype=hdd`.
 
-Example:
+`virtualMachineAndPodAffinity` controls the placement of virtual machines relative to other virtual machines. It allows you to specify a preference for placing virtual machines on the same nodes where certain virtual machines are already running.
+
+Example of a soft rule:
 
 ```yaml
 spec:
@@ -718,6 +744,14 @@ In this example, the virtual machine will be placed on nodes that do **not** hav
 ### Avoiding Co-Location — AntiAffinity
 
 `AntiAffinity` is the opposite of `Affinity`, and it allows setting requirements to avoid placing virtual machines on the same nodes. This is useful for load distribution or ensuring fault tolerance.
+
+Placement requirements can be strict or soft:
+- Strict (`requiredDuringSchedulingIgnoredDuringExecution`) — The VM is scheduled only on nodes that meet the condition.
+- Soft (`preferredDuringSchedulingIgnoredDuringExecution`) — The VM is scheduled on suitable nodes if possible.
+
+{% alert level="info" %}
+Be careful when using strict requirements in small clusters with few nodes for VMs. If you apply `virtualMachineAndPodAntiAffinity` with `requiredDuringSchedulingIgnoredDuringExecution`, each VM replica must run on a separate node. In a cluster with limited nodes, this may cause some VMs to fail to start due to insufficient available nodes.
+{% endalert %}
 
 The terms `Affinity` and `AntiAffinity` are applicable only to the relationship between virtual machines. For nodes, the corresponding constraints are referred to as `nodeAffinity`. In `nodeAffinity`, there is no direct opposite term like in `virtualMachineAndPodAffinity`. However, you can create opposing conditions by using negative operators in label expressions. To emphasize excluding certain nodes, you can use `nodeAffinity` with operators like `NotIn`.
 
@@ -834,21 +868,207 @@ To detach the disk from the virtual machine, delete the previously created resou
 d8 k delete vmbda attach-blank-disk
 ```
 
-Attaching images is done in a similar way. To do this, specify VirtualImage or ClusterVirtualImage and the image name as `kind`:
+Attaching images is done by analogy. To do this, specify `VirtualImage` or `ClusterVirtualImage` and the image name as `kind`:
 
 ```yaml
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineBlockDeviceAttachment
 metadata:
-name: attach-ubuntu-iso
+  name: attach-ubuntu-iso
 spec:
-blockDeviceRef:
-kind: VirtualImage # Or ClusterVirtualImage.
-name: ubuntu-iso
-virtualMachineName: linux-vm
+  blockDeviceRef:
+    kind: VirtualImage # or ClusterVirtualImage
+    name: ubuntu-iso
+  virtualMachineName: linux-vm
 EOF
 ```
+
+### Organizing interaction with virtual machines
+
+Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations: direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
+
+Services simplify interaction with both individual VMs and groups of similar VMs. For example, the ClusterIP service type creates a fixed internal address that can be used to access both a single VM and a group of VMs, regardless of their actual IP addresses. This allows other system components to interact with resources through a stable name or IP, automatically directing traffic to the right machines.
+
+Services also serve as a load balancing tool: they distribute requests evenly among all connected machines, ensuring fault tolerance and ease of expansion without the need to reconfigure clients.
+
+For scenarios where direct access to specific VMs within the cluster is important (for example, for diagnostics or cluster configuration), headless services can be used. Headless services do not assign a common IP, but instead link the DNS name to the real addresses of all connected machines. A request to such a name returns a list of IPs, allowing you to select the desired VM manually while maintaining the convenience of predictable DNS records.
+
+For external access, services are supplemented with mechanisms such as NodePort, which opens a port on a cluster node, LoadBalancer, which automatically creates a cloud load balancer, or Ingress, which manages HTTP/HTTPS traffic routing.
+
+All these approaches are united by their ability to hide the complexity of the infrastructure behind simple interfaces: clients work with a specific address, and the system itself decides how to route the request to the desired VM, even if its number or status changes.
+
+The service name is formed as `<service-name>.<namespace or project name>.svc.<clustername>`, or more briefly: `<service-name>.<namespace or project name>.svc`. For example, if your service name is `http` and the namespace is `default`, the full DNS name will be `http.default.svc.cluster.local`.
+
+The VM's membership in the service is determined by a set of labels. To set labels on a VM in the context of infrastructure management, use the following command:
+
+```bash
+d8 k label vm <vm-name> label-name=label-value
+```
+
+Example:
+
+```bash
+d8 k label vm linux-vm app=nginx
+```
+
+Example output:
+
+```txt
+virtualmachine.virtualization.deckhouse.io/linux-vm labeled
+```
+
+#### Headless service
+
+A headless service allows you to easily route requests within a cluster without the need for load balancing. Instead, it simply returns all IP addresses of virtual machines connected to this service.
+
+Even if you use a headless service for only one virtual machine, it is still useful. By using a DNS name, you can access the machine without depending on its current IP address. This simplifies management and configuration because other applications within the cluster can use this DNS name to connect instead of using a specific IP address, which may change.
+
+Example of creating a headless service:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: http
+  namespace: default
+spec:
+  clusterIP: None
+  selector:
+    # Label by which the service determines which virtual machine to direct traffic to.
+    app: nginx
+EOF
+```
+
+After creation, the VM or VM group can be accessed by name: `http.default.svc`
+
+#### ClusterIP service
+
+ClusterIP is a standard service type that provides an internal IP address for accessing the service within the cluster. This IP address is used to route traffic between different components of the system. ClusterIP allows virtual machines to interact with each other through a predictable and stable IP address, which simplifies internal communication within the cluster.
+
+Example ClusterIP configuration:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: http
+spec:
+  selector:
+    # Label by which the service determines which virtual machine to route traffic to.
+    app: nginx
+EOF
+```
+
+#### Publish virtual machine services using a service with the NodePort type
+
+`NodePort` is an extension of the `ClusterIP` service that provides access to the service through a specified port on all nodes in the cluster. This makes the service accessible from outside the cluster through a combination of the node's IP address and port.
+
+NodePort is suitable for scenarios where direct access to the service from outside the cluster is required without using a external load balancer.
+
+Create the following service:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: linux-vm-nginx-nodeport
+spec:
+  type: NodePort
+  selector:
+    # label by which the service determines which virtual machine to direct traffic to
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 31880
+EOF
+```
+
+![](/../../../../images/virtualization-platform/lb-nodeport.png)
+
+In this example, a service with the type `NodePort` will be created that opens external port 31880 on all nodes in your cluster. This port will forward incoming traffic to internal port 80 on the virtual machine where the Nginx application is running.
+
+If you do not explicitly specify the `nodePort` value, an arbitrary port will be assigned to the service, which can be viewed in the service status immediately after its creation.
+
+#### Publishing virtual machine services using a service with the LoadBalancer service type
+
+
+`LoadBalancer` is a type of service that automatically creates an external load balancer with a static IP address. This balancer distributes incoming traffic among virtual machines, ensuring the service's availability from the Internet.
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: linux-vm-nginx-lb
+spec:
+  type: LoadBalancer
+  selector:
+    # label by which the service determines which virtual machine to direct traffic to
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+EOF
+```
+
+![](/../../../../images/virtualization-platform/lb-loadbalancer.png)
+
+#### Publish virtual machine services using Ingress
+
+`Ingress` allows you to manage incoming HTTP/HTTPS requests and route them to different servers within your cluster. This is the most appropriate method if you want to use domain names and SSL termination to access your virtual machines.
+
+To publish a virtual machine service through `Ingress`, you must create the following resources:
+
+An internal service to bind to `Ingress`. Example:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: linux-vm-nginx
+spec:
+  selector:
+    # label by which the service determines which virtual machine to direct traffic to
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+EOF
+```
+
+And an `Ingress` resource for publishing. Example:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linux-vm
+spec:
+  rules:
+    - host: linux-vm.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linux-vm-nginx
+                port:
+                  number: 80
+EOF
+```
+
+![](/../../../../images/virtualization-platform/lb-ingress.png)
 
 ## Live migration of virtual machines
 
