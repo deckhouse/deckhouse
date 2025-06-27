@@ -55,7 +55,7 @@
 {{- $_ := set $csiNodeConfig "fullname" "csi-node-legacy" }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
-{{- $_ := set $csiNodeConfig "readOnlyRootFilesystem" true }}
+{{- $_ := set $csiNodeConfig "readOnlyRootFilesystem" false }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 
