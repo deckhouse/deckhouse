@@ -30,9 +30,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
@@ -388,7 +388,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	imageInfo, err := md.getImageInfo(ctx, regCli, releaseChannel)
+	imageInfo, err := md.getImageInfo(ctx, regCli, strcase.ToKebab(releaseChannel))
 	if err != nil {
 		return nil, fmt.Errorf("get image info: %w", err)
 	}
@@ -424,7 +424,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 }
 
 func (md *ModuleDownloader) getImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ImageInfo, error) {
-	img, err := regCli.Image(context.TODO(), strcase.ToKebab(imageTag))
+	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
@@ -626,7 +626,7 @@ func (md *ModuleDownloader) GetNewImageInfo(ctx context.Context, moduleName, mod
 		return nil, fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	image, err := regCli.Image(context.TODO(), moduleVersion)
+	image, err := regCli.Image(ctx, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %v", err)
 	}
