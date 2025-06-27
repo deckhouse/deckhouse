@@ -347,7 +347,7 @@ jobs:
       - name: Check push enabled
         id: check_push
         env:
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
           REPO: ${{github.repository}}
         run: |
           if [[ ${REPO} == "deckhouse/deckhouse" ]]; then
@@ -517,7 +517,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: CE
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -651,7 +651,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: EE
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -785,7 +785,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: FE
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -919,7 +919,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: BE
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -1053,7 +1053,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: SE
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -1187,7 +1187,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: SE-plus
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
