@@ -1,0 +1,45 @@
+{{ $version := "0.17.3" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/node-feature-discovery.git /src
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+{{- range tuple "nfd-master" "nfd-worker" "nfd-gc" }}
+  -  GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -tags osusergo,netgo -ldflags "-s -w -extldflags=-static -X sigs.k8s.io/node-feature-discovery/pkg/version.version={{ $version }}" -o /{{ . }} ./cmd/{{ . }}
+{{- end }}
+  - chown 64535:64535 /nfd-master /nfd-worker /nfd-gc
+  - chmod 0700 /nfd-master /nfd-worker /nfd-gc
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  includePaths:
+  - nfd-master
+  - nfd-worker
+  - nfd-gc
+  before: setup
