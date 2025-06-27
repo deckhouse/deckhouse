@@ -67,7 +67,7 @@ import:
   before: install
 imageSpec:
   config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 fromImage: common/distroless
