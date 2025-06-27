@@ -669,3 +669,59 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
+
+## Настройка ресурсов Sidecar в Istio
+
+Для переопределения глобальных ограничений ресурсов для Sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
+
+### Поддерживаемые аннотации
+
+| Аннотация                          | Описание                     | Пример значения |
+|-------------------------------------|-----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | Запрос CPU для sidecar      | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | Лимит CPU для sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Запрос памяти для sidecar   | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Лимит памяти для sidecar    | `512Mi`       |
+
+### Примеры конфигурации
+
+Для Deployment:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для ReplicaSet:
+```
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для Pod:
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+{% alert level="warning" %}Все четыре параметра должны быть указаны вместе - proxyCPU, proxyCPULimit, proxyMemory, and proxyMemoryLimit. Частичная конфигурация не поддерживается.{% endalert %}
