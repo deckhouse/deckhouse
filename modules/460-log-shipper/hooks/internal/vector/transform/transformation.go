@@ -32,9 +32,9 @@ var (
 
 func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
-	var transformation apis.LogTransform
 	var err error
 	for _, tm := range tms {
+		var transformation apis.LogTransform
 		switch tm.Action {
 		case v1alpha1.ReplaceDotKeys:
 			transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
