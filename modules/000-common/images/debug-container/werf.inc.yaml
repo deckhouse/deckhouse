@@ -103,7 +103,7 @@ import:
   before: install
 shell:
   install:
-  - mkdir -p /relocate
+  - mkdir -p /relocate/{bin,lib}
   # From the base_image repository
   - cp -r /coreutils/usr /relocate/
   - cp -r /bash/usr /relocate/
