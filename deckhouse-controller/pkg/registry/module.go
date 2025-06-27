@@ -23,9 +23,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v2"
 
 	modRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
