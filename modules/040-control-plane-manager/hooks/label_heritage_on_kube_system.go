@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -56,12 +58,16 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-	snap := input.Snapshots["ns"]
-	if len(snap) == 1 {
-		if snap[0] != nil {
-			name := snap[0].(string)
-			input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
+	snaps := input.NewSnapshots.Get("ns")
+
+	if len(snaps) == 1 {
+		var name string
+		err := snaps[0].UnmarshalTo(&name)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
 		}
+
+		input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
 	}
 
 	return nil

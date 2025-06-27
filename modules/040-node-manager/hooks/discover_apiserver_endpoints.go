@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -122,8 +124,11 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func handleAPIEndpoints(input *go_hook.HookInput) error {
 	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("kube_apiserver"))
 
-	for _, ep := range input.Snapshots["apiserver_endpoints"] {
-		endpointsSet.Add(ep.([]string)...)
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.NewSnapshots.Get("apiserver_endpoints")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'apiserver_endpoints' snapshot: %w", err)
+		}
+		endpointsSet.Add(ep...)
 	}
 	endpointsSet.Delete("") // clean faulty pods
 
