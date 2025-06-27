@@ -672,6 +672,7 @@ To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrad
 You can override the global Istio sidecar resource limits for specific workloads by adding annotations to your Deployment, ReplicaSet, or Pod resources.
 
 ### Supported Annotations
+
 Use these annotations to customize sidecar resources:
 | Annotation                          | Description                 | Example Value |
 |-------------------------------------|-----------------------------|---------------|
@@ -683,7 +684,7 @@ Use these annotations to customize sidecar resources:
 ### Configuration Examples
 
 For Deployments:
-```yaml
+```shell
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -696,7 +697,7 @@ metadata:
 ```
 
 For ReplicaSets:
-```yaml
+```shell
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
@@ -709,7 +710,7 @@ metadata:
 ```
 
 For Pod:
-```yaml
+```shell
 apiVersion: v1
 kind: Pod
 metadata:
