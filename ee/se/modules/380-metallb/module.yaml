@@ -1,8 +1,5 @@
 name: metallb
 stage: "General Availability"
-weight: 380
 subsystems:
   - networking
 namespace: d8-metallb
-requirements:
-  bootstrapped: true

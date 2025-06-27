@@ -35,6 +35,7 @@ const (
 // Definition of module.yaml file struct
 type Definition struct {
 	Name           string   `json:"name" yaml:"name"`
+	Critical       bool     `json:"critical" yaml:"critical"`
 	Weight         uint32   `json:"weight,omitempty" yaml:"weight,omitempty"`
 	Tags           []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Subsystems     []string `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`

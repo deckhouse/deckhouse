@@ -28,7 +28,6 @@ name: testxxz
 weight: 340
 
 requirements:
-  bootstrapped: true
   deckhouse: ">= 1.67"
   kubernetes: ">= 1.31"
   modules:
@@ -44,7 +43,6 @@ requirements:
 	// assert.True(t, m.Requirements.Bootstrapped)
 	assert.Equal(t, "testxxz", m.Name)
 	assert.Equal(t, uint32(340), m.Weight)
-	assert.Equal(t, "true", m.Requirements.Bootstrapped)
 	assert.Equal(t, ">= 1.31", m.Requirements.Kubernetes)
 	assert.Equal(t, ">= 1.67", m.Requirements.Deckhouse)
 	assert.Equal(t, ">= 0.0.0", m.Requirements.ParentModules["prometheus"])
