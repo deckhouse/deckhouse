@@ -160,7 +160,7 @@ EOF
 1. Сгенерируйте пароль:
 
    ```shell
-   echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+   echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
 
    `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
