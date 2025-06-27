@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/metric"
+	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -295,7 +295,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
-	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, opts)
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, r.logger.Named("downloader"), opts)
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)
@@ -406,7 +406,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, metricModuleGroup, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
 				availableModule.PullError = err.Error()

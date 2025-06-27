@@ -412,6 +412,42 @@ global:
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Release with module.yaml", func() {
+		moduleYaml := `
+name: deckhouse
+weight: 2
+stage: "General Availability"
+requirements:
+  kubernetes: ">= 1.27"
+subsystems:
+  - deckhouse
+namespace: d8-system
+disable:
+  confirmation: true
+  message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+`
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version": "v1.16.0"}`,
+						"module.yaml":  moduleYaml,
+					}},
+				}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
+			},
+		}, nil)
+
+		suite.setupController("release-with-module-yaml.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("StepByStepUpdateFailed", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",

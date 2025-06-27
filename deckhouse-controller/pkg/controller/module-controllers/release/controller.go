@@ -1034,7 +1034,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	}()
 
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, logger)
-	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
+	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, logger.Named("downloader"), options)
 
 	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
 	if err != nil {
@@ -1087,7 +1087,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			logger.Debug("successfully updated module conditions")
 		}
 
-		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+		if err := r.updateReleaseStatus(ctx, release, status); err != nil {
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 

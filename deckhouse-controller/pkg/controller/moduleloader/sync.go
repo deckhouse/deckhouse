@@ -172,15 +172,15 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if mpo.Status.Weight == 0 {
 			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, opts)
+			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
 
-			def, err := md.DownloadModuleDefinitionByVersion(mpo.Name, mpo.Spec.ImageTag)
+			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
 				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
 			}
 
 			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = def.Weight
+			mpo.Status.Weight = imageInfo.ModuleDefinition.Weight
 			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
 			_ = l.client.Status().Update(ctx, &mpo)
 		}
@@ -421,7 +421,7 @@ func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVers
 	if err != nil || !info.IsDir() {
 		l.logger.Info("downloading the module from the registry", slog.String("name", moduleName), slog.String("version", moduleVersion))
 		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.logger)
-		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, options)
+		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options)
 
 		if mpo {
 			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")
