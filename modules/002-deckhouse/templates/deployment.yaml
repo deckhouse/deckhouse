@@ -26,7 +26,7 @@ spec:
     kind: Deployment
     name: deckhouse
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
