@@ -69,6 +69,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** Added support for configuring private HTTP container registries in containerd. [#14155](https://github.com/deckhouse/deckhouse/pull/14155)
+    Users can now configure containerd to pull images from private registries, easing deployments in private environments.
  - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
  - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
@@ -153,6 +155,7 @@
     In L2 mode, the Public IP address will not be marked as free in the pool after deleting the LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
  - **[metallb]** Fixed deprecated CRD addresspools.metallb.io deletion. [#13553](https://github.com/deckhouse/deckhouse/pull/13553)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
+ - **[multitenancy-manager]** Fix rendering properties with additionalProperties. [#14148](https://github.com/deckhouse/deckhouse/pull/14148)
  - **[network-gateway]** Fix python path [#13574](https://github.com/deckhouse/deckhouse/pull/13574)
  - **[node-manager]** fixed update for static clusters [#13962](https://github.com/deckhouse/deckhouse/pull/13962)
  - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
