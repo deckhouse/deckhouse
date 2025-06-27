@@ -18,9 +18,14 @@ package bashible
 
 import (
 	"fmt"
-	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+)
+
+var (
+	_ validation.Validatable = Context{}
+	_ validation.Validatable = ContextHosts{}
+	_ validation.Validatable = ContextMirrorHost{}
 )
 
 type Context struct {
@@ -55,39 +60,27 @@ type ContextRewrite struct {
 	To   string `json:"to" yaml:"to"`
 }
 
-func (b *Context) Validate() error {
-	if err := validation.ValidateStruct(b,
-		validation.Field(&b.Mode, validation.Required),
-		validation.Field(&b.Version, validation.Required),
-		validation.Field(&b.ImagesBase, validation.Required),
-		validation.Field(&b.ProxyEndpoints, validation.Each(validation.Required)),
-		validation.Field(&b.Hosts, validation.Required),
-	); err != nil {
-		return err
-	}
-
-	for name, host := range b.Hosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("hosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-	return nil
+func (c Context) Validate() error {
+	return validation.ValidateStruct(&c,
+		validation.Field(&c.Mode, validation.Required),
+		validation.Field(&c.Version, validation.Required),
+		validation.Field(&c.ImagesBase, validation.Required),
+		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
+		// Hosts key must not be empty
+		validation.Field(&c.Hosts, validation.Required),
+		// Validate each host
+		validation.Field(&c.Hosts, validation.Each(validation.Required)),
+	)
 }
 
-func (h *ContextHosts) Validate() error {
-	if err := validation.ValidateStruct(h,
+func (h ContextHosts) Validate() error {
+	if err := validation.ValidateStruct(&h,
+		// Mirrors must not be empty
 		validation.Field(&h.Mirrors, validation.Required),
+		// Validate each mirror
+		validation.Field(&h.Mirrors, validation.Each(validation.Required)),
 	); err != nil {
 		return err
-	}
-
-	for i, mirror := range h.Mirrors {
-		if err := mirror.Validate(); err != nil {
-			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
-		}
 	}
 
 	seen := make(map[string]struct{})
@@ -101,14 +94,14 @@ func (h *ContextHosts) Validate() error {
 	return nil
 }
 
-func (m *ContextMirrorHost) Validate() error {
-	return validation.ValidateStruct(m,
+func (m ContextMirrorHost) Validate() error {
+	return validation.ValidateStruct(&m,
 		validation.Field(&m.Host, validation.Required),
 		validation.Field(&m.Scheme, validation.Required),
 	)
 }
 
-func (m *ContextMirrorHost) UniqueKey() string {
+func (m ContextMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }
 
