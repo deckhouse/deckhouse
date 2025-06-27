@@ -392,7 +392,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if !r.isDeckhousePodReady(ctx) && !task.IsPatch {
-		r.logger.Info("Deckhouse is not ready. Skipping upgrade")
+		r.logger.Info("Deckhouse is not ready, waiting")
 
 		drs := &v1alpha1.DeckhouseReleaseStatus{
 			Phase: v1alpha1.DeckhouseReleasePhasePending,

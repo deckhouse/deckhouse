@@ -36,12 +36,31 @@ DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
 
 login_prod_registry() {
   echo "Log in to PROD registry"
-  echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+  docker login "${PROD_REGISTRY}"
 }
 login_dev_registry() {
   echo "Log in to DEV registry"
-  echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+  docker login "${DEV_REGISTRY}"
 }
+
+# Create docker config file to use during this CI Job
+echo "----------------------------------------------"
+echo ""
+echo "Preparing DOCKER_CONFIG"
+mkdir -p "${WORKDIR}/docker"
+cat > "${WORKDIR}/docker/config.json" << EOL
+{
+        "auths": {
+                "${PROD_REGISTRY}": {
+                        "auth": "$(echo -n "${PROD_REGISTRY_USER}:${PROD_REGISTRY_PASSWORD}" | base64)"
+                },
+                "${DEV_REGISTRY}": {
+                        "auth": "$(echo -n "${DEV_REGISTRY_USER}:${DEV_REGISTRY_PASSWORD}" | base64)"
+                }
+        }
+}
+EOL
+export DOCKER_CONFIG="${WORKDIR}/docker"
 
 echo "----------------------------------------------"
 echo ""

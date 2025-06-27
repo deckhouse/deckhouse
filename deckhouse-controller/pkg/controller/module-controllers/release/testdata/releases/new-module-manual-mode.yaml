@@ -34,3 +34,8 @@ spec:
   releaseChannel: Alpha
   update:
     mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: echo
