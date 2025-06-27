@@ -31,9 +31,9 @@ var (
 )
 
 func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) {
-	transforms := make([]apis.LogTransform, 0)
-	var err error
+	transforms := []apis.LogTransform{}
 	for _, tm := range tms {
+		var err error
 		var transformation apis.LogTransform
 		switch tm.Action {
 		case v1alpha1.ReplaceDotKeys:
@@ -126,13 +126,13 @@ func addMaxDepth(depth int) string {
 
 // dot in label prefix need for vector
 func checkFixDotPrefix(lbs []string) []string {
-	labels := []string{}
-	for _, l := range lbs {
+	labels := make([]string, len(lbs))
+	for i, l := range lbs {
 		if !strings.HasPrefix(l, ".") {
-			labels = append(labels, fmt.Sprintf(".%s", l))
+			labels[i] = fmt.Sprintf(".%s", l)
 			continue
 		}
-		labels = append(labels, l)
+		labels[i] = l
 	}
 	return labels
 }
