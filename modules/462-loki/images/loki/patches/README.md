@@ -28,3 +28,7 @@ Add new metrics:
 - `force_expiration_hook_first_expired_chunk_timestamp_seconds`
 
 to monitor the sorting results along with existing `force_expiration_hook_last_expired_chunk_timestamp_seconds`
+
+## 005-Force-expiration-sparse-file-size-eval.patch
+
+Refactor `evaluateFileSize` to work with sparse files. Use `syscall` directly, instead of `os.Lstat`.  
