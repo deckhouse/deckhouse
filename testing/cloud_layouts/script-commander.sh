@@ -802,7 +802,14 @@ function wait_upmeter_green() {
 function check_resources_state_results() {
   echo "Check applied resource status..."
   response=$(get_cluster_status)
-  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response" | grep -v 'vstaticinstancev1alpha1.deckhouse.io')
+#  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response"') # We waiting fix
+  errors=$(jq -c '
+    .resources_state_results[]
+    | select(.errors)
+    | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
+    | select(.errors | length > 0)
+    | .errors
+  ' <<< "$response")
   if [ -n "$errors" ]; then
     echo "  Errors found:"
     echo "${errors}"
