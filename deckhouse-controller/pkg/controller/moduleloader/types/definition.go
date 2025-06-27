@@ -22,6 +22,7 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	openapierrors "github.com/go-openapi/errors"
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -53,7 +54,7 @@ type ModuleDescriptions struct {
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
-func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) error {
+func (d *Definition) Validate(values addonutils.Values, ignoreRequiredFields bool, logger *log.Logger) error {
 	if d.Weight < 900 || d.Weight > 999 {
 		return errors.New("external module weight must be between 900 and 999")
 	}
@@ -78,11 +79,17 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 
 	err = dm.Validate()
 
-	// next we will need to record all validation errors
+	// next we will need to record all validation errors, except required fields if ignoreRequiredFields is true
 	var result error
 	var mErr *multierror.Error
 	if errors.As(err, &mErr) {
 		for _, me := range mErr.Errors {
+			var e *openapierrors.Validation
+			if errors.As(me, &e) {
+				if e.Code() == 602 && ignoreRequiredFields {
+					continue
+				}
+			}
 			result = errors.Join(result, me)
 		}
 	}

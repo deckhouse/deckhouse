@@ -1067,8 +1067,8 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
 	}
-
-	if err = def.Validate(values, logger); err != nil {
+	ignoreRequiredFields := false
+	if err = def.Validate(values, ignoreRequiredFields, logger); err != nil {
 		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
 			Message: "validation failed: " + err.Error(),
