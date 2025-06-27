@@ -336,6 +336,81 @@ shell:
     EOD
     ln -s /.tofurc /root/.tofurc
 
+    # add bash envsubst
+    # from https://gist.github.com/gmolveau/2770f2d05fa5825e1ffdb5a61f0c1283
+    # envsubst is used in the e2e tests, remove it when we move tests to commander
+    cat << "EOD" > /bin/envsubst
+    #!/bin/bash
+
+    usage() {
+        echo "Usage: $0 [OPTIONS] [file_path]"
+        echo "OPTIONS:"
+        echo "  -p, --prefix PREFIX      Specify the prefix for environment variables"
+        echo "  -h, --help               Show this help message"
+        echo "If no file_path is provided, the script reads from stdin."
+        exit 1
+    }
+
+    # Function to replace environment variables with a prefix in a text file
+    replace_env_variables() {
+        local content="$1"
+        local prefix="$2"
+
+        # Get environment variables with the specified prefix (only variable names)
+        variables=$(env | grep "^${prefix}" | sed -e "s/${prefix}\([^=]*\)=.*/\1/")
+
+        # Loop through variables and simulate replacement in the content
+        while IFS= read -r variable; do
+            key="${prefix}${variable}"
+            value=$(printenv "${key}")
+            if [ -n "${value}" ]; then
+                content=$(echo "${content}" | sed "s|\${${key}}|${value}|g")
+            fi
+        done <<< "${variables}"
+
+        echo "${content}"
+    }
+
+    # Initialize flags with default values
+    file_path=""
+    prefix=""
+
+    # Parse flags
+    while [[ $# -gt 0 ]]; do
+        key="$1"
+
+        case $key in
+            -p | --prefix)
+                prefix="$2"
+                shift # past argument
+                shift # past value
+                ;;
+            -h | --help)
+                usage
+                ;;
+            *)
+                file_path="$1"
+                shift # past value
+                ;;
+        esac
+    done
+
+    # If no file path provided or stdin specified, read from stdin
+    if [ -z "${file_path}" ] || [ "${file_path}" == "-" ]; then
+        content=$(cat -)
+    else
+        # Check if file exists
+        if [ ! -f "${file_path}" ]; then
+            echo "File ${file_path} not found."
+            exit 1
+        fi
+        content=$(< "${file_path}")
+    fi
+
+    replace_env_variables "${content}" "${prefix}"
+    EOD
+    chown 64535:64535 /bin/envsubst
+    chmod +x /bin/envsubst
 {{- end }}
 
 
