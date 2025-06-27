@@ -18,9 +18,14 @@ package bashible
 
 import (
 	"fmt"
-	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+)
+
+var (
+	_ validation.Validatable = Config{}
+	_ validation.Validatable = ConfigHosts{}
+	_ validation.Validatable = ConfigMirrorHost{}
 )
 
 type Config struct {
@@ -54,39 +59,27 @@ type ConfigRewrite struct {
 	To   string `json:"to" yaml:"to"`
 }
 
-func (c *Config) Validate() error {
-	if err := validation.ValidateStruct(c,
+func (c Config) Validate() error {
+	return validation.ValidateStruct(&c,
 		validation.Field(&c.Mode, validation.Required),
 		validation.Field(&c.Version, validation.Required),
 		validation.Field(&c.ImagesBase, validation.Required),
 		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
+		// Hosts key must not be empty
 		validation.Field(&c.Hosts, validation.Required),
-	); err != nil {
-		return err
-	}
-
-	for name, host := range c.Hosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("hosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-	return nil
+		// Validate each host
+		validation.Field(&c.Hosts, validation.Each(validation.Required)),
+	)
 }
 
-func (h *ConfigHosts) Validate() error {
-	if err := validation.ValidateStruct(h,
+func (h ConfigHosts) Validate() error {
+	if err := validation.ValidateStruct(&h,
+		// Mirrors must not be empty
 		validation.Field(&h.Mirrors, validation.Required),
+		// Validate each mirror
+		validation.Field(&h.Mirrors, validation.Each(validation.Required)),
 	); err != nil {
 		return err
-	}
-
-	for i, mirror := range h.Mirrors {
-		if err := mirror.Validate(); err != nil {
-			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
-		}
 	}
 
 	seen := make(map[string]struct{})
@@ -100,13 +93,13 @@ func (h *ConfigHosts) Validate() error {
 	return nil
 }
 
-func (m *ConfigMirrorHost) Validate() error {
-	return validation.ValidateStruct(m,
+func (m ConfigMirrorHost) Validate() error {
+	return validation.ValidateStruct(&m,
 		validation.Field(&m.Host, validation.Required),
 		validation.Field(&m.Scheme, validation.Required),
 	)
 }
 
-func (m *ConfigMirrorHost) UniqueKey() string {
+func (m ConfigMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }

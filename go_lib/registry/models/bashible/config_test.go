@@ -29,20 +29,20 @@ func validConfig() *Config {
 		ImagesBase: "example.com/base",
 		Version:    "1.0",
 		Hosts: map[string]ConfigHosts{
-			"host1": validRegistryHost(),
+			"host1": validConfigHosts(),
 		},
 	}
 }
 
-func validRegistryHost() ConfigHosts {
+func validConfigHosts() ConfigHosts {
 	return ConfigHosts{
 		Mirrors: []ConfigMirrorHost{
-			validMirrorHost(),
+			validConfigMirrorHost(),
 		},
 	}
 }
 
-func validMirrorHost() ConfigMirrorHost {
+func validConfigMirrorHost() ConfigMirrorHost {
 	return ConfigMirrorHost{
 		Host:     "mirror1.example.com",
 		Scheme:   "https",
@@ -120,8 +120,8 @@ func TestConfigValidate(t *testing.T) {
 			name: "Mirror with empty Host is invalid",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
 				mirror.Host = ""
 				host.Mirrors = []ConfigMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
@@ -133,8 +133,8 @@ func TestConfigValidate(t *testing.T) {
 			name: "Mirror with empty Scheme is invalid",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
 				mirror.Scheme = ""
 				host.Mirrors = []ConfigMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
@@ -146,8 +146,8 @@ func TestConfigValidate(t *testing.T) {
 			name: "Duplicate Mirrors",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
 				host.Mirrors = []ConfigMirrorHost{mirror, mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
