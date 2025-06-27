@@ -9,12 +9,25 @@
 ---
 # #####################################################################
 # List of binary files used by agent
-# from base install script
-## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-{{ $binariesFromALT := "/etc/localtime" }}
+{{ $binariesFromBaseImages := "" }}
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep  /usr/bin/sed" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/head" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/wc" }}
+# groups
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/groups" }}
+# for prepull
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/tar /usr/bin/stat /usr/bin/tail /usr/bin/timeout" }}
+# for debug and usability
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/curl /usr/bin/env /usr/bin/ls /usr/bin/sleep" }}
+#####################################################################
+{{ $binariesFromALT := "" }}
+# from base install script
+{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }}
+# shell-scripts dependencies
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sh /usr/bin/nsenter /bin/mount" }}
 # kmod and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
@@ -28,14 +41,8 @@
 # bash-completion
 {{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
 {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
-# groups
-{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
-# for prepull
-{{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
-# for cilium-cli sysdump
-{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
 # for debug
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
@@ -86,6 +93,14 @@ image: {{ .ModuleName }}/agent-binaries-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
+
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /binbinbin
+  before: install
+  includePaths:
+  - /usr/bin/bash
+
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/check-n-cleaning-iptables.sh
   to: /check-n-cleaning-iptables.sh
@@ -246,6 +261,63 @@ import:
   add: /relocate
   to: /
   before: install
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/env
+  - usr/bin/ls
+  - usr/bin/sleep
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: install
+- image: tools/bash
+  before: install
+  add: /usr/bin/bash
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/basename
+  - usr/bin/cat
+  - usr/bin/cp
+  - usr/bin/cut
+  - usr/bin/echo
+  - usr/bin/groups
+  - usr/bin/head
+  - usr/bin/ln
+  - usr/bin/mkdir
+  - usr/bin/mv
+  - usr/bin/od
+  - usr/bin/printf
+  - usr/bin/rm
+  - usr/bin/stat
+  - usr/bin/tail
+  - usr/bin/timeout
+  - usr/bin/true
+  - usr/bin/wc
+- image: tools/findutils
+  before: install
+  add: /usr/bin/find
+- image: tools/gawk
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+- image: tools/grep
+  before: install
+  add: /usr/bin/grep
+- image: tools/sed
+  before: install
+  add: /usr/bin/sed
+- image: tools/tar
+  before: install
+  add: /usr/bin/tar
 git:
 {{- include "image mount points" . }}
 imageSpec:
