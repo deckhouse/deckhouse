@@ -1,5 +1,6 @@
 name: network-policy-engine
 stage: "General Availability"
+critical: true
 weight: 50
 subsystems:
   - networking
