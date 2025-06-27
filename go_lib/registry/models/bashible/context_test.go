@@ -26,9 +26,10 @@ import (
 
 func validContext() *Context {
 	return &Context{
-		Mode:       "managed",
-		ImagesBase: "example.com/base",
-		Version:    "1.0",
+		RegistryModuleEnable: false,
+		Mode:                 "managed",
+		ImagesBase:           "example.com/base",
+		Version:              "1.0",
 		Hosts: map[string]ContextHosts{
 			"host1": validContextHosts(),
 		},
@@ -187,7 +188,7 @@ func TestContextToMap(t *testing.T) {
 		result result
 	}{
 		{
-			name: "Valid registry data: with auth",
+			name: "Valid registry data: with all fields",
 			input: func() Context {
 				ret := Context{
 					RegistryModuleEnable: true,
@@ -241,6 +242,61 @@ func TestContextToMap(t *testing.T) {
 												"to":   "deckhouse/ce",
 											},
 										},
+									},
+								},
+							},
+						},
+					}
+					return ret
+				}(),
+				err: false,
+			},
+		},
+
+		{
+			name: "Valid registry data: without optional fields",
+			input: func() Context {
+				ret := Context{
+					RegistryModuleEnable: true,
+					Mode:                 "unmanaged",
+					Version:              "unknown",
+					ImagesBase:           "registry.d8-system.svc/deckhouse/system",
+					ProxyEndpoints:       []string{},
+					Hosts: map[string]ContextHosts{
+						"registry.d8-system.svc": {
+							Mirrors: []ContextMirrorHost{{
+								Host:     "r.example.com",
+								Scheme:   "http",
+								Auth:     ContextAuth{},
+								Rewrites: []ContextRewrite{}},
+							},
+						},
+					},
+				}
+				return ret
+			}(),
+			result: result{
+				toMap: func() map[string]interface{} {
+
+					ret := map[string]interface{}{
+						"registryModuleEnable": true,
+						"mode":                 "unmanaged",
+						"version":              "unknown",
+						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
+						"proxyEndpoints":       []interface{}{},
+						"hosts": map[string]interface{}{
+							"registry.d8-system.svc": map[string]interface{}{
+								"mirrors": []interface{}{
+									map[string]interface{}{
+										"host":   "r.example.com",
+										"scheme": "http",
+										"ca":     "",
+										"auth": map[string]interface{}{
+											"username": "",
+											"password": "",
+											"auth":     "",
+										},
+										"rewrites": []interface{}{},
 									},
 								},
 							},

@@ -40,10 +40,10 @@ func (c *bashibleConfigSecret) decode(secret *corev1.Secret) error {
 
 func (c *bashibleConfigSecret) validate() error {
 	if c == nil {
-		return fmt.Errorf("validation failed: is empty")
+		return fmt.Errorf("failed: is empty")
 	}
-	ctx := bashible.Config(*c)
-	return ctx.Validate()
+	cfg := bashible.Config(*c)
+	return cfg.Validate()
 }
 
 func (c bashibleConfigSecret) toRegistryData() *RegistryData {

@@ -51,8 +51,16 @@ func (rd *RegistryData) hashSum() (string, error) {
 
 func (rd *RegistryData) validate() error {
 	if rd == nil {
-		return fmt.Errorf("validation failed: is empty")
+		return fmt.Errorf("failed: is empty")
 	}
 	ctx := bashible.Context(*rd)
 	return ctx.Validate()
+}
+
+func (rd *RegistryData) toMap() (map[string]interface{}, error) {
+	if rd == nil {
+		return nil, fmt.Errorf("failed: is empty")
+	}
+	ctx := bashible.Context(*rd)
+	return ctx.ToMap()
 }

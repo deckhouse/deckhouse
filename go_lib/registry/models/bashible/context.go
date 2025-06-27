@@ -17,7 +17,6 @@ limitations under the License.
 package bashible
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -113,13 +112,50 @@ func (m *ContextMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }
 
-func (b *Context) ToMap() (map[string]interface{}, error) {
-	jsonData, err := json.Marshal(b)
-	if err != nil {
-		return nil, err
+func (c Context) ToMap() (map[string]interface{}, error) {
+	proxies := make([]interface{}, 0, len(c.ProxyEndpoints))
+	for _, ep := range c.ProxyEndpoints {
+		proxies = append(proxies, ep)
 	}
 
-	var result map[string]interface{}
-	err = json.Unmarshal(jsonData, &result)
-	return result, err
+	hosts := make(map[string]interface{}, len(c.Hosts))
+	for hostName, host := range c.Hosts {
+		mirrors := make([]interface{}, 0, len(host.Mirrors))
+		for _, mirror := range host.Mirrors {
+			auth := map[string]interface{}{
+				"username": mirror.Auth.Username,
+				"password": mirror.Auth.Password,
+				"auth":     mirror.Auth.Auth,
+			}
+
+			rewrites := make([]interface{}, 0, len(mirror.Rewrites))
+			for _, rw := range mirror.Rewrites {
+				rewrites = append(rewrites, map[string]interface{}{
+					"from": rw.From,
+					"to":   rw.To,
+				})
+			}
+
+			mirrors = append(mirrors, map[string]interface{}{
+				"host":     mirror.Host,
+				"scheme":   mirror.Scheme,
+				"ca":       mirror.CA,
+				"auth":     auth,
+				"rewrites": rewrites,
+			})
+		}
+		hosts[hostName] = map[string]interface{}{
+			"mirrors": mirrors,
+		}
+	}
+
+	ret := map[string]interface{}{
+		"registryModuleEnable": c.RegistryModuleEnable,
+		"mode":                 c.Mode,
+		"version":              c.Version,
+		"imagesBase":           c.ImagesBase,
+		"proxyEndpoints":       proxies,
+		"hosts":                hosts,
+	}
+	return ret, nil
 }

@@ -18,10 +18,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	"regexp"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type RegistryData struct {
