@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 func validRegistryData() RegistryData {

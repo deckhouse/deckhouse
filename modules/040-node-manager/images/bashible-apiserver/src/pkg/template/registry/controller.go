@@ -47,7 +47,7 @@ type StateController struct {
 
 type HashedRegistryData struct {
 	HashSum string
-	Data    RegistryData
+	Data    map[string]interface{}
 }
 
 func (sc *StateController) SetupWithManager(ctx context.Context, ctrlManager ctrl.Manager) <-chan HashedRegistryData {
@@ -104,7 +104,12 @@ func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, fmt.Errorf("hash sum generate error for registry data: %w", err)
 	}
 
-	sc.dataCh <- HashedRegistryData{HashSum: hashSum, Data: rData}
+	mapData, err := rData.toMap()
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to map registry data: %w", err)
+	}
+
+	sc.dataCh <- HashedRegistryData{HashSum: hashSum, Data: mapData}
 	return ctrl.Result{}, nil
 }
 

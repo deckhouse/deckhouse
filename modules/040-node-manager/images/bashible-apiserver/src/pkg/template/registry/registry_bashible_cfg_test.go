@@ -24,6 +24,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBashibleConfigSecretValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *bashibleConfigSecret
+		wantErr bool
+	}{
+		{
+			name: "Valid data",
+			input: &bashibleConfigSecret{
+				Mode:       "managed",
+				ImagesBase: "example.com/base",
+				Version:    "1.0",
+				Hosts: map[string]bashible.ConfigHosts{
+					"host1": {
+						Mirrors: []bashible.ConfigMirrorHost{
+							{
+								Host:     "mirror1.example.com",
+								Scheme:   "https",
+								Auth:     bashible.ConfigAuth{},
+								Rewrites: []bashible.ConfigRewrite{},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "Epmty data",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
+
+			if tt.wantErr {
+				assert.Error(t, err, "Expected errors but got none")
+			} else {
+				assert.NoError(t, err, "Expected no errors but got some")
+			}
+		})
+	}
+}
+
 func TestBashibleConfigSecretToRegistryData(t *testing.T) {
 	tests := []struct {
 		name             string
