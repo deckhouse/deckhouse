@@ -11,8 +11,8 @@ import:
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-  add: /src/kiali/frontend/build
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install
 shell:
@@ -52,18 +52,3 @@ shell:
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
----
-image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-final: false
-fromImage: builder/node-alpine
-import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
-  add: /src/kiali
-  to: /src/kiali
-  before: setup
-shell:
-  setup:
-  {{- include "node packages proxy" . | nindent 2 }}
-  - cd /src/kiali/frontend
-  - yarn install --frozen-lockfile
-  - yarn run build
