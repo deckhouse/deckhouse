@@ -536,21 +536,18 @@ spec:
         sourceFormat: String
         string:
           targetField: msg
-          depth: 1
 ```
 
 Пример изначальной записи в логе:
 
 ```text
 /docker-entrypoint.sh: Configuration complete; ready for start up
-{"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 ```
 
 Результат преобразования:
 
 ```json
 {... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
-{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
 ```
 
 ### Преобразование смешанных форматов логов (JSON и Klog) в структурированный JSON и уменьшение вложенности
@@ -570,22 +567,18 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: Klog
-        klog:
-          depth: 1
 ```
 
 Пример изначальной записи в логе:
 
 ```text
 I0505 17:59:40.692994   28133 klog.go:70] hello from klog
-{"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}
 ```
 
 Результат преобразования:
 
 ```json
 {... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
-{... "message": {"level" : "info","msg" : "fetching.module.release", "releasechannel" : "Stable", "time" : "2025-06-23T08:00:29Z"}}
 ```
 
 ### Парсинг JSON и уменьшение вложенности
@@ -691,8 +684,6 @@ spec:
     - action: EnsureStructuredMessage
       ensureStructuredMessage:
         sourceFormat: JSON
-        json:
-          depth: 0
     - action: DropLabels
       dropLabels:
         labels:

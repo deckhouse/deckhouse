@@ -29,7 +29,7 @@ spec:
   - action: ReplaceDotKeys
     replaceDotKeys:
       labels:
-        - pod_labels
+        - .pod_labels
   - action: EnsureStructuredMessage
     ensureStructuredMessage:
       sourceFormat: String
@@ -43,10 +43,8 @@ spec:
   - action: EnsureStructuredMessage
     ensureStructuredMessage:
       sourceFormat: Klog
-      klog:
-        depth: 2
   - action: DropLabels
     dropLabels:
       labels: 
-        - first
+        - .first
         - .second

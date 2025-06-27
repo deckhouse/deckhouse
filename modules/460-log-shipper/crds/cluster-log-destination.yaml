@@ -922,7 +922,7 @@ spec:
                             description: "List of labels where dots will be replaced with underscores."
                             items:
                               type: string
-                              pattern: '^[a-zA-Z0-9_\\\.\-]+$'
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
                       ensureStructuredMessage:
                         type: object
                         description: "Ensures that the message field contains a JSON object."
@@ -943,15 +943,12 @@ spec:
                                 enum:
                                   - JSON
                             required:
-                              - json
                               - sourceFormat
                           - properties:
-                              klog: {}
                               sourceFormat:
                                 enum:
                                   - Klog
                             required:
-                              - klog
                               - sourceFormat
                         properties:
                           sourceFormat:
@@ -967,28 +964,12 @@ spec:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                                 description: "Target field where the wrapped string is placed."
-                              depth:
-                                type: integer
-                                default: 2
-                                minimum: 0
-                                maximum: 128
-                                description: "Depth for JSON parsing. A value of zero disables parsing."
                           json:
                             type: object
                             properties:
                               depth:
                                 type: integer
-                                default: 2
-                                minimum: 0
-                                maximum: 128
-                                description: "Depth for JSON parsing. A value of zero disables parsing."
-                          klog:
-                            type: object
-                            properties:
-                              depth:
-                                type: integer
-                                default: 2
-                                minimum: 0
+                                minimum: 1
                                 maximum: 128
                                 description: "Depth for JSON parsing. A value of zero disables parsing."
                       dropLabels:
@@ -1002,7 +983,7 @@ spec:
                             description: "List of labels to remove."
                             items:
                               type: string
-                              pattern: '^[a-zA-Z0-9_\\\.\-]+$'
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
                 buffer:
                   type: object
                   oneOf:

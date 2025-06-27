@@ -42,7 +42,6 @@ type EnsureStructuredMessageSpec struct {
 	SourceFormat SourceFormat           `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`
 	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
-	Klog         SourceFormatKlogSpec   `json:"klog,omitempty"`
 }
 type SourceFormat string
 
@@ -54,11 +53,7 @@ const (
 
 type SourceFormatStringSpec struct {
 	TargetField string `json:"targetField"`
-	Depth       int    `json:"depth,omitempty"`
 }
 type SourceFormatJSONSpec struct {
-	Depth int `json:"depth,omitempty"`
-}
-type SourceFormatKlogSpec struct {
 	Depth int `json:"depth,omitempty"`
 }

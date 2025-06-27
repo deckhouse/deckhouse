@@ -24,10 +24,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 var (
-	vectorLabelTemplate = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+$`)
+	vectorLabelTemplate = regexp.MustCompile(`^\.[a-zA-Z0-9_\[\]\\\.\-]+$`)
 )
 
 func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) {
@@ -56,52 +57,50 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 }
 
 func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
-	var vrl string
+	sources := []string{}
 	vrlName := "tf_replaceDotKeys"
-	for _, l := range checkFixDotPrefix(r.Labels) {
+	for _, l := range r.Labels {
 		if !validLabel(l) {
 			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valid", l)
 		}
-		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
-			"-> |key| { replace(key, \".\", \"_\")}\n}\n", vrl, l, l, l)
+		sources = append(sources, vrl.ReplaceDotKeys(l))
 	}
-	return NewTransformation(vrlName, vrl), nil
+	return NewTransformation(vrlName, strings.Join(sources, "\n")), nil
 }
 
 func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
-	var vrl string
+	var source string
 	vrlName := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
 	case v1alpha1.FormatString:
 		if e.String.TargetField == "" {
 			return nil, fmt.Errorf("transformations ensureStructuredMessage string: TargetField is empty")
 		}
-		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? { \"%s\": .message }\n",
-			addMaxDepth(e.String.Depth), e.String.TargetField)
+		source = vrl.EnsureStructuredMessageString(e.String.TargetField)
 	case v1alpha1.FormatJSON:
-		vrl = fmt.Sprintf(".message = parse_json!(.message%s)\n", addMaxDepth(e.JSON.Depth))
+		source = vrl.EnsureStructuredMessageJSON(e.JSON.Depth)
 	case v1alpha1.FormatKlog:
-		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? parse_klog!(.message)\n", addMaxDepth(e.Klog.Depth))
+		source = vrl.EnsureStructuredMessageKlog()
 	default:
 		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valid", e.SourceFormat)
 	}
-	return NewTransformation(vrlName, vrl), nil
+	return NewTransformation(vrlName, source), nil
 }
 
 func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
-	var vrl string
+	sources := []string{}
 	vrlName := "tf_dropLabels"
-	for _, l := range checkFixDotPrefix(d.Labels) {
+	for _, l := range d.Labels {
 		if !validLabel(l) {
 			return nil, fmt.Errorf("transformations dropLabels label: %s not valid", l)
 		}
-		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
+		sources = append(sources, vrl.DropLabels(l))
 	}
-	return NewTransformation(vrlName, vrl), nil
+	return NewTransformation(vrlName, strings.Join(sources, "\n")), nil
 }
 
-func NewTransformation(name, vrl string) *DynamicTransform {
-	if vrl == "" || name == "" {
+func NewTransformation(name, source string) *DynamicTransform {
+	if source == "" || name == "" {
 		return nil
 	}
 	return &DynamicTransform{
@@ -111,30 +110,10 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]any{
-			"source":        vrl,
+			"source":        source,
 			"drop_on_abort": false,
 		},
 	}
-}
-
-func addMaxDepth(depth int) string {
-	if depth > 0 {
-		return fmt.Sprintf(", max_depth: %d", depth)
-	}
-	return ""
-}
-
-// dot in label prefix need for vector
-func checkFixDotPrefix(lbs []string) []string {
-	labels := make([]string, len(lbs))
-	for i, l := range lbs {
-		if !strings.HasPrefix(l, ".") {
-			labels[i] = fmt.Sprintf(".%s", l)
-			continue
-		}
-		labels[i] = l
-	}
-	return labels
 }
 
 func validLabel(label string) bool {

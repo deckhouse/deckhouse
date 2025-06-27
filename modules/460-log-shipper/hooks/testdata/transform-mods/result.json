@@ -13,7 +13,7 @@
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}\n",
+      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_String": {
@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_replaceDotKeys"
       ],
-      "source": ".message = parse_json(.message, max_depth: 2) ?? { \"text\": .message }\n",
+      "source": "if is_string(.message) {\n.message =  { \"text\": .message }\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON": {
@@ -29,7 +29,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_String"
       ],
-      "source": ".message = parse_json!(.message, max_depth: 1)\n",
+      "source": ".message = parse_json(.message, max_depth: 1) ?? .message",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/03_tf_ensureStructuredMessage_Klog": {
@@ -37,7 +37,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON"
       ],
-      "source": ".message = parse_json(.message, max_depth: 2) ?? parse_klog!(.message)\n",
+      "source": ".message = parse_klog(.message) ?? .message",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/04_tf_dropLabels": {
@@ -45,7 +45,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/03_tf_ensureStructuredMessage_Klog"
       ],
-      "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n",
+      "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/05_del_parsed_data": {

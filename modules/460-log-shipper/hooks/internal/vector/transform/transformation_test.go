@@ -29,16 +29,6 @@ var testCases = []struct {
 	in   v1alpha1.TransformationSpec
 	out  string
 }{
-	{"EnsureStructuredMessage String Format Depth 1",
-		v1alpha1.TransformationSpec{
-			Action: "EnsureStructuredMessage",
-			EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{
-				SourceFormat: "String",
-				String:       v1alpha1.SourceFormatStringSpec{TargetField: "text", Depth: 1},
-			},
-		},
-		".message = parse_json(.message, max_depth: 1) ?? { \"text\": .message }\n",
-	},
 	{"EnsureStructuredMessage String Format",
 		v1alpha1.TransformationSpec{
 			Action: "EnsureStructuredMessage",
@@ -47,7 +37,7 @@ var testCases = []struct {
 				String:       v1alpha1.SourceFormatStringSpec{TargetField: "text"},
 			},
 		},
-		".message = parse_json(.message) ?? { \"text\": .message }\n",
+		"if is_string(.message) {\n.message =  { \"text\": .message }\n}",
 	},
 	{"EnsureStructuredMessage JSON Format ",
 		v1alpha1.TransformationSpec{
@@ -57,7 +47,7 @@ var testCases = []struct {
 				JSON:         v1alpha1.SourceFormatJSONSpec{Depth: 1},
 			},
 		},
-		".message = parse_json!(.message, max_depth: 1)\n",
+		".message = parse_json(.message, max_depth: 1) ?? .message",
 	},
 	{"EnsureStructuredMessage Klog Format",
 		v1alpha1.TransformationSpec{
@@ -66,29 +56,29 @@ var testCases = []struct {
 				SourceFormat: "Klog",
 			},
 		},
-		".message = parse_json(.message) ?? parse_klog!(.message)\n",
+		".message = parse_klog(.message) ?? .message",
 	},
 	{"DropLabels",
 		v1alpha1.TransformationSpec{
 			Action: "DropLabels",
 			DropLabels: v1alpha1.DropLabelsSpec{
-				Labels: []string{"first", "second"},
+				Labels: []string{".first", ".second"},
 			},
 		},
 		"if exists(.first) {\n del(.first)\n}\n" +
-			"if exists(.second) {\n del(.second)\n}\n",
+			"if exists(.second) {\n del(.second)\n}",
 	},
 	{"ReplaceDotKeys",
 		v1alpha1.TransformationSpec{
 			Action: "ReplaceDotKeys",
 			ReplaceDotKeys: v1alpha1.ReplaceDotKeysSpec{
-				Labels: []string{"pod_labels", "examples"},
+				Labels: []string{".pod_labels", ".examples"},
 			},
 		},
 		"if exists(.pod_labels) {\n" +
 			".pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n" +
 			"if exists(.examples) {\n" +
-			".examples = map_keys(object!(.examples), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n",
+			".examples = map_keys(object!(.examples), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
 	},
 }
 
