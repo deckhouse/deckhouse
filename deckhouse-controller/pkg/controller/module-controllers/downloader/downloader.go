@@ -147,7 +147,7 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 // DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
-	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
+	releaseImageInfo, err := md.fetchReleaseImageInfoByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module release: %w", err)
 	}
