@@ -57,7 +57,7 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 
 func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := "tf_replaceDotKeys"
+	vrlName := "tf_replaceDotKeys"
 	for _, l := range checkFixDotPrefix(r.Labels) {
 		if !validLabel(l) {
 			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valid", l)
@@ -65,7 +65,7 @@ func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
 			"-> |key| { replace(key, \".\", \"_\")}\n}\n", vrl, l, l, l)
 	}
-	return NewTransformation(name, vrl), nil
+	return NewTransformation(vrlName, vrl), nil
 }
 
 func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
