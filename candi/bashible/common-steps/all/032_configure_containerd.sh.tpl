@@ -153,7 +153,7 @@ oom_score = 0
           username = {{ $mirror.auth.username | quote }}
           password = {{ $mirror.auth.password | default "" | quote }}
           {{- else }}
-          auth = {{ $mirror.auth.auth | default "" | quote }}
+          auth = {{ (($mirror).auth).auth | default "" | quote }}
           {{- end }}
       {{- if $mirror.ca }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
