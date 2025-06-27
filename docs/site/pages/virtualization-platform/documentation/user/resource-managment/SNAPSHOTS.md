@@ -112,7 +112,12 @@ EOF
 
 A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The [VirtualMachineSnapshot](../../../reference/cr/virtualmachinesnapshot.html) resource is used to create virtual machine snapshots.
 
+{% alert level="warning" %}
+It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a Pending state while waiting for the images to become available.
+{% endalert %}
+
 #### Types of snapshots
+
 Snapshots can be consistent or inconsistent, which is determined by the `requiredConsistency` parameter. By default, the `requiredConsistency` parameter is set to `true`, which requires a consistent snapshot.
 
 A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
@@ -152,6 +157,12 @@ If you plan to use the snapshot as a template, perform the following steps in th
 - Optimizing disk space.
 - Resetting initialization configurations (`cloud-init clean`).
 - Create a snapshot with a clear indication not to save the IP address: `keepIPAddress: Never`.
+
+When creating an image, follow these recommendations:
+
+- Disconnect all images if they were connected to the virtual machine.
+- Do not use a static IP address for VirtualMachineIPAddress. If a static address has been used, change it to automatic.
+- Create a snapshot with an explicit indication not to save the IP address: `keepIPAddress: Never`.
 
 #### Creating snapshots
 
@@ -204,6 +215,25 @@ spec:
 EOF
 ```
 
+After successfully creating a snapshot, its status will show the list of resources saved in the snapshot.
+
+Output example:
+
+```yaml
+status:
+  ...
+  resources:
+  - apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: VirtualMachine
+    name: linux-vm
+  - apiVersion: v1
+    kind: Secret
+    name: cloud-init
+  - apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: VirtualDisk
+    name: linux-vm-root
+```
+
 ## Restore from snapshots
 
 The [VirtualMachineRestore](../../../reference/cr/virtualmachinerestore.html) resource is used to restore a virtual machine from a snapshot. During the restore process, the following objects are automatically created in the cluster:
@@ -238,6 +268,8 @@ EOF
 
 A snapshot of a virtual machine can be used both to create its exact copy (clone) and as a template for deploying new VMs with a similar configuration.
 This requires creating a `VirtualMachineRestore` resource and setting the renaming parameters in the `.spec.nameReplacements` block to avoid name conflicts.
+
+The list of resources and their names are available in the VM snapshot status in the `status.resources` block.
 
 Example manifest for restoring a VM from a snapshot:
 
@@ -275,4 +307,16 @@ When restoring a virtual machine from a snapshot, it is important to consider th
 2. For static IP addresses (`type: Static`) the value must be exactly the same as what was captured in the snapshot.
 3. Automation-related secrets (such as cloud-init or sysprep configuration) must exactly match the configuration being restored.
 
-Failure to do so will result in a restore error . This is because the system checks the integrity of the configuration and the uniqueness of the resources to prevent conflicts in the cluster.
+Failure to do so will result in a restore error, and the VirtualMachineRestore resource will enter the `Failed` state. This is because the system checks the integrity of the configuration and the uniqueness of the resources to prevent conflicts in the cluster.
+
+When restoring or cloning a virtual machine, the operation may be successful, but the VM will remain in `Pending` state.
+
+This occurs if the VM depends on resources (such as disk images or virtual machine classes) or their configurations that have been changed or deleted at the time of restoration.
+
+Check the VM's conditions block using the command:
+
+```bash
+d8 k vm get <vmname> -o json | jq ‘.status.conditions’
+```
+
+Check the output for errors related to missing or changed resources. Manually update the VM configuration to remove dependencies that are no longer available in the cluster.
