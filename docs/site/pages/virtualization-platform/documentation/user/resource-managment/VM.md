@@ -560,7 +560,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 Example output:
 
-```txt
+```text
 2
 ```
 
@@ -914,7 +914,7 @@ d8 k label vm linux-vm app=nginx
 
 Example output:
 
-```txt
+```text
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
 
@@ -1174,7 +1174,7 @@ d8 k get vmop
 
 Example output:
 
-```txt
+```text
 NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
 firmware-update-fnbk2   Completed   Evict   static-vm-node-00   148m
 ```

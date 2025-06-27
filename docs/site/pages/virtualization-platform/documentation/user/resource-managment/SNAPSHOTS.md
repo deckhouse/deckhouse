@@ -130,9 +130,9 @@ A consistent snapshot guarantees a consistent and complete state of the virtual 
 - The VM is running, and `qemu-guest-agent` is not installed or running in the guest OS.
 - The VM is running, and `qemu-guest-agent` is not installed in the guest OS, but the snapshot manifest specifies the `requiredConsistency: false` parameter, and you want to avoid suspending the file system.
 
-  {% alert level="warning" %}
-  There is a risk of data loss or integrity violation when restoring from such a snapshot.
-  {% endalert %}
+{% alert level="warning" %}
+There is a risk of data loss or integrity violation when restoring from such a snapshot.
+{% endalert %}
 
 #### Scenarios for using snapshots
 

@@ -482,7 +482,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 Пример вывода:
 
-```txt
+```text
 1
 ```
 
@@ -506,7 +506,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 Пример вывода:
 
-```txt
+```text
 1
 ```
 
@@ -560,7 +560,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 Пример вывода:
 
-```txt
+```text
 2
 ```
 
@@ -915,7 +915,7 @@ d8 k label vm linux-vm app=nginx
 
 Пример вывода команды:
 
-```txt
+```text
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
 
@@ -1173,7 +1173,7 @@ d8 k get vmop
 
 Пример вывода:
 
-```txt
+```text
 NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
 firmware-update-fnbk2   Completed   Evict   linux-vm            1m
 ```
@@ -1273,7 +1273,7 @@ spec:
 
 Пример вывода ресурса
 
-```txt
+```text
 NAME                         PHASE       TYPE    VIRTUALMACHINE      AGE
 nodeplacement-update-dabk4   Completed   Evict   linux-vm            1m
 ```
