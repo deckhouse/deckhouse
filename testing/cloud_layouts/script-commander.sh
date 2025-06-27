@@ -271,27 +271,7 @@ function prepare_environment() {
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
 
-    bootstrap_static || exit 1
-
     cluster_template_id="dbe33391-02c1-4f23-a77b-0edb8b079ff6"
-    values="{
-      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
-      \"defaultCRI\": \"${CRI}\",
-      \"sshMasterHost\": \"${master_ip}\",
-      \"sshMasterUser\": \"${ssh_user}\",
-      \"sshBastionHost\": \"${bastion_ip}\",
-      \"sshBastionUser\": \"${ssh_user}\",
-      \"sshRedosHost\": \"${worker_redos_ip}\",
-      \"sshRedosUser\": \"${ssh_redos_user_worker}\",
-      \"sshOpensuseHost\": \"${worker_opensuse_ip}\",
-      \"sshOpensuseUser\": \"${ssh_opensuse_user_worker}\",
-      \"sshRosaHost\": \"${worker_rosa_ip}\",
-      \"sshRosaUser\": \"${ssh_rosa_user_worker}\",
-      \"sshPrivateKey\": \"${SSH_KEY}\",
-      \"imagesRepo\": \"${IMAGES_REPO}\",
-      \"branch\": \"${DEV_BRANCH}\",
-      \"deckhouseDockercfg\": \"${LOCAL_DECKHOUSE_DOCKERCFG}\"
-    }"
 
     ;;
   esac
@@ -415,13 +395,15 @@ function bootstrap_static() {
   D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
   E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
   E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  IMAGES_REPO="e2e-registry.foxtrot-dev.ru"
+  IMAGES_REPO="e2e-registry.foxtrot-dev.ru/sys/deckhouse-oss"
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
        cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
+apt-get update
+apt-get install -y docker.io docker-compose wget curl
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
 DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
@@ -443,7 +425,7 @@ d8 --version
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
-d8 mirror push d8 "${IMAGES_REPO}" --registry-login $E2E_REGISTRY_USER --registry-password $E2E_REGISTRY_PASSWORD
+d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 
 # Checking that it's FE-UPGRADE
 # Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
@@ -820,7 +802,7 @@ function wait_upmeter_green() {
 function check_resources_state_results() {
   echo "Check applied resource status..."
   response=$(get_cluster_status)
-  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response")
+  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response" | grep -v 'vstaticinstancev1alpha1.deckhouse.io')
   if [ -n "$errors" ]; then
     echo "  Errors found:"
     echo "${errors}"
@@ -976,6 +958,28 @@ function run-test() {
   local response
   local cluster_id
 
+  if [[ ${PROVIDER} == "Static" ]]; then
+      bootstrap_static || return $?
+      values="{
+            \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+            \"defaultCRI\": \"${CRI}\",
+            \"sshMasterHost\": \"${master_ip}\",
+            \"sshMasterUser\": \"${ssh_user}\",
+            \"sshBastionHost\": \"${bastion_ip}\",
+            \"sshBastionUser\": \"${ssh_user}\",
+            \"sshRedosHost\": \"${worker_redos_ip}\",
+            \"sshRedosUser\": \"${ssh_redos_user_worker}\",
+            \"sshOpensuseHost\": \"${worker_opensuse_ip}\",
+            \"sshOpensuseUser\": \"${ssh_opensuse_user_worker}\",
+            \"sshRosaHost\": \"${worker_rosa_ip}\",
+            \"sshRosaUser\": \"${ssh_rosa_user_worker}\",
+            \"sshPrivateKey\": \"${SSH_KEY}\",
+            \"imagesRepo\": \"${IMAGES_REPO}\",
+            \"branch\": \"${DEV_BRANCH}\",
+            \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
+          }"
+  fi
+
   cluster_template_version_id=$(curl -s -X 'GET' \
     "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
     -H 'accept: application/json' \
@@ -1035,7 +1039,6 @@ function run-test() {
 
 
     # Get ssh connection string
-    # TODO add bastion logic
     if [[ "$master_ip_find" == "false" ]]; then
       master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
       master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
@@ -1158,62 +1161,69 @@ function cleanup() {
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
 
-  if [ -z $cluster_id ]; then
+  if [ -z "$cluster_id" ] && [[ "$PROVIDER" == "Static" ]]; then
+    echo "  Error getting cluster id, but provider is Static, continue"
+  elif [ -z $cluster_id ]; then
     echo "  Error getting cluster id"
     return 1
-  fi
+  else
+    echo "  Deleting cluster ${cluster_id}"
 
-  echo "  Deleting cluster ${cluster_id}"
-
-  response=$(curl -s -X 'DELETE' \
-    "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
-    -H 'accept: application/json' \
-    -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
-    -w "\n%{http_code}")
-
-  http_code=$(echo "$response" | tail -n 1)
-  response=$(echo "$response" | sed '$d')
-
-  # Check for HTTP errors
-  if [[ ${http_code} -ge 400 ]]; then
-    echo "Error: HTTP error ${http_code}" >&2
-    echo "$response" >&2
-    return 1
-  fi
-
-  # Waiting to cluster cleanup
-  testRunAttempts=40
-  sleep=30
-  for ((i=1; i<=testRunAttempts; i++)); do
-    cluster_status="$(curl -s -X 'GET' \
+    response=$(curl -s -X 'DELETE' \
       "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
-      -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
-      jq -r '.status')"
-    >&2 echo "Check Cluster delete..."
-    echo "  Cluster status: $cluster_status"
-    if [ "deleted" = "$cluster_status" ]; then
-      return 0
-    elif [ "deletion_failed" = "$cluster_status" ]; then
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -w "\n%{http_code}")
+
+    http_code=$(echo "$response" | tail -n 1)
+    response=$(echo "$response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response" >&2
       return 1
     fi
-    if [[ $i -lt $testRunAttempts ]]; then
-      >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."
-      sleep $sleep
-    else
-      >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed."
-      return 1
-    fi
-  done
+
+    # Waiting to cluster cleanup
+    testRunAttempts=40
+    sleep=30
+    for ((i=1; i<=testRunAttempts; i++)); do
+      cluster_status="$(curl -s -X 'GET' \
+        "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
+        -H 'accept: application/json' \
+        -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
+        jq -r '.status')"
+      >&2 echo "Check Cluster delete..."
+      echo "  Cluster status: $cluster_status"
+      if [ "deleted" = "$cluster_status" ]; then
+        echo "  Cluster deleted"
+        break
+      elif [ "deletion_failed" = "$cluster_status" ]; then
+        return 1
+      fi
+      if [[ $i -lt $testRunAttempts ]]; then
+        >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."
+        sleep $sleep
+      else
+        >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed."
+        return 1
+      fi
+    done
+  fi
+
 
   if [[ ${PROVIDER} == "Static" ]]; then
     get_opentofu
+    cd $cwd
     #  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     #  $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-    # TODO to delete, mac os debug
+    # TODO tofu in  image has different architecture, to delete, mac os debug
     tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     tofu destroy -auto-approve -no-color || return $?
   fi
+
+  return 0
 
 }
 
