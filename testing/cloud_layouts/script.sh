@@ -350,7 +350,7 @@ function prepare_environment() {
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
         env VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
     ssh_user="ubuntu"
     ;;
