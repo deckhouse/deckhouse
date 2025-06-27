@@ -276,6 +276,7 @@ import:
   - usr/bin/basename
   - usr/bin/cat
   - usr/bin/cp
+  - usr/bin/coreutils
   - usr/bin/cut
   - usr/bin/echo
   - usr/bin/groups
