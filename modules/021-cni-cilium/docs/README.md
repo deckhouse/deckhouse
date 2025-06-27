@@ -88,9 +88,9 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 In Deckhouse Kubernetes Platform, you can apply the following algorithms to load balance service traffic:
 
-* **Random**. Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
-* **Maglev**. Uses consistent hashing to distribute traffic evenly, suitable for high load services.
-* **Least Connections**. Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long-lived connections.
+* `Random`: Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
+* `Maglev`: Uses consistent hashing to distribute traffic evenly, suitable for high load services.
+* `Least Connections`: Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long-lived connections.
 
 By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
 
