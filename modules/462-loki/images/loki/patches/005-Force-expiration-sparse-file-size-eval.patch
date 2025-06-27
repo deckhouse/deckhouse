@@ -1,8 +1,14 @@
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-index 7faee517ea94c3c1faeb50d563d93ae40caad4e3..67287bf785f03588f53d93eebb1ff1a1013e5d45 100644
+index 7faee517ea94c3c1faeb50d563d93ae40caad4e3..140984f305278af19975f7355c5dc52a97f2af4e 100644
 --- a/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -9,6 +9,7 @@ import (
+@@ -4,11 +4,13 @@ import (
+ 	"context"
+ 	"encoding/base64"
+ 	"fmt"
++	"io/fs"
+ 	"os"
+ 	"path"
  	"path/filepath"
  	"strings"
  	"sync/atomic"
@@ -10,27 +16,65 @@ index 7faee517ea94c3c1faeb50d563d93ae40caad4e3..67287bf785f03588f53d93eebb1ff1a1
  	"time"
  	"unsafe"
 
-@@ -353,15 +354,21 @@ func evaluateDirSize(path string) (int64, error) {
+@@ -339,14 +341,32 @@ func (h *forceExpirationHook) isDirUsageThresholdExceeded() (exceeded bool, byte
 
- // chunk size
-
-+const (
-+	statBlkSizeBytes = 512
-+)
-+
- func evaluateFileSize(path string) (int64, error) {
--	stat, err := os.Lstat(path)
-+	var stat syscall.Stat_t
-+	err := syscall.Stat(path, &stat)
- 	switch {
- 	case os.IsNotExist(err):
- 		return 0, nil
+ func evaluateDirSize(path string) (int64, error) {
+ 	var size int64
+-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
++	err := filepath.WalkDir(path, func(_ string, entry os.DirEntry, err error) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if !info.IsDir() {
+-			size += info.Size()
++		if entry.Type().IsRegular() {
++			info, infoGetErr := entry.Info()
++			if infoGetErr != nil {
++				_ = level.Warn(util_log.Logger).Log(
++					"msg", "unable to evaluate file size for dir size, skipping file",
++					"reason", fmt.Errorf("failed to get entry info: %w", infoGetErr),
++				)
++				// skip file
++				return nil
++			}
++			fileSize, extractFileSizeErr := extractFileSize(info)
++			if extractFileSizeErr != nil {
++				_ = level.Warn(util_log.Logger).Log(
++					"msg", "unable to evaluate file size for dir size, skipping file",
++					"reason", fmt.Errorf("failed to extract file size: %w", extractFileSizeErr),
++				)
++				// skip file
++				return nil
++			}
++			size += fileSize
+ 		}
+-		return err
++		return nil
+ 	})
+ 	return size, err
+ }
+@@ -361,8 +381,23 @@ func evaluateFileSize(path string) (int64, error) {
  	case err != nil:
  		return 0, err
  	default:
 -		return stat.Size(), nil
-+		// st_blocks indicates the number of blocks allocated to the file, in 512-byte units
-+		return stat.Blocks * statBlkSizeBytes, nil
++		return extractFileSize(stat)
++	}
++}
++
++const (
++	statBlkSizeBytes = 512
++)
++
++// extractFileSize extracts file size from fs.FileInfo
++// we use this method since both evaluateDirSize and evaluateFileSize uses os.Lstat under the hood
++func extractFileSize(info fs.FileInfo) (int64, error) {
++	statResp, ok := info.Sys().(*syscall.Stat_t)
++	if !ok {
++		return 0, fmt.Errorf("failed to evaluate Stat_t info: %T", info.Sys())
  	}
++	// st_blocks indicates the number of blocks allocated to the file, in 512-byte units
++	return statResp.Blocks * statBlkSizeBytes, nil
  }
 
+ // helper functions
