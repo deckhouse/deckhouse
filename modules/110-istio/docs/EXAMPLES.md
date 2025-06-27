@@ -725,4 +725,4 @@ metadata:
 # ... rest of your pod spec
 ```
 
-{% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (proxyCPU, proxyCPULimit, proxyMemory, and proxyMemoryLimit).{% endalert %}
+{% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (`sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`).{% endalert %}

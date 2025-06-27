@@ -727,4 +727,4 @@ metadata:
 # ... остальная часть манифеста
 ```
 
-{% alert level="warning" %}Все четыре параметра должны быть указаны вместе - proxyCPU, proxyCPULimit, proxyMemory, and proxyMemoryLimit. Частичная конфигурация не поддерживается.{% endalert %}
+{% alert level="warning" %}Все четыре параметра должны быть указаны вместе - `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}
