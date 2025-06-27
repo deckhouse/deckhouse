@@ -684,6 +684,7 @@ Use these annotations to customize sidecar resources:
 ### Configuration Examples
 
 For Deployments:
+
 ```shell
 apiVersion: apps/v1
 kind: Deployment
@@ -697,6 +698,7 @@ metadata:
 ```
 
 For ReplicaSets:
+
 ```shell
 apiVersion: apps/v1
 kind: ReplicaSet
@@ -710,6 +712,7 @@ metadata:
 ```
 
 For Pod:
+
 ```shell
 apiVersion: v1
 kind: Pod
@@ -723,52 +726,3 @@ metadata:
 ```
 
 {% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (proxyCPU, proxyCPULimit, proxyMemory, and proxyMemoryLimit).{% endalert %}
-
-<!-- There are parameters for setting Sidecars limits and requests (#specify link). These are global settings and they may differ for different high-load applications. To redefine the global settings of Sidecars limits and requests, you can use the addition of `Deployment`, `ReplicaSet`, or `Pod` resources to the `annotations`:
-* `sidecar.istio.io/proxyCPU` - Requested CPU for sidecar container
-* `sidecar.istio.io/proxyCPULimit` - Requested CPU limit for sidecar container
-* `sidecar.istio.io/proxyMemory` - Requested memory for sidecar container
-* `sidecar.istio.io/proxyMemoryLimit` - Requested memory limit for sidecar container
-
-For `Deployment`:
-```shell
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  annotations:
-    deployment.kubernetes.io/revision: "1"
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
-```
-
-For `ReplicaSet`:
-```shell
-apiVersion: apps/v1
-kind: ReplicaSet
-metadata:
-  annotations:
-    deployment.kubernetes.io/desired-replicas: "1"
-    deployment.kubernetes.io/max-replicas: "2"
-    deployment.kubernetes.io/revision: "1"
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
-```
-
-For `Pod`:
-```shell
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    istio.io/rev: v1x21
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
-```
-
-{% alert level="warning" %}For this functionality to work, all parameters must be redefined `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, `sidecar.istio.io/proxyMemoryLimit`.{% endalert %} -->

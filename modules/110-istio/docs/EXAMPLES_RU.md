@@ -686,6 +686,7 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 ### Примеры конфигурации
 
 Для Deployment:
+
 ```shell
 apiVersion: apps/v1
 kind: Deployment
@@ -699,6 +700,7 @@ metadata:
 ```
 
 Для ReplicaSet:
+
 ```shell
 apiVersion: apps/v1
 kind: ReplicaSet
@@ -712,6 +714,7 @@ metadata:
 ```
 
 Для Pod:
+
 ```shell
 apiVersion: v1
 kind: Pod
