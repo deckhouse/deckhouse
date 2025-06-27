@@ -236,7 +236,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	}
 
 	// get image info from release channel
-	imageInfo, err := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
+	imageInfo, err := f.GetReleaseImageInfo(ctx, f.releaseVersionImageHash)
 	if err != nil && !errors.Is(err, ErrImageNotChanged) {
 		return fmt.Errorf("get new image: %w", err)
 	}
@@ -624,13 +624,16 @@ func (f *DeckhouseReleaseFetcher) patchSetSuspendAnnotation(ctx context.Context,
 
 var ErrImageNotChanged = errors.New("image not changed")
 
-type ImageInfo struct {
+type ReleaseImageInfo struct {
 	Metadata *ReleaseMetadata
 	Image    registryv1.Image
 	Digest   registryv1.Hash
 }
 
-func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousImageHash string) (*ImageInfo, error) {
+// GetReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
+// return error if version.json not found in metadata
+// return ErrImageNotChanged with ReleaseImageInfo if image hash matches with previousImageHash
+func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previousImageHash string) (*ReleaseImageInfo, error) {
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
@@ -645,7 +648,7 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 	}
 
 	if previousImageHash == imageDigest.String() {
-		return &ImageInfo{
+		return &ReleaseImageInfo{
 			Image:  image,
 			Digest: imageDigest,
 		}, ErrImageNotChanged
@@ -660,7 +663,7 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 		return nil, fmt.Errorf("version not found, probably image is broken or layer does not exist")
 	}
 
-	return &ImageInfo{
+	return &ReleaseImageInfo{
 		Image:    image,
 		Digest:   imageDigest,
 		Metadata: releaseMeta,

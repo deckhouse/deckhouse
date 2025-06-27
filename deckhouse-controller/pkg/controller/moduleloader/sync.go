@@ -174,7 +174,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
 			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
 
-			imageInfo, err := md.DownloadImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
+			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
 				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
 			}

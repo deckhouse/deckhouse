@@ -108,7 +108,7 @@ func (r *reconciler) fetchModuleReleases(
 	defer span.End()
 
 	// client watch only one channel
-	// registry.deckhouse.io/deckhouse/ce/modules/$module/release-channel:$release-channel
+	// registry.deckhouse.io/deckhouse/ce/modules/$module/release:$release
 	registryClient, err := r.dc.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
