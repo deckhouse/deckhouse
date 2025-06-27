@@ -93,14 +93,6 @@ image: {{ .ModuleName }}/agent-binaries-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /binbinbin
-  before: install
-  includePaths:
-  - /usr/bin/bash
-
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/check-n-cleaning-iptables.sh
   to: /check-n-cleaning-iptables.sh
