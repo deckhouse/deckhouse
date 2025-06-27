@@ -17,7 +17,7 @@ memory: 25Mi
   {{- $nodeImage := $config.nodeImage | required "$config.nodeImage is required" }}
   {{- $driverFQDN := $config.driverFQDN | required "$config.driverFQDN is required" }}
   {{- $serviceAccount := $config.serviceAccount | default "" }}
-  {{- $readOnlyRootFilesystem := $config.readOnlyRootFilesystem | default true }}
+  {{- $readOnlyRootFilesystem := $config.readOnlyRootFilesystem | default "true" }}
   {{- $additionalNodeVPA := $config.additionalNodeVPA }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
