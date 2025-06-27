@@ -114,8 +114,17 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		}
 
 		sort.Strings(keys)
+		specialKeys := map[string]struct{}{
+			"cef.name":     {},
+			"cef.severity": {},
+		}
+
 		for _, k := range keys {
-			extensions[normalizeKey(k)] = k
+			normalized := normalizeKey(k)
+			if _, isSpecial := specialKeys[normalized]; isSpecial {
+				continue
+			}
+			extensions[normalized] = k
 		}
 
 		encoding.Codec = "cef"
