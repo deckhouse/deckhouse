@@ -107,17 +107,18 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 - правила, размещённые в формате custom resource [FalcoAuditRules](cr.html#falcoauditrules), `fstec` — правила аудита удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022г. (Требования по безопасности информации к средствам контейнеризации).
 
-Для просмотра всех правил аудита `falco` можно воспользоваться следующей командой:
+Чтобы вывести список всех правил аудита `falco`, выполните:
 
 ```shell
 kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
-В рамках [текущей](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#%D1%82%D0%B5%D0%BA%D1%83%D1%89%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C) ролевой модели для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имен `d8-runtime-audit-engine`.
+{% alert level="info" %}
+- При использовании [текущей ролевой модели](../user-authz/#текущая-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имён `d8-runtime-audit-engine`.
+- При использовании [экспериментальной ролевой модели](../user-authz/#экспериментальная-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `d8:manage:security:manager`.
+{% endalert %}
 
-В рамках [экспериментальной](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#%D1%8D%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D0%B8%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C) ролевой модели потребуется роль `d8:manage:security:manager`.
-
-Настроить список встроенных правил можно с помощью параметра [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
+Настроить список встроенных правил можно с помощью параметра [settings.builtInRulesList](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
 ### Пользовательские правила
 
