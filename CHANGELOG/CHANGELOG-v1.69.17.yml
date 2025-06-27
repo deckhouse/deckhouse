@@ -1,0 +1,12 @@
+multitenancy-manager:
+  fixes:
+    - summary: Fix rendering properties with additionalProperties.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14148
+node-manager:
+  features:
+    - summary: Added support for configuring private HTTP container registries in containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14155
+      impact: >-
+        Users can now configure containerd to pull images from private registries, easing
+        deployments in private environments.
+
