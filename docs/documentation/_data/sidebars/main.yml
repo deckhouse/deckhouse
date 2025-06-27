@@ -42,10 +42,6 @@ entries:
                 ru: Доступ
               folders:
                 - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /admin/configuration/access/overview.html
-                - title:
                     en: Connection
                     ru: Подключение
                   folders:
