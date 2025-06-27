@@ -989,14 +989,13 @@ spec:
 EOF
 ```
 
-![](/../../../../images/virtualization-platform/lb-nodeport.png)
+![NodePort](/../../../../images/virtualization-platform/lb-nodeport.png)
 
 In this example, a service with the type `NodePort` will be created that opens external port 31880 on all nodes in your cluster. This port will forward incoming traffic to internal port 80 on the virtual machine where the Nginx application is running.
 
 If you do not explicitly specify the `nodePort` value, an arbitrary port will be assigned to the service, which can be viewed in the service status immediately after its creation.
 
 #### Publishing virtual machine services using a service with the LoadBalancer service type
-
 
 `LoadBalancer` is a type of service that automatically creates an external load balancer with a static IP address. This balancer distributes incoming traffic among virtual machines, ensuring the service's availability from the Internet.
 
@@ -1018,7 +1017,7 @@ spec:
 EOF
 ```
 
-![](/../../../../images/virtualization-platform/lb-loadbalancer.png)
+![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.png)
 
 #### Publish virtual machine services using Ingress
 
@@ -1068,7 +1067,7 @@ spec:
 EOF
 ```
 
-![](/../../../../images/virtualization-platform/lb-ingress.png)
+![Ingress](/../../../../images/virtualization-platform/lb-ingress.png)
 
 ## Live migration of virtual machines
 

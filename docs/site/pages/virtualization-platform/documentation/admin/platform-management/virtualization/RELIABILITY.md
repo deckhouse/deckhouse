@@ -64,6 +64,7 @@ The following is an example of migrating a selected virtual machine.
    ```
 
    Example output:
+
    ```console
    NAME                                   PHASE       NODE           IPADDRESS     AGE
    linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m

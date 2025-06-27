@@ -116,7 +116,7 @@ A virtual machine snapshot is a saved state of a virtual machine at a specific p
 It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a Pending state while waiting for the images to become available.
 {% endalert %}
 
-#### Types of snapshots
+### Types of snapshots
 
 Snapshots can be consistent or inconsistent, which is determined by the `requiredConsistency` parameter. By default, the `requiredConsistency` parameter is set to `true`, which requires a consistent snapshot.
 
