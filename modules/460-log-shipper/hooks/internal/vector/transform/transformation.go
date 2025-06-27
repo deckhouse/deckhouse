@@ -36,34 +36,21 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 	var err error
 	for _, tm := range tms {
 		switch tm.Action {
-		case "ReplaceDotKeys":
-			if len(tm.ReplaceDotKeys.Labels) == 0 {
-				continue
-			}
+		case v1alpha1.ReplaceDotKeys:
 			transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
-			if err != nil {
-				return nil, err
-			}
-		case "EnsureStructuredMessage":
-			if tm.EnsureStructuredMessage.SourceFormat == "" {
-				continue
-			}
+		case v1alpha1.EnsureStructuredMessage:
 			transformation, err = ensureStructuredMessage(tm.EnsureStructuredMessage)
-			if err != nil {
-				return nil, err
-			}
-		case "DropLabels":
-			if len(tm.DropLabels.Labels) == 0 {
-				continue
-			}
+		case v1alpha1.DropLabels:
 			transformation, err = dropLabels(tm.DropLabels)
-			if err != nil {
-				return nil, err
-			}
 		default:
-			return nil, fmt.Errorf("transformations action: %s not valide", tm.Action)
+			return nil, fmt.Errorf("transformations action: %s not valid", tm.Action)
 		}
-		transforms = append(transforms, transformation)
+		if err != nil {
+			return nil, err
+		}
+		if transformation != nil {
+			transforms = append(transforms, transformation)
+		}
 	}
 	return transforms, nil
 }
@@ -71,10 +58,9 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 	var vrl string
 	name := "tf_replaceDotKeys"
-	labels := checkFixDotPrefix(r.Labels)
-	for _, l := range labels {
+	for _, l := range checkFixDotPrefix(r.Labels) {
 		if !validLabel(l) {
-			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valide", l)
+			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valid", l)
 		}
 		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
 			"-> |key| { replace(key, \".\", \"_\")}\n}\n", vrl, l, l, l)
@@ -84,38 +70,40 @@ func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
 
 func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
+	vrlName := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
-	case "String":
+	case v1alpha1.FormatString:
 		if e.String.TargetField == "" {
 			return nil, fmt.Errorf("transformations ensureStructuredMessage string: TargetField is empty")
 		}
 		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? { \"%s\": .message }\n",
 			addMaxDepth(e.String.Depth), e.String.TargetField)
-	case "JSON":
+	case v1alpha1.FormatJSON:
 		vrl = fmt.Sprintf(".message = parse_json!(.message%s)\n", addMaxDepth(e.JSON.Depth))
-	case "Klog":
+	case v1alpha1.FormatKlog:
 		vrl = fmt.Sprintf(".message = parse_json(.message%s) ?? parse_klog!(.message)\n", addMaxDepth(e.Klog.Depth))
 	default:
-		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valide", e.SourceFormat)
+		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valid", e.SourceFormat)
 	}
-	return NewTransformation(name, vrl), nil
+	return NewTransformation(vrlName, vrl), nil
 }
 
 func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	var vrl string
-	name := "tf_dropLabels"
-	labels := checkFixDotPrefix(d.Labels)
-	for _, l := range labels {
+	vrlName := "tf_dropLabels"
+	for _, l := range checkFixDotPrefix(d.Labels) {
 		if !validLabel(l) {
-			return nil, fmt.Errorf("transformations dropLabels label: %s not valide", l)
+			return nil, fmt.Errorf("transformations dropLabels label: %s not valid", l)
 		}
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
-	return NewTransformation(name, vrl), nil
+	return NewTransformation(vrlName, vrl), nil
 }
 
 func NewTransformation(name, vrl string) *DynamicTransform {
+	if vrl == "" || name == "" {
+		return nil
+	}
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   name,

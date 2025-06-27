@@ -18,11 +18,20 @@ package v1alpha1
 
 // Modules labeles transformation that users can use
 type TransformationSpec struct {
-	Action                  string                      `json:"action"`
+	Action                  TransformationAction        `json:"action"`
 	ReplaceDotKeys          ReplaceDotKeysSpec          `josn:"replaceDotKeys,omitempty"`
 	EnsureStructuredMessage EnsureStructuredMessageSpec `json:"ensureStructuredMessage,omitempty"`
 	DropLabels              DropLabelsSpec              `json:"dropLabels,omitempty"`
 }
+
+type TransformationAction string
+
+const (
+	ReplaceDotKeys          TransformationAction = "ReplaceDotKeys"
+	EnsureStructuredMessage TransformationAction = "EnsureStructuredMessage"
+	DropLabels              TransformationAction = "DropLabels"
+)
+
 type ReplaceDotKeysSpec struct {
 	Labels []string `json:"labels"`
 }
@@ -30,11 +39,19 @@ type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
 }
 type EnsureStructuredMessageSpec struct {
-	SourceFormat string                 `json:"sourceFormat"`
+	SourceFormat SourceFormat           `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`
 	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
 	Klog         SourceFormatKlogSpec   `json:"klog,omitempty"`
 }
+type SourceFormat string
+
+const (
+	FormatString SourceFormat = "String"
+	FormatJSON   SourceFormat = "JSON"
+	FormatKlog   SourceFormat = "Klog"
+)
+
 type SourceFormatStringSpec struct {
 	TargetField string `json:"targetField"`
 	Depth       int    `json:"depth,omitempty"`
