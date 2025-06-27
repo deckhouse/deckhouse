@@ -11,46 +11,70 @@ import:
 - image: tools/coreutils
   add: /
   to: /coreutils
+  includePaths:
+  - usr
   before: install
 - image: tools/bash
   add: /
   to: /bash
+  includePaths:
+  - usr
   before: install
 - image: tools/findutils
   add: /
   to: /findutils
+  includePaths:
+  - usr
   before: install
 - image: tools/gawk
   add: /
   to: /gawk
+  includePaths:
+  - usr
   before: install
 - image: tools/grep
   add: /
   to: /grep
+  includePaths:
+  - usr
   before: install
 - image: tools/jq
   add: /
   to: /jq
+  includePaths:
+  - usr
   before: install
 - image: tools/less
   add: /
   to: /less
+  includePaths:
+  - usr
   before: install
 - image: tools/sed
   add: /
   to: /sed
+  includePaths:
+  - usr
   before: install
 - image: tools/vim
   add: /
   to: /vim
+  includePaths:
+  - usr
   before: install
 - image: tools/openssl
   add: /
   to: /openssl
+  includePaths:
+  - usr
+  - lib
   before: install
 - image: libs/musl
   add: /
   to: /musl
+  includePaths:
+  - usr
+  - lib
   before: install
 
   # TODO: Move to the base_image repository
