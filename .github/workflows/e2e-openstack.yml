@@ -280,7 +280,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -502,7 +501,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -534,7 +532,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -576,7 +573,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -665,7 +661,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -687,7 +682,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -798,7 +792,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -1020,7 +1013,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -1052,7 +1044,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -1094,7 +1085,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1183,7 +1173,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1205,7 +1194,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1316,7 +1304,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -1538,7 +1525,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -1570,7 +1556,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -1612,7 +1597,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1701,7 +1685,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1723,7 +1706,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1834,7 +1816,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -2056,7 +2037,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -2088,7 +2068,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -2130,7 +2109,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2219,7 +2197,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2241,7 +2218,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2352,7 +2328,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -2574,7 +2549,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -2606,7 +2580,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -2648,7 +2621,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2737,7 +2709,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2759,7 +2730,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2870,7 +2840,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -3092,7 +3061,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -3124,7 +3092,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3166,7 +3133,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3255,7 +3221,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3277,7 +3242,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3388,7 +3352,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -3610,7 +3573,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -3642,7 +3604,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3684,7 +3645,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3773,7 +3733,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3795,7 +3754,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \

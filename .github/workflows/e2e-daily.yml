@@ -149,7 +149,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: AWS
       CRI: Containerd
       LAYOUT: WithoutNAT
@@ -286,7 +285,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: AWS
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -317,7 +315,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -383,7 +380,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -445,7 +441,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
@@ -658,7 +653,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -691,7 +685,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -716,7 +709,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -756,7 +748,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
@@ -815,7 +806,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -840,7 +830,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -913,7 +902,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Azure
       CRI: Containerd
       LAYOUT: Standard
@@ -1050,7 +1038,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -1083,7 +1070,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1153,7 +1139,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1217,7 +1202,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: GCP
       CRI: Containerd
       LAYOUT: WithoutNAT
@@ -1354,7 +1338,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: GCP
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1385,7 +1368,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1451,7 +1433,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1513,7 +1494,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Yandex.Cloud
       CRI: Containerd
       LAYOUT: WithoutNAT
@@ -1650,7 +1630,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1682,7 +1661,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1750,7 +1728,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1813,7 +1790,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
@@ -2020,7 +1996,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
@@ -2050,7 +2025,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2072,7 +2046,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2130,7 +2103,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2152,7 +2124,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2229,7 +2200,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: vSphere
       CRI: Containerd
       LAYOUT: Standard
@@ -2436,7 +2406,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: vSphere
           CRI: Containerd
           LAYOUT: Standard
@@ -2467,7 +2436,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2489,7 +2457,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2549,7 +2516,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2571,7 +2537,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2649,7 +2614,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -2856,7 +2820,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -2890,7 +2853,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2912,7 +2874,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2978,7 +2939,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3000,7 +2960,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3081,7 +3040,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Static
       CRI: Containerd
       LAYOUT: Static
@@ -3288,7 +3246,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Static
           CRI: Containerd
           LAYOUT: Static
@@ -3318,7 +3275,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3340,7 +3296,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3398,7 +3353,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3420,7 +3374,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \

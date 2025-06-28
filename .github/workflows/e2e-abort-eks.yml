@@ -304,7 +304,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -329,7 +328,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -599,7 +597,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -624,7 +621,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -894,7 +890,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -919,7 +914,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1189,7 +1183,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1214,7 +1207,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1484,7 +1476,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1509,7 +1500,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1779,7 +1769,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1804,7 +1793,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -2074,7 +2062,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2099,7 +2086,6 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
