@@ -8,42 +8,42 @@
     }
   },
   "transforms": {
-    "transform/destination/test-kafka-dest/00_tf_replaceDotKeys": {
+    "transform/destination/test-kafka-dest/00_tf_ensureStructuredMessage_JSON": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
+      "source": ".message = parse_json(.message, max_depth: 1) ?? .message",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_String": {
+    "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_Klog": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/00_tf_replaceDotKeys"
+        "transform/destination/test-kafka-dest/00_tf_ensureStructuredMessage_JSON"
+      ],
+      "source": ".message = parse_klog(.message) ?? .message",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_String": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_Klog"
       ],
       "source": "if is_string(.message) {\n.message =  { \"text\": .message }\n}",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON": {
+    "transform/destination/test-kafka-dest/03_tf_replaceKeys": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_String"
+        "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_String"
       ],
-      "source": ".message = parse_json(.message, max_depth: 1) ?? .message",
-      "type": "remap"
-    },
-    "transform/destination/test-kafka-dest/03_tf_ensureStructuredMessage_Klog": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_JSON"
-      ],
-      "source": ".message = parse_klog(.message) ?? .message",
+      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/04_tf_dropLabels": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/03_tf_ensureStructuredMessage_Klog"
+        "transform/destination/test-kafka-dest/03_tf_replaceKeys"
       ],
       "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}",
       "type": "remap"

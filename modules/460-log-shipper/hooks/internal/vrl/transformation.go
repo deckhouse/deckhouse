@@ -18,22 +18,22 @@ package vrl
 
 import "fmt"
 
-func ReplaceDotKeys(label string) string {
+func ReplaceKeys(label, source, target string) string {
 	return fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
-		"-> |key| { replace(key, \".\", \"_\")}\n}", label, label, label)
+		"-> |key| { replace(key, \"%s\", \"%s\")}\n}", label, label, label, source, target)
 }
 
-func EnsureStructuredMessageString(targetField string) string {
+func ParseStringMessage(targetField string) string {
 	return fmt.Sprintf("if is_string(.message) {\n.message =  { \"%s\": .message }\n}", targetField)
 }
-func EnsureStructuredMessageJSON(depth int) string {
+func ParseJSONMessage(depth int) string {
 	maxDepth := ""
 	if depth > 0 {
 		maxDepth = fmt.Sprintf(", max_depth: %d", depth)
 	}
 	return fmt.Sprintf(".message = parse_json(.message%s) ?? .message", maxDepth)
 }
-func EnsureStructuredMessageKlog() string {
+func ParseKlogMessage() string {
 	return ".message = parse_klog(.message) ?? .message"
 }
 func DropLabels(label string) string {

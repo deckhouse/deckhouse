@@ -517,11 +517,11 @@ spec:
 
 ## Преобразование логов
 
-### Преобразование смешанных форматов логов (JSON и строки) в структурированный JSON и уменьшение вложенности
+### Преобразование логов в структурированный JSON
 
-Вы можете использовать трансформацию `EnsureStructuredMessage`,
-чтобы парсить или оборачивать записи в логах в смешанных форматах (JSON и строки) в структурированный JSON-объект.
-Также вы можете контролировать глубину вложенности с помощью параметра `depth`.
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы парсить или оборачивать записи в логах формате строки в структурированный JSON-объект.
+Если применяется несколько ParseMessage преобразование строки должно быть последним.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -531,8 +531,8 @@ metadata:
 spec:
   ...
   transformations:
-    - action: EnsureStructuredMessage
-      ensureStructuredMessage:
+    - action: ParseMessage
+      parseMessage:
         sourceFormat: String
         string:
           targetField: msg
@@ -550,11 +550,10 @@ spec:
 {... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
 ```
 
-### Преобразование смешанных форматов логов (JSON и Klog) в структурированный JSON и уменьшение вложенности
+### Преобразование логов в фрмате Klog в структурированный JSON
 
-Вы можете использовать трансформацию `EnsureStructuredMessage`,
-чтобы парсить или оборачивать записи в логах в смешанных форматах (JSON и Klog) в структурированный JSON-объект.
-Также вы можете контролировать глубину вложенности с помощью параметра `depth`.
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы парсить логи в формате Klog в структурированный JSON-объект.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -564,8 +563,8 @@ metadata:
 spec:
   ...
   transformations:
-    - action: EnsureStructuredMessage
-      ensureStructuredMessage:
+    - action: ParseMessage
+      parseMessage:
         sourceFormat: Klog
 ```
 
@@ -583,7 +582,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ### Парсинг JSON и уменьшение вложенности
 
-Вы можете использовать трансформацию `EnsureStructuredMessage`, чтобы парсить записи в логах в формате JSON.
+Вы можете использовать трансформацию `ParseMessage`, чтобы парсить записи в логах в формате JSON.
 С помощью параметра `depth` можно контролировать глубину вложенности.
 
 ```yaml
@@ -591,11 +590,11 @@ apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
   name: parse-json
-  ...
 spec:
+  ...
   transformations:
-    - action: EnsureStructuredMessage
-      ensureStructuredMessage:
+    - action: ParseMessage
+      parseMessage:
         sourceFormat: JSON
         json:
           depth: 1
@@ -613,12 +612,53 @@ spec:
 {... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
 ```
 
-### Замена точек на подчеркивания в ключах лейблов
+### Пример парсинга смешаных логов в JSON-обект
 
-Вы можете использовать трансформацию `ReplaceDotKeys`, чтобы заменить точки на нижние подчеркивания в заданных ключах лейблов.
+Преобразование строки должно быть последним.
 
-> Перед применением трансформации `ReplaceDotKeys` к полю `message` или его вложенным полям
-> необходимо преобразовать запись лога в структурированный JSON с помощью трансформации `EnsureStructuredMessage`.
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourseFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+        string:
+          targetField: "text"
+```
+
+Пример изначальной записи в логе:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Результат преобразования:
+
+```json
+{... "message": { "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+{... "message": {"level" : "{ "severity": "info" }","msg" : "fetching.module.release"}}
+{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+```
+
+### Замена в ключах лейблов
+
+Вы можете использовать трансформацию `ReplaceKeys`, чтобы заменить `soure` на `target` в заданных ключах лейблов.
+
+> Перед применением трансформации `ReplaceKeys` к полю `message` или его вложенным полям
+> необходимо преобразовать запись лога в структурированный JSON с помощью трансформации `ParseMessage`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -628,8 +668,10 @@ metadata:
 spec:
   ...
   transformations:
-    - action: ReplaceDotKeys
-      replaceDotKeys:
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
         labels:
           - pod_labels
 ```
@@ -651,7 +693,7 @@ spec:
 Вы можете использовать трансформацию `DropLabels`, чтобы удалить заданные лейблы из записей логов.
 
 > Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
-> необходимо преобразовать запись лога в структурированный JSON с помощью трансформации `EnsureStructuredMessage`.
+> необходимо преобразовать запись лога в структурированный JSON с помощью трансформации `ParseMessage`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -670,7 +712,7 @@ spec:
 #### Пример удаления заданного лейбла из структурированного сообщения
 
 В этом примере показано как вы можете удалить лейбл из структурированного JSON-сообщения.
-Сначала применяется трансформация `EnsureStructuredMessage` для парсинга сообщения,
+Сначала применяется трансформация `ParseMessage` для парсинга сообщения,
 после чего применяется `DropLabels` для удаления указанного лейбла.
 
 ```yaml
@@ -681,8 +723,8 @@ metadata:
 spec:
   ...
   transformations:
-    - action: EnsureStructuredMessage
-      ensureStructuredMessage:
+    - action: ParseMessage
+      parseMessage:
         sourceFormat: JSON
     - action: DropLabels
       dropLabels:

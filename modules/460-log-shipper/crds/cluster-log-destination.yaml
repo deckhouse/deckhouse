@@ -841,14 +841,16 @@ spec:
 
                     Available options:
 
-                      - `ReplaceDotKeys`: Replaces dots with underscores in the specified labels.
+                      - `ReplaceKeys`: Replaces `source` with `target` in the specified labels.
 
                         Example:
 
                         ```yaml
                         transformations:
-                        - action: ReplaceDotKeys
-                          replaceDotKeys:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
                             labels:
                               - pod_labels
                         ```
@@ -859,8 +861,8 @@ spec:
 
                         ```yaml
                         transformations:
-                        - action: EnsureStructuredMessage
-                          ensureStructuredMessage:
+                        - action: ParseMessage
+                          parseMessage:
                             sourceFormat: String
                             string:
                               targetField: msg
@@ -883,20 +885,20 @@ spec:
                     type: object
                     oneOf:
                       - properties:
-                          replaceDotKeys: {}
+                          replaceKeys: {}
                           action:
                             enum:
-                              - ReplaceDotKeys
+                              - ReplaceKeys
                         required:
-                          - replaceDotKeys
+                          - replaceKeys
                           - action
                       - properties:
-                          ensureStructuredMessage: {}
+                          parseMessage: {}
                           action:
                             enum:
-                              - EnsureStructuredMessage
+                              - ParseMessage
                         required:
-                          - ensureStructuredMessage
+                          - parseMessage
                           - action
                       - properties:
                           dropLabels: {}
@@ -909,23 +911,31 @@ spec:
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceDotKeys", "EnsureStructuredMessage", "DropLabels"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
                         description: Type of a transformation.
-                      replaceDotKeys:
+                      replaceKeys:
                         type: object
                         description: "Replaces dots with underscores in the specified labels."
                         required:
                           - labels
+                          - source
                         properties:
+                          source:
+                            type: string
+                            description: "Replace all matches of this pattern. Can be a static string or a regular expression"
+                          target:
+                            type: string
+                            default: ""
+                            description: "The string that the matches are replaced with"
                           labels:
                             type: array
                             description: "List of labels where dots will be replaced with underscores."
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
-                      ensureStructuredMessage:
+                      parseMessage:
                         type: object
-                        description: "Ensures that the message field contains a JSON object."
+                        description: "Parse that the message field contains a JSON object."
                         required:
                           - sourceFormat
                         oneOf:

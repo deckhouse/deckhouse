@@ -421,26 +421,28 @@ spec:
                     
                     Возможные варианты:
 
-                      - `ReplaceDotKeys` — заменяет точки на нижние подчеркивания в заданных лейблах.
+                      - `ReplaceKeys` — заменяет `source` на `target` в заданных лейблах.
 
                         Пример:
 
                         ```yaml
                         transformations:
-                        - action: ReplaceDotKeys
-                          replaceDotKeys:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
                             labels:
                               - pod_labels
                         ```
 
-                      - `EnsureStructuredMessage` — проверяет, что сообщение структурировано в формате JSON и при необходимости оборачивает его в JSON-объект.
+                      - `ParseMessage` — Преобразует поле `message` из заданого формата `sourceFormat` в JSON-обект.
 
                         Пример:
 
                         ```yaml
                         transformations:
-                        - action: EnsureStructuredMessage
-                          ensureStructuredMessage:
+                        - action: ParseMessage
+                          parseMessage:
                             sourceFormat: String
                             string:
                               targetField: msg
@@ -462,33 +464,31 @@ spec:
                   items:
                     properties:
                       action:
-                        description: "Тип трансформации."
-                      replaceDotKeys:
-                        description: "Замена точек на нижние подчеркивания в ключах."
+                        description: Тип трансформации.
+                      replaceKeys:
+                        description: Замена `source` на `target` в заданных ключах рекурсивно.
                         properties:
+                          source:
+                            description: Заменить все совпадения этого шаблона. Может быть статической строкой или регулярным выражением.
+                          target:
+                            description: Строка, на которую заменяются совпадения.
                           labels:
-                            description: "Список лейблов для замены точек на нижние подчеркивания в ключах."
-                      ensureStructuredMessage:
-                        description: "Гарантирует, что поле сообщения содержит объект JSON."
+                            description: Список лейблов для рекурсивной замены.
+                      parseMessage:
+                        description: Преобразует поле `message` в JSON-обект.
                         properties:
                           sourceFormat:
-                            description: "Формат сообщения для преобразования в JSON."
+                            description: Формат сообщения для преобразования в JSON.
                           string:
                             properties:
                               targetField:
                                 description: Имя поля, в которое помещается структурированное сообщение.
-                              depth:
-                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
                           json:
                             properties:
                               depth:
-                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
-                          klog:
-                            properties:
-                              depth:
-                                description: "Глубина парсинга JSON. Нулевое значение отключает парсинг."
+                                description: Глубина парсинга JSON.
                       dropLabels:
-                        description: "Удаление заданных лейблов."
+                        description: Удаление заданных лейблов.
                         properties:
                           labels:
                             description: Список лейблов, которые необходимо удалить.

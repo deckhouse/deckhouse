@@ -37,10 +37,10 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 		var err error
 		var transformation apis.LogTransform
 		switch tm.Action {
-		case v1alpha1.ReplaceDotKeys:
-			transformation, err = replaceDotKeys(tm.ReplaceDotKeys)
-		case v1alpha1.EnsureStructuredMessage:
-			transformation, err = ensureStructuredMessage(tm.EnsureStructuredMessage)
+		case v1alpha1.ReplaceKeys:
+			transformation, err = replaceKeys(tm.ReplaceKeys)
+		case v1alpha1.ParseMessage:
+			transformation, err = parseMessage(tm.ParseMessage)
 		case v1alpha1.DropLabels:
 			transformation, err = dropLabels(tm.DropLabels)
 		default:
@@ -56,19 +56,22 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 	return transforms, nil
 }
 
-func replaceDotKeys(r v1alpha1.ReplaceDotKeysSpec) (apis.LogTransform, error) {
+func replaceKeys(r v1alpha1.ReplaceKeysSpec) (apis.LogTransform, error) {
 	sources := []string{}
-	vrlName := "tf_replaceDotKeys"
+	vrlName := "tf_replaceKeys"
+	if r.Source == "" {
+		return nil, fmt.Errorf("transformations replaceKeys: Source is empty")
+	}
 	for _, l := range r.Labels {
 		if !validLabel(l) {
 			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valid", l)
 		}
-		sources = append(sources, vrl.ReplaceDotKeys(l))
+		sources = append(sources, vrl.ReplaceKeys(l, r.Source, r.Target))
 	}
 	return NewTransformation(vrlName, strings.Join(sources, "\n")), nil
 }
 
-func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTransform, error) {
+func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	var source string
 	vrlName := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
@@ -76,11 +79,11 @@ func ensureStructuredMessage(e v1alpha1.EnsureStructuredMessageSpec) (apis.LogTr
 		if e.String.TargetField == "" {
 			return nil, fmt.Errorf("transformations ensureStructuredMessage string: TargetField is empty")
 		}
-		source = vrl.EnsureStructuredMessageString(e.String.TargetField)
+		source = vrl.ParseStringMessage(e.String.TargetField)
 	case v1alpha1.FormatJSON:
-		source = vrl.EnsureStructuredMessageJSON(e.JSON.Depth)
+		source = vrl.ParseJSONMessage(e.JSON.Depth)
 	case v1alpha1.FormatKlog:
-		source = vrl.EnsureStructuredMessageKlog()
+		source = vrl.ParseKlogMessage()
 	default:
 		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valid", e.SourceFormat)
 	}

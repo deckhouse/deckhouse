@@ -29,30 +29,30 @@ var testCases = []struct {
 	in   v1alpha1.TransformationSpec
 	out  string
 }{
-	{"EnsureStructuredMessage String Format",
+	{"ParseMessage String Format",
 		v1alpha1.TransformationSpec{
-			Action: "EnsureStructuredMessage",
-			EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
 				SourceFormat: "String",
 				String:       v1alpha1.SourceFormatStringSpec{TargetField: "text"},
 			},
 		},
 		"if is_string(.message) {\n.message =  { \"text\": .message }\n}",
 	},
-	{"EnsureStructuredMessage JSON Format ",
+	{"ParseMessage JSON Format ",
 		v1alpha1.TransformationSpec{
-			Action: "EnsureStructuredMessage",
-			EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
 				SourceFormat: "JSON",
 				JSON:         v1alpha1.SourceFormatJSONSpec{Depth: 1},
 			},
 		},
 		".message = parse_json(.message, max_depth: 1) ?? .message",
 	},
-	{"EnsureStructuredMessage Klog Format",
+	{"ParseMessage Klog Format",
 		v1alpha1.TransformationSpec{
-			Action: "EnsureStructuredMessage",
-			EnsureStructuredMessage: v1alpha1.EnsureStructuredMessageSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
 				SourceFormat: "Klog",
 			},
 		},
@@ -60,7 +60,7 @@ var testCases = []struct {
 	},
 	{"DropLabels",
 		v1alpha1.TransformationSpec{
-			Action: "DropLabels",
+			Action: v1alpha1.DropLabels,
 			DropLabels: v1alpha1.DropLabelsSpec{
 				Labels: []string{".first", ".second"},
 			},
@@ -68,10 +68,12 @@ var testCases = []struct {
 		"if exists(.first) {\n del(.first)\n}\n" +
 			"if exists(.second) {\n del(.second)\n}",
 	},
-	{"ReplaceDotKeys",
+	{"ReplaceKeys",
 		v1alpha1.TransformationSpec{
-			Action: "ReplaceDotKeys",
-			ReplaceDotKeys: v1alpha1.ReplaceDotKeysSpec{
+			Action: v1alpha1.ReplaceKeys,
+			ReplaceKeys: v1alpha1.ReplaceKeysSpec{
+				Source: ".",
+				Target: "_",
 				Labels: []string{".pod_labels", ".examples"},
 			},
 		},

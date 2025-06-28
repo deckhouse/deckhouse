@@ -18,27 +18,29 @@ package v1alpha1
 
 // Modules labeles transformation that users can use
 type TransformationSpec struct {
-	Action                  TransformationAction        `json:"action"`
-	ReplaceDotKeys          ReplaceDotKeysSpec          `josn:"replaceDotKeys,omitempty"`
-	EnsureStructuredMessage EnsureStructuredMessageSpec `json:"ensureStructuredMessage,omitempty"`
-	DropLabels              DropLabelsSpec              `json:"dropLabels,omitempty"`
+	Action       TransformationAction `json:"action"`
+	ReplaceKeys  ReplaceKeysSpec      `josn:"replaceKeys,omitempty"`
+	ParseMessage ParseMessageSpec     `json:"parseMessage,omitempty"`
+	DropLabels   DropLabelsSpec       `json:"dropLabels,omitempty"`
 }
 
 type TransformationAction string
 
 const (
-	ReplaceDotKeys          TransformationAction = "ReplaceDotKeys"
-	EnsureStructuredMessage TransformationAction = "EnsureStructuredMessage"
-	DropLabels              TransformationAction = "DropLabels"
+	ReplaceKeys  TransformationAction = "ReplaceKeys"
+	ParseMessage TransformationAction = "ParseMessage"
+	DropLabels   TransformationAction = "DropLabels"
 )
 
-type ReplaceDotKeysSpec struct {
+type ReplaceKeysSpec struct {
+	Source string   `json:"source"`
+	Target string   `json:"target"`
 	Labels []string `json:"labels"`
 }
 type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
 }
-type EnsureStructuredMessageSpec struct {
+type ParseMessageSpec struct {
 	SourceFormat SourceFormat           `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`
 	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`

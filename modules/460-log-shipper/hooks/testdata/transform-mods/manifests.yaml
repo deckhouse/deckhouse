@@ -26,23 +26,25 @@ spec:
       username: test
       password: test
   transformations:
-  - action: ReplaceDotKeys
-    replaceDotKeys:
-      labels:
-        - .pod_labels
-  - action: EnsureStructuredMessage
-    ensureStructuredMessage:
-      sourceFormat: String
-      string:
-        targetField: text
-  - action: EnsureStructuredMessage
-    ensureStructuredMessage:
+  - action: ParseMessage
+    parseMessage:
       sourceFormat: JSON
       json:
         depth: 1
-  - action: EnsureStructuredMessage
-    ensureStructuredMessage:
+  - action: ParseMessage
+    parseMessage:
       sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+      string:
+        targetField: text
+  - action: ReplaceKeys
+    replaceKeys:
+      source: "."
+      target: "_"
+      labels:
+        - .pod_labels
   - action: DropLabels
     dropLabels:
       labels: 
