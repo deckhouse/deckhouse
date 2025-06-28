@@ -612,6 +612,7 @@ Transformed result:
 ```json
 {... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
 ```
+
 ### Example of parsing mixed logs into a JSON object
 
 The string transformation must be the last one.
