@@ -1,0 +1,287 @@
+Subject: [PATCH] ++
+---
+Index: controllers/vcdmachine_controller.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
+--- a/controllers/vcdmachine_controller.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
++++ b/controllers/vcdmachine_controller.go	(date 1751144195652)
+@@ -121,7 +121,7 @@
+ 		return ctrl.Result{}, nil
+ 	}
+
+-	log = log.WithValues("cluster", cluster.Name)
++	log.Info("VCDMachine reconcile. Got cluster", "cluster", cluster.Name, "machine", machine.Name)
+
+ 	// Return early if the object or Cluster is paused.
+ 	if annotations.IsPaused(cluster, vcdMachine) {
+@@ -131,6 +131,8 @@
+
+ 	machineBeingDeleted := !vcdMachine.ObjectMeta.DeletionTimestamp.IsZero()
+
++	log.Info("VCDMachine reconcile. machineBeingDeleted", "machine", machine.Name, "machineBeingDeleted", machineBeingDeleted)
++
+ 	// Fetch the VCD Cluster.
+ 	vcdCluster := &infrav1.VCDCluster{}
+ 	vcdClusterName := client.ObjectKey{
+@@ -146,6 +148,8 @@
+ 		}
+ 	}
+
++	log.Info("VCDMachine reconcile. Got cluster from api", "cluster", cluster.Name, "machine", machine.Name)
++
+ 	// Initialize the patch helper
+ 	patchHelper, err := patch.NewHelper(vcdMachine, r)
+ 	if err != nil {
+@@ -167,6 +171,8 @@
+ 		return ctrl.Result{}, nil
+ 	}
+
++	log.Info("VCDMachine reconcile. machineBeingDeleted", "machine", machine.Name, "machineBeingDeleted", machineBeingDeleted)
++
+ 	// If the machine is not being deleted, check if the infrastructure is ready. If not ready, return and wait for
+ 	// the cluster object to be updated
+ 	if !machineBeingDeleted && !cluster.Status.InfrastructureReady {
+@@ -1075,7 +1081,10 @@
+
+ func (r *VCDMachineReconciler) reconcileDelete(ctx context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine,
+ 	vcdMachine *infrav1.VCDMachine, vcdCluster *infrav1.VCDCluster) (ctrl.Result, error) {
+-	log := ctrl.LoggerFrom(ctx, "machine", machine.Name, "cluster", vcdCluster.Name)
++	log := ctrl.LoggerFrom(ctx, "machine", machine.Name, "cluster", vcdCluster.Name, "reconcileDelete", true)
++
++	log.Info("Starting reconcile delete")
++	defer log.Info("Finish reconcile delete")
+
+ 	patchHelper, err := patch.NewHelper(vcdMachine, r.Client)
+ 	if err != nil {
+@@ -1084,6 +1093,9 @@
+
+ 	conditions.MarkFalse(vcdMachine, ContainerProvisionedCondition,
+ 		clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
++
++	log.Info("Patch VCD machine for conditions")
++
+ 	if err := patchVCDMachine(ctx, patchHelper, vcdMachine); err != nil {
+ 		return ctrl.Result{}, errors.Wrapf(err, "Failed to patch VCDMachine [%s/%s]", vcdCluster.Name, vcdMachine.Name)
+ 	}
+@@ -1093,11 +1105,15 @@
+ 		return ctrl.Result{}, nil
+ 	}
+
++	log.Info("Site found", "site", vcdCluster.Spec.Site)
++
+ 	workloadVCDClient, err := createVCDClientFromSecrets(ctx, r.Client, vcdCluster)
+ 	if err != nil {
+ 		return ctrl.Result{}, errors.Wrapf(err, "Error creating VCD client to reconcile Cluster [%s] infrastructure", vcdCluster.Name)
+ 	}
+
++	log.Info("workloadVCDClient created")
++
+ 	// close all idle connections when reconciliation is done
+ 	defer func() {
+ 		if workloadVCDClient != nil && workloadVCDClient.VCDClient != nil {
+@@ -1110,6 +1126,8 @@
+ 		return ctrl.Result{}, errors.Wrapf(err, "failed to get the Organization VDC (OVDC) from the VCD client for reconciling infrastructure of Cluster [%s]", vcdCluster.Name)
+ 	}
+
++	log.Info("start updateVcdResourceToVcdCluster")
++
+ 	err = updateVcdResourceToVcdCluster(vcdCluster, ResourceTypeOvdc, workloadVCDClient.VDC.Vdc.ID, workloadVCDClient.VDC.Vdc.Name)
+ 	if err != nil {
+ 		return ctrl.Result{}, errors.Wrapf(err, "Error updating vcdResource into vcdcluster.status to reconcile Cluster [%s] infrastructure", vcdCluster.Name)
+@@ -1119,6 +1137,9 @@
+ 	if err != nil {
+ 		return ctrl.Result{}, errors.Wrapf(err, "Unable to create VCD client to reconcile infrastructure for the Machine [%s]", machine.Name)
+ 	}
++
++	log.Info("got capvcdRdeManager, updating ClientWithVDC")
++
+ 	err = updateClientWithVDC(vcdCluster, workloadVCDClient)
+ 	if err != nil {
+ 		return ctrl.Result{}, errors.Wrapf(err, "Error updating VCD client with VDC to reconcile Cluster [%s] infrastructure", vcdCluster.Name)
+@@ -1133,7 +1154,10 @@
+ 		return ctrl.Result{}, errors.Wrapf(err, "failed to create gateway manager object while reconciling machine [%s]", vcdMachine.Name)
+ 	}
+
++	log.Info("got gateway manager")
++
+ 	if util.IsControlPlaneMachine(machine) {
++		log.Info("machine is control-plane machine")
+ 		// remove the address from the lbpool
+ 		log.Info("Deleting the control plane IP from the load balancer pool")
+ 		lbPoolName := capisdk.GetLoadBalancerPoolNameUsingPrefix(
+@@ -1206,6 +1230,8 @@
+ 		}
+ 	}
+
++	log.Info("machine is not control-plane machine, get vcdmanager")
++
+ 	vdcManager, err := vcdsdk.NewVDCManager(workloadVCDClient, workloadVCDClient.ClusterOrgName,
+ 		workloadVCDClient.ClusterOVDCName)
+ 	if err != nil {
+@@ -1217,6 +1243,8 @@
+ 		return ctrl.Result{}, errors.Wrapf(err, "failed to create a vdc manager object when reconciling machine [%s]", vcdMachine.Name)
+ 	}
+
++	log.Info("got vcdmanager,RemoveErrorByNameOrIdFromErrorSet")
++
+ 	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineError, "", machine.Name)
+ 	if err != nil {
+ 		log.Error(err, "failed to remove VCDMachineError from RDE", "rdeID", vcdCluster.Status.InfraId)
+@@ -1224,6 +1252,9 @@
+
+ 	// get the vApp
+ 	vAppName := vcdCluster.Name
++
++	log.Info("vApp name, get vapp from cloud", "name", vAppName)
++
+ 	vApp, err := vdcManager.Vdc.GetVAppByName(vAppName, true)
+ 	if err != nil {
+ 		if err == govcd.ErrorEntityNotFound {
+@@ -1237,6 +1268,7 @@
+ 		}
+ 	}
+ 	if vApp != nil {
++		log.Info("got vapp from cloud != nil", "name", vAppName)
+ 		// Delete the VM if and only if rdeId (matches) present in the vApp
+ 		if !vcdCluster.Status.VAppMetadataUpdated {
+ 			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineError, "", machine.Name, fmt.Sprintf("rdeId is not presented in the vApp [%s]: %v", vcdCluster.Name, err))
+@@ -1245,6 +1277,9 @@
+ 			}
+ 			return ctrl.Result{}, errors.Errorf("Error occurred during the machine deletion; Metadata not found in vApp")
+ 		}
++
++		log.Info("try to get metadata by key", "name", vAppName)
++
+ 		metadataInfraId, err := vdcManager.GetMetadataByKey(vApp, CapvcdInfraId)
+ 		if err != nil {
+ 			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineError, "", machine.Name, fmt.Sprintf("failed to get metadata by key [%s]: %v", CapvcdInfraId, err))
+@@ -1253,6 +1288,9 @@
+ 			}
+ 			return ctrl.Result{}, errors.Errorf("Error occurred during fetching metadata in vApp")
+ 		}
++
++		log.Info("got metadata by key", "name", vAppName, "metadata", metadataInfraId, "isIfraIdCorrect", metadataInfraId != vcdCluster.Status.InfraId)
++
+ 		// checking the metadata value and vcdCluster.Status.InfraId are equal or not
+ 		if metadataInfraId != vcdCluster.Status.InfraId {
+ 			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineError, "", machine.Name, fmt.Sprintf("%v", err))
+@@ -1262,11 +1300,17 @@
+ 			return ctrl.Result{}, errors.Wrapf(err,
+ 				"Error occurred during the machine deletion; failed to delete vApp [%s]", vcdCluster.Name)
+ 		}
++
++		log.Info("RemoveErrorByNameOrIdFromErrorSet creation error", "name", vAppName)
++
+ 		// Removed error: VCDClusterVappCreationError VCDMachineError
+ 		err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDClusterVappCreationError, "", "")
+ 		if err != nil {
+ 			log.Error(err, "failed to remove VCDClusterVappCreationError from RDE", "rdeID", vcdCluster.Status.InfraId)
+ 		}
++
++		log.Info("RemoveErrorByNameOrIdFromErrorSet machine error", "name", vAppName)
++
+ 		err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineError, "", "")
+ 		if err != nil {
+ 			log.Error(err, "failed to remove VCDMachineError from RDE", "rdeID", vcdCluster.Status.InfraId)
+@@ -1276,6 +1320,9 @@
+ 		if err != nil {
+ 			return ctrl.Result{}, err
+ 		}
++
++		log.Info("got vm namer", "name", vAppName, "vmName", vmName)
++
+ 		vm, err := vApp.GetVMByName(vmName, true)
+ 		if err != nil {
+ 			if err == govcd.ErrorEntityNotFound {
+@@ -1289,6 +1336,7 @@
+ 			}
+ 		}
+ 		if vm != nil {
++			log.Info("vm != nil", "name", vAppName, "vmName", vmName)
+ 			// check if there are any disks attached to the VM
+ 			if vm.VM.VmSpecSection != nil && vm.VM.VmSpecSection.DiskSection != nil {
+ 				for _, diskSettings := range vm.VM.VmSpecSection.DiskSection.DiskSettings {
+@@ -1306,17 +1354,24 @@
+ 				}
+ 			}
+
++			log.Info("vm disk checked", "name", vAppName, "vmName", vmName)
++
+ 			// power-off the VM if it is powered on
+ 			vmStatus, err := vm.GetStatus()
+ 			if err != nil {
+ 				klog.Warningf("Unable to get VM status for VM [%s]: [%v]", vm.VM.Name, err)
++				log.Info("vm status error", "name", vAppName, "vmName", vmName, "err", err)
+ 			} else {
+ 				// continue and try to power-off in any case
+ 				klog.Infof("VM [%s] has status [%s]", vm.VM.Name, vmStatus)
++				log.Info("try to power off machine", "name", vAppName, "vmName", vmName, "vmstatus", vmStatus)
+ 				task, err := vm.PowerOff()
+ 				if err != nil {
+ 					klog.Warningf("Error while powering off VM [%s]: [%v]", vm.VM.Name, err)
++					log.Info("Error while powering off VM", "name", vAppName, "vmName", vmName, "err", err)
+ 				} else {
++					log.Info("vm power off succeess", "name", vAppName, "vmName", vmName)
++
+ 					if err = task.WaitTaskCompletion(); err != nil {
+ 						err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineDeletionError, "", machine.Name, fmt.Sprintf("%v", err))
+ 						if err1 != nil {
+@@ -1330,24 +1385,35 @@
+ 			// in any case try to delete the machine
+ 			log.Info("Deleting the infra VM of the machine")
+ 			if err := vm.Delete(); err != nil {
++				log.Info("vm deletion error", "name", vAppName, "vmName", vmName, "err", err)
++
+ 				err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineDeletionError, "", machine.Name, fmt.Sprintf("%v", err))
+ 				if err1 != nil {
+ 					log.Error(err1, "failed to add VCDMachineDeletionError into RDE", "rdeID", vcdCluster.Status.InfraId)
+ 				}
+ 				return ctrl.Result{}, errors.Wrapf(err, "error deleting the machine [%s/%s]", vAppName, vm.VM.Name)
+ 			}
++
++			log.Info("vm delete successful", "name", vAppName, "vmName", vmName)
++
+ 		}
+ 		log.Info("Successfully deleted infra resources of the machine")
+ 		err = capvcdRdeManager.AddToEventSet(ctx, capisdk.InfraVmDeleted, "", machine.Name, "", true)
+ 		if err != nil {
+ 			log.Error(err, "failed to add InfraVmDeleted event into RDE", "rdeID", vcdCluster.Status.InfraId)
+ 		}
++
++		log.Info("vm RemoveErrorByNameOrIdFromErrorSet deletetion error", "name", vAppName, "vmName", vmName)
++
+ 		err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineDeletionError, "", machine.Name)
+ 		if err != nil {
+ 			log.Error(err, "failed to remove VCDMachineDeletionError from RDE", "rdeID", vcdCluster.Status.InfraId)
+ 		}
+ 	}
+ 	// Remove VM from VCDResourceSet of RDE
++
++	log.Info("Remove VM from VCDResourceSet of RDE", "name", vAppName)
++
+ 	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
+ 	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
+ 	if err != nil {
+@@ -1362,12 +1428,19 @@
+ 		// VCD has a bug where RDE update to VCD resource set may fail. Although VCD resource set in the RDE may
+ 		// contain outdated information, the cluster creation won't be blocked.
+ 	}
++	log.Info("RemoveErrorByNameOrIdFromErrorSet rde error", "name", vAppName)
++
+ 	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", machine.Name)
+ 	if err != nil {
+ 		log.Error(err, "failed to remove RdeError from RDE", "rdeID", vcdCluster.Status.InfraId)
+ 	}
+
++	log.Info("remove finalizer", "name", vAppName)
++
+ 	controllerutil.RemoveFinalizer(vcdMachine, infrav1.MachineFinalizer)
++
++	log.Info("finalizer removed", "name", vAppName)
++
+ 	return ctrl.Result{}, nil
+ }
+
