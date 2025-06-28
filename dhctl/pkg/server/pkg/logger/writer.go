@@ -15,7 +15,9 @@
 package logger
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 )
 
@@ -79,8 +81,13 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
-	defer w.m.Unlock()
+	defer func() {
+		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
+		w.m.Unlock()
+		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
+	}()
 
 	var lines []string
 
@@ -99,7 +106,9 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 
 	if len(lines) > 0 {
 		for _, line := range lines {
+			fmt.Fprintf(os.Stderr, "debudlogwriter: send to logger: %s\n", line)
 			w.l.Debug(line)
+			fmt.Fprintf(os.Stderr, "debudlogwriter: sent to logger: %s\n", line)
 		}
 	}
 
