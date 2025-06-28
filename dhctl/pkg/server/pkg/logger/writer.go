@@ -91,6 +91,8 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 
 	var lines []string
 
+	fmt.Fprintf(os.Stderr, "Split log %s by line\n", string(p))
+
 	for _, b := range p {
 		switch b {
 		case '\n', '\r':
@@ -103,6 +105,8 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 			w.prev = append(w.prev, b)
 		}
 	}
+
+	fmt.Fprintf(os.Stderr, "Splited log %s by line; lines %d\n", string(p), len(lines))
 
 	if len(lines) > 0 {
 		for _, line := range lines {
