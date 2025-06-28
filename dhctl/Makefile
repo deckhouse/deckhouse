@@ -117,6 +117,10 @@ build-test: check-vars
 test: check-vars
 	go test -p 1 ./...
 
+
+test-race: check-vars
+	go test -race -p 1 ./...
+
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
 
