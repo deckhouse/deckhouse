@@ -31,10 +31,10 @@ func ParseJSONMessage(depth int) string {
 	if depth > 0 {
 		maxDepth = fmt.Sprintf(", max_depth: %d", depth)
 	}
-	return fmt.Sprintf(".message = parse_json(.message%s) ?? .message", maxDepth)
+	return fmt.Sprintf("if is_string(.message) {\n.message = parse_json(.message%s) ?? .message\n}", maxDepth)
 }
 func ParseKlogMessage() string {
-	return ".message = parse_klog(.message) ?? .message"
+	return "if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}"
 }
 func DropLabels(label string) string {
 	return fmt.Sprintf("if exists(%s) {\n del(%s)\n}", label, label)

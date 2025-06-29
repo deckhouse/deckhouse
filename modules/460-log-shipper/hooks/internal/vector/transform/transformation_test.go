@@ -47,7 +47,7 @@ var testCases = []struct {
 				JSON:         v1alpha1.SourceFormatJSONSpec{Depth: 1},
 			},
 		},
-		".message = parse_json(.message, max_depth: 1) ?? .message",
+		"if is_string(.message) {\n.message = parse_json(.message, max_depth: 1) ?? .message\n}",
 	},
 	{"ParseMessage Klog Format",
 		v1alpha1.TransformationSpec{
@@ -56,7 +56,7 @@ var testCases = []struct {
 				SourceFormat: "Klog",
 			},
 		},
-		".message = parse_klog(.message) ?? .message",
+		"if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}",
 	},
 	{"DropLabels",
 		v1alpha1.TransformationSpec{

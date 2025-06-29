@@ -13,7 +13,7 @@
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": ".message = parse_json(.message, max_depth: 1) ?? .message",
+      "source": "if is_string(.message) {\n.message = parse_json(.message, max_depth: 1) ?? .message\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage_Klog": {
@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_ensureStructuredMessage_JSON"
       ],
-      "source": ".message = parse_klog(.message) ?? .message",
+      "source": "if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_String": {
