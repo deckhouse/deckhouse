@@ -960,10 +960,28 @@ spec:
                                   - Klog
                             required:
                               - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "NginxLog"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "SysLog"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "CLF"
+                            required:
+                              - sourceFormat
                         properties:
                           sourceFormat:
                             type: string
-                            enum: ["String", "JSON", "Klog"]
+                            enum: ["String", "JSON", "Klog", "NginxLog", "SysLog", "CLF"]
                             description: "Message format for parsing in JSON."
                           string:
                             type: object

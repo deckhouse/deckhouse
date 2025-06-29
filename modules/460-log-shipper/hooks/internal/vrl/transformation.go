@@ -35,6 +35,16 @@ func ParseJSONMessage(depth int) string {
 }
 func ParseKlogMessage() string {
 	return "if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}"
+
+}
+func ParseNginxLogMessage() string {
+	return "if is_string(.message) {\n.message = parse_nginx_log(.message) ?? .message\n}"
+}
+func ParseCLFMessage() string {
+	return "if is_string(.message) {\n.message = parse_common_log(.message) ?? .message\n}"
+}
+func ParseSysLogMessage() string {
+	return "if is_string(.message) {\n.message = parse_syslog(.message) ?? .message\n}"
 }
 func DropLabels(label string) string {
 	return fmt.Sprintf("if exists(%s) {\n del(%s)\n}", label, label)

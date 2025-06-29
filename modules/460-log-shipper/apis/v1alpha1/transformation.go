@@ -48,9 +48,12 @@ type ParseMessageSpec struct {
 type SourceFormat string
 
 const (
-	FormatString SourceFormat = "String"
-	FormatJSON   SourceFormat = "JSON"
-	FormatKlog   SourceFormat = "Klog"
+	FormatString   SourceFormat = "String"
+	FormatJSON     SourceFormat = "JSON"
+	FormatKlog     SourceFormat = "Klog"
+	FormatNginxLog SourceFormat = "NginxLog"
+	FormatSysLog   SourceFormat = "SysLog"
+	FormatCLF      SourceFormat = "CLF"
 )
 
 type SourceFormatStringSpec struct {
