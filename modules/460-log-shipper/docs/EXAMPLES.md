@@ -515,6 +515,236 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 {%- endalert %}
 {% raw %}
 
+## Log transformations
+
+### Transform mixed log formats (JSON and plain strings) to structured JSON and reduce nesting
+
+You can use the `ParseMessage` transformation
+to wrap or parse a log entry in mixed formats (JSON and plain strings) into a structured JSON object.
+Also, you can control the nesting depth using the `depth` parameter.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: string-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: String
+        string:
+          targetField: msg
+```
+
+Example original log entry:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+```
+
+Transformed result:
+
+```json
+{... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+```
+
+### Transform mixed log formats (JSON and Klog) to structured JSON and reduce nesting
+
+You can use the `ParseMessage` transformation
+to wrap or parse a log entry in mixed formats (JSON and Klog) into a structured JSON object.
+Also, you can control the nesting depth using the `depth` parameter.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Klog
+```
+
+Example original log entry:
+
+```text
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Transformed result:
+
+```json
+{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+```
+
+### Parse JSON and reduce nesting
+
+You can use the `ParseMessage` transformation to parse a log entry in JSON.
+Also, you can control the nesting depth using the `depth` parameter.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+        json:
+          depth: 1
+```
+
+Example original log entry:
+
+```text
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+```
+
+Transformed result:
+
+```json
+{... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
+```
+
+### Example of parsing mixed logs into a JSON object
+
+The string transformation must be the last one.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourseFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+        string:
+          targetField: "text"
+```
+
+Example original log entry:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Transformed result:
+
+```json
+{... "message": { "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+{... "message": {"level" : "{ "severity": "info" }","msg" : "fetching.module.release"}}
+{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+```
+
+### Replace dots with underscores in label keys
+
+You can use the `ReplaceKeys` transformation to replace dots in specified label keys with underscores.
+
+> To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured JSON using the `ParseMessage` transformation.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: replace-dot
+spec:
+  ...
+  transformations:
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - pod_labels
+```
+
+Example original log entry:
+
+```text
+{"msg" : "fetching.module.release"} # Pod label pod.app=test
+```
+
+Transformed result:
+
+```json
+{... "message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
+```
+
+### Remove labels
+
+You can use the `DropLabels` transformation to remove specific labels from log messages.
+
+> To apply the `DropLabels` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured JSON using the `ParseMessage` transformation.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - example
+```
+
+#### Example of removing a specific label from a structured message
+
+The following example shows how you can remove a nested label from a structured JSON message.
+The `ParseMessage` transformation is applied first to parse the message,
+followed by `DropLabels` to remove the specified label.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - message.example
+```
+
+Example original log entry:
+
+```text
+{"msg" : "fetching.module.release", "example": "test"}
+```
+
+Transformed result:
+
+```json
+{... "message": {"msg" : "fetching.module.release"}}
+```
+
 ## Collect logs from production namespaces using the namespace label selector option
 
 ```yaml
