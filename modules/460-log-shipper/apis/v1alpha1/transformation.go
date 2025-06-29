@@ -41,9 +41,10 @@ type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
 }
 type ParseMessageSpec struct {
-	SourceFormat SourceFormat           `json:"sourceFormat"`
-	String       SourceFormatStringSpec `json:"string,omitempty"`
-	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
+	SourceFormat SourceFormat             `json:"sourceFormat"`
+	String       SourceFormatStringSpec   `json:"string,omitempty"`
+	JSON         SourceFormatJSONSpec     `json:"json,omitempty"`
+	NginxLog     SourceFormatNginxLogSpec `json:"nginxLog,omitempty"`
 }
 type SourceFormat string
 
@@ -61,4 +62,7 @@ type SourceFormatStringSpec struct {
 }
 type SourceFormatJSONSpec struct {
 	Depth int `json:"depth,omitempty"`
+}
+type SourceFormatNginxLogSpec struct {
+	Format string `json:"format,omitempty"`
 }

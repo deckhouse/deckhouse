@@ -83,13 +83,13 @@ func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	case v1alpha1.FormatJSON:
 		source = vrl.ParseJSONMessage(e.JSON.Depth)
 	case v1alpha1.FormatKlog:
-		source = vrl.ParseKlogMessage()
+		source = vrl.ParseKlogMessage.String()
 	case v1alpha1.FormatNginxLog:
-		source = vrl.ParseNginxLogMessage()
+		source = vrl.ParseNginxLogMessage(e.NginxLog.Format)
 	case v1alpha1.FormatCLF:
-		source = vrl.ParseCLFMessage()
+		source = vrl.ParseCLFMessage.String()
 	case v1alpha1.FormatSysLog:
-		source = vrl.ParseSysLogMessage()
+		source = vrl.ParseSysLogMessage.String()
 	default:
 		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valid", e.SourceFormat)
 	}

@@ -56,7 +56,35 @@ var testCases = []struct {
 				SourceFormat: "Klog",
 			},
 		},
-		"if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}",
+		"if is_string(.message) {\n  .message = parse_klog(.message) ?? .message\n}",
+	},
+	{"ParseMessage SysLog Format",
+		v1alpha1.TransformationSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
+				SourceFormat: "SysLog",
+			},
+		},
+		"if is_string(.message) {\n  .message = parse_syslog(.message) ?? .message\n}",
+	},
+	{"ParseMessage NginxLog Format",
+		v1alpha1.TransformationSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
+				SourceFormat: "NginxLog",
+				NginxLog:     v1alpha1.SourceFormatNginxLogSpec{Format: "main"},
+			},
+		},
+		"if is_string(.message) {\n.message = parse_nginx_log(.message, \"main\") ?? .message\n}",
+	},
+	{"ParseMessage CLF Format",
+		v1alpha1.TransformationSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
+				SourceFormat: "CLF",
+			},
+		},
+		"if is_string(.message) {\n  .message = parse_common_log(.message) ?? .message\n}",
 	},
 	{"DropLabels",
 		v1alpha1.TransformationSpec{

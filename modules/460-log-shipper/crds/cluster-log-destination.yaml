@@ -961,11 +961,13 @@ spec:
                             required:
                               - sourceFormat
                           - properties:
+                              nginxLog: {}
                               sourceFormat:
                                 enum:
                                   - "NginxLog"
                             required:
                               - sourceFormat
+                              - nginxLog
                           - properties:
                               sourceFormat:
                                 enum:
@@ -1000,6 +1002,12 @@ spec:
                                 minimum: 1
                                 maximum: 128
                                 description: "Depth for JSON parsing. A value of zero disables parsing."
+                          nginxLog:
+                            type: object
+                            properties:
+                              format:
+                                type: string
+                                description: "The format to use for parsing the log."
                       dropLabels:
                         type: object
                         description: "Removes the specified labels."
