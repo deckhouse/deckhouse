@@ -1,5 +1,4 @@
 name: user-authz
-weight: 140
 stage: "General Availability"
 namespace: d8-user-authz
 subsystems:
@@ -9,5 +8,4 @@ description: |
 descriptions:
   en: |
     The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
-requirements:
-  bootstrapped: true
+
