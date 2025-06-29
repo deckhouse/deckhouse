@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_ensureStructuredMessage_JSON"
       ],
-      "source": "if is_string(.message) {\n.message = parse_klog(.message) ?? .message\n}",
+      "source": "if is_string(.message) {\n  .message = parse_klog(.message) ?? .message\n}",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_ensureStructuredMessage_String": {
