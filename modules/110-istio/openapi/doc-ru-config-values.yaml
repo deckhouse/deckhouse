@@ -410,8 +410,8 @@ properties:
           Разрешает пройти только одну из аутентификаций.
 
           В комбинации с опцией `whitelistSourceRanges` позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
-  ambient:
-    description: Настройки для компонента ztunnel и других задействованных в Ambient Mesh.
+  ztunnel:
+    description: Настройки для компонента ztunnel.
     properties:
       resourcesManagement:
         description: |
@@ -420,8 +420,8 @@ properties:
           mode:
             description: |
               Режим управления ресурсами:
-              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-ambient-resourcesmanagement-static);
-              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-ambient-resourcesmanagement-vpa).
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-ztunnel-resourcesmanagement-static);
+              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-ztunnel-resourcesmanagement-vpa).
           vpa:
             description: |
               Параметры управления ресурсами в режиме VPA.

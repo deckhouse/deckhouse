@@ -853,9 +853,9 @@ properties:
           Enables single authentication.
 
           If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
-  ambient:
+  ztunnel:
     type: object
-    description: ztunnel and other components for Ambient Mesh specific settings.
+    description: ztunnel specific settings.
     default: {}
     properties:
       resourcesManagement:
@@ -888,8 +888,8 @@ properties:
             type: string
             description: |
               Resource management mode:
-              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-resourcesmanagement-static) parameter section;
-              - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-resourcesmanagement-vpa) parameter section.
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ztunnel-resourcesmanagement-static) parameter section;
+              - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ztunnel-resourcesmanagement-vpa) parameter section.
             enum: ['VPA', 'Static']
             default: 'VPA'
           vpa:

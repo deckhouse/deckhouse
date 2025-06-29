@@ -15,7 +15,7 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | nindent 2 }}
 spec:
-{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "DaemonSet" (printf "ztunnel-%s" $revision) "discovery" $.Values.istio.ambient.resourcesManagement ) | nindent 2 }}
+{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "DaemonSet" (printf "ztunnel-%s" $revision) "discovery" $.Values.istio.ztunnel.resourcesManagement ) | nindent 2 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -71,7 +71,7 @@ spec:
           name: ztunnel-stats
           protocol: TCP
         resources:
-            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.ambient.resourcesManagement) | nindent 14 }}
+            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.ztunnel.resourcesManagement) | nindent 14 }}
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
         imagePullPolicy: IfNotPresent
         securityContext:
