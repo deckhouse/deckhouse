@@ -129,6 +129,9 @@ masterNodeGroup:
         # [<en>] Amount of memory resources allowed for the virtual machine.
         # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
         size: 8Gi
+      # [<en>] The name of the VirtualMachineClass.
+      # [<ru>] Имя VirtualMachineClass.
+      virtualMachineClassName: general
       # [<en>] Static IP addresses (or Auto for automatic IP address assignment) to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
       # [<ru>] Статические IP-адреса (или Auto для автоматического назначения IP-адреса), назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
       ipAddresses:
@@ -204,6 +207,9 @@ spec:
       # [<en>] Amount of memory resources allowed for the virtual machine.
       # [<ru>] Количество ресурсов памяти, разрешенных для виртуальной машины.
       size: 8Gi
+    # [<en>] The name of the VirtualMachineClass.
+    # [<ru>] Имя VirtualMachineClass.
+    virtualMachineClassName: general
     # [<en>] Defines a bootloader for the virtual machine.
     # [<ru>] Определяет загрузчик для виртуальной машины.
     bootloader: EFI
