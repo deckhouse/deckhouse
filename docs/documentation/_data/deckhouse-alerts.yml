@@ -3445,7 +3445,7 @@ alerts:
       description: |
         Deckhouse memory usage is too high.
       summary: |
-        Deckhouse pod {{ $labels.pod }} on node {{ $labels.node }} has high memory usage.  Please, if possible, get the memory dump for debugging purpose: curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap?seconds=60&quot; &gt; /tmp/heap and send this file (/tmp/heap) to the support team.
+        Deckhouse pod {{ $labels.pod }} on node {{ $labels.node }} has high memory usage.  Please, if possible, get the memory dump for debugging purpose: curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap&quot; &gt; /tmp/heap and send this file (/tmp/heap) to the support team.
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
