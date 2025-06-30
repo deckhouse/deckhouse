@@ -415,18 +415,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
-	if len(release.Annotations) == 0 {
-		release.Annotations = make(map[string]string, 1)
-	}
-
-	if r.isModuleReady(ctx, r.moduleManager, release.GetModuleName()) {
-		release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
-		release.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = "true"
-	} else {
-		release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "true"
-		needsUpdate = true
-	}
-
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
@@ -1495,22 +1483,10 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 	}
 }
 
-func (r *reconciler) isModuleReady(ctx context.Context, moduleManager moduleManager, moduleName string) bool {
-	module := new(v1alpha1.Module)
-	err := r.client.Get(ctx, types.NamespacedName{Name: moduleName}, module)
-	if err != nil {
-		r.log.Error("cannot find module", slog.String("module-name", moduleName), log.Err(err))
-		return false
-	}
-
+func (r *reconciler) isModuleReady(_ context.Context, moduleManager moduleManager, moduleName string) bool {
 	basicModule := moduleManager.GetModule(moduleName)
 	if basicModule == nil {
 		return false
-	}
-
-	if module.Status.Phase == v1alpha1.ModulePhaseReady {
-		basicModule.SetPhase(addonmodules.Ready)
-		return true
 	}
 
 	return basicModule.GetPhase() == addonmodules.Ready
