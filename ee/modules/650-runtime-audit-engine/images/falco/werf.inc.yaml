@@ -177,6 +177,8 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}          
   - apt-get install -y git libelf-devel libbpf-devel bpftool cmake clang18.1 build-essential golang gcc12 gcc12-c++ perl-IPC-Cmd
+  {{- include "alt packages clean" . | nindent 2 }}    
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
