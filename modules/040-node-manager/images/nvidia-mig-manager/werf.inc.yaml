@@ -30,9 +30,6 @@ import:
   includePaths:
     - lib64
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
-  add: /busybox
-  before: setup
 - image: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
   add: /usr/bin/nvidia-ctk
   to: /usr/bin/nvidia-ctk
