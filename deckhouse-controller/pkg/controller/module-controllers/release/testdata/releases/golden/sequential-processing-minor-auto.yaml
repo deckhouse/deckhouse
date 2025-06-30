@@ -60,6 +60,9 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -96,8 +99,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    modules.deckhouse.io/isUpdating: "true"
-    modules.deckhouse.io/notified: "false"
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -114,7 +117,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1001"
+  resourceVersion: "1002"
 spec:
   changelog:
     features:
@@ -143,3 +146,4 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: LastReleaseDeployed
+  phase: Ready
