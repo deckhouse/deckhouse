@@ -16,7 +16,10 @@ limitations under the License.
 
 package vrl
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 //VRL for transformations destination logs.
 
@@ -65,7 +68,8 @@ func ParseJSONMessage(depth int) string {
 
 // Parse message nginx log with format to json object
 func ParseNginxLogMessage(format string) string {
-	return fmt.Sprintf("if is_string(.message) {\n.message = parse_nginx_log(.message, \"%s\") ?? .message\n}", format)
+	return fmt.Sprintf("if is_string(.message) {\n.message = parse_nginx_log(.message, \"%s\") ?? .message\n}",
+		strings.ToLower(format))
 }
 
 // Delete label

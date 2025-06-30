@@ -583,7 +583,7 @@ Transformed result:
 
 ### Parse Syslog logs to structured JSON
 
-You can use the `ParseMessage` transformation 
+You can use the `ParseMessage` transformation
 to parse Syslog logs into a structured JSON object.
 
 ```yaml
@@ -628,7 +628,7 @@ Transformed result:
 
 ### Parse CLF logs to structured JSON
 
-You can use the `ParseMessage` transformation 
+You can use the `ParseMessage` transformation
 to parse CLF logs into a structured JSON object.
 
 ```yaml
@@ -669,7 +669,7 @@ Transformed result:
 
 ### Parse Logfmt logs to structured JSON
 
-You can use the `ParseMessage` transformation 
+You can use the `ParseMessage` transformation
 to parse Logfmt logs into a structured JSON object.
 
 ```yaml
