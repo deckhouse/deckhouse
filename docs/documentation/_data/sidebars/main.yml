@@ -1115,7 +1115,7 @@ entries:
         - title:
             en: VPA
             ru: VPA
-          url: /architecture/vpa.html
+          url: /architecture/vpa.html 
         - title:
             en: Authentication
             ru: Аутентификация

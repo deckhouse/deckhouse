@@ -92,3 +92,147 @@ kubectl describe vpa my-app-vpa
 1. Примените файл конфигурации для VPA с помощью `kubectl apply -f <имя файла конфигурации>`.
 
 Подробнее про настройку лимитов VPA [см. в разделе Использование](../../../user/configuration/app-scaling/vpa.html#работа-vpa-с-лимитами).
+
+### Примеры настройки
+
+#### Настройка модуля
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  version: 1
+  enabled: true
+  settings:
+    nodeSelector:
+      node-role/system: ""
+    tolerations:
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: system
+```
+
+#### Пример минимального ресурса VerticalPodAutoscaler
+
+```yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: my-app-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: my-app
+```
+
+#### Пример полного ресурса VerticalPodAutoscaler
+
+```yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: my-app-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: my-app
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: hamster
+      minAllowed:
+        memory: 100Mi
+        cpu: 120m
+      maxAllowed:
+        memory: 300Mi
+        cpu: 350m
+      mode: Auto
+```
+
+## Как Vertical Pod Autoscaler работает с лимитами
+
+### Пример 1
+
+В примере представлен VPA-объект:
+
+```yaml
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: test2
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: test2
+  updatePolicy:
+    updateMode: "Initial"
+```
+
+В VPA-объекте представлен под с ресурсами:
+
+```yaml
+resources:
+  limits:
+    cpu: 2
+  requests:
+    cpu: 1
+```
+
+Если контейнер использует весь CPU, и VPA рекомендует этому контейнеру 1.168 CPU, то отношение между запросами и ограничениями будет равно 100%.
+В этом случае при пересоздании пода VPA модифицирует его и проставит такие ресурсы:
+
+```yaml
+resources:
+  limits:
+    cpu: 2336m
+  requests:
+    cpu: 1168m
+```
+
+### Пример 2
+
+В примере представлен VPA-объект:
+
+```yaml
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: test2
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: test2
+  updatePolicy:
+    updateMode: "Initial"
+```
+
+В VPA-объекте представлен под с ресурсами:
+
+```yaml
+resources:
+  limits:
+    cpu: 1
+  requests:
+    cpu: 750m
+```
+
+Если отношение запросов и ограничений равно 25%, и VPA рекомендует 1.168 CPU для контейнера, VPA изменит ресурсы контейнера следующим образом:
+
+```yaml
+resources:
+  limits:
+    cpu: 1557m
+  requests:
+    cpu: 1168m
+```
+
+Если необходимо ограничить максимальное количество ресурсов, которые могут быть выделены для ограничений контейнера, нужно использовать в спецификации объекта VPA `maxAllowed` или использовать [Limit Range](https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/) объекта Kubernetes.
