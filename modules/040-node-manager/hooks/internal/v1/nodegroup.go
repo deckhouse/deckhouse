@@ -105,7 +105,7 @@ type NodeGroupSpec struct {
 }
 
 type GPU struct {
-	// Resources sharing type. mps, timeSlicing, mig or exclusive(without sharing)
+	// Resources sharing type. timeSlicing, mig or exclusive(without sharing)
 	Sharing string `json:"sharing,omitempty"`
 
 	TimeSlicing *TimeSlicing `json:"timeSlicing,omitempty"`

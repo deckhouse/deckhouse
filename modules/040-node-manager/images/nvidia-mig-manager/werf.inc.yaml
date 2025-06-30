@@ -30,9 +30,6 @@ import:
   includePaths:
     - lib64
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
-  add: /busybox
-  before: setup
 - image: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
   add: /usr/bin/nvidia-ctk
   to: /usr/bin/nvidia-ctk
@@ -83,8 +80,6 @@ secrets:
 shell:
   beforeInstall:
   - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox && chmod a+x /busybox
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH

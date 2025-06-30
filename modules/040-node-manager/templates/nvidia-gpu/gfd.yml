@@ -76,10 +76,6 @@ spec:
                     operator: In
                     values:
                       - "true"
-      tolerations:
-        - key: nvidia.com/gpu
-          operator: Exists
-          effect: NoSchedule
       priorityClassName: system-node-critical
       serviceAccountName: nvidia-gpu-feature-discovery
       shareProcessNamespace: true

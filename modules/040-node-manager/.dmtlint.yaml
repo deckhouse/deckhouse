@@ -12,12 +12,6 @@ linters-settings:
           name: gpu-feature-discovery
           container: gpu-feature-discovery-ctr
         - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-control-daemon-mounts
-        - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-control-daemon-ctr
-        - kind: DaemonSet
           name: gpu-feature-discovery
           container: gpu-feature-discovery-ctr
         - kind: DaemonSet
@@ -61,12 +55,6 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-device-plugin
           container: nvidia-device-plugin-sidecar
-        - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-control-daemon-ctr
-        - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-config-manager
         - kind: Deployment
           name: node-feature-discovery-gc
           container: gc
@@ -92,12 +80,6 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-device-plugin
           container: nvidia-device-plugin-sidecar
-        - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-control-daemon-ctr
-        - kind: DaemonSet
-          name: mps-control-daemon
-          container: mps-config-manager
         - kind: Deployment
           name: node-feature-discovery-gc
           container: gc

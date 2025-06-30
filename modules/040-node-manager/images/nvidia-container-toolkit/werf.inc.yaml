@@ -27,8 +27,6 @@ secrets:
 shell:
   beforeInstall:
   - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox && chmod a+x /busybox
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.23.0.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
