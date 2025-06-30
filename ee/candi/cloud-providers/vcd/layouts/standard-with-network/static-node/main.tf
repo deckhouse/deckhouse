@@ -9,4 +9,6 @@ module "static_node" {
   nodeIndex                    = var.nodeIndex
   clusterUUID                  = var.clusterUUID
   nodeGroupName                = var.nodeGroupName
+  cloudConfig                  = var.cloudConfig
+  resourceManagementTimeout    = var.resourceManagementTimeout
 }

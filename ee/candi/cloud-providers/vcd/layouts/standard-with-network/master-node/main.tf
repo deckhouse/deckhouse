@@ -8,4 +8,6 @@ module "master_node" {
   providerClusterConfiguration = var.providerClusterConfiguration
   nodeIndex                    = var.nodeIndex
   clusterUUID                  = var.clusterUUID
+  cloudConfig                  = var.cloudConfig
+  resourceManagementTimeout    = var.resourceManagementTimeout
 }
