@@ -1,0 +1,30 @@
+diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
+index de59e70..3b40315 100644
+--- a/pkg/resourceprovider/provider.go
++++ b/pkg/resourceprovider/provider.go
+@@ -180,6 +180,7 @@ func (p *resourceProvider) GetPodMetrics(pods ...*metav1.PartialObjectMetadata)
+ // also recording the earliest time in resTime.  It will return without operating if
+ // any data is missing.
+ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resultsByNs map[string]nsQueryResults) *metrics.PodMetrics {
++       now := time.Now()
+        // check to make sure everything is present
+        nsRes, nsResPresent := resultsByNs[pod.Namespace]
+        if !nsResPresent {
+@@ -187,12 +188,15 @@ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resul
+                return nil
+        }
+        cpuRes, hasResult := nsRes.cpu[pod.Name]
+-       if !hasResult {
++
++       // add check if pod starts more then p.window seconds ago
++
++       if !hasResult && pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
+                klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
+                return nil
+        }
+        memRes, hasResult := nsRes.mem[pod.Name]
+-       if !hasResult {
++       if !hasResult && pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
+                klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
+                return nil
+        }
