@@ -23,7 +23,7 @@ data:
         resources:
         - name: nvidia.com/gpu
           replicas: 4
-  Mig: |-
+  MIG: |-
     version: v1
     flags:
       migStrategy: mixed
