@@ -5,7 +5,7 @@
 ---
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
@@ -15,11 +15,11 @@ import:
   add: /src/kiali/frontend/build
   to: /opt/kiali/console
   before: install
-shell:
-  install:
-  - adduser --no-create-home --uid 1000 kiali
-  - chown -R kiali:kiali /opt/kiali/console
-  - chmod -R g=u /opt/kiali/console
+# shell:
+#   install:
+#   - adduser --no-create-home --uid 1000 kiali
+#   - chown -R kiali:kiali /opt/kiali/console
+#   - chmod -R g=u /opt/kiali/console
 imageSpec:
   config:
     user: "1000"
