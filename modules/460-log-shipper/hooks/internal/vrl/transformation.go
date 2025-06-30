@@ -20,8 +20,7 @@ import (
 	"fmt"
 )
 
-//VRL for transformations destination logs.
-
+// VRL for transformations destination logs.
 const (
 	// Parse message klog to json. If message string and parse without error.
 	ParseKlogMessage Rule = `
