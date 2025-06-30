@@ -72,7 +72,7 @@ var testCases = []struct {
 			Action: v1alpha1.ParseMessage,
 			ParseMessage: v1alpha1.ParseMessageSpec{
 				SourceFormat: "NginxLog",
-				NginxLog:     v1alpha1.SourceFormatNginxLogSpec{Format: "Main"},
+				NginxLog:     v1alpha1.SourceFormatNginxLogSpec{Format: "main"},
 			},
 		},
 		"if is_string(.message) {\n.message = parse_nginx_log(.message, \"main\") ?? .message\n}",
