@@ -10,6 +10,7 @@ memory: 100Mi
 
 {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{ $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $revision := get $versionInfo "revision" }}
   {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
@@ -74,7 +75,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
       automountServiceAccountToken: true
-      serviceAccountName: operator
+      serviceAccountName: operator-{{ $revision }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -94,6 +95,12 @@ spec:
           runAsUser: 1337
           runAsNonRoot: true
         imagePullPolicy: IfNotPresent
+        {{- if (hasPrefix "1.25" $fullVersion) }}
+        volumeMounts:
+        - mountPath: /etc/sail-operator
+          name: operator-config
+          readOnly: true
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -120,4 +127,14 @@ spec:
             value: 300s
           - name: REVISION
             value: {{ $revision }}
+      {{- if (hasPrefix "1.25" $fullVersion) }}
+      volumes:
+        - downwardAPI:
+            defaultMode: 420
+            items:
+            - fieldRef:
+                fieldPath: metadata.annotations
+              path: config.properties
+          name: operator-config
+      {{- end }}
 {{- end }}
