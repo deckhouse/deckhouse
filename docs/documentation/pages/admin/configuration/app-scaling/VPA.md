@@ -92,4 +92,21 @@ In the status section, you’ll see the following parameters:
 
 For more details on VPA resource limits configuration, see [the documentation](../../../user/configuration/app-scaling/vpa.html#how-vpa-interacts-with-limits).
 
-![VPA architecture](https://raw.githubusercontent.com/kubernetes/design-proposals-archive/acc25e14ca83dfda4f66d8cb1f1b491f26e78ffe/autoscaling/images/vpa-architecture.png)
+### Module configuration example
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  version: 1
+  enabled: true
+  settings:
+    nodeSelector:
+      node-role/system: ""
+    tolerations:
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: system
+```
