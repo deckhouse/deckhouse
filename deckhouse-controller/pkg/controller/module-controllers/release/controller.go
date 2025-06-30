@@ -419,7 +419,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		release.Annotations = make(map[string]string, 1)
 	}
 
-	if r.isModuleReady(ctx, release.GetModuleName()) {
+	if release.GetIsUpdating() && r.isModuleReady(ctx, release.GetModuleName()) {
 		release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
 		release.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = "true"
 		needsUpdate = true
