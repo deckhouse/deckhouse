@@ -33,6 +33,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- if .gpu }}
     {{ $default_runtime = "nvidia" }}
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
+sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS 
   {{- end }}
 
 systemd_cgroup=true
