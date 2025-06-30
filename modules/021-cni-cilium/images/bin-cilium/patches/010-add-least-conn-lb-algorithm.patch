@@ -113,7 +113,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +
 +#define LEAST_CONN_MAX_ENTRIES 65536
 +/* the limit was selected due to verifier restriction on executing instructions  (LEAST_CONN_MAX_ENTRIES / 1000)*/
-+#define LEAST_CONN_FOREACH_MAX_ENTRIES 1000
++#define LEAST_CONN_FOREACH_MAX_ENTRIES 500
 +#define LEAST_CONN_THRESHOLD 10
 +
 +struct {
