@@ -45,6 +45,18 @@ import:
   owner: 1337
   group: 1337
   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
