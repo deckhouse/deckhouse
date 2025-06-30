@@ -1,0 +1,34 @@
+diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
+index de59e70..f2df8ef 100644
+--- a/pkg/resourceprovider/provider.go
++++ b/pkg/resourceprovider/provider.go
+@@ -187,14 +187,25 @@ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resul
+                return nil
+        }
+        cpuRes, hasResult := nsRes.cpu[pod.Name]
+-       if !hasResult {
+-               klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
++
++       if !hasResult && pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++               if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++                       klog.V(4).Infof("unable to fetch cpu metrics for pod %s (young pod, age < window), skipping",
++                               pod.Name)
++               } else {
++                       klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
++               }
+                return nil
+        }
++
+        memRes, hasResult := nsRes.mem[pod.Name]
+        if !hasResult {
+-               klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
+-               return nil
++               if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++                       klog.V(4).Infof("unable to fetch memory metrics for pod %s (young pod, age < window), skipping",
++                               pod.Name)
++               } else {
++                       klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
++               }
+        }
+
+        containerMetrics := make(map[string]metrics.ContainerMetrics)
