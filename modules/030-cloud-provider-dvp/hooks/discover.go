@@ -146,6 +146,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageClassList)
+
 	return nil
 }
 
