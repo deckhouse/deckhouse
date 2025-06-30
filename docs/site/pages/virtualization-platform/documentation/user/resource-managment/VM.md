@@ -697,7 +697,7 @@ Placement requirements can be:
 - Strict (`requiredDuringSchedulingIgnoredDuringExecution`) — The VM is placed only on nodes that meet the condition.
 - Soft (`preferredDuringSchedulingIgnoredDuringExecution`) — The VM is placed on suitable nodes, if possible.
 
-`nodeAffinity` - determines on which nodes a VM can be launched using tag expressions.
+`nodeAffinity` — determines on which nodes a VM can be launched using tag expressions.
 
 Example of using `nodeAffinity` with a strict rule:
 
@@ -886,11 +886,11 @@ EOF
 
 ### Organizing interaction with virtual machines
 
-Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations: direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
+Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations — direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
 
 Services simplify interaction with both individual VMs and groups of similar VMs. For example, the ClusterIP service type creates a fixed internal address that can be used to access both a single VM and a group of VMs, regardless of their actual IP addresses. This allows other system components to interact with resources through a stable name or IP, automatically directing traffic to the right machines.
 
-Services also serve as a load balancing tool: they distribute requests evenly among all connected machines, ensuring fault tolerance and ease of expansion without the need to reconfigure clients.
+Services also serve as a load balancing tool — they distribute requests evenly among all connected machines, ensuring fault tolerance and ease of expansion without the need to reconfigure clients.
 
 For scenarios where direct access to specific VMs within the cluster is important (for example, for diagnostics or cluster configuration), headless services can be used. Headless services do not assign a common IP, but instead link the DNS name to the real addresses of all connected machines. A request to such a name returns a list of IPs, allowing you to select the desired VM manually while maintaining the convenience of predictable DNS records.
 
@@ -964,7 +964,7 @@ EOF
 
 #### Publish virtual machine services using a service with the NodePort type
 
-`NodePort` is an extension of the `ClusterIP` service that provides access to the service through a specified port on all nodes in the cluster. This makes the service accessible from outside the cluster through a combination of the node's IP address and port.
+`NodePort` is an extension of the ClusterIP service that provides access to the service through a specified port on all nodes in the cluster. This makes the service accessible from outside the cluster through a combination of the node's IP address and port.
 
 NodePort is suitable for scenarios where direct access to the service from outside the cluster is required without using a external load balancer.
 
@@ -997,7 +997,7 @@ If you do not explicitly specify the `nodePort` value, an arbitrary port will be
 
 #### Publishing virtual machine services using a service with the LoadBalancer service type
 
-`LoadBalancer` is a type of service that automatically creates an external load balancer with a static IP address. This balancer distributes incoming traffic among virtual machines, ensuring the service's availability from the Internet.
+LoadBalancer is a type of service that automatically creates an external load balancer with a static IP address. This balancer distributes incoming traffic among virtual machines, ensuring the service's availability from the Internet.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -1021,11 +1021,11 @@ EOF
 
 #### Publish virtual machine services using Ingress
 
-`Ingress` allows you to manage incoming HTTP/HTTPS requests and route them to different servers within your cluster. This is the most appropriate method if you want to use domain names and SSL termination to access your virtual machines.
+Ingress allows you to manage incoming HTTP/HTTPS requests and route them to different servers within your cluster. This is the most appropriate method if you want to use domain names and SSL termination to access your virtual machines.
 
-To publish a virtual machine service through `Ingress`, you must create the following resources:
+To publish a virtual machine service through Ingress, you must create the following resources:
 
-An internal service to bind to `Ingress`. Example:
+An internal service to bind to Ingress. Example:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -1044,7 +1044,7 @@ spec:
 EOF
 ```
 
-And an `Ingress` resource for publishing. Example:
+And an Ingress resource for publishing. Example:
 
 ```yaml
 d8 k apply -f - <<EOF

@@ -217,7 +217,7 @@ EOF
 
 After successfully creating a snapshot, its status will show the list of resources saved in the snapshot.
 
-Output example:
+Example output:
 
 ```yaml
 status:
