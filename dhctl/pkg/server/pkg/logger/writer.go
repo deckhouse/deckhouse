@@ -19,8 +19,6 @@ import (
 	"log/slog"
 	"os"
 	"sync"
-
-	"github.com/linkdata/deadlock"
 )
 
 type LogWriter[T any] struct {
@@ -72,7 +70,7 @@ func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
 type DebugLogWriter struct {
 	l *slog.Logger
 
-	m    deadlock.Mutex
+	m    sync.Mutex
 	prev []byte
 }
 
