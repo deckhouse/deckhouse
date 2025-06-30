@@ -1,10 +1,71 @@
+{!{ define "set_security_scan_requirement_status" }!}
+
+# <template: set_security_scan_requirement_status>
+set_security_scan_requirement_status: 
+  name: Set commit status after security scan run
+  runs-on: ubuntu-latest
+  needs: test_cve_report_main
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh -y
+    - name: Auth with GitHub CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Set PR Label
+      env:
+        PR_NUMBER: ${{ inputs.issue_number }}
+      run: |
+        echo "PR Number: $PR_NUMBER"
+        if [ "${{ needs.test_cve_report_main.result }}" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/success"
+        else
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/failed"
+        fi
+# </template: set_security_scan_requirement_status>
+{!{- end -}!}
+
+{!{ define "remove_labels_job" }!}
+{!{- $ctx := . -}!}
+# <template: remove_labels_job>
+remove_labels:
+  name: Remove labels
+  runs-on: ubuntu-latest
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Remove labels
+      id: remove
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const label = "security/cve";
+          const ci = require('./.github/scripts/js/ci');
+          const issue_number = context.payload.inputs.issue_number;
+          console.log("Issue number is", issue_number);
+          return await ci.removeLabel({github, context, core, issue_number, label});
+# </template: remove_labels_job>
+{!{- end -}!}
+
+{!{ define "exctract_pr_number" }!}
+# <template: exctract_pr_number>
+- name: Extract PR number from ref
+  id: extract_pr
+  run: |
+    echo "REF=${{ github.event.inputs.pull_request_ref }}"
+    PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
+    echo "PR_NUMBER=$PR_NUMBER"
+    echo "TAG=pr$PR_NUMBER" >> $GITHUB_ENV
+# </template: exctract_pr_number>
+{!{- end -}!}
 {!{ define "cve_scan_deckhouse_images" }!}
 # <template: cve_scan_deckhouse_images>
 - name: Set scan target type
   run: |
     if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
       echo "SCAN_TARGET=only_main" >> $GITHUB_ENV
-    elif [ "${{ github.event_name }}" == "pull_request" ]; then
+    elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.pull_request_ref }}" ]; then
       echo "SCAN_TARGET=pr" >> $GITHUB_ENV
     elif [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
       echo "SCAN_TARGET=regular" >> $GITHUB_ENV
@@ -28,7 +89,7 @@
     SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
-    ./.github/scripts/cve_scan.sh -r
+    ./.github/scripts/cve_scan.sh
 # </template: cve_scan_deckhouse_images>
 {!{- end -}!}
 

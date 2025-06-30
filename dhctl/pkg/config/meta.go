@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -199,22 +200,34 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("failed to parse VCD API version '%s': %v", VCDProviderInfo.ApiVersion, err)
 		}
 
-		versionConstraint, err := semver.NewConstraint("<37.2")
+		log.DebugF("VCD API version '%s'\n", VCDProviderInfo.ApiVersion)
+
+		const versionConstraintStr = "<37.2"
+
+		versionConstraint, err := semver.NewConstraint(versionConstraintStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraint, err)
 		}
 
-		infrastructureModulesDir := getInfrastructureModulesDir("vcd")
+		infrastructureModulesDir := infrastructure.GetInfrastructureModulesDir("vcd")
 
 		versionsFilePath := filepath.Join(infrastructureModulesDir, "versions.tf")
 
+		log.DebugF("Infrastructure version file for VCD %s\n", versionsFilePath)
+
 		err = os.Remove(versionsFilePath)
-		if err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
+			}
+
+			log.DebugF("Infrastructure version file %s not found. Continue\n", versionsFilePath)
+		} else {
+			log.DebugF("Infrastructure version file %s was found and deleted\n", versionsFilePath)
 		}
 
 		if versionConstraint.Check(version) {
-
+			log.DebugF("Use legacy VCD version %s (%s). Use legacy mode as true\n", version, versionConstraintStr)
 			if _, ok := m.ProviderClusterConfig["legacyMode"]; !ok {
 				legacyMode, err := json.Marshal(true)
 				if err != nil {
@@ -228,11 +241,17 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
 			}
+
+			log.DebugLn("Symlink to legacy version file was created\n")
 		} else {
+			log.DebugF("Use latest VCD version %s (%s)e\n", version, versionConstraintStr)
+
 			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-new.tf"), versionsFilePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create symlink to versions-new.tf: %v", err)
 			}
+
+			log.DebugLn("Symlink to latest version file was created\n")
 		}
 	}
 

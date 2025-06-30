@@ -26,6 +26,11 @@ for pid in $(ps ax | grep "bash /var/lib/bashible/bashible" | grep -v grep | awk
   kill $pid
 done
 
+if [ -f /lib/systemd/system/d8-shutdown-inhibitor.service ] ; then
+  systemctl disable d8-shutdown-inhibitor.service
+  systemctl stop d8-shutdown-inhibitor.service
+fi
+
 systemctl disable sysctl-tuner.service sysctl-tuner.timer
 systemctl disable old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl disable d8-containerd-cgroup-migration.service
@@ -51,9 +56,13 @@ rm -rf /etc/systemd/system/sysctl-tuner.*
 rm -rf /etc/systemd/system/old-csi-mount-cleaner.*
 rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
 rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d /lib/systemd/system/containerd-deckhouse.service
+rm -rf /etc/systemd/system/d8-shutdown-inhibitor.* /etc/systemd/system/d8-shutdown-inhibitor.service.d /lib/systemd/system/d8-shutdown-inhibitor.service
+rm -rf /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
 rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d /lib/systemd/system/kubelet.service
 
 systemctl daemon-reload
+# Send SIGHUP to logind to reload its configuration.
+systemctl -s SIGHUP kill systemd-logind
 
 rm -rf /var/cache/registrypackages
 rm -rf /etc/kubernetes

@@ -3,6 +3,7 @@ title: Picking resources for a bare metal cluster
 permalink: en/guides/hardware-requirements.html
 description: Hardware requirements for cluster nodes managed by Deckhouse Kubernetes Platform.
 lang: en
+layout: sidebar-guides
 ---
 
 Before deploying a cluster running Deckhouse Kubernetes Platform, you have to plan the configuration of the future cluster and decide on the parameters if its nodes (e. g., RAM, CPU, etc.).
@@ -199,7 +200,7 @@ Such clusters lack fault tolerance. We highly advise you against using this kind
 
 In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight workloads.
 
-The [Getting Started guide](../gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32GB of RAM, and 60GB of disk space on a performant disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](../gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32GB of RAM, and 60GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
 With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 

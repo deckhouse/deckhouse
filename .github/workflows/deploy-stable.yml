@@ -1330,7 +1330,7 @@ jobs:
           git push --force origin "${RELEASE_BRANCH_NAME}"
 
       - name: Send failure report
-        if: failure()
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         run: |

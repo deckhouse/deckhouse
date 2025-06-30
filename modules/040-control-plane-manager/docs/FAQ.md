@@ -515,7 +515,7 @@ There must be some `log scraper` on master nodes  *([log-shipper](../log-shipper
 The following fixed parameters of log rotation are in use:
 
 * The maximum disk space is limited to `1000 Mb`.
-* Logs older than `7 days` will be deleted.
+* Logs older than `30 days` will be deleted.
 
 Depending on the `Policy` settings and the number of requests to the `apiserver`, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes.
 

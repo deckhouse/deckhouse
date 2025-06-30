@@ -22,14 +22,8 @@ linters-settings:
       liveness-probe:
         - kind: DaemonSet
           name: node-local-dns
-          container: kube-rbac-proxy
-        - kind: DaemonSet
-          name: node-local-dns
           container: iptables-loop
       readiness-probe:
-        - kind: DaemonSet
-          name: node-local-dns
-          container: kube-rbac-proxy
         - kind: DaemonSet
           name: node-local-dns
           container: iptables-loop

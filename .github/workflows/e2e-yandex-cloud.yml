@@ -240,6 +240,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -453,6 +454,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -468,6 +470,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -476,16 +479,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -578,11 +582,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -834,6 +838,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -849,6 +854,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -857,16 +863,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -959,11 +966,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1215,6 +1222,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -1230,6 +1238,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -1238,16 +1247,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1340,11 +1350,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1596,6 +1606,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -1611,6 +1622,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -1619,16 +1631,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1721,11 +1734,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1977,6 +1990,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -1992,6 +2006,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -2000,16 +2015,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2102,11 +2118,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2358,6 +2374,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -2373,6 +2390,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -2381,16 +2399,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2483,11 +2502,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2739,6 +2758,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -2754,6 +2774,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
 
@@ -2762,16 +2783,17 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2864,11 +2886,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 

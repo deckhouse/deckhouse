@@ -5,6 +5,22 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
+        en: Platform overview
+        ru: О платформе
+      folders:
+        - title:
+            en: Platform editions
+            ru: Редакции платформы
+          url: /stronghold/documentation/about/editions.html
+        - title:
+            en: Update channels
+            ru: Каналы обновлений
+          url: /stronghold/documentation/about/update-channels.html
+        - title:
+            en: Requirements
+            ru: Требования
+          url: /stronghold/documentation/about/requirements.html
+    - title:
         en: Administration guide
         ru: Руководство администратора
       folders:
@@ -33,22 +49,10 @@ entries:
             ru: Запуск в DKP
           folders:
             - title:
-                en: Platform editions
-                ru: Редакции платформы
-              url: /stronghold/documentation/admin/editions.html
-            - title:
-                en: Update channels
-                ru: Каналы обновлений
-              url: /stronghold/documentation/admin/update-channels.html
-            - title:
                 en: Install
                 ru: Установка платформы
               url: /stronghold/documentation/admin/install/steps/install.html
               folders:
-                - title:
-                    en: Requirements
-                    ru: Требования
-                  url: /stronghold/documentation/admin/install/requirements.html
                 - title:
                     en: Installation steps
                     ru: Порядок установки

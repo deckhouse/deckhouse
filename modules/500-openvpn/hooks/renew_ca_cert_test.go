@@ -17,15 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -56,12 +49,12 @@ metadata:
 type: Opaque
 data: {}
 `
-		invalidCertSecret = `
+		invalidCACertSecret = `
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: openvpn-pki-server
+  name: openvpn-pki-ca
   namespace: d8-openvpn
 type: Opaque
 data:
@@ -72,11 +65,22 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: openvpn-pki-server
+  name: openvpn-pki-ca
   namespace: d8-openvpn
 type: Opaque
 data:
   tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDRENDQWZDZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREFvTVJJd0VBWURWUVFLRXdsR2JHRnUKZENCS1UwTXhFakFRQmdOVkJBTVRDV1pzWVc1MExtTnZiVEFlRncweU5EQTBNRE14TmpJNE5EaGFGdzB5TkRBMApNREl4TmpJNE5EaGFNQ2d4RWpBUUJnTlZCQW9UQ1Vac1lXNTBJRXBUUXpFU01CQUdBMVVFQXhNSlpteGhiblF1ClkyOXRNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTAzcWNEaEtVZGFHWnp2SGcKNFk2ZkVtclMxN0NMKzl1QWdnWDdlbFJLWXZ6Q3pZTXlNbmNhR08zTGs5cUxJVjZOS0JGTDcrd01qYklnSjV5bwpvcCtZVTVwalFkU3owWnVvRVNyWDd4S05GWnh3cVJZME5KTmtoaTRkVERxWnZ1R1JCeTZVbDVaMFNCSjliRFQzCjVHdkhYMjFtTHJDdmVoZDRBYTZQU05VQXFweG85VGw3elZRS3J5Y2NQTUtvdEE0ZlZ0VkFvOHVkSXZIYVphZFUKMnZZSEFUazc3TGMrRHNjUi9YL2lYcUVMdkozR1VkWGxvNXFpWVZwN0pXZzY2RXRrNm5HWnhaZ2sxNEJHaWw3RQp4bEM1WkJyUWFPTFdwOS84S2ppT0U2MEFKZXdmdXpZdklTQ3RSZVZxSzEwUzExQTd6bUtvOGZvdUgxVGRteDlWCkNrM2Myd0lEQVFBQm96MHdPekFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUgKQXdFd0ZBWURWUjBSQkEwd0M0SUpabXhoYm5RdVkyOXRNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUI1aW5EcQpYZjR0Nk1rOVQrZHFJR0QwR1pEOE5WNHlOeU9wSmFQaUhIZ0JGVmZMcW1QTlc0aVlQVHVuazc0OVFMOW14dEV6CnRMN1o2bUp0Wnk2Q1NEcEpHRE9pYk5nQ29iaGxqUkhsUkp6S0lZWUxnSHR0a3lYSFNOV1dUeXMzWS81L3ZRTWcKUkxEUmlyUzU4TytvcVp3WTlGZm1lbDNRSU9vVXpBRzU1c2IxRlhLL3Z2MDNMWlhtWnkzZ3d1UEJjbGcrQ0I3eAoweVUyZEF5TmhwM09Jd0hSUWtRUFdHVndUS0IwazFwOHFYcndFdmtnT3FMZ3dhYTdhMThKeTRxZTBkaFpJUFBSCmtvNlNGTksvOWdqY21hZ1BFTGhDTm5kL1pWS1ZhTGtQTzNob2QyOWVUbGg5bkMrbzNRSGlndis5dnc1S3d6WWUKUFlkUnhOZUJILytMcnlpQwotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCgo=
+`
+		validCACert = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openvpn-pki-ca
+  namespace: d8-openvpn
+type: Opaque
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZDVENDQXZHZ0F3SUJBZ0lVZk1xcllHd0t4L01OM054aStCQlljejZkK1RFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lUWGxVWlhOMFEwRXdJQmNOTWpVd05qRTVNRFkxT0RNeFdoZ1BNakV5TlRBMgpNakF3TmpVNE16RmFNQk14RVRBUEJnTlZCQU1NQ0UxNVZHVnpkRU5CTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGCkFBT0NBZzhBTUlJQ0NnS0NBZ0VBeE8vaXBTU0U0U2Q0akxnMTNkOCtqcVkrM0hGMnMzQnRXK2pzNEhjKy8wK04KYkM4WUpuMlMwNHRGNDZXVkROOGd0bnlkOWVlRDVoYkNVdEdTN01iVDhkWWpTenFXeSt4YTRXcEt4OWVoZXBLVgowcjBJcm5vOVNveFppSzVzR2dXYUtUV2xvVnFZejluQjJKdnhUY3o4dnVKVDlsU2F4Q2drYTRqZ0p4UmdTUzlOCjJhQUVBU2tncXlyTkk1NmdxWkV4R1F1ZG1Wa2x6TkRFUE9SSFBzRXVzb2FXb3NwazArWHdLaDFBcEVEZHJLRHIKY2hYWFBpcnRjb21VKzdTV1B5UTd6bis5bmhKUjhiS2k0MFNxTTNqM2lHWDRuU0lVa2I2VGlBa212K210LzI1Ugp1dDhnYXlJaU8xVVliL3NkQmJlOW1LVUc1NElWZkNjYklHc1FhQ0FBeGVlNVI3Vzh6aGlHNUxJb1VtbkZRa3YwClltd3BwOEl2b0dXSng3cWtaaFlFTnVWYytpQ2VPMCt4dFBFdjhiajFjTVZrSHo2dE4yUDFWODIvWkpSNlg4bDkKUk9MZVhZOENNZU9qL0NqaG1BOXY1a01jbEI4aWR0cEhrRE9zRldkZ2NJYUZzTHVubkxLVVhxSVB1bGFyeVBQUAoxR3RpZXV1ZU5zclNFdC9ROWpORCs4cGRyWkl0eE1ybjNoaFBuR2ZQYjFBaW5GZW5jUTUvRitFSTYybXZzYUVIClJ0ckhRazlDY3gvdjEzdjlwUGs5V1VxbWZlRHpyS2tXR0x6MjZnbHJjdkFGTlNjckVucVlVOXJFcVRKcFp6UGoKbzBLb1czWWM5V0tSZW5MR3hFcWhQeU5YNlQxZ3BmVnhQV0FMZlowSW5SNnBhUkNONTc2cm04djhxTStxbUhjQwpBd0VBQWFOVE1GRXdIUVlEVlIwT0JCWUVGSDd5dm1KVXNISUU5QVgwZW1KcFNVOGd6MStPTUI4R0ExVWRJd1FZCk1CYUFGSDd5dm1KVXNISUU5QVgwZW1KcFNVOGd6MStPTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3RFFZSktvWkkKaHZjTkFRRUxCUUFEZ2dJQkFNSDkyN3RtOGNGeHFXeDg0VHJzSGphUlhtVW9qRUN5M3B1UjNKUEFRRWpXZ1ZhRwo3RnNWOU9Jcmh6ZSsyS0dSQm1OQnlHT0NZaGNucERaYXhPcXkyQThMcUhMOHNUd1ErU2JNcVNFVjZVVENJcWNYCktHSStIMzYrL2t4VFJNd0c4MDVVd055MWJ6VEpqMWZ4emxBWDE0VFBzaFZyRnNTekxqWG1lL1J5Vk5Ham4zbWUKUG9JTGY3ckIyNFB1R3lrNlQ3eGY5enFxWk9SY0t5akI5M1J2QjlPUlYySjVkSi9TR3d5bnJpODdCazlzV093MwpsZzM4R2hTSUprR0dEV0Z1eUpiTU83dHIxOHFKUkR4NnNpL1RmYlIwUjN6bzFVRnNWTlRYamJVdGt5ZndwaUhZCkg5V1ZLaHJ3VjNzUk9yRkRBZ2pRb2p5ZmJQYjJPNExZZ3dNaktGRHJpeXJEMTVHNnVBV2J5S0xPSDZZa1h0eDIKRFNSZGl3UlY5eXdrK0xmSTlBVDYvU25FaitKeXIrdnBGWVR1ck9nTGs1Q0tMYk9DRFIyRldIS2cwNk1nNzdlbgpmSTlKVkM2Vzl3K3JFdnFMcFhlbC91Y2hveTZGYWpWZWVSMjAwUlNvSUNzRnFKcVNwWkR6SFVnQmZkL1NEenhVClNzbVRWL3NCUy9QMy94L21VRzlNeVJyVmRUcVpzTXpsM25pb3d0ZTU0bFRaQzVRRXJESEpUei9oMk5Gbk1YVjcKTFREYWpMcU5sYzkvR083QjJ5VExtSkVMb0tObDBENkZTTDA4RVdGUzVETXFEYUQyY1hYSE10U01weTY4TDJZKwpmSkZLdVRLNHNpcE9lZ0hyNHBCMnplRDZWeVlYdzFxUS96cUhpcDJyd0lUSzlMMGJCckh4RnAyMnV0dzgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
 `
 		validCertSecret = `
 ---
@@ -130,139 +134,61 @@ spec:
 
 	Context("Cluster with expired cert", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 */6 * * *"))
-
-			var ns corev1.Namespace
-			var secret corev1.Secret
-			var statefulSet appsv1.StatefulSet
-
-			_ = yaml.Unmarshal([]byte(d8OpenvpnNamespace), &ns)
-			_ = yaml.Unmarshal([]byte(expiredCertSecret), &secret)
-			_ = yaml.Unmarshal([]byte(openvpnStatefulSet), &statefulSet)
-
-			// Create resources
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.CoreV1().Secrets("d8-openvpn").Create(context.TODO(), &secret, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.AppsV1().StatefulSets("d8-openvpn").Create(context.TODO(), &statefulSet, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
+			f.BindingContexts.Set(f.KubeStateSet(d8OpenvpnNamespace + expiredCertSecret + emptySecret + openvpnStatefulSet))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunGoHook()
-
 		})
 
 		// Check cert is deleted
-		It("Hook is executed successfully", func() {
+		It("Server cert should be removed", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Namespaces().Get(context.Background(), "openvpn-pki-server", metav1.GetOptions{})
-			Expect(errors.IsNotFound(err)).To(BeTrue(), "Secret 'openvpn-pki-server' should be deleted")
+			secret := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server")
+			secretCa := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-ca")
+			Expect(secret.Exists()).To(BeFalse())
+			Expect(secretCa.Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Cluster with valid cert", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 */6 * * *"))
-
-			var ns corev1.Namespace
-			var secret corev1.Secret
-			var statefulSet appsv1.StatefulSet
-
-			_ = yaml.Unmarshal([]byte(d8OpenvpnNamespace), &ns)
-			_ = yaml.Unmarshal([]byte(validCertSecret), &secret)
-			_ = yaml.Unmarshal([]byte(openvpnStatefulSet), &statefulSet)
-
-			// Create resources
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.CoreV1().Secrets("d8-openvpn").Create(context.TODO(), &secret, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.AppsV1().StatefulSets("d8-openvpn").Create(context.TODO(), &statefulSet, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
+			f.BindingContexts.Set(f.KubeStateSet(d8OpenvpnNamespace + validCertSecret + validCACert + openvpnStatefulSet))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunGoHook()
-
 		})
 
-		// Check cert is not deleted
-		It("Hook is executed successfully", func() {
+		It("Server cert should exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Secrets("d8-openvpn").Get(context.Background(), "openvpn-pki-server", metav1.GetOptions{})
-			Expect(err).To(BeNil(), "Secret 'openvpn-pki-server' should still exist")
+			secret := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server")
+			Expect(secret.Exists()).To(BeTrue())
 		})
 	})
 
 	Context("Cluster with empty secret (no cert data)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 */6 * * *"))
-
-			var ns corev1.Namespace
-			var secret corev1.Secret
-			var statefulSet appsv1.StatefulSet
-
-			_ = yaml.Unmarshal([]byte(d8OpenvpnNamespace), &ns)
-			_ = yaml.Unmarshal([]byte(emptySecret), &secret)
-			_ = yaml.Unmarshal([]byte(openvpnStatefulSet), &statefulSet)
-
-			// Create resources
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.CoreV1().Secrets("d8-openvpn").Create(context.TODO(), &secret, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.AppsV1().StatefulSets("d8-openvpn").Create(context.TODO(), &statefulSet, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
+			f.BindingContexts.Set(f.KubeStateSet(d8OpenvpnNamespace + emptySecret + validCACert + openvpnStatefulSet))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunGoHook()
 		})
 
-		// Check secret is not deleted
 		It("Hook does not delete empty secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Secrets("d8-openvpn").Get(context.Background(), "openvpn-pki-server", metav1.GetOptions{})
-			Expect(err).To(BeNil(), "Secret 'openvpn-pki-server' should still exist")
+			secret := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server")
+			Expect(secret.Exists()).To(BeTrue())
 		})
 	})
 
 	Context("Cluster with invalid cert", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 */6 * * *"))
-
-			var ns corev1.Namespace
-			var secret corev1.Secret
-			var statefulSet appsv1.StatefulSet
-
-			_ = yaml.Unmarshal([]byte(d8OpenvpnNamespace), &ns)
-			_ = yaml.Unmarshal([]byte(invalidCertSecret), &secret)
-			_ = yaml.Unmarshal([]byte(openvpnStatefulSet), &statefulSet)
-
-			// Create resources
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.CoreV1().Secrets("d8-openvpn").Create(context.TODO(), &secret, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			_, err = k8sClient.AppsV1().StatefulSets("d8-openvpn").Create(context.TODO(), &statefulSet, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
+			f.BindingContexts.Set(f.KubeStateSet(d8OpenvpnNamespace + invalidCACertSecret + emptySecret + openvpnStatefulSet))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunGoHook()
 		})
 
 		// Check secret is not deleted
 		It("Hook does not delete invalid certificate secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err := k8sClient.CoreV1().Secrets("d8-openvpn").Get(context.Background(), "openvpn-pki-server", metav1.GetOptions{})
-			Expect(err).To(BeNil(), "Secret 'openvpn-pki-server' should still exist")
+			secret := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server")
+			Expect(secret.Exists()).To(BeTrue())
 		})
 	})
 })

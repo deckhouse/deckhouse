@@ -60,7 +60,7 @@ function prepare_channels() {
 }
 
 function run_hugo() {
-    docker run --rm -p 1313:1313 -v $BUILDER_TEMPLATE_PATH:/src klakegg/hugo:0.111.3-ext-alpine server --renderToDisk --disableFastRender --environment production
+    docker run --rm -p 1313:1313 -v $BUILDER_TEMPLATE_PATH:/src -w /src cibuilds/hugo:0.147.7 hugo server --disableFastRender --environment production
 }
 
 if [ "$1" = "clean" ]; then

@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: The `alliance.ingressGateway.advertise` option was fixed up.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13924
+

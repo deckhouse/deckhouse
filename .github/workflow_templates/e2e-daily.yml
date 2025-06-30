@@ -76,7 +76,7 @@ jobs:
     name: Send alert about workflow problem
     runs-on: ubuntu-latest
     needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
-    if: ${{ failure() }}
+    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:
 {!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}

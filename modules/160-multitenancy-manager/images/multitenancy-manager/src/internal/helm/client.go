@@ -302,6 +302,21 @@ func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}
 		}
 	}
 
+	// handle additionalProperties (map types)
+	if schema.AdditionalProperties != nil {
+		mapResult := make(map[string]interface{})
+		for key, value := range projectValues {
+			// skip keys that are already handled as properties
+			if _, exists := schema.Properties[key]; exists {
+				continue
+			}
+
+			mapResult[key] = value
+		}
+
+		result = mapResult
+	}
+
 	return result
 }
 

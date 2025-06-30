@@ -46,7 +46,6 @@ type ModuleReleaseFetcherConfig struct {
 	RegistryClientMetaFetcher cr.Client
 	Clock                     clockwork.Clock
 	ModuleDownloader          *downloader.ModuleDownloader
-	// moduleManager             moduleManager
 
 	ModuleName        string
 	TargetReleaseMeta *downloader.ModuleDownloadResult
@@ -60,20 +59,19 @@ type ModuleReleaseFetcherConfig struct {
 	Logger *log.Logger
 }
 
-func NewDeckhouseReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetcher {
+func NewModuleReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetcher {
 	return &ModuleReleaseFetcher{
 		k8sClient:                cfg.K8sClient,
 		registryClientTagFetcher: cfg.RegistryClientTagFetcher,
 		clock:                    cfg.Clock,
 		moduleDownloader:         cfg.ModuleDownloader,
-		// moduleManager:             cfg.moduleManager,
-		moduleName:        cfg.ModuleName,
-		targetReleaseMeta: cfg.TargetReleaseMeta,
-		source:            cfg.Source,
-		updatePolicyName:  cfg.UpdatePolicyName,
-		metricStorage:     cfg.MetricStorage,
-		metricGroupName:   cfg.MetricModuleGroup,
-		logger:            cfg.Logger,
+		moduleName:               cfg.ModuleName,
+		targetReleaseMeta:        cfg.TargetReleaseMeta,
+		source:                   cfg.Source,
+		updatePolicyName:         cfg.UpdatePolicyName,
+		metricStorage:            cfg.MetricStorage,
+		metricGroupName:          cfg.MetricModuleGroup,
+		logger:                   cfg.Logger,
 	}
 }
 
@@ -82,7 +80,6 @@ type ModuleReleaseFetcher struct {
 	registryClientTagFetcher cr.Client
 	clock                    clockwork.Clock
 	moduleDownloader         *downloader.ModuleDownloader
-	// moduleManager  moduleManager
 
 	moduleName        string
 	targetReleaseMeta *downloader.ModuleDownloadResult
@@ -96,7 +93,7 @@ type ModuleReleaseFetcher struct {
 	logger *log.Logger
 }
 
-// checkDeckhouseRelease create fetcher and start
+// fetchModuleReleases create fetcher and start
 func (r *reconciler) fetchModuleReleases(
 	ctx context.Context,
 	moduleDownloader *downloader.ModuleDownloader,
@@ -107,11 +104,11 @@ func (r *reconciler) fetchModuleReleases(
 	metricModuleGroup string,
 	opts []cr.Option,
 ) error {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkDeckhouseRelease")
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkModuleRelease")
 	defer span.End()
 
 	// client watch only one channel
-	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
+	// registry.deckhouse.io/deckhouse/ce/modules/$module/release-channel:$release-channel
 	registryClient, err := r.dc.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
@@ -131,15 +128,20 @@ func (r *reconciler) fetchModuleReleases(
 		Logger:                   r.logger.Named("release-fetcher"),
 	}
 
-	releaseFetcher := NewDeckhouseReleaseFetcher(cfg)
+	releaseFetcher := NewModuleReleaseFetcher(cfg)
 
 	return releaseFetcher.fetchModuleReleases(ctx)
 }
 
 // fetchModuleReleases is a complete flow for loop
 func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchDeckhouseRelease")
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchModuleRelease")
 	defer span.End()
+
+	logger := f.logger.With(
+		slog.String("module_name", f.moduleName),
+		slog.String("source_name", f.source.Name),
+	)
 
 	releases, err := f.listModuleReleases(ctx, f.moduleName)
 	if err != nil {
@@ -149,13 +151,15 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	var releaseForUpdate *v1alpha1.ModuleRelease
 	releasesInCluster := make([]*v1alpha1.ModuleRelease, 0, len(releases))
 
-	idx, deployedRelease := getLatestDeployedRelease(releases)
-	if idx != -1 {
-		releasesInCluster = releases[:idx+1]
+	deployedIdx, deployedRelease := getLatestDeployedRelease(releases)
+	if deployedIdx != -1 {
+		logger.Debug("no latest deploy release")
+
+		releasesInCluster = releases[:deployedIdx+1]
 		releaseForUpdate = deployedRelease
 	}
 
-	// check sequence from the start if no deckhouse release deployed
+	// check sequence from the start if no module release deployed
 	// last element because it's reversed
 	if len(releasesInCluster) == 0 && len(releases) > 0 {
 		releaseForUpdate = releases[len(releases)-1]
@@ -168,8 +172,20 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
+	def, err := f.moduleDownloader.DownloadModuleDefinitionByVersion(f.moduleName, f.targetReleaseMeta.ModuleVersion)
+	if err != nil {
+		return fmt.Errorf("download module definition: %w", err)
+	}
+
+	f.targetReleaseMeta.ModuleDefinition = def
+
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
+
+	logger.Debug("start ensure releases",
+		slog.Bool("deployed_release_found", deployedIdx != -1),
+		slog.String("module_version", newSemver.String()),
+	)
 
 	err = f.ensureReleases(ctx, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
@@ -204,7 +220,15 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		"registry": f.source.Spec.Registry.Repo,
 	}
 
+	logger := f.logger.With(
+		slog.String("module_name", f.moduleName),
+		slog.String("source_name", f.source.Name),
+		slog.String("module_version", f.targetReleaseMeta.ModuleVersion),
+	)
+
 	if len(releasesInCluster) == 0 {
+		logger.Debug("no release in cluster")
+
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -217,6 +241,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	actual := releaseForUpdate
 	metricLabels["actual_version"] = "v" + actual.GetVersion().String()
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
+		logger.Debug("from deployed")
+
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -239,6 +265,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
+			logger.Debug("from deployed")
+
 			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
 			if err != nil {
 				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
@@ -258,9 +286,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	current := actual.GetVersion()
 	for _, ver := range vers {
 		ensureErr := func() error {
-			f.logger.Debug("ensure module release for module for the module source",
-				slog.String("name", f.moduleName),
-				slog.String("source_name", f.source.Name))
+			logger.Debug("ensure module release", slog.String("version", ver.String()))
 
 			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
 			if err != nil {
@@ -399,7 +425,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			Spec: v1alpha1.ModuleReleaseSpec{
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleWeight,
+				Weight:     meta.ModuleDefinition.Weight,
 				Changelog:  meta.Changelog,
 			},
 		}
@@ -449,7 +475,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleWeight,
+		Weight:     meta.ModuleDefinition.Weight,
 		Changelog:  meta.Changelog,
 	}
 

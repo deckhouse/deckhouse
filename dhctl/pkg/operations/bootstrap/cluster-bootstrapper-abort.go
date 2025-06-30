@@ -83,11 +83,11 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
-
 	if err != nil {
 		return err
 	}
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)

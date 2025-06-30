@@ -40,6 +40,13 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /candi/openapi/dhctl
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
 - add: /deckhouse-controller/crds
   to: /src/global/crds
   owner: jekyll
