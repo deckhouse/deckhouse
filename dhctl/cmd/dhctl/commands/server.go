@@ -34,6 +34,13 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		deadlock.Opts.OnPotentialDeadlock = func() {
 			fmt.Fprintf(os.Stderr, "Deadlock detected\n")
 		}
+
+		if deadlock.Enabled {
+			fmt.Fprintf(os.Stderr, "Deadlock detect enabled\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "Deadlock detect disabled\n")
+		}
+
 		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
 	})
 	return cmd
