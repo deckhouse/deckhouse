@@ -312,36 +312,6 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	}
 }
 
-// fetchReleaseImageInfoByVersion get Image, Digest and release metadata by version
-// return error if version.json not found in metadata
-// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName:$moduleVersion
-func (md *ModuleDownloader) fetchReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ReleaseImageInfo, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchReleaseImageInfoByVersion")
-	defer span.End()
-
-	md.logger.Info("fetching module release metadata",
-		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName)),
-		slog.String("module_version", moduleVersion),
-	)
-
-	md.logger.Debug("module metadata",
-		slog.String("module_name", moduleName),
-	)
-
-	// fill releaseImageInfo.Image
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %w", err)
-	}
-
-	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, moduleVersion)
-	if err != nil {
-		return nil, fmt.Errorf("get image info: %w", err)
-	}
-
-	return releaseImageInfo, nil
-}
-
 // fetchModuleReleaseMetadataFromReleaseChannel get Image, Digest and release metadata by releaseChannel
 // releaseChannel must be in kebab-case
 // return error if version.json not found in metadata
