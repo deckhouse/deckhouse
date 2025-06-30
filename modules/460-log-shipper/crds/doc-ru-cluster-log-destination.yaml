@@ -487,6 +487,10 @@ spec:
                             properties:
                               depth:
                                 description: Глубина парсинга JSON.
+                          nginxLog:
+                            properties:
+                              format:
+                                description: Формат, используемый для анализа лога.
                       dropLabels:
                         description: Удаление заданных лейблов.
                         properties:

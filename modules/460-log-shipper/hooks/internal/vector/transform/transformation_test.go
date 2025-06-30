@@ -77,6 +77,15 @@ var testCases = []struct {
 		},
 		"if is_string(.message) {\n.message = parse_nginx_log(.message, \"main\") ?? .message\n}",
 	},
+	{"ParseMessage Logfmt Format",
+		v1alpha1.TransformationSpec{
+			Action: v1alpha1.ParseMessage,
+			ParseMessage: v1alpha1.ParseMessageSpec{
+				SourceFormat: "Logfmt",
+			},
+		},
+		"if is_string(.message) {\n  .message = parse_logfmt(.message) ?? .message\n}",
+	},
 	{"ParseMessage CLF Format",
 		v1alpha1.TransformationSpec{
 			Action: v1alpha1.ParseMessage,

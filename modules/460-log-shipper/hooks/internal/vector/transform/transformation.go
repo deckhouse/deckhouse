@@ -19,6 +19,7 @@ package transform
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -64,7 +65,7 @@ func replaceKeys(r v1alpha1.ReplaceKeysSpec) (apis.LogTransform, error) {
 	}
 	for _, l := range r.Labels {
 		if !validLabel(l) {
-			return nil, fmt.Errorf("transformations replaceDotKeys label: %s not valid", l)
+			return nil, fmt.Errorf("transformations replaceKeys label: %s not valid", l)
 		}
 		sources = append(sources, vrl.ReplaceKeys(l, r.Source, r.Target))
 	}
@@ -73,11 +74,11 @@ func replaceKeys(r v1alpha1.ReplaceKeysSpec) (apis.LogTransform, error) {
 
 func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	var source string
-	vrlName := fmt.Sprintf("tf_ensureStructuredMessage_%s", e.SourceFormat)
+	vrlName := fmt.Sprintf("tf_parseMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
 	case v1alpha1.FormatString:
 		if e.String.TargetField == "" {
-			return nil, fmt.Errorf("transformations ensureStructuredMessage string: TargetField is empty")
+			return nil, fmt.Errorf("transformations parseMessage string: TargetField is empty")
 		}
 		source = vrl.ParseStringMessage(e.String.TargetField)
 	case v1alpha1.FormatJSON:
@@ -85,13 +86,18 @@ func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	case v1alpha1.FormatKlog:
 		source = vrl.ParseKlogMessage.String()
 	case v1alpha1.FormatNginxLog:
+		if !slices.Contains(v1alpha1.NginxLogFormat, e.NginxLog.Format) {
+			return nil, fmt.Errorf("transformations parseMessage NginxLog: Format is not valid")
+		}
 		source = vrl.ParseNginxLogMessage(e.NginxLog.Format)
 	case v1alpha1.FormatCLF:
 		source = vrl.ParseCLFMessage.String()
 	case v1alpha1.FormatSysLog:
 		source = vrl.ParseSysLogMessage.String()
+	case v1alpha1.FormatLogfmt:
+		source = vrl.ParseLogfmtMessage.String()
 	default:
-		return nil, fmt.Errorf("transformations ensureStructuredMessage: sourceFormat %s not valid", e.SourceFormat)
+		return nil, fmt.Errorf("transformations parseMessage: sourceFormat %s not valid", e.SourceFormat)
 	}
 	return NewTransformation(vrlName, source), nil
 }

@@ -55,6 +55,7 @@ const (
 	FormatNginxLog SourceFormat = "NginxLog"
 	FormatSysLog   SourceFormat = "SysLog"
 	FormatCLF      SourceFormat = "CLF"
+	FormatLogfmt   SourceFormat = "Logfmt"
 )
 
 type SourceFormatStringSpec struct {
@@ -66,3 +67,5 @@ type SourceFormatJSONSpec struct {
 type SourceFormatNginxLogSpec struct {
 	Format string `json:"format,omitempty"`
 }
+
+var NginxLogFormat = []string{"combined", "error", "ingress_upstreaminfo", "main"}

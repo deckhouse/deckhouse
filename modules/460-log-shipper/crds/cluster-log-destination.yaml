@@ -855,7 +855,7 @@ spec:
                               - pod_labels
                         ```
 
-                      - `EnsureStructuredMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                      - `ParceMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
                             
                         Example:
 
@@ -980,10 +980,16 @@ spec:
                                   - "CLF"
                             required:
                               - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "Logfmt"
+                            required:
+                              - sourceFormat
                         properties:
                           sourceFormat:
                             type: string
-                            enum: ["String", "JSON", "Klog", "NginxLog", "SysLog", "CLF"]
+                            enum: ["String", "JSON", "Klog", "NginxLog", "SysLog", "CLF", "Logfmt"]
                             description: "Message format for parsing in JSON."
                           string:
                             type: object
@@ -1007,6 +1013,7 @@ spec:
                             properties:
                               format:
                                 type: string
+                                enum: ["combined", "error", "ingress_upstreaminfo", "main"]
                                 description: "The format to use for parsing the log."
                       dropLabels:
                         type: object

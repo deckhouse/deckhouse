@@ -581,6 +581,129 @@ Transformed result:
 {... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
 ```
 
+### Parse Syslog logs to structured JSON
+
+You can use the `ParseMessage` transformation 
+to parse Syslog logs into a structured JSON object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Syslog
+```
+
+Example original log entry:
+
+```text
+<13>1 2020-03-13T20:45:38.119Z dynamicwireless.name non 2426 ID931 [exampleSDID@32473 iut="3" eventSource= "Application" eventID="1011"] Try to override the THX port, maybe it will reboot the neural interface!
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "appname": "non",
+  "exampleSDID@32473": {
+    "eventID": "1011",
+    "eventSource": "Application",
+    "iut": "3"
+  },
+  "facility": "user",
+  "hostname": "dynamicwireless.name",
+  "message": "Try to override the THX port, maybe it will reboot the neural interface!",
+  "msgid": "ID931",
+  "procid": 2426,
+  "severity": "notice",
+  "timestamp": "2020-03-13T20:45:38.119Z",
+  "version": 1
+}}
+```
+
+### Parse CLF logs to structured JSON
+
+You can use the `ParseMessage` transformation 
+to parse CLF logs into a structured JSON object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: CLF
+```
+
+Example original log entry:
+
+```text
+127.0.0.1 bob frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "host": "127.0.0.1",
+  "identity": "bob",
+  "message": "GET /apache_pb.gif HTTP/1.0",
+  "method": "GET",
+  "path": "/apache_pb.gif",
+  "protocol": "HTTP/1.0",
+  "size": 2326,
+  "status": 200,
+  "timestamp": "2000-10-10T20:55:36Z",
+  "user": "frank"
+}}
+```
+
+### Parse Logfmt logs to structured JSON
+
+You can use the `ParseMessage` transformation 
+to parse Logfmt logs into a structured JSON object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Logfmt
+```
+
+Example original log entry:
+
+```text
+@timestamp=\"Sun Jan 10 16:47:39 EST 2021\" level=info msg=\"Stopping all fetchers\" tag#production=stopping_fetchers id=ConsumerFetcherManager-1382721708341 module=kafka.consumer.ConsumerFetcherManager
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "@timestamp": "Sun Jan 10 16:47:39 EST 2021",
+  "id": "ConsumerFetcherManager-1382721708341",
+  "level": "info",
+  "module": "kafka.consumer.ConsumerFetcherManager",
+  "msg": "Stopping all fetchers",
+  "tag#production": "stopping_fetchers"
+}}
+```
+
 ### Parse JSON and reduce nesting
 
 You can use the `ParseMessage` transformation to parse a log entry in JSON.

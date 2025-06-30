@@ -520,7 +520,7 @@ spec:
 ### Преобразование логов в структурированный JSON
 
 Вы можете использовать трансформацию `ParseMessage`,
-чтобы парсить или оборачивать записи в логах формате строки в структурированный JSON-объект.
+чтобы оборачивать записи в логах формате строки в структурированный JSON-объект.
 Если применяется несколько ParseMessage преобразование строки должно быть последним.
 
 ```yaml
@@ -578,6 +578,129 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ```json
 {... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+```
+
+### Преобразование логов в фрмате Syslog в структурированный JSON
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы парсить логи в формате Syslog в структурированный JSON-объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Syslog
+```
+
+Пример изначальной записи в логе:
+
+```text
+<13>1 2020-03-13T20:45:38.119Z dynamicwireless.name non 2426 ID931 [exampleSDID@32473 iut="3" eventSource= "Application" eventID="1011"] Try to override the THX port, maybe it will reboot the neural interface!
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "appname": "non",
+  "exampleSDID@32473": {
+    "eventID": "1011",
+    "eventSource": "Application",
+    "iut": "3"
+  },
+  "facility": "user",
+  "hostname": "dynamicwireless.name",
+  "message": "Try to override the THX port, maybe it will reboot the neural interface!",
+  "msgid": "ID931",
+  "procid": 2426,
+  "severity": "notice",
+  "timestamp": "2020-03-13T20:45:38.119Z",
+  "version": 1
+}}
+```
+
+### Преобразование логов в фрмате CLF в структурированный JSON
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы парсить логи в формате CLF в структурированный JSON-объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: CLF
+```
+
+Пример изначальной записи в логе:
+
+```text
+127.0.0.1 bob frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "host": "127.0.0.1",
+  "identity": "bob",
+  "message": "GET /apache_pb.gif HTTP/1.0",
+  "method": "GET",
+  "path": "/apache_pb.gif",
+  "protocol": "HTTP/1.0",
+  "size": 2326,
+  "status": 200,
+  "timestamp": "2000-10-10T20:55:36Z",
+  "user": "frank"
+}}
+```
+
+### Преобразование логов в фрмате LogFmt в структурированный JSON
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы парсить логи в формате Logfmt в структурированный JSON-объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Logfmt
+```
+
+Пример изначальной записи в логе:
+
+```text
+@timestamp=\"Sun Jan 10 16:47:39 EST 2021\" level=info msg=\"Stopping all fetchers\" tag#production=stopping_fetchers id=ConsumerFetcherManager-1382721708341 module=kafka.consumer.ConsumerFetcherManager
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "@timestamp": "Sun Jan 10 16:47:39 EST 2021",
+  "id": "ConsumerFetcherManager-1382721708341",
+  "level": "info",
+  "module": "kafka.consumer.ConsumerFetcherManager",
+  "msg": "Stopping all fetchers",
+  "tag#production": "stopping_fetchers"
+}}
 ```
 
 ### Парсинг JSON и уменьшение вложенности
