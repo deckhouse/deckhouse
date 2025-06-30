@@ -91,3 +91,5 @@ In the status section, you’ll see the following parameters:
 1. Apply the VPA configuration file using `kubectl apply -f <your-config-file-name>`.
 
 For more details on VPA resource limits configuration, see [the documentation](../../../user/configuration/app-scaling/vpa.html#how-vpa-interacts-with-limits).
+
+![VPA architecture](https://raw.githubusercontent.com/kubernetes/design-proposals-archive/acc25e14ca83dfda4f66d8cb1f1b491f26e78ffe/autoscaling/images/vpa-architecture.png)
