@@ -68,4 +68,4 @@ type SourceFormatNginxLogSpec struct {
 	Format string `json:"format,omitempty"`
 }
 
-var NginxLogFormat = []string{"Combined", "Error", "Ingress_upstreaminfo", "Main"}
+var NginxLogFormat = []string{"combined", "error", "ingress_upstreaminfo", "main"}

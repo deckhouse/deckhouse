@@ -1013,7 +1013,6 @@ spec:
                             properties:
                               format:
                                 type: string
-                                enum: ["Combined", "Error", "Ingress_upstreaminfo", "Main"]
                                 description: "The format to use for parsing the log."
                       dropLabels:
                         type: object
