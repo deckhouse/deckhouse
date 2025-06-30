@@ -19,7 +19,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
