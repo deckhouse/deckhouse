@@ -615,7 +615,6 @@ disable:
 		err := suite.ctr.checkDeckhouseRelease(context.TODO())
 		require.NoError(suite.T(), err)
 	})
-
 }
 
 type fakeLayer struct {
