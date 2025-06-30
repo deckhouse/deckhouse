@@ -283,7 +283,7 @@ import:
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap) }}
 shell:
   beforeInstall:
-  - apk add --no-cache findutils sed make git
+  - apk add --no-cache findutils sed make git coreutils
   {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
 
 {{- end }}
