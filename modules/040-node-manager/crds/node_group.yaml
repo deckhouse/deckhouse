@@ -1544,7 +1544,7 @@ spec:
                         timeSlicing: {}
                     - properties:
                         sharing:
-                          enum: [Mig]
+                          enum: [MIG]
                         mig: {}
                     - properties:
                         sharing:
