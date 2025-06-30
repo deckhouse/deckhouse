@@ -145,17 +145,14 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
 
-	err = handleDiscoveryDataVolumeTypes(input, discoveryData.StorageClassList)
-	if err != nil {
-		return err
-	}
+	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageClassList)
 	return nil
 }
 
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	dvpStorageClassList []cloudDataV1.DVPStorageClass,
-) error {
+) {
 	dvpstorageClass := make(map[string]cloudDataV1.DVPStorageClass, len(dvpStorageClassList))
 
 	for _, sc := range dvpStorageClassList {
@@ -178,17 +175,6 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	// TODO: review this, looks like deadcode
-	storageClassSnapshots := make(map[string]*storage.StorageClass)
-
-	for snapshot, err := range sdkobjectpatch.SnapshotIter[*storage.StorageClass](input.NewSnapshots.Get("storage_classes")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %w", err)
-		}
-
-		storageClassSnapshots[snapshot.Name] = snapshot
-	}
-
 	storageClasses := make([]storageClass, 0, len(dvpStorageClassList))
 	for name, domain := range dvpstorageClass {
 		sc := storageClass{
@@ -205,7 +191,6 @@ func handleDiscoveryDataVolumeTypes(
 	input.Logger.Info("Found DVP storage classes using StorageClass snapshots, StorageClasses from discovery data: %v", storageClasses)
 
 	setStorageClassesValues(input, storageClasses)
-	return nil
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
