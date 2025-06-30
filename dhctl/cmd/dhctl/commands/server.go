@@ -15,7 +15,10 @@
 package commands
 
 import (
+	"fmt"
+	"github.com/linkdata/deadlock"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
@@ -27,6 +30,10 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		deadlock.Opts.PrintAllCurrentGoroutines = true
+		deadlock.Opts.OnPotentialDeadlock = func() {
+			fmt.Fprintf(os.Stderr, "Deadlock detected\n")
+		}
 		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
 	})
 	return cmd

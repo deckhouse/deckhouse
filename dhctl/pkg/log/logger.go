@@ -283,13 +283,11 @@ func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
 	if d.debugLogWriter != nil {
-		d.logboekLogger.Info().LogF("debugLogWriter found start write to writer\n")
 		o := fmt.Sprintf(format, a...)
 		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
 		if err != nil {
 			d.logboekLogger.Info().LogF("cannot write debug log (%s): %v", o, err)
 		}
-		d.logboekLogger.Info().LogF("debugLogWriter log written\n")
 	}
 
 	if d.isDebug {
