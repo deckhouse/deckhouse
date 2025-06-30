@@ -11,7 +11,8 @@
 # List of binary files used by agent
 {{ $binariesFromBaseImages := "" }}
 # shell-scripts dependencies
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep  /usr/bin/sed" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep /usr/bin/sed" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/nsenter /bin/mount" }}
 {{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/head" }}
 {{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/wc" }}
 # groups
@@ -27,7 +28,7 @@
 # from base install script
 {{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }}
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sh /usr/bin/nsenter /bin/mount" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }}
 # kmod and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
@@ -311,6 +312,13 @@ import:
 - image: tools/tar
   before: install
   add: /usr/bin/tar
+- image: tools/util-linux
+  before: install
+  add: /usr/bin/nsenter
+- image: tools/util-linux
+  before: install
+  add: /bin/mount
+  to: /usr/bin/mount
 git:
 {{- include "image mount points" . }}
 imageSpec:
