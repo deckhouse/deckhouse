@@ -146,6 +146,7 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal start 'config_map' snapshot: %w", err)
 		}
+		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capsFromStartSnap)
 
 		capiEnabled = hasCapiProvider || capsFromStartSnap
 		capsEnabled = capsFromStartSnap
