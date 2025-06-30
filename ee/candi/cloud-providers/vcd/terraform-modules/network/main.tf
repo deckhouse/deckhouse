@@ -29,3 +29,16 @@ resource "vcd_network_routed_v2" "network" {
   dns1          = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 0 ? var.providerClusterConfiguration.internalNetworkDNSServers[0] : null
   dns2          = length(var.providerClusterConfiguration.internalNetworkDNSServers) > 1 ? var.providerClusterConfiguration.internalNetworkDNSServers[1] : null
 }
+
+resource "vcd_nsxt_network_dhcp" "pools" {
+  count = local.useNSXT ? 1 : 0
+
+  org_network_id = vcd_network_routed_v2.network.id
+  dns_servers    = var.providerClusterConfiguration.internalNetworkDNSServers
+
+  pool {
+    start_address = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 30)
+    end_address   = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, -2)
+  }
+
+}
