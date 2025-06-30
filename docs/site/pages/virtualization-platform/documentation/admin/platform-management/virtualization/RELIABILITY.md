@@ -112,7 +112,7 @@ The following requirements must be met for this mechanism to work:
 - The virtual machine startup policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
 - The [Fencing mechanism](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode) must be enabled on nodes running the virtual machines.
 
-  Let's see how it works on the example:
+Let's see how it works on the example:
 
 1. A cluster consists of three nodes: `master`, `workerA`, and `workerB`. The worker nodes have the Fencing mechanism enabled. The `linux-vm` virtual machine is running on the `workerA` node.
 1. A problem occurs on the `workerA` node (power outage, no network connection, etc.).

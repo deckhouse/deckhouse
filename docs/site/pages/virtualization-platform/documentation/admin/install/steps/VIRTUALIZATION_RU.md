@@ -85,7 +85,7 @@ vm-route-forge-nq9xr                         1/1     Running   0             10m
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
 
 {% alert level="warning" %}
-Хранилище, обслуживающее данный класс хранения (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
+Хранилище, обслуживающее класс хранения (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
 {% endalert %}
 
 #### Сетевые настройки
