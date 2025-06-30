@@ -7,13 +7,22 @@
   {{- $versionMap := dict }}
   {{- range $_, $edition := $.Editions }}
    {{- if $edition.versionMapFile }}
-     {{- $versionMap = (merge $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
+     {{- $versionMap = (mergeOverwrite $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
    {{- end }}
    {{- if eq $.Env $edition.name }}
      {{- break -}}
    {{- end }}
   {{- end }}
 
+  # Filtering only non-empty values in k8s
+  {{- $filteredK8s := dict }}
+  {{- range $ver, $val := $versionMap.k8s }}
+    {{- if $val }}
+      {{- $_ := set $filteredK8s $ver $val }}
+    {{- end }}
+  {{- end }}
+
+  {{- $_ := set $versionMap "k8s" $filteredK8s }}
   {{- $_ := set $context "CandiVersionMap" $versionMap }}
   # kubernetes versions list
   {{- $kubernetesVersions := list }}

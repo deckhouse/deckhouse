@@ -445,7 +445,11 @@ spec:
                           - vsphereVolume
                     verifyImageSignatures:
                       type: array
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - se+
+                        - ee
+                        - cse-lite
+                        - cse-pro
                       x-doc-examples:
                         - - reference: docker.io/myrepo/*
                             publicKeys:

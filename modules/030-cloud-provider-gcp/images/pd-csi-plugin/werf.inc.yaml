@@ -53,9 +53,12 @@ git:
       install:
         - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.gcp }} {{ $.SOURCE_REPO }}/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $value.csi.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
@@ -64,20 +67,21 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - mkdir -p bin

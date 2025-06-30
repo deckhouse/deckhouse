@@ -63,6 +63,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- end }}
       serviceAccountName: d8-node-local-dns
+      automountServiceAccountToken: true
 {{- if (.Values.global.enabledModules | has "cni-cilium") }}
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
@@ -176,6 +177,7 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
@@ -197,6 +199,16 @@ spec:
         ports:
         - containerPort: 4224
           name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

@@ -70,6 +70,9 @@ properties:
   bgpPeers:
     type: array
     default: []
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: |
       A list of external BGP routers to use with the module.
 
@@ -237,6 +240,9 @@ properties:
     type: object
     description: |
       The BGP communities list.
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     x-doc-example:
       no-advertise: "65535:65282"
     additionalProperties:

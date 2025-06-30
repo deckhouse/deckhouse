@@ -1,5 +1,6 @@
 name: basic-auth
 weight: 500
+stage: "General Availability"
 namespace: kube-basic-auth
 
 requirements:

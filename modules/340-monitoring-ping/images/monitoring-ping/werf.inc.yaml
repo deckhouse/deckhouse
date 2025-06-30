@@ -1,73 +1,50 @@
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+    add: /src/monitoring-ping
+    to: /monitoring-ping
+    after: setup
+imageSpec:
+  config:
+    entrypoint: ["/monitoring-ping"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+fromImage: builder/golang-alpine-1.23
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /src
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go build -ldflags="-s -w" -o /src/monitoring-ping
+    - chmod 0700 /src/monitoring-ping # it is necessary to make a launch from user deckhouse after allocation of the file /var/run/node-exporter-textfile/monitoring-ping_*.prom
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src/monitoring-ping
-  stageDependencies:
-    install:
-    - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+        - "**/*"
 shell:
   install:
-  - cd /src
-  - git clone -b v5.2 --depth=1 {{ .SOURCE_REPO }}/schweikert/fping.git ./fping
-  - rm -rf fping/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
-from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/fping
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake
-  install:
-  - cd src
-  - autoreconf -i
-  - ./configure LDFLAGS="-static" --prefix=/opt/fping-static
-  - make
-  - make install
-  - chown -R 64535:64535 /opt/fping-static
-  - chmod 0700 /opt/fping-static/sbin/fping
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-fromImage: common/alt-p11-artifact
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping/requirements.txt
-  to: /requirements.txt
-  before: install
-- image: common/python-static
-  add: /opt/python-static
-  before: install
-shell:
-  beforeInstall:
-  - apt-get install -y git
-  install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
----
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping
-  to: /src
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /opt/python-static
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
-  add: /opt/fping-static/sbin/fping
-  to: /usr/sbin/fping
-  before: setup
-imageSpec:
-  config:
-    entrypoint: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
+    - cd /src

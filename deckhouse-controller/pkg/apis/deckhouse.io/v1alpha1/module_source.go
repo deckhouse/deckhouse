@@ -105,6 +105,7 @@ type ModuleSourceStatus struct {
 
 type AvailableModule struct {
 	Name       string `json:"name"`
+	Version    string `json:"version,omitempty"`
 	Policy     string `json:"policy,omitempty"`
 	Checksum   string `json:"checksum,omitempty"`
 	PullError  string `json:"pullError,omitempty"`

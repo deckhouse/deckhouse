@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{ $kubernetesVersion := .kubernetesVersion | toString }}
+{{ $kubeadmDir := ternary "/var/lib/bashible/kubeadm/v1beta4" "/var/lib/bashible/kubeadm/v1beta3" (semverCompare ">=1.31" $kubernetesVersion) }}
+
 {{- if eq .runType "ClusterBootstrap" }}
 # Read previously discovered IP
 export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
@@ -22,10 +25,10 @@ function subst_config() {
     mv "$tmpfile" "$1"
 }
 
-subst_config /var/lib/bashible/kubeadm/config.yaml
-for file in $(find /var/lib/bashible/kubeadm/patches/*.yaml); do
+subst_config {{ $kubeadmDir }}/config.yaml
+for file in $(find {{ $kubeadmDir }}/patches/*.yaml); do
   subst_config "$file"
 done
 {{- end }}
 
-kubeadm init phase certs ca --config /var/lib/bashible/kubeadm/config.yaml
+kubeadm init phase certs ca --config {{ $kubeadmDir }}/config.yaml

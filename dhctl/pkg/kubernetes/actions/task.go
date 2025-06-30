@@ -18,10 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 

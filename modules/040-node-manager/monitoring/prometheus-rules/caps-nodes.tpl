@@ -14,4 +14,10 @@
       plk_labels_as_annotations: "caps_md"
       summary: There are unavailable instances in the `{{`{{ $labels.machine_deployment_name }}`}}` MachineDeployment.
       description: |
-        In MachineDeployment `{{`{{ $labels.machine_deployment_name }}`}}` number of unavailable instances is **{{`{{ $value }}`}}**. Take a look and check at the state of the instances in the cluster: `kubectl get instance -l node.deckhouse.io/group={{`{{ $labels.machine_deployment_name }}`}}`
+        The MachineDeployment `{{`{{ $labels.machine_deployment_name }}`}}` has **{{`{{ $value }}`}}** unavailable instances.
+
+        Check the status of the instances in the cluster with the following command:
+
+        ```shell
+        kubectl get instance -l node.deckhouse.io/group={{`{{ $labels.machine_deployment_name }}`}}
+        ```

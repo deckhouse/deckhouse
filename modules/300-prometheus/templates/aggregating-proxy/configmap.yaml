@@ -18,7 +18,7 @@ data:
       grpc_listen_address: 127.0.0.1
       grpc_listen_port: 9095
     limits:
-      align_queries_with_step: false
+      align_queries_with_step: true
     frontend:
       cache_results: true
       log_queries_longer_than: 0

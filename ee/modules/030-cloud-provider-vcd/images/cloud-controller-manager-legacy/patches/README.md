@@ -19,3 +19,7 @@ Update dependencies
 ### 004-klog.patch
 
 Update klog to klog/v2 in other files
+
+### 005-add-vapptemplate-search-by-org.patch
+
+Add support for searching vAppTemplates in a given org

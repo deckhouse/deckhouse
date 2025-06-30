@@ -80,7 +80,7 @@ func delectStorageClassCloudManual(input *go_hook.HookInput) error {
 
 	for _, o := range storageclasses {
 		sc := o.(CloudStorageClass)
-		if sc.IsCloud && !(sc.Name == "vsphere-main" && sc.Provisioner == "vsphere.csi.vmware.com") {
+		if sc.IsCloud && (sc.Name != "vsphere-main" || sc.Provisioner != "vsphere.csi.vmware.com") {
 			input.MetricsCollector.Set(
 				"storage_class_cloud_manual",
 				1.0,

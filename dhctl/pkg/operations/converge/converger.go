@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -28,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
@@ -44,6 +43,7 @@ type Params struct {
 	KubeClient *client.KubernetesClient // optional
 
 	OnPhaseFunc     phases.DefaultOnPhaseFunc
+	OnProgressFunc  phases.OnProgressFunc
 	ChangesSettings infrastructure.ChangeActionSettings
 
 	*client.KubernetesInitParams
@@ -76,9 +76,15 @@ func NewConverger(params *Params) *Converger {
 	// }
 	// }
 
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
 	return &Converger{
-		Params:                 params,
-		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
+		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationConverge, params.OnPhaseFunc, params.OnProgressFunc,
+		),
 	}
 }
 

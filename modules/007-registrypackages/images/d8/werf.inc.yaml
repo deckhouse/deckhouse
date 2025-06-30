@@ -8,9 +8,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -35,7 +38,9 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye
+mount:
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -51,15 +56,20 @@ git:
     stageDependencies:
       setup:
       - '**/*'
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libbtrfs-dev -y
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
-  - export GOPROXY={{ $.GOPROXY }}
-
-  - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-  - GOPRIVATE="flant.internal"
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+  - export GOPRIVATE="flant.internal"
   - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
   - git config --global --add safe.directory '*'
   - mkdir -p ~/.ssh

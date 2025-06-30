@@ -4,7 +4,7 @@
       expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",violating_kind="Pod",violating_namespace=~".*",source_type="PSS"})) > 0
       for: 10m
       labels:
-        severity_level: "7"
+        severity_level: "3"
         d8_module: admission-policy-engine
         d8_component: gatekeeper
       annotations:
@@ -34,7 +34,7 @@
       expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})) > 0
       for: 10m
       labels:
-        severity_level: "7"
+        severity_level: "3"
         d8_module: admission-policy-engine
         d8_component: gatekeeper
       annotations:
@@ -62,7 +62,7 @@
       expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
       for: 10m
       labels:
-        severity_level: "7"
+        severity_level: "3"
         d8_module: admission-policy-engine
         d8_component: gatekeeper
       annotations:

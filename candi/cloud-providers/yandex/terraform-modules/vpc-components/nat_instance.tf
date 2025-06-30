@@ -27,24 +27,35 @@ data "yandex_vpc_subnet" "external_subnet" {
   subnet_id = var.nat_instance_external_subnet_id
 }
 
-data "yandex_compute_instance" "nat_instance" {
-  count = local.is_with_nat_instance ? (var.nat_instance_internal_subnet_cidr == null ? 1 : 0) : 0
-  name = join("-", [var.prefix, "nat"])
-}
-
 locals {
   user_internal_subnet_zone = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].zone
   external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
   internal_subnet_zone = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? "ru-central1-a" : local.external_subnet_zone) : local.user_internal_subnet_zone
 
+  # used for backward compatability
+  zone_to_subnet_id = tomap({
+    "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
+    "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
+    "ru-central1-d" = local.should_create_subnets ? yandex_vpc_subnet.kube_d[0].id : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].id)
+  })
+
+  # used for backward compatability
+  # we can not use one map because we will get cycle
+  # local.nat_instance_internal_address_calculated uses in route table and yandex_vpc_subnet.kube_* depend on route table
+  zone_to_cidr = tomap({
+    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
+    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
+    "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].v4_cidr_blocks[0])
+  })
+
   # if user set internal subnet id for nat instance get cidr from its subnet
   user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]
 
-  nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : local.user_internal_subnet_cidr
+  nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : (local.user_internal_subnet_cidr != null ? local.user_internal_subnet_cidr : local.zone_to_cidr[local.internal_subnet_zone])
 
-  # if user pass nat instance internal address directly (it for backward compatibility) use passed address,
+  # if user passes nat instance internal address directly (deprecated, keep for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
-  nat_instance_internal_address_calculated = local.is_with_nat_instance ? (var.nat_instance_internal_address != null ? var.nat_instance_internal_address : (local.nat_instance_internal_cidr != null ? cidrhost(local.nat_instance_internal_cidr, 10): null)) : null
+  nat_instance_internal_address_calculated = var.nat_instance_internal_address != null ? var.nat_instance_internal_address : cidrhost(local.nat_instance_internal_cidr, 10)
 
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
 
@@ -129,8 +140,8 @@ resource "yandex_compute_instance" "nat_instance" {
   }
 
   network_interface {
-    subnet_id      = var.nat_instance_internal_subnet_cidr != null ? yandex_vpc_subnet.nat_instance[0].id: (var.nat_instance_internal_subnet_id != null ? var.nat_instance_internal_subnet_id: data.yandex_compute_instance.nat_instance[0].network_interface.0.subnet_id)
-    ip_address     = local.nat_instance_internal_address_calculated != null ? local.nat_instance_internal_address_calculated : data.yandex_compute_instance.nat_instance[0].network_interface.0.ip_address
+    subnet_id      = var.nat_instance_internal_subnet_cidr != null ? yandex_vpc_subnet.nat_instance[0].id: (var.nat_instance_internal_subnet_id != null ? var.nat_instance_internal_subnet_id: local.zone_to_subnet_id[local.internal_subnet_zone])
+    ip_address     = local.nat_instance_internal_address_calculated
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
   }

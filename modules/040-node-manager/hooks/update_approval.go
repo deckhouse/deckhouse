@@ -241,7 +241,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for approvedNodeName := range approvedNodeNames {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
 			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		}
 
@@ -290,7 +290,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if !((node.IsDisruptionRequired || node.IsRollingUpdate) && !node.IsDraining) {
+		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
 			continue
 		}
 
@@ -319,7 +319,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.Logger.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
+			input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name))
 			input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
 			continue
 		}
@@ -366,7 +366,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			metricStatus = "DisruptionApproved"
 		}
 
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
 
@@ -415,7 +415,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
 	}

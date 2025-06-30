@@ -31,7 +31,7 @@ git:
         - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-user-authz-webhook-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
@@ -39,11 +39,13 @@ import:
     to: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     - go build -ldflags '-s -w' -o webhook ./cmd/webhook/main.go
     - go build -ldflags '-s -w' -o healthcheck ./cmd/healthcheck/main.go

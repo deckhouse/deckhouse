@@ -46,6 +46,7 @@ const labels = {
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
   'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
+  'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
@@ -58,6 +59,9 @@ const labels = {
   'e2e/use/edition/se': { type: 'e2e-use', edition: 'SE' },
   'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
   'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
+
+  // E2E: autoscaler
+  'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
@@ -77,7 +81,8 @@ const labels = {
   'e2e/use/cis': { type: 'e2e-use', cis: true },
 
   // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' }
+  'security/rootless': { type: 'security', security: 'rootless' },
+  'security/cve': { type: 'security', security: 'cve' }
 };
 module.exports.knownLabels = labels;
 

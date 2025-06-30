@@ -1,41 +1,34 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
   before: install
   includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
   before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

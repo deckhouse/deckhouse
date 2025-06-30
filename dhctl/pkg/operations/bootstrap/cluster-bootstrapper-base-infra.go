@@ -18,11 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -36,11 +35,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
-
 	if err != nil {
 		return err
 	}
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)

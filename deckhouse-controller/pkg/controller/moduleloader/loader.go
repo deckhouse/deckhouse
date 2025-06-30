@@ -83,13 +83,14 @@ type Loader struct {
 	globalDir string
 
 	dependencyContainer dependency.Container
+	exts                *extenders.ExtendersStack
 
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
@@ -101,6 +102,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		embeddedPolicy:       embeddedPolicy,
 		version:              version,
 		dependencyContainer:  dc,
+		exts:                 exts,
 	}
 }
 
@@ -205,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -235,6 +237,16 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 	}
 
 	return module, nil
+}
+
+func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
+	modules := []string{}
+	for _, module := range l.modules {
+		if module.GetModuleDefenition().ExclusiveGroup == exclusiveGroup {
+			modules = append(modules, module.GetBasicModule().Name)
+		}
+	}
+	return modules
 }
 
 // LoadModulesFromFS parses and ensures modules from FS
@@ -344,6 +356,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Weight = def.Weight
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
+			module.Properties.ExclusiveGroup = def.ExclusiveGroup
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())

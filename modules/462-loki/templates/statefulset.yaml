@@ -37,6 +37,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: {{ .Chart.Name }}
+      automountServiceAccountToken: true
       terminationGracePeriodSeconds: 4800
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -49,7 +50,7 @@ spec:
         command: [ '/usr/bin/loki', '-config.file=/etc/loki/config.yaml' ]
         env:
           - name: ALLOW_DELETE_LOGS
-            value: "{{ .Values.loki.allowDeleteLogs }}"
+            value: {{ .Values.loki.allowDeleteLogs | default "false" | quote }}
         volumeMounts:
           - name: config
             mountPath: /etc/loki/config.yaml

@@ -1,0 +1,80 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $enableWorkflowOnTestRepos := false }!}
+
+name: E2E Autoclean
+on:
+  schedule:
+  - cron: '0 7 * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [ closed ]
+
+env:
+  SCRIPT_DIR: ".github/scripts/python/e2e-commander-clean"
+  E2E_COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+  E2E_COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  e2e-autoclean:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: Run
+    needs:
+    - skip_tests_repos
+    runs-on: [self-hosted, regular]
+    steps:
+    {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      run: |
+        python ${SCRIPT_DIR}/main.py --auto
+    {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
+  e2e-pr-clean:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    env:
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    name: Run
+    needs:
+    - skip_tests_repos
+    runs-on: [ self-hosted, regular ]
+    steps:
+    {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      run: |
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+        python ${SCRIPT_DIR}/main.py --pr ${PULL_REQUEST_NUMBER}${REPO_SUFFIX:+-${REPO_SUFFIX}}

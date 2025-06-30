@@ -62,17 +62,30 @@ spec:
                 allowAccessToSystemNamespaces:
                   type: boolean
                   x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
                     Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
                     Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
-                  x-doc-d8Revision: ee
                   x-doc-default: false
                 limitNamespaces:
                   type: array
                   x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |
                     List of regex-patterns that define namespaces accessible by the user.
 
@@ -83,7 +96,6 @@ spec:
                     Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
                     Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
-                  x-doc-d8Revision: ee
                   x-doc-examples: ['production-.*']
                   items:
                     type: string
@@ -201,15 +213,28 @@ spec:
                 allowAccessToSystemNamespaces:
                   type: boolean
                   x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
                     Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
                     Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
-                  x-doc-d8Revision: ee
                   x-doc-default: false
                 namespaceSelector:
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |
                     Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
 
@@ -218,7 +243,6 @@ spec:
                     If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
 
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
-                  x-doc-d8Revision: ee
                   type: object
                   oneOf:
                     - required: ["labelSelector"]
@@ -233,7 +257,6 @@ spec:
                         Since `labelSelector` provides access to a limited number of the namespaces that match it, `matchAny` is needed in cases where access to all namespaces is to be granted.
                       type: boolean
                       enum: [true]
-                      x-doc-d8Revision: ee
                     labelSelector:
                       description: |
                         Defines the label selector-based filter of the namespaces.
@@ -244,12 +267,10 @@ spec:
                         If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
                       type: object
                       minProperties: 1
-                      x-doc-d8Revision: ee
                       properties:
                         matchExpressions:
                           type: array
                           description: An array of set-based expressions.
-                          x-doc-d8Revision: ee
                           x-doc-examples:
                             - - key: tier
                                 operator: In
@@ -276,11 +297,9 @@ spec:
                               key:
                                 description: A label name.
                                 type: string
-                                x-doc-d8Revision: ee
                               operator:
                                 description: A comparison operator.
                                 type: string
-                                x-doc-d8Revision: ee
                                 enum:
                                   - In
                                   - NotIn
@@ -288,7 +307,6 @@ spec:
                                   - DoesNotExist
                               values:
                                 description: A label value.
-                                x-doc-d8Revision: ee
                                 type: array
                                 items:
                                   type: string
@@ -297,9 +315,9 @@ spec:
                                   maxLength: 63
                         matchLabels:
                           type: object
-                          description: A set of labels a namespace must have to match.
+                          description: |
+                            A set of labels a namespace must have to match.
                           x-doc-examples: [{ "foo": "bar", "baz": "who" }]
-                          x-doc-d8Revision: ee
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
@@ -308,6 +326,13 @@ spec:
                 limitNamespaces:
                   type: array
                   x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |
                     List of regex-patterns that define namespaces accessible by the user.
 
@@ -318,7 +343,6 @@ spec:
                     Option available **only** if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
                     Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
-                  x-doc-d8Revision: ee
                   x-doc-examples: ['production-.*']
                   items:
                     type: string

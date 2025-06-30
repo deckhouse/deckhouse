@@ -1,5 +1,10 @@
 # Changelog v1.68
 
+## [MALFORMED]
+
+
+ - #12058 unknown section "ceph-csi"
+
 ## Know before update
 
 
@@ -46,7 +51,6 @@
  - **[candi]** Escaped character `%` in systemd for work proxy in containerd configuration. [#11483](https://github.com/deckhouse/deckhouse/pull/11483)
  - **[candi]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
  - **[candi]** Set `dhctl` to ignore metadata changes in the `vcd_vapp_vm` resource. [#11201](https://github.com/deckhouse/deckhouse/pull/11201)
- - **[ceph-csi]** CVE update go mod. [#12058](https://github.com/deckhouse/deckhouse/pull/12058)
  - **[chrony]** Fixed a security vulnerability in `chrony-exporter`. [#11558](https://github.com/deckhouse/deckhouse/pull/11558)
  - **[chrony]** Fixed a port conflict. [#11449](https://github.com/deckhouse/deckhouse/pull/11449)
  - **[chrony]** Added the missing libcap library. [#11431](https://github.com/deckhouse/deckhouse/pull/11431)
@@ -78,6 +82,7 @@
  - **[deckhouse-controller]** Fix DeckhouseRelease approval in the Manual update mode. [#12527](https://github.com/deckhouse/deckhouse/pull/12527)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
  - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
+ - **[dhctl]** Do not create a local-converger lock for commanderMode [#13454](https://github.com/deckhouse/deckhouse/pull/13454)
  - **[dhctl]** Escape special shell characters in sudo preflight check. [#12533](https://github.com/deckhouse/deckhouse/pull/12533)
  - **[dhctl]** sudoPassword from the connection-config not used in dhctl CLI and dhctl server [#12419](https://github.com/deckhouse/deckhouse/pull/12419)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
@@ -145,6 +150,7 @@
  - **[registrypackages]** CVE update ec2-describe-tags. [#12115](https://github.com/deckhouse/deckhouse/pull/12115)
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
+ - **[runtime-audit-engine]** Fix CrashLoopBack due to invalid config. [#13144](https://github.com/deckhouse/deckhouse/pull/13144)
  - **[runtime-audit-engine]** copy falcosecurity_falcosidekick_falco_events_total metric to falco_events for backward compatibility [#12873](https://github.com/deckhouse/deckhouse/pull/12873)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
  - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)

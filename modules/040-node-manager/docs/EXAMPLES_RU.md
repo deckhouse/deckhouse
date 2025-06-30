@@ -199,9 +199,9 @@ spec:
    EOF
    ```
 
-   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
+1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup). Параметр `count` обозначает количество `staticInstances`, подпадающих под `labelSelector`, которые будут добавлены в кластер, в данном случае `1`:
 
-1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить `labelSelector`, нужно создать новую `NodeGroup` и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
    kubectl create -f - <<EOF
@@ -218,6 +218,8 @@ spec:
            role: worker
    EOF
    ```
+
+   > Если необходимо добавить узлы в уже существующую группу узлов, укажите их желаемое количество в поле `.spec.count` NodeGroup.
 
 ### С помощью Cluster API Provider Static для нескольких групп узлов
 
@@ -326,7 +328,7 @@ spec:
 `StaticInstance` static-0:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-worker-1
@@ -603,4 +605,76 @@ spec:
     bb-sync-file \
       "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
       ${CONFIG_TMP_FILE} 
+```
+
+### Добавление в containerd возможности скачивать образы из insecure container registry
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-registry.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    REGISTRY_URL=private.registry.example
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+              endpoint = ["http://${REGISTRY_URL}"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+              auth = "AAAABBBCCCDDD=="
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              insecure_skip_verify = true
+    EOF
+  nodeGroups:
+    - "*"
+  weight: 31
+```
+
+Установите следующие параметры в ресурсе `NodeGroupConfiguration`:
+
+* `REGISTRY_URL: <ADDITIONAL_REGISTRY_URL>` — адрес insecure container registry. Пример: `REGISTRY_URL=private.registry.example`;
+* `auth: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
+
+Если разрешен анонимный доступ к образам в стороннем registry, значение параметра `auth` должно выглядеть следующим образом:
+
+```json
+{"auths": { "<ADDITIONAL_REGISTRY>": {}}}
+```
+
+Приведенное значение должно быть закодировано в Base64.
+
+Если для доступа к образам в стороннем registry необходима аутентификация, значение параметра `auth` должно выглядеть следующим образом:
+
+```json
+{"auths": { "<ADDITIONAL_REGISTRY>": {"username":"<ADDITIONAL_USERNAME>","password":"<ADDITIONAL_PASSWORD>","auth":"<AUTH_BASE64>"}}}
+```
+
+где:
+
+* `<ADDITIONAL_USERNAME>` — имя пользователя для аутентификации на `<ADDITIONAL_REGISTRY>`;
+* `<ADDITIONAL_PASSWORD>` — пароль пользователя для аутентификации на `<ADDITIONAL_REGISTRY>`;
+* `<ADDITIONAL_REGISTRY>` — адрес стороннего registry в виде `<HOSTNAME>[:PORT]`;
+* `<AUTH_BASE64>` — строка вида `<ADDITIONAL_USERNAME>:<ADDITIONAL_PASSWORD>`, закодированная в Base64.
+
+Итоговое значение для `auth` должно быть также закодировано в Base64.
+
+Вы можете использовать следующий скрипт для генерации `auth`:
+
+```shell
+declare MYUSER='<ADDITIONAL_USERNAME>'
+declare MYPASSWORD='<ADDITIONAL_PASWORD>'
+declare MYREGISTRY='<ADDITIONAL_REGISTRY>'
+
+MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
+MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
+
+echo "$MYRESULTSTRING"
 ```

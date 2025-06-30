@@ -1,19 +1,34 @@
+From 41610843d105dce5a0d29484e9f723a49f4114f3 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 16 Apr 2025 09:32:48 +0300
+Subject: [PATCH] add dhcp server for pods
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ bpf/bpf_lxc.c                       |   8 +
+ bpf/lib/dhcp.h                      | 394 ++++++++++++++++++++++++++++
+ pkg/datapath/linux/config/config.go |  45 ++++
+ pkg/defaults/defaults.go            |   4 +
+ pkg/option/config.go                |  12 +
+ 5 files changed, 463 insertions(+)
+ create mode 100644 bpf/lib/dhcp.h
+
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
-index e5653ec9f9..5ecc4c68f4 100644
+index 878185780a..46919871f1 100644
 --- a/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c
-@@ -38,6 +38,10 @@
- #include "lib/identity.h"
- #include "lib/policy.h"
- 
+@@ -52,6 +52,10 @@
+ #include "lib/nodeport.h"
+ #include "lib/policy_log.h"
+
 +#ifdef ENABLE_DHCPD
 +#include "lib/dhcp.h"
 +#endif
 +
- /* Override LB_SELECTION initially defined in node_config.h to force bpf_lxc to use the random backend selection
-  * algorithm for in-cluster traffic. Otherwise, it will fail with the Maglev hash algorithm because Cilium doesn't provision
-  * the Maglev table for ClusterIP unless bpf.lbExternalClusterIP is set to true.
-@@ -1396,6 +1400,10 @@ int cil_from_container(struct __ctx_buff *ctx)
+ /* Per-packet LB is needed if all LB cases can not be handled in bpf_sock.
+  * Most services with L7 LB flag can not be redirected to their proxy port
+  * in bpf_sock, so we must check for those via per packet LB as well.
+@@ -1511,6 +1515,10 @@ int cil_from_container(struct __ctx_buff *ctx)
  #endif /* ENABLE_IPV6 */
  #ifdef ENABLE_IPV4
  	case bpf_htons(ETH_P_IP):
@@ -22,8 +37,8 @@ index e5653ec9f9..5ecc4c68f4 100644
 +			break;
 +#endif
  		edt_set_aggregate(ctx, LXC_ID);
- 		ep_tail_call(ctx, CILIUM_CALL_IPV4_FROM_LXC);
- 		ret = DROP_MISSED_TAIL_CALL;
+ 		ret = tail_call_internal(ctx, CILIUM_CALL_IPV4_FROM_LXC, &ext_err);
+ 		sec_label = SECLABEL_IPV4;
 diff --git a/bpf/lib/dhcp.h b/bpf/lib/dhcp.h
 new file mode 100644
 index 0000000000..682fc7e4c6
@@ -272,7 +287,7 @@ index 0000000000..682fc7e4c6
 +	void *dhcp_options;
 +	void *data, *data_end;
 +
-+	union macaddr node_mac = NODE_MAC;
++	union macaddr node_mac = THIS_INTERFACE_MAC;
 +	__u32 yiaddr = LXC_IPV4;
 +	/* manually calculated, based on dhcp_prepare_options implementation */
 +	__u16 dhcp_options_len = 3 + 6 + 6 + 6 + 6 + 6 + sizeof(domain_search_list) + 1;
@@ -425,13 +440,13 @@ index 0000000000..682fc7e4c6
 +
 +#endif /* __LIB_DHCP__ */
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index 333076b2ff..11b6dc35e5 100644
+index a3243d93e3..a7dfd71a3d 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
-@@ -80,6 +80,41 @@ func writeIncludes(w io.Writer) (int, error) {
+@@ -100,6 +100,41 @@ func writeIncludes(w io.Writer) (int, error) {
  	return fmt.Fprintf(w, "#include \"lib/utils.h\"\n\n")
  }
- 
+
 +func ipv4ToHex(ipString string) (string, error) {
 +	ip := net.ParseIP(ipString)
 +	if ip == nil {
@@ -469,8 +484,8 @@ index 333076b2ff..11b6dc35e5 100644
 +
  // WriteNodeConfig writes the local node configuration to the specified writer.
  func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeConfiguration) error {
- 	extraMacrosMap := make(map[string]string)
-@@ -129,6 +164,16 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 	extraMacrosMap := make(dpdef.Map)
+@@ -169,6 +204,16 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  			cDefinesMap["IPV4_FRAG_DATAGRAMS_MAP"] = fragmap.MapName
  			cDefinesMap["CILIUM_IPV4_FRAG_MAP_MAX_ENTRIES"] = fmt.Sprintf("%d", option.Config.FragmentsMapEntries)
  		}
@@ -485,31 +500,31 @@ index 333076b2ff..11b6dc35e5 100644
 +			cDefinesMap["DOMAIN_SEARCH_LIST_VALUE"] = generateDomainSearchList(option.Config.DhcpdClusterDomain)
 +		}
  	}
- 
+
  	if option.Config.EnableIPv6 {
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index c9f89257a5..72b3cc610f 100644
+index 1a25f14957..a79767f26c 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
-@@ -559,6 +559,10 @@ const (
- 
- 	// EnableEnvoyConfig is the default value for option.EnableEnvoyConfig
- 	EnableEnvoyConfig = false
+@@ -595,6 +595,10 @@ const (
+
+ 	// EnableSourceIPVerification is the default value for source ip validation
+ 	EnableSourceIPVerification = true
 +
 +	DhcpdEnabled = false
 +	DhcpdClusterDNS = ""
 +	DhcpdClusterDomain = ""
  )
- 
+
  var (
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e891a60a3d..fc581d083a 100644
+index e4390c0622..b873f742b8 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -379,6 +379,11 @@ const (
+@@ -361,6 +361,11 @@ const (
  	// EnableIPMasqAgent enables BPF ip-masq-agent
  	EnableIPMasqAgent = "enable-ip-masq-agent"
- 
+
 +	// DdhcpdEnabled enables BPF dhcp server
 +	DhcpdEnabled = "dhcpd-enabled"
 +	DhcpdClusterDNS = "dhcpd-cluster-dns"
@@ -517,26 +532,26 @@ index e891a60a3d..fc581d083a 100644
 +
  	// EnableIPv4EgressGateway enables the IPv4 egress gateway
  	EnableIPv4EgressGateway = "enable-ipv4-egress-gateway"
- 
-@@ -1820,6 +1825,9 @@ type DaemonConfig struct {
- 	DeriveMasqIPAddrFromDevice string
- 	EnableBPFClockProbe        bool
- 	EnableIPMasqAgent          bool
-+	DhcpdEnabled               bool
-+	DhcpdClusterDNS            string
-+	DhcpdClusterDomain         string
- 	EnableIPv4EgressGateway    bool
- 	EnableEnvoyConfig          bool
- 	EnableIngressController    bool
-@@ -2513,6 +2521,7 @@ var (
- 		EnableBGPControlPlane:  defaults.EnableBGPControlPlane,
- 		EnableK8sNetworkPolicy: defaults.EnableK8sNetworkPolicy,
- 		EnableEnvoyConfig:      defaults.EnableEnvoyConfig,
-+		DhcpdEnabled:           defaults.DhcpdEnabled,
- 	}
- )
- 
-@@ -3166,6 +3175,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+
+@@ -1652,6 +1657,9 @@ type DaemonConfig struct {
+ 	EnableBPFMasquerade         bool
+ 	EnableMasqueradeRouteSource bool
+ 	EnableIPMasqAgent           bool
++	DhcpdEnabled                bool
++	DhcpdClusterDNS             string
++	DhcpdClusterDomain          string
+ 	IPMasqAgentConfigPath       string
+
+ 	EnableBPFClockProbe     bool
+@@ -2316,6 +2324,7 @@ var (
+ 		BPFEventsTraceEnabled:         defaults.BPFEventsTraceEnabled,
+ 		BPFConntrackAccounting:        defaults.BPFConntrackAccounting,
+ 		EnableEnvoyConfig:             defaults.EnableEnvoyConfig,
++		DhcpdEnabled:                  defaults.DhcpdEnabled,
+ 		EnableInternalTrafficPolicy:   defaults.EnableInternalTrafficPolicy,
+
+ 		EnableNonDefaultDenyPolicies: defaults.EnableNonDefaultDenyPolicies,
+@@ -2950,6 +2959,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.LocalRouterIPv6 = vp.GetString(LocalRouterIPv6)
  	c.EnableBPFClockProbe = vp.GetBool(EnableBPFClockProbe)
  	c.EnableIPMasqAgent = vp.GetBool(EnableIPMasqAgent)
@@ -545,7 +560,6 @@ index e891a60a3d..fc581d083a 100644
 +	c.DhcpdClusterDomain = vp.GetString(DhcpdClusterDomain)
  	c.EnableIPv4EgressGateway = vp.GetBool(EnableIPv4EgressGateway)
  	c.EnableEnvoyConfig = vp.GetBool(EnableEnvoyConfig)
- 	c.EnableIngressController = vp.GetBool(EnableIngressController)
--- 
+ 	c.IPMasqAgentConfigPath = vp.GetString(IPMasqAgentConfigPath)
+--
 2.34.1
-

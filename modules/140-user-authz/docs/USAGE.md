@@ -240,9 +240,9 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  # This option is only available if the enableMultiTenancy parameter is set.
   allowAccessToSystemNamespaces: false
-  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  # This option is only available if the enableMultiTenancy parameter is set.
   namespaceSelector:
     labelSelector:
       matchExpressions:
@@ -260,9 +260,9 @@ spec:
 There are two types of users in Kubernetes:
 
 * Service accounts managed by Kubernetes via the API;
-* Regular users managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
-  * Via the [user-authn](../../modules/user-authn/) module.
-  * Via the certificates.
+* Regular users and groups managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
+  * Via the `user-authn` module. The module supports the following external providers and authentication protocols: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. More details — in the documentation of the [`user-authn`](../../modules/user-authn/) module.
+  * Via the [certificates](#how-to-create-a-user-using-a-client-certificate).
 
 When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a bastion node.
 
@@ -305,12 +305,12 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+     # This option is only available if the enableMultiTenancy parameter is set.
      allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   If multitenancy is enabled in the Deckhouse configuration (the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter; it is only available in Enterprise Edition), configure the namespaces the ServiceAccount has access to (the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
+   If multitenancy is enabled in the Deckhouse configuration (via the [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) parameter), configure the namespaces the ServiceAccount has access to (via the [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
 
 1. Set the variable values (they will be used later) by running the following commands (**insert your own values**):
 
@@ -397,52 +397,178 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 
 ### How to create a user using a client certificate
 
-#### Creating a user
+{% alert level="info" %}
+This method is recommended for system needs (authentication of kubelets, control plane components, etc.). If you need to create a "normal" user (e.g. with console access, `kubectl`, etc.), use [kubeconfig generation](../user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).
+{% endalert %}
 
-* Get the cluster's root certificate (ca.crt and ca.key).
-* Generate the user key:
+To create a user with a client certificate, you can use either [OpenSSL](#creating-a-user-using-a-certificate-issued-via-openssl) or the [Kubernetes API (via the CertificateSigningRequest object)](#creating-a-user-by-issuing-a-certificate-via-the-kubernetes-api).
 
-  ```shell
-  openssl genrsa -out myuser.key 2048
-  ```
+{% alert level="warning" %}
+Certificates issued by any of these methods cannot be revoked.
+If a certificate is compromised, you will need to remove all permissions for that user (this can be difficult if the user is added to any groups: you will also need to remove all relevant groups).
+{% endalert %}
 
-* Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` & `mygroup2`):
+#### Creating a user using a certificate issued via OpenSSL
 
-  ```shell
-  openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-  ```
+{% alert level="warning" %}
+Consider security risks when using this method.
 
-* Sign the CSR using the cluster root certificate:
+The `ca.crt` and `ca.key` must not leave the master node: sign the CSR only on the master node.
 
-  ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-  ```
+Signing CSRs outside the master node risks compromising the cluster root certificate.
+{% endalert %}
 
-* Now you can use the certificate issued in the config file:
+The features of this method are:
 
-  ```shell
-  cat << EOF
-  apiVersion: v1
-  clusters:
-  - cluster:
-      certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<cluster_host>:6443
-    name: kubernetes
-  contexts:
-  - context:
-      cluster: kubernetes
-      user: myuser
-    name: myuser@kubernetes
-  current-context: myuser@kubernetes
-  kind: Config
-  preferences: {}
-  users:
-  - name: myuser
-    user:
-      client-certificate-data: $(cat myuser.crt | base64 -w0)
-      client-key-data: $(cat myuser.key | base64 -w0)
-  EOF
-  ```
+- The client certificate must be signed on the master node to prevent the cluster certificate from being compromised.
+- Access to the cluster CA key (`ca.key`) is required. Only the cluster administrator can sign certificates.
+
+To create a user using a client certificate issued through OpenSSL, follow these steps:
+
+1. Get the cluster’s root certificate (`ca.crt` and `ca.key`).
+1. Generate the user key:
+
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
+
+1. Create a CSR file and specify the username in it (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
+
+    ```shell
+    openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+    ```
+
+1. Upload the CSR created in the previous step (`myuser.csr` in this example) to the master node and sign it with the cluster root certificate. Example command to sign the CSR on the master node (make sure that the paths to `myuser.csr`, `ca.crt` and `ca.key` are correct for your case):
+
+    ```shell
+    openssl x509 -req -in myuser.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out myuser.crt -days 10
+    ```
+
+Now the certificate can be specified in the config file:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
+    server: https://<cluster_host>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
+
+#### Creating a user by issuing a certificate via the Kubernetes API
+
+This is a more secure method because a special kubernetes API is used to sign the certificate.
+
+The features of this method are:
+
+- API-based certificate signing: CSRs are processed through the Kubernetes API without requiring access to the CA’s private key (`ca.key`).
+- Not only the cluster administrator can issue client certificates. The right to create CSRs and sign them can be assigned to a specific user.
+
+To create a user using a client certificate issued through the Kubernetes API, follow these steps:
+
+1. Generate the user key:
+
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
+
+1. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
+
+    ```shell
+    openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+    ```
+
+1. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
+
+    > In the `request` field, specify the contents of the CSR created in the previous step, encoded in Base64.
+
+    ```yaml
+    apiVersion: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+    metadata:
+    name: demo-client-cert
+    spec:
+      request: # CSR in Base64
+      signerName: "kubernetes.io/kube-apiserver-client"
+      expirationSeconds: 7200
+      usages:
+      - "digital signature"
+      - "client auth"
+    ```
+  
+1. Apply the manifest to create a certificate signing request:
+  
+    ```shell
+    kubectl apply -f csr.yaml
+    ```
+
+1. Check that the certificate has been approved and issued:
+
+    ```shell
+    kubectl get csr demo-client-cert
+    ```
+
+    If the certificate is issued, it will have the value `Approved,Issued` in the `CONDITION` column. Example output:
+
+    ```shell
+    NAME               AGE     SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+    demo-client-cert   8m24s   kubernetes.io/kube-apiserver-client   kubernetes-admin   120m                Approved,Issued
+    ```
+
+    If the certificate is not automatically verified, verify it:
+
+    ```shell
+    kubectl certificate approve demo-client-cert
+    ```
+
+    Then, confirm that the certificate has been successfully approved.
+
+1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
+
+    ```shell
+    kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
+    ```
+
+Now the certificate can be specified in the config file:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
+    server: https://<cluster_host>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
 
 #### Granting access to the created user
 

@@ -19,7 +19,7 @@ lang: ru
 Для включения узла в эту группу нужно назначить ему соответствующую метку:
 
 ```shell
-d8 k label node <имя узла> node-role.deckhouse.io/egress=
+d8 k label node <имя узла> dedicated/egress=
 ```
 
 ### Режим PrimaryIPFromEgressGatewayNodeInterface
@@ -37,7 +37,7 @@ metadata:
   name: egress-gw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     # В качестве IP-адреса будет использоваться primary IP-адрес на публичном сетевом интерфейсе узла.
     mode: PrimaryIPFromEgressGatewayNodeInterface
@@ -65,7 +65,7 @@ metadata:
   name: egress-gw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     # В качестве IP-адреса будет использоваться primary IP-адрес на публичном сетевом интерфейсе узла.
     mode: VirtualIPAddress
@@ -89,7 +89,7 @@ EOF
 
 ```shell
 # Вывести узлы, подпадающие под spec.nodeSelector:
-d8 k get nodes -l node-role.deckhouse.io/egress="" -ojson | jq -r '.items[].metadata.name'
+d8 k get nodes -l dedicated/egress="" -ojson | jq -r '.items[].metadata.name'
 
 # Вывести узлы в состоянии Ready:
 d8 k get nodes -ojson | jq -r '.items[] | select(.status.conditions[] | select(.type == "Ready" and .status == "True")) | .metadata.name'

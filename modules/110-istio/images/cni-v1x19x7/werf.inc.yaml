@@ -27,15 +27,17 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -43,7 +45,7 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/istio-cni/

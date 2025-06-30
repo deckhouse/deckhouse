@@ -48,11 +48,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.17.0 {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
-  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus-deps.git /src/prometheus-deps
-  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
+  - git clone --depth 1 --branch v0.17.0 $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git /src/promu
+  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus-deps.git /src/prometheus-deps
+  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
   - git apply /patches/*.patch --verbose
   - rm -rf web/ui/*
@@ -61,7 +64,7 @@ shell:
   - rm -r documentation/examples/remote_storage
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -69,20 +72,21 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
   add: /src/promu
@@ -92,9 +96,12 @@ import:
   add: /src/prometheus
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /src

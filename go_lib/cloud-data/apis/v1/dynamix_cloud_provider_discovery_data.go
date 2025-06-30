@@ -24,5 +24,5 @@ type DynamixStorageEndpoint struct {
 	Name      string   `json:"name"`
 	Pools     []string `json:"pools"`
 	IsEnabled bool     `json:"isEnabled,omitempty"`
-	IsDefault bool     `json:"IsDefault,omitempty"`
+	IsDefault bool     `json:"isDefault,omitempty"`
 }

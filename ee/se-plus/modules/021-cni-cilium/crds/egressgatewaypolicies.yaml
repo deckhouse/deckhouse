@@ -26,7 +26,11 @@ spec:
           type: object
           description: |-
             Interface for configuring policies to redirect application traffic to specific egress gateways described through the EgressGateway interface.
-          x-doc-d8Revision: ee
+          x-doc-d8Editions:
+            - se+
+            - ee
+            - cse-lite
+            - cse-pro
           required:
             - spec
           properties:
@@ -36,19 +40,31 @@ spec:
                 - egressGatewayName
               properties:
                 destinationCIDRs:
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |-
                     Network requests towards these subnets will be routed through the egress gateway.
                   items:
                     type: string
                   type: array
                 egressGatewayName:
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |-
                     The name of the EgressGateway resource that describes the egress gateway for handling traffic.
                   type: string
                 excludedCIDRs:
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |-
                     Network ranges that are required to be excluded from the ranges described in `destinationCIDRs`.
                     Note that you do not need to exclude the special cluster ranges (`podSubnetCIDR` and `serviceSubnetCIDR`).
@@ -56,40 +72,68 @@ spec:
                     type: string
                   type: array
                 selectors:
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   description: |-
                     Application Pod Selectors. Their traffic will be routed through the appropriate egress gateway.
                     For namespase designation use the `io.kubernetes.pod.namespace` pseudo-label.
                   items:
                     properties:
                       podSelector:
-                        x-doc-d8Revision: ee
+                        x-doc-d8Editions:
+                          - se+
+                          - ee
+                          - cse-lite
+                          - cse-pro
                         description: |-
                           A label selector is a label query over a set of resources. The result of matchLabels and
                           matchExpressions are ANDed. An empty label selector matches all objects. A null
                           label selector matches no objects.
                         properties:
                           matchExpressions:
-                            x-doc-d8Revision: ee
+                            x-doc-d8Editions:
+                              - se+
+                              - ee
+                              - cse-lite
+                              - cse-pro
                             description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
                             items:
-                              x-doc-d8Revision: ee
+                              x-doc-d8Editions:
+                                - se+
+                                - ee
+                                - cse-lite
+                                - cse-pro
                               description: |-
                                 A label selector requirement is a selector that contains values, a key, and an operator that
                                 relates the key and values.
                               properties:
                                 key:
-                                  x-doc-d8Revision: ee
+                                  x-doc-d8Editions:
+                                    - se+
+                                    - ee
+                                    - cse-lite
+                                    - cse-pro
                                   description: key is the label key that the selector applies to.
                                   type: string
                                 operator:
-                                  x-doc-d8Revision: ee
+                                  x-doc-d8Editions:
+                                    - se+
+                                    - ee
+                                    - cse-lite
+                                    - cse-pro
                                   description: |-
                                     operator represents a key's relationship to a set of values.
                                     Valid operators are In, NotIn, Exists and DoesNotExist.
                                   type: string
                                 values:
-                                  x-doc-d8Revision: ee
+                                  x-doc-d8Editions:
+                                    - se+
+                                    - ee
+                                    - cse-lite
+                                    - cse-pro
                                   description: |-
                                     values is an array of string values. If the operator is In or NotIn,
                                     the values array must be non-empty. If the operator is Exists or DoesNotExist,
@@ -106,7 +150,11 @@ spec:
                           matchLabels:
                             additionalProperties:
                               type: string
-                            x-doc-d8Revision: ee
+                            x-doc-d8Editions:
+                              - se+
+                              - ee
+                              - cse-lite
+                              - cse-pro
                             description: |-
                               matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
                               map is equivalent to an element of matchExpressions, whose key field is "key", the

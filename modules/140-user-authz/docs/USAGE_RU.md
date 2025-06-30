@@ -240,9 +240,9 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+  # Опция доступна только при включенном режиме enableMultiTenancy.
   allowAccessToSystemNamespaces: false
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+  # Опция доступна только при включенном режиме enableMultiTenancy.
   namespaceSelector:
     labelSelector:
       matchExpressions:
@@ -260,11 +260,11 @@ spec:
 В Kubernetes есть две категории пользователей:
 
 * ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
-* Остальные пользователи, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
-  * через модуль [user-authn](../../modules/user-authn/);
-  * с помощью сертификатов.
+* Остальные пользователи и группы, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются способы аутентификации:
+  * Через модуль `user-authn`. Модуль поддерживает следующие внешние провайдеры и протоколы аутентификации: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. Подробнее — в документации модуля [`user-authn`](../../modules/user-authn/).
+  * С помощью [сертификатов](#создание-пользователя-с-помощью-клиентского-сертификата).
 
-При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
+При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на master-узле.
 
 ### Создание ServiceAccount для сервера и предоставление ему доступа
 
@@ -305,12 +305,12 @@ spec:
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+     # Опция доступна только при включенном режиме enableMultiTenancy.
      allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+   Если в конфигурации Deckhouse включён режим мультитенантности (в параметре [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), настройте доступные для ServiceAccount пространства имён (в параметре [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
@@ -397,52 +397,178 @@ spec:
 
 ### Создание пользователя с помощью клиентского сертификата
 
-#### Создание пользователя
+{% alert level="info" %}
+Этот способ рекомендуется использовать для системных нужд (аутентификация kubelet'ов, компонентов control plane и пр.). Если нужно создать «обычного» пользователя (например, с доступом через консоль, `kubectl` и т.д.), используйте генерацию [kubeconfig](../user-authn/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api).
+{% endalert %}
 
-* Получите корневой сертификат кластера (ca.crt и ca.key).
-* Сгенерируйте ключ пользователя:
+При создании пользователя с помощью клиентского сертификата можно использовать [OpenSSL](#создание-пользователя-с-помощью-сертификата-выпущенного-через-openssl) или [Kubernetes API (объект CertificateSigningRequest)](#создание-пользователя-с-помощью-сертификата-выпущенного-через-kubernetes-api).
 
-  ```shell
-  openssl genrsa -out myuser.key 2048
-  ```
+{% alert level="warning" %}
+Сертификаты, выпущенные любым из этих способов, отозвать нельзя.
+В случае компрометации сертификата потребуется убрать все права этого пользователя (это может быть сложно, если пользователь добавлен в какие-нибудь группы: придётся также удалять все соответствующие группы).
+{% endalert %}
 
-* Создайте CSR, где укажите, что требуется пользователь `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+#### Создание пользователя с помощью сертификата, выпущенного через OpenSSL
 
-  ```shell
-  openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-  ```
+{% alert level="warning" %}
+При использовании этого способа учитывайте риски безопасности.
 
-* Подпишите CSR корневым сертификатом кластера:
+`ca.crt` и `ca.key`не должны покидать master-узел: подписывайте CSR только на нём.
 
-  ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-  ```
+При подписании CSR вне master-узла есть риск компрометации корневого сертификата кластера.
+{% endalert %}
 
-* Теперь полученный сертификат можно указывать в конфиг-файле:
+Особенности этого способа:
 
-  ```shell
-  cat << EOF
-  apiVersion: v1
-  clusters:
-  - cluster:
-      certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<хост кластера>:6443
-    name: kubernetes
-  contexts:
-  - context:
-      cluster: kubernetes
-      user: myuser
-    name: myuser@kubernetes
-  current-context: myuser@kubernetes
-  kind: Config
-  preferences: {}
-  users:
-  - name: myuser
-    user:
-      client-certificate-data: $(cat myuser.crt | base64 -w0)
-      client-key-data: $(cat myuser.key | base64 -w0)
-  EOF
-  ```
+- Клиентский сертификат должен подписываться на master-узле, чтобы не допустить компрометации кластерного сертификата.
+- Необходим доступ к CA-ключу кластера (`ca.key`). Подписывать сертификаты может только администратор кластера.
+
+Чтобы создать пользователя с помощью клиентского сертификата, выпущенного через OpenSSL, выполните следующие шаги:
+
+1. Получите корневой сертификат кластера (`ca.crt` и `ca.key`).
+1. Сгенерируйте ключ пользователя:
+
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
+
+1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+
+    ```shell
+    openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+    ```
+
+1. Загрузите созданный на предыдущем шаге CSR (в этом примере — `myuser.csr`) на master-узел и подпишите его корневым сертификатом кластера. Пример команды для подписания CSR на мастер-узле (убедитесь, что в команде указаны верные для вашего случая пути к `myuser.csr`, `ca.crt` и `ca.key`):
+
+    ```shell
+    openssl x509 -req -in myuser.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out myuser.crt -days 10
+    ```
+
+Полученный сертификат можно указывать в конфигурационном файле:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
+    server: https://<хост кластера>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
+
+#### Создание пользователя с помощью сертификата, выпущенного через Kubernetes API
+
+Это более безопасный способ, т.к. для подписания сертификата используется специальный API kubernetes.
+
+Особенности этого способа:
+
+- Подписание сертификата через Kubernetes API: CSR отправляется на подпись через API и прямой доступ к `ca.key` не требуется.
+- Выпускать клиентские сертификаты может не только администратор кластера. Право на создание CSR и их подписание можно назначить определенному пользователю.
+
+Чтобы создать пользователя с помощью клиентского сертификата, выпущенного через Kubernetes API, выполните следующие шаги:
+
+1. Сгенерируйте ключ пользователя:
+
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
+
+1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+
+    ```shell
+    openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+    ```
+
+1. Создайте манифест объекта CertificateSigningRequest и сохраните его в файл (в этом примере — `csr.yaml`):
+
+    > В поле `request` укажите содержимое CSR, созданного на предыдущем этапе, закодированное в Base64.
+
+    ```yaml
+    apiVersion: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+    metadata:
+    name: demo-client-cert
+    spec:
+      request: # CSR в Base64
+      signerName: "kubernetes.io/kube-apiserver-client"
+      expirationSeconds: 7200
+      usages:
+      - "digital signature"
+      - "client auth"
+    ```
+  
+1. Примените манифест, чтобы создать запрос на подпись сертификата:
+  
+    ```shell
+    kubectl apply -f csr.yaml
+    ```
+
+1. Убедитесь, что сертификат подтвержден:
+
+    ```shell
+    kubectl get csr demo-client-cert
+    ```
+
+    Если сертификат подтвержден, в колонке `CONDITION` у него будет значение `Approved,Issued`. Пример вывода:
+
+    ```shell
+    NAME               AGE     SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+    demo-client-cert   8m24s   kubernetes.io/kube-apiserver-client   kubernetes-admin   120m                Approved,Issued
+    ```
+
+    Если сертификат не подтвердился автоматически, подтвердите его:
+
+    ```shell
+    kubectl certificate approve demo-client-cert
+    ```
+
+    После этого убедитесь, что сертификат подтвержден.
+
+1. Извлеките закодированный сертификат из CSR с именем `demo-client-cert`, декодируйте его из Base64 и сохраните в файл (в этом примере — `myuser.crt`), созданный на шаге 2:
+
+    ```shell
+    kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
+    ```
+
+Полученный сертификат необходимо указать в конфигурационном файле:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
+    server: https://<хост кластера>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
 
 #### Предоставление доступа созданному пользователю
 

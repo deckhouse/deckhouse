@@ -41,11 +41,23 @@ spec:
                     Selecting the load balancer operating mode.
                 l2:
                   type: object
+                  x-doc-d8Editions:
+                    - se+
+                    - se
+                    - ee
+                    - cse-lite
+                    - cse-pro
                   properties:
                     interfaces:
                       items:
                         type: string
                       type: array
+                      x-doc-d8Editions:
+                        - se+
+                        - se
+                        - ee
+                        - cse-lite
+                        - cse-pro
                       x-doc-examples: ["eth1", "eth2"]
                       description: |-
                         A list of network interfaces from which the assigned IP addresses will be announced.

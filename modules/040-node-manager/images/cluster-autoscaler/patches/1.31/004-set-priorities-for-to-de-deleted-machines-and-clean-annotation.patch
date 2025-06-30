@@ -1,0 +1,176 @@
+Subject: [PATCH] ++
+---
+Index: cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1747480923187)
+@@ -25,7 +25,8 @@
+ 	"context"
+ 	"fmt"
+ 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+-	"k8s.io/apimachinery/pkg/util/sets"
++	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/autoscaler/cluster-autoscaler/core/scaledown/eligibility"
+ 	"slices"
+ 	"strconv"
+@@ -33,7 +34,6 @@
+ 	"sync"
+ 	"time"
+
+-	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
+ 	apiv1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/api/resource"
+ 	"k8s.io/apimachinery/pkg/types"
+@@ -340,26 +340,63 @@
+ 	if len(toBeDeletedMachineNames) == 0 {
+ 		return nil
+ 	}
+-	machinesOfNodeGroup, err := ngImpl.mcmManager.getMachinesForMachineDeployment(ngImpl.Name)
++
++	machines, err := ngImpl.mcmManager.getMachinesForMachineDeployment(ngImpl.Name)
+ 	if err != nil {
+-		klog.Warningf("NodeGroup.Refresh() of %q failed to get machines for MachineDeployment due to: %v", ngImpl.Name, err)
+-		return nil
++		return err
++	}
++
++	machinesSet := make(map[string]*v1alpha1.Machine)
++	for _, machine := range machines {
++		machinesSet[machine.Name] = machine
+ 	}
+-	toBeDeletedMachines := filterMachinesMatchingNames(machinesOfNodeGroup, sets.New(toBeDeletedMachineNames...))
+-	if len(toBeDeletedMachines) == 0 {
+-		klog.Warningf("NodeGroup.Refresh() of %q could not find Machine objects for toBeDeletedMachineNames %q", ngImpl.Name, toBeDeletedMachineNames)
+-		return nil
+-	}
+-	toBeDeletedNodeNames := getNodeNamesFromMachines(toBeDeletedMachines)
+-	if len(toBeDeletedNodeNames) == 0 {
+-		klog.Warningf("NodeGroup.Refresh() of %q could not find toBeDeletedNodeNames for toBeDeletedMachineNames %q of MachineDeployment", ngImpl.Name, toBeDeletedMachineNames)
+-		return nil
++
++	savedInAnnotation := make([]string, 0, len(toBeDeletedMachineNames))
++	for _, deleted := range toBeDeletedMachineNames {
++		if machine, ok := machinesSet[deleted]; ok {
++			if isMachineFailedOrTerminating(machine) {
++				klog.V(4).Infof("Machine %s is marked as failed or terminating. Will be removed from annotation", deleted)
++				continue
++			}
++
++			klog.V(4).Infof("Machine %s was found. Will keep in annotation", deleted)
++			savedInAnnotation = append(savedInAnnotation, deleted)
++		}
++
++		klog.V(4).Infof("Not found machine %s in machineset. Will be removed from annotation", deleted)
+ 	}
+-	err = ngImpl.mcmManager.cordonNodes(toBeDeletedNodeNames)
++
++	klog.V(2).Infof("Next machines will be saved to annotation %v", savedInAnnotation)
++
++	annotationVal := createMachinesTriggeredForDeletionAnnotValue(savedInAnnotation)
++	mdCopy := mcd.DeepCopy()
++	mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = annotationVal
++	updatedMd, err := ngImpl.mcmManager.machineClient.MachineDeployments(mcd.Namespace).Update(context.TODO(), mdCopy, metav1.UpdateOptions{})
+ 	if err != nil {
+-		// we do not return error since we don't want this to block CA operation. This is best-effort.
+-		klog.Warningf("NodeGroup.Refresh() of %q ran into error cordoning nodes: %v", ngImpl.Name, err)
++		return err
+ 	}
++	klog.V(2).Infof("MachineDeployment %q triggered by mcm annotation cleaned to %q", mcd.Name, updatedMd.Annotations[machineutils.TriggerDeletionByMCM])
++
++	//machinesOfNodeGroup, err := ngImpl.mcmManager.getMachinesForMachineDeployment(ngImpl.Name)
++	//if err != nil {
++	//	klog.Warningf("NodeGroup.Refresh() of %q failed to get machines for MachineDeployment due to: %v", ngImpl.Name, err)
++	//	return nil
++	//}
++	//toBeDeletedMachines := filterMachinesMatchingNames(machinesOfNodeGroup, sets.New(toBeDeletedMachineNames...))
++	//if len(toBeDeletedMachines) == 0 {
++	//	klog.Warningf("NodeGroup.Refresh() of %q could not find Machine objects for toBeDeletedMachineNames %q", ngImpl.Name, toBeDeletedMachineNames)
++	//	return nil
++	//}
++	//toBeDeletedNodeNames := getNodeNamesFromMachines(toBeDeletedMachines)
++	//if len(toBeDeletedNodeNames) == 0 {
++	//	klog.Warningf("NodeGroup.Refresh() of %q could not find toBeDeletedNodeNames for toBeDeletedMachineNames %q of MachineDeployment", ngImpl.Name, toBeDeletedMachineNames)
++	//	return nil
++	//}
++	//err = ngImpl.mcmManager.cordonNodes(toBeDeletedNodeNames)
++	//if err != nil {
++	//	// we do not return error since we don't want this to block CA operation. This is best-effort.
++	//	klog.Warningf("NodeGroup.Refresh() of %q ran into error cordoning nodes: %v", ngImpl.Name, err)
++	//}
+ 	return nil
+ }
+
+@@ -434,6 +471,20 @@
+ 		return fmt.Errorf("MachineDeployment %s is under rolling update , cannot reduce replica count", ngImpl.Name)
+ 	}
+
++	klog.V(2).Infof("Start set priorities for machines %v", toBeDeletedMachineInfos)
++
++	for _, info := range toBeDeletedMachineInfos {
++		err = ngImpl.mcmManager.retry(func(ctx context.Context) (bool, error) {
++
++			klog.V(2).Infof("Set priority for machine %s/%s", info.Key.Namespace, info.Key.Name)
++			return ngImpl.mcmManager.updateAnnotationOnMachine(ctx, info.Key.Name, MachinePriorityMachineAnnotation, priorityValueForDeletionCandidateMachines)
++		}, "Machine", "update", info.Key.Name)
++
++		if err != nil {
++			return err
++		}
++	}
++
+ 	// Trying to update the machineDeployment till the deadline
+ 	err = ngImpl.mcmManager.retry(func(ctx context.Context) (bool, error) {
+ 		return ngImpl.mcmManager.scaleDownMachineDeployment(ctx, ngImpl.Name, toBeDeletedMachineInfos)
+Index: cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1747480923237)
+@@ -89,6 +89,7 @@
+ 	defaultPriorityValue = "3"
+ 	// priorityValueForDeletionCandidateMachines is the priority annotation value set on machines that the CA wants to be deleted. Its value is set to 1.
+ 	priorityValueForDeletionCandidateMachines = "1"
++	MachinePriorityMachineAnnotation          = "machinepriority.machine.sapcloud.io"
+ 	minResyncPeriodDefault                    = 1 * time.Hour
+ 	// kindMachineClass is the kind for generic machine class used by the OOT providers
+ 	kindMachineClass = "MachineClass"
+@@ -537,18 +538,19 @@
+ 	}
+ 	klog.V(2).Infof("MachineDeployment %q size decreased from %d to %d, TriggerDeletionByMCM Annotation Value: %q", md.Name, md.Spec.Replicas, updatedMd.Spec.Replicas, updatedMd.Annotations[machineutils.TriggerDeletionByMCM])
+
+-	toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
+-	for _, mInfo := range toBeDeletedMachineInfos {
+-		if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
+-			toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
+-			klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
+-		}
+-	}
+-	err = m.cordonNodes(toBeCordonedNodeNames)
+-	if err != nil {
+-		// Do not return error as cordoning is best-effort
+-		klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
+-	}
++	//toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
++	//for _, mInfo := range toBeDeletedMachineInfos {
++	//	if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
++	//		toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
++	//		klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
++	//	}
++	//}
++	//err = m.cordonNodes(toBeCordonedNodeNames)
++	//if err != nil {
++	//	// Do not return error as cordoning is best-effort
++	//	klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
++	//}
++
+ 	return false, nil
+ }
+

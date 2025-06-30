@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-
 	"testing"
 	"text/template"
 
@@ -251,6 +250,14 @@ func TestPrepareRegistry(t *testing.T) {
 
 			require.Equal(t, cfg.Registry, expectedData)
 		})
+	})
+
+	t.Run("Validate HTTP imagesRepo with CA", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
+		cfg.Registry.Scheme = "http"
+		cfg.Registry.CA = "==exampleCA=="
+		err := validateHTTPRegistryScheme(cfg.Registry.Scheme, cfg.Registry.CA)
+		require.EqualError(t, err, "registry CA is not allowed for HTTP scheme")
 	})
 
 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {

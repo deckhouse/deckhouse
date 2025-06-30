@@ -21,8 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"

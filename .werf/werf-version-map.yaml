@@ -3,9 +3,9 @@ image: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 final: false
 import:
-- image: common/yq4-artifact
-  add: /usr/local/bin/yq
-  to: /usr/local/bin/yq
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
   before: install
 git:
 - add: /
@@ -30,23 +30,19 @@ shell:
   {{- $curEditionFile := printf "/version_map_%s.yml" $edition.name }}
   {{- if $edition.versionMapFile }}
     {{- $tmpEditionFile := printf "%s.tmp" $curEditionFile }}
-
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
-
+  - |
+    yq eval-all '
+      select(fileIndex == 0) * select(fileIndex == 1) |
+      with(.k8s; del(.[] | select(. == null or tag == "!!map" and length == 0)))
+      ' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
       {{- else }}
-
   - cp {{ $edition.versionMapFile }} {{ $curEditionFile }}
-
       {{- end }}
-
   {{- else }}
-
   - cp {{ $previousEditionFile }} {{ $curEditionFile }}
-
   {{- end }}
-
   {{- $previousEditionFile = $curEditionFile }}
 {{- end }}
 ---

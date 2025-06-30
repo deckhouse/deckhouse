@@ -6,6 +6,8 @@ lang: ru
 
 Ресурс [VirtualImage](../../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
 
+При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
+
 Процесс создания образа включает следующие шаги:
 
 1. Пользователь создаёт ресурс [VirtualImage](../../../reference/cr/virtualimage.html).
@@ -14,17 +16,43 @@ lang: ru
 
 Существуют различные типы образов:
 
-- ISO-образ — установочный образ, используемый для начальной установки операционной системы. Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
-- Образ диска с предустановленной системой — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Эти образы предлагаются несколькими производителями и могут быть представлены в таких форматах, как qcow2, raw, vmdk и другие.
+- **ISO-образ** — установочный образ, используемый для начальной установки операционной системы. Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
+- **Образ диска с предустановленной системой** — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Готовые образы можно получить на ресурсах разработчиков дистрибутива, либо создать самостоятельно.
 
 Примеры ресурсов для получения образов виртуальной машины:
 
-- [Ubuntu](https://cloud-images.ubuntu.com),
-- [Debian](https://cdimage.debian.org/images/cloud/),
-- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/),
-- [CentOS](https://cloud.centos.org/centos/7/images/),
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64),
+- Ubuntu
+  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
+  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
+  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
+  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
+- Debian
+  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
+  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
+- AlmaLinux
+  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
+  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
+- RockyLinux
+  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
+- CentOS
+  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
+  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
+  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
+  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+- Alt Linux
+  - [p10](https://ftp.altlinux.ru/pub/distributions/ALTLinux/p10/images/cloud/x86_64/)
+  - [p9](https://ftp.altlinux.ru/pub/distributions/ALTLinux/p9/images/cloud/x86_64/)
 - [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+
+Поддерживаются следующие форматы образов с предустановленной системой:
+
+- qcow2
+- raw
+- vmdk
+- vdi
+
+Также файлы образов могут быть сжаты одним из следующих алгоритмов сжатия: gz, xz.
 
 После создания ресурса, тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
 
@@ -46,7 +74,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22.04
+  name: ubuntu-22-04
 spec:
   # Сохраним образ в DVCR
   storage: ContainerRegistry
@@ -54,24 +82,24 @@ spec:
   dataSource:
     type: HTTP
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+      url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
 
 Проверьте результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
-d8 k get virtualimage ubuntu-22.04
+d8 k get virtualimage ubuntu-22-04
 
 # Укороченный вариант команды
-d8 k get vi ubuntu-22.04
+d8 k get vi ubuntu-22-04
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04   Ready   false   100%       23h
+ubuntu-22-04   Ready   false   100%       23h
 ```
 
 После создания ресурс [VirtualImage](../../../reference/cr/virtualimage.html) может находиться в следующих состояниях:
@@ -85,29 +113,31 @@ ubuntu-22.04   Ready   false   100%       23h
 
 До тех пор, пока образ не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создания диска запустится заново. После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя!
 
+Диагностика проблем с ресурсом осуществляется путем анализа информации в блоке `.status.conditions`.
+
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
 
 ```bash
-d8 k get vi ubuntu-22.04 -w
+d8 k get vi ubuntu-22-04 -w
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22.04   Provisioning   false              4s
-ubuntu-22.04   Provisioning   false   0.0%       4s
-ubuntu-22.04   Provisioning   false   28.2%      6s
-ubuntu-22.04   Provisioning   false   66.5%      8s
-ubuntu-22.04   Provisioning   false   100.0%     10s
-ubuntu-22.04   Provisioning   false   100.0%     16s
-ubuntu-22.04   Ready          false   100%       18s
+ubuntu-22-04   Provisioning   false              4s
+ubuntu-22-04   Provisioning   false   0.0%       4s
+ubuntu-22-04   Provisioning   false   28.2%      6s
+ubuntu-22-04   Provisioning   false   66.5%      8s
+ubuntu-22-04   Provisioning   false   100.0%     10s
+ubuntu-22-04   Provisioning   false   100.0%     16s
+ubuntu-22-04   Ready          false   100%       18s
 ```
 
 В описании ресурса [VirtualImage](../../../reference/cr/virtualimage.html) можно получить дополнительную информацию о скачанном образе:
 
 ```bash
-d8 k describe vi ubuntu-22.04
+d8 k describe vi ubuntu-22-04
 ```
 
 Теперь рассмотрим пример создания образа с хранением его в PVC:
@@ -117,30 +147,35 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22.04-pvc
+  name: ubuntu-22-04-pvc
 spec:
   # Настройки хранения проектного образа.
   storage: PersistentVolumeClaim
+  persistentVolumeClaim:
+    # Подставьте ваше название StorageClass.
+    storageClassName: i-sds-replicated-thin-r2
   # Источник для создания образа.
   dataSource:
     type: HTTP
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+      url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
 
 Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
-d8 k get vi ubuntu-22.04-pvc
+d8 k get vi ubuntu-22-04-pvc
 ```
 
 Пример вывода:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04-pvc  Ready   false   100%       23h
+ubuntu-22-04-pvc  Ready   false   100%       23h
 ```
+
+Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в [настройках модуля](../../admin/install/steps/virtualization.html#описание-параметров).
 
 ### Создание образа из container registry
 
@@ -215,11 +250,15 @@ EOF
 
 ```bash
 d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
+```
 
-# {
-#   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
-#   "inCluster":"http://10.222.165.239/upload"
-# }
+Пример вывода:
+
+```json
+{
+  "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
+  "inCluster":"http://10.222.165.239/upload"
+}
 ```
 
 В качестве примера загрузите образ Cirros:

@@ -120,7 +120,7 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleAPIEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots["kube_apiserver"])
+	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("kube_apiserver"))
 
 	for _, ep := range input.Snapshots["apiserver_endpoints"] {
 		endpointsSet.Add(ep.([]string)...)

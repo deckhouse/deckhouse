@@ -23,6 +23,7 @@
 {{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
+{{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -153,6 +154,7 @@ spec:
   {{- end }}
 {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
       serviceAccountName: ingress-nginx
+      automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -201,7 +203,7 @@ spec:
         args:
         - /nginx-ingress-controller
         - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
-        - --v=2
+        - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
         - --ingress-class={{ $crd.spec.ingressClass }}
         - --healthz-port=10254
         - --http-port=80
@@ -215,12 +217,6 @@ spec:
         {{- end }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $gracePeriod }}
-        {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
-        # we don't disable it if validation is disabled because it will lead to deployment rollout
-        - --validating-webhook=:8443
-        - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
-        - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
-        {{- end }}
         {{- if $defaultSSLCertificateSecretRef.name }}
         - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
         {{- end }}
@@ -316,11 +312,6 @@ spec:
           hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
     {{- end }}
   {{- end }}
-  {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
-        - containerPort: 8443
-          protocol: TCP
-          name: webhook
-  {{- end }}
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
@@ -336,9 +327,6 @@ spec:
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-        - mountPath: /chroot/etc/nginx/webhook-ssl/
-          name: webhook-cert
-          readOnly: true
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
@@ -420,9 +408,6 @@ spec:
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-{{ $crd.name }}-auth-tls
-      - name: webhook-cert
-        secret:
-          secretName: ingress-admission-certificate
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config

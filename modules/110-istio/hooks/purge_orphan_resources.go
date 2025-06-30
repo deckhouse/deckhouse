@@ -19,19 +19,23 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	istioSystemNs                = "d8-istio"
 	istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
+	istioRootCertConfigMapName   = "istio-ca-root-cert"
 )
 
 var (
@@ -44,6 +48,16 @@ var (
 		Group:    "install.istio.io",
 		Version:  "v1alpha1",
 		Resource: "istiooperators",
+	}
+	istioFederationGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiofederations",
+	}
+	istioMulticlusterGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiomulticlusters",
 	}
 )
 
@@ -61,6 +75,56 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		return err
 	}
 
+	// Clean up cluster-wide IstioFederation resources
+	federations, err := k8sClient.Dynamic().Resource(istioFederationGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warn("Failed to list IstioFederation resources", log.Err(err))
+	} else {
+		for _, fed := range federations.Items {
+			_, err = k8sClient.Dynamic().Resource(istioFederationGVR).Patch(context.TODO(), fed.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warn("Failed to remove finalizers from IstioFederation", slog.String("name", fed.GetName()), log.Err(err))
+				continue
+			}
+			input.Logger.Info("Finalizers from IstioFederation removed", slog.String("name", fed.GetName()))
+
+			_, fedDeletionTimestampExists := fed.GetAnnotations()["deletionTimestamp"]
+			if !fedDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioFederationGVR).Delete(context.TODO(), fed.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warn("Failed to delete IstioFederation", slog.String("name", fed.GetName()), log.Err(err))
+					continue
+				}
+				input.Logger.Info("IstioFederation deleted", slog.String("name", fed.GetName()))
+			}
+		}
+	}
+
+	// Clean up cluster-wide IstioMulticluster resources
+	multiclusters, err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warn("Failed to list IstioMulticluster resources", log.Err(err))
+	} else {
+		for _, mc := range multiclusters.Items {
+			_, err = k8sClient.Dynamic().Resource(istioMulticlusterGVR).Patch(context.TODO(), mc.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warn("Failed to remove finalizers from IstioMulticluster", slog.String("name", mc.GetName()), log.Err(err))
+				continue
+			}
+			input.Logger.Info("Finalizers from IstioMulticluster removed", slog.String("name", mc.GetName()))
+
+			_, mcDeletionTimestampExists := mc.GetAnnotations()["deletionTimestamp"]
+			if !mcDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).Delete(context.TODO(), mc.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warn("Failed to delete IstioMulticluster", slog.String("name", mc.GetName()), log.Err(err))
+					continue
+				}
+				input.Logger.Info("IstioMulticluster deleted", slog.String("name", mc.GetName()))
+			}
+		}
+	}
+
 	ns, _ := k8sClient.CoreV1().Namespaces().Get(context.TODO(), istioSystemNs, metav1.GetOptions{})
 	if ns != nil {
 		// remove finalizers and delete iop in ns d8-istio
@@ -73,16 +137,36 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			if err != nil {
 				return err
 			}
-			input.Logger.Infof("Finalizers from IstioOperator/%s in namespace %s removed", iop.GetName(), istioSystemNs)
+			input.Logger.Info("Finalizers from IstioOperator in namespace removed", slog.String("name", iop.GetName()), slog.String("namespace", istioSystemNs))
 			_, iopDeletionTimestampExists := iop.GetAnnotations()["deletionTimestamp"]
 			if !iopDeletionTimestampExists {
 				err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
 				if err != nil {
 					return err
 				}
-				input.Logger.Infof("IstioOperator/%s deleted from namespace %s", iop.GetName(), istioSystemNs)
+				input.Logger.Info("IstioOperator deleted from namespace", slog.String("name", iop.GetName()), slog.String("namespace", istioSystemNs))
 			}
 		}
+
+		// Delete the istio-ca-root-cert ConfigMap in namespaces
+		namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, namespace := range namespaces.Items {
+			if namespace.Name == istioSystemNs {
+				continue
+			}
+
+			err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
+			if err != nil && !k8serrors.IsNotFound(err) {
+				input.Logger.Warn("Failed to delete ConfigMap in namespace", slog.String("name", istioRootCertConfigMapName), slog.String("namespace", namespace.Name), log.Err(err))
+				continue
+			}
+			input.Logger.Info("ConfigMap deleted from namespace", slog.String("name", istioRootCertConfigMapName), slog.String("namespace", namespace.Name))
+		}
+
 		// delete NS
 		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
 		if !nsDeletionTimestampExists {
@@ -90,7 +174,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			if err != nil {
 				return err
 			}
-			input.Logger.Infof("Namespace %s deleted", ns.GetName())
+			input.Logger.Info("Namespace deleted", slog.String("namespace", ns.GetName()))
 		}
 	}
 
@@ -104,7 +188,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.Logger.Infof("ClusterRole/%s deleted", icr.GetName())
+		input.Logger.Info("ClusterRole deleted", slog.String("name", icr.GetName()))
 	}
 
 	// delete ClusterRoleBinding
@@ -117,7 +201,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.Logger.Infof("ClusterRoleBinding/%s deleted", icrb.GetName())
+		input.Logger.Info("ClusterRoleBinding deleted", slog.String("name", icrb.GetName()))
 	}
 
 	// delete MutatingWebhookConfiguration
@@ -130,7 +214,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.Logger.Infof("MutatingWebhookConfiguration/%s deleted", imwc.GetName())
+		input.Logger.Info("MutatingWebhookConfiguration deleted", slog.String("name", imwc.GetName()))
 	}
 
 	// delete ValidatingWebhookConfiguration
@@ -143,7 +227,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.Logger.Infof("ValidatingWebhookConfiguration/%s deleted", ivwc.GetName())
+		input.Logger.Info("ValidatingWebhookConfiguration deleted", slog.String("name", ivwc.GetName()))
 	}
 
 	return nil

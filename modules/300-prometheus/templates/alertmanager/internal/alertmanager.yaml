@@ -16,6 +16,7 @@ spec:
   - name: deckhouse-registry
   listenLocal: true
   serviceAccountName: alertmanager-internal
+  automountServiceAccountToken: true
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:

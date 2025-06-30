@@ -19,12 +19,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -156,11 +155,6 @@ func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.
 	}
 
 	err = deckhouse.WaitForPVCDeletion(ctx, kubeCl)
-	if err != nil {
-		return err
-	}
-
-	err = deckhouse.DeletePV(ctx, kubeCl)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 properties:
   globalVersion:
@@ -33,15 +33,11 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
-  enableHTTP10:
-    type: boolean
-    default: false
-    x-examples: [true]
-    description: |
-      Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Parameters for federating with other clusters.
     default: {}
     properties:
@@ -52,7 +48,9 @@ properties:
         x-examples: [true]
   multicluster:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Multicluster parameters.
     default: {}
     properties:
@@ -63,20 +61,26 @@ properties:
         x-examples: [true]
   alliance:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Common options both for federation and multicluster.
     default: {}
     properties:
       ingressGateway:
         type: object
         description: ingressgateway settings.
-        x-doc-d8Revision: ee
+        x-doc-d8Editions:
+          - ee
+          - cse-pro
         default: {}
         properties:
           advertise:
             type: array
             description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             default: []
             x-examples: [[{"ip": "172.16.0.5", "port": 15443}]]
             items:
@@ -95,7 +99,9 @@ properties:
             type: string
             enum: [LoadBalancer, NodePort]
             x-examples: [LoadBalancer]
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             description: |
               The method for exposing ingressgateway.
               - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
@@ -104,7 +110,9 @@ properties:
           nodePort:
             type: object
             description: Special settings for NodePort inlet.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             default: {}
             x-examples: [{}, {"port": 30001}]
             properties:
@@ -118,7 +126,9 @@ properties:
             additionalProperties:
               type: string
             description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
           nodeSelector:
@@ -130,14 +140,18 @@ properties:
               ingressgateway DaemonSet nodeSelector.
 
               The same as the `spec.nodeSelector` pod parameter in Kubernetes.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
           tolerations:
             type: array
             description: |
               ingressgateway DaemonSet tolerations.
 
               The same as `spec.tolerations` for the Kubernetes pod.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             items:
               type: object
               properties:
@@ -366,36 +380,6 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
-  proxyConfig:
-    type: object
-    description: |
-      Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
-    default: {}
-    properties:
-      holdApplicationUntilProxyStarts:
-        type: boolean
-        x-examples: [true]
-        default: false
-        description: |
-          With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
-
-          This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
-      idleTimeout:
-        type: string
-        pattern: '^[0-9]+(s|m|h)$'
-        x-examples: [24h]
-        default: 1h
-        description: |
-          Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
-
-          This global flag can be overriden per Pod by an annotation:
-            ```yaml
-              proxy.istio.io/config: |-
-                proxyMetadata:
-                  ISTIO_META_IDLE_TIMEOUT: "12h"
-            ```
-          > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
-          > **Warning!** After changing this setting, a restart of the client pods is required.
   controlPlane:
     type: object
     description: istiod specific settings.
@@ -687,6 +671,42 @@ properties:
         default: "InitContainer"
         enum: ["CNIPlugin", "InitContainer"]
         x-examples: ["CNIPlugin", "InitContainer"]
+      enableHTTP10:
+        type: boolean
+        default: false
+        x-examples: [ true ]
+        description: |
+          Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
+      proxyConfig:
+        type: object
+        description: |
+          Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+        default: { }
+        properties:
+          holdApplicationUntilProxyStarts:
+            type: boolean
+            x-examples: [ true ]
+            default: false
+            description: |
+              With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
+
+              This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+          idleTimeout:
+            type: string
+            pattern: '^[0-9]+(s|m|h)$'
+            x-examples: [ 24h ]
+            default: 1h
+            description: |
+              Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
+
+              This global flag can be overriden per Pod by an annotation:
+                ```yaml
+                  proxy.istio.io/config: |-
+                    proxyMetadata:
+                      ISTIO_META_IDLE_TIMEOUT: "12h"
+                ```
+              > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
+              > **Warning!** After changing this setting, a restart of the client pods is required.
   nodeSelector:
     type: object
     additionalProperties:

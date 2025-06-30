@@ -1,0 +1,17 @@
+candi:
+  features:
+    - summary: Add rosa 12.6.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13369
+cloud-provider-yandex:
+  fixes:
+    - summary: fix WithNATInstance clusters converge
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13189
+control-plane-manager:
+  fixes:
+    - summary: Stale service account alert upd
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13235
+node-manager:
+  fixes:
+    - summary: Autoscaler - remove additional cordon node by mcm provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13391
+

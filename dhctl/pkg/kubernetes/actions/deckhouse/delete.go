@@ -225,27 +225,6 @@ func DeletePVC(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	})
 }
 
-func DeletePV(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete PersistentVolumes provided manually or contain reclaimPolicy other than Delete.", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		persistentVolumes, err := kubeCl.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		annotationKey := "pv.kubernetes.io/provisioned-by"
-		for _, volume := range persistentVolumes.Items {
-			if _, exists := volume.Annotations[annotationKey]; !exists || volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
-				err := kubeCl.CoreV1().PersistentVolumes().Delete(ctx, volume.Name, metav1.DeleteOptions{})
-				if err != nil {
-					return err
-				}
-				log.InfoF("%s\n", volume.Name)
-			}
-		}
-		return nil
-	})
-}
-
 func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 30, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(ctx, deckhouseDeploymentName, metav1.GetOptions{})
@@ -297,26 +276,33 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 			return err
 		}
 
-		count := len(resources.Items)
+		// Skip PV's provided manually or with reclaimPolicy other than Delete
+		annotationKey := "pv.kubernetes.io/provisioned-by"
+		var filteredResources []v1.PersistentVolume
+		var skipPVs []v1.PersistentVolume
+		for _, resource := range resources.Items {
+			if _, exists := resource.Annotations[annotationKey]; !exists || resource.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+				skipPVs = append(skipPVs, resource)
+			} else {
+				filteredResources = append(filteredResources, resource)
+			}
+		}
+
+		skipPVsCount := len(skipPVs)
+		if skipPVsCount != 0 {
+			skipPVsInfo := strings.Builder{}
+			for _, item := range skipPVs {
+				skipPVsInfo.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+			}
+			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+		}
+
+		count := len(filteredResources)
 		if count != 0 {
-			var (
-				pvsWithnonDeleteReclaimPolicy strings.Builder
-				remainingPVs                  strings.Builder
-			)
-
-			for _, item := range resources.Items {
-				if item.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
-					pvsWithnonDeleteReclaimPolicy.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
-				}
-
+			remainingPVs := strings.Builder{}
+			for _, item := range filteredResources {
 				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
 			}
-
-			if pvsWithnonDeleteReclaimPolicy.Len() != 0 {
-				return fmt.Errorf("%d PersistentVolumes with reclaimPolicy other than Delete in the cluster. Set their reclaim policy to Delete or remove them manually\n%s",
-					count, strings.TrimSuffix(remainingPVs.String(), "\n"))
-			}
-
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
 		log.InfoLn("All PersistentVolumes are deleted from the cluster")

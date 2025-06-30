@@ -5,7 +5,7 @@ linters-settings:
     exclude-rules:
       license:
         files:
-          - images/simple-bridge/rootfs/bin/simple-bridge
+          - images/simple-bridge/src/rootfs/bin/simple-bridge
   container:
     exclude-rules:
       read-only-root-filesystem:

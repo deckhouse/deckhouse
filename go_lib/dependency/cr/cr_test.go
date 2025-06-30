@@ -124,11 +124,11 @@ func TestClient_Image(t *testing.T) {
 
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Basic handler to simulate registry responses
-		switch {
-		case r.URL.Path == "/v2/":
+		switch r.URL.Path {
+		case "/v2/":
 			// Registry API check
 			w.WriteHeader(http.StatusOK)
-		case r.URL.Path == "/v2/test/repo/manifests/latest":
+		case "/v2/test/repo/manifests/latest":
 			// Serving image manifest
 			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			w.WriteHeader(http.StatusOK)
@@ -138,13 +138,13 @@ func TestClient_Image(t *testing.T) {
 			require.NoError(t, err)
 			_, err = w.Write(json)
 			require.NoError(t, err)
-		case r.URL.Path == "/v2/test/repo/manifests/notfound":
+		case "/v2/test/repo/manifests/notfound":
 			// Image not found
 			w.WriteHeader(http.StatusNotFound)
-		case r.URL.Path == "/v2/test/repo/manifests/unauthorized":
+		case "/v2/test/repo/manifests/unauthorized":
 			// Unauthorized access
 			w.WriteHeader(http.StatusUnauthorized)
-		case r.URL.Path == "/v2/test/repo/manifests/timeout":
+		case "/v2/test/repo/manifests/timeout":
 			// Simulate timeout
 			time.Sleep(2 * time.Second)
 			w.WriteHeader(http.StatusOK)
@@ -326,11 +326,11 @@ func TestClient_ListTags(t *testing.T) {
 	// Create a test HTTP server that acts as a registry
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Basic handler to simulate registry responses
-		switch {
-		case r.URL.Path == "/v2/":
+		switch r.URL.Path {
+		case "/v2/":
 			// Registry API check
 			w.WriteHeader(http.StatusOK)
-		case r.URL.Path == "/v2/test/repo/tags/list":
+		case "/v2/test/repo/tags/list":
 			switch {
 			case r.URL.Query().Get("n") == "1":
 				// Tag list with pagination
@@ -352,23 +352,23 @@ func TestClient_ListTags(t *testing.T) {
 				_, err := w.Write([]byte(`{"name":"test/repo","tags":["latest","v1.0.0","v1.1.0"]}`))
 				require.NoError(t, err)
 			}
-		case r.URL.Path == "/v2/empty/repo/tags/list":
+		case "/v2/empty/repo/tags/list":
 			// Empty repository
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{"name":"empty/repo","tags":[]}`))
 			require.NoError(t, err)
-		case r.URL.Path == "/v2/nonexistent/repo/tags/list":
+		case "/v2/nonexistent/repo/tags/list":
 			// Repository not found
 			w.WriteHeader(http.StatusNotFound)
-		case r.URL.Path == "/v2/unauthorized/repo/tags/list":
+		case "/v2/unauthorized/repo/tags/list":
 			// Unauthorized access
 			w.WriteHeader(http.StatusUnauthorized)
-		case r.URL.Path == "/v2/timeout/repo/tags/list":
+		case "/v2/timeout/repo/tags/list":
 			// Simulate timeout
 			time.Sleep(2 * time.Second)
 			w.WriteHeader(http.StatusOK)
-		case r.URL.Path == "/v2/malformed/repo/tags/list":
+		case "/v2/malformed/repo/tags/list":
 			// Malformed response
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)

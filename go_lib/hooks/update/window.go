@@ -95,11 +95,11 @@ func (uw Window) IsAllowed(now time.Time) bool {
 
 // NextAllowedTime calculates next update window with respect on minimalTime
 // if minimal time is out of window - this function checks next days to find the nearest one
-func (ws Windows) NextAllowedTime(min time.Time) time.Time {
-	min = min.UTC()
+func (ws Windows) NextAllowedTime(minDate time.Time) time.Time {
+	minDate = minDate.UTC()
 
 	if len(ws) == 0 {
-		return min
+		return minDate
 	}
 
 	var minTime time.Time
@@ -110,17 +110,17 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		fromInput, _ := time.Parse(hh_mm, window.From)
 		toInput, _ := time.Parse(hh_mm, window.To)
 
-		fromTime := time.Date(min.Year(), min.Month(), min.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
-		toTime := time.Date(min.Year(), min.Month(), min.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+		fromTime := time.Date(minDate.Year(), minDate.Month(), minDate.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
+		toTime := time.Date(minDate.Year(), minDate.Month(), minDate.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
-		if window.isTodayAllowed(min, window.Days) {
-			if (min.After(fromTime) || min.Equal(fromTime)) && min.Before(toTime) {
-				windowMinTime = min
+		if window.isTodayAllowed(minDate, window.Days) {
+			if (minDate.After(fromTime) || minDate.Equal(fromTime)) && minDate.Before(toTime) {
+				windowMinTime = minDate
 				if minTime.IsZero() || windowMinTime.Before(minTime) {
 					minTime = windowMinTime
 				}
 				continue
-			} else if min.Before(fromTime) {
+			} else if minDate.Before(fromTime) {
 				windowMinTime = fromTime
 				if minTime.IsZero() || windowMinTime.Before(minTime) {
 					minTime = windowMinTime
@@ -130,15 +130,15 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		}
 
 		// if not today
-		nextDay := min.AddDate(0, 0, 1)
+		nextDay := minDate.AddDate(0, 0, 1)
 		for {
 			if window.isTodayAllowed(nextDay, window.Days) {
 				fromTime = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
 				toTime = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
-				if min.Before(toTime) {
-					if min.After(fromTime) || min.Equal(fromTime) {
-						windowMinTime = min
+				if minDate.Before(toTime) {
+					if minDate.After(fromTime) || minDate.Equal(fromTime) {
+						windowMinTime = minDate
 						break
 					}
 

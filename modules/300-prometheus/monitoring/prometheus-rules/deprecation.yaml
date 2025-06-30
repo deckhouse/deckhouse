@@ -11,12 +11,15 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_prometheus_deprecations: "PrometheusDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_prometheus_deprecations: "PrometheusDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: Deprecated Prometheus ServiceMonitor has found.
+        summary: Deprecated Prometheus ServiceMonitor detected.
         description: |
-          Kubernetes cluster uses a more advanced network mechanism - EndpointSlice
-          You service monitor `{{ $labels.namespace }}/{{ $labels.name }}` has relabeling with old Endpoint mechanism, starts with `__meta_kubernetes_endpoints_`.
-          This relabeling rule support, based on the `_endpoint_` label, will be remove in the future (Deckhouse release 1.60).
-          Please, migrate to EndpointSlice relabeling rules. To do this, you have modify ServiceMonitor with changing the following labels:
+          The Kubernetes cluster uses the modern `EndpointSlice` network mechanism, but the ServiceMonitor `{{ $labels.namespace }}/{{ $labels.name }}` still uses relabeling rules based on the old `Endpoints` mechanism (starting with `__meta_kubernetes_endpoints_`).
+
+          Support for the old relabeling rules will be removed in a future Deckhouse release (1.60).
+          To avoid issues, update your ServiceMonitor to use `EndpointSlice`-based relabeling.
+
+          Update relabeling rules as follows:
+
           ```shell
           __meta_kubernetes_endpoints_name -> __meta_kubernetes_endpointslice_name
           __meta_kubernetes_endpoints_label_XXX -> __meta_kubernetes_endpointslice_label_XXX
@@ -39,10 +42,11 @@
         plk_protocol_version: "1"
         plk_ignore_labels: "name"
         summary: |-
-          AdditionalScrapeConfigs from secrets will be deprecated in soon
+          AdditionalScrapeConfigs from Secrets will be deprecated soon.
         description: |-
-          Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD ScrapeConfig instead.
-          ```https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md```
+          Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
+  
+          Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md) instead.
 
 - name: d8.grafana.interval_deprecation
   rules:
@@ -57,12 +61,17 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana panel intervals have been found.
+        summary: Deprecated Grafana panel intervals detected.
         description: |
-          Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
-          To list all deprecated panel intervals use the expr `sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0`
+          Before upgrading to Grafana 10, update outdated panel expressions that use `$interval_rv`, `interval_sx3`, or `interval_sx4` to the new variable `$__rate_interval`.
 
-          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          To list all deprecated panel intervals, use the following expression:
+
+          ```promql
+          sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
+          ```
+
+          Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated intervals are removed.
 
 - name: d8.grafana.alert_rule_deprecation
   rules:
@@ -77,12 +86,17 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana alerts have been found.
+        summary: Deprecated Grafana alerts detected.
         description: |
-          Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
-          To list all deprecated alert rules use the expr `sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0`
+          Before upgrading to Grafana 10, migrate outdated alerts from Grafana to an external alertmanager (or `exporter-alertmanager` stack).
 
-          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          To list all deprecated alert rules, use the following expression:
+
+          ```promql
+          sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
+          ```
+
+          Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.
 
 - name: d8.grafana.plugin_deprecation
   rules:
@@ -97,12 +111,17 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana plugins have been found.
+        summary: Deprecated Grafana plugins detected.
         description: |
-          Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0`
+          Before upgrading to Grafana 10, make sure that the currently installed plugins will work correctly with Grafana 10.
 
-          Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
-          We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
+          To list all potentially outdated plugins, use the following expression:
 
-          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          ```promql
+          sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
+          ```
+
+          The `flant-statusmap-panel` plugin is deprecated and no longer supported.
+          It's recommended that you migrate to the [state timeline plugin](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/) instead.
+
+          Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.

@@ -15,6 +15,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -49,14 +51,20 @@ func customLogoHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	snap := input.Snapshots["logo-cm"]
-	if len(snap) == 0 || snap[0] == nil {
+	snaps := input.NewSnapshots.Get("logo-cm")
+	if len(snaps) == 0 || snaps[0] == nil {
 		input.Values.Set("prometheus.internal.grafana.customLogo.enabled", false)
 		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)
 		return nil
 	}
 
-	logoData := snap[0].(string)
+	var logoData string
+
+	err := snaps[0].UnmarshalTo(&logoData)
+	if err != nil {
+		input.Logger.Warn("cannot unmarshal logo data", log.Err(err))
+		return nil
+	}
 
 	cm := buildGrafanaLogoCM(logoData)
 

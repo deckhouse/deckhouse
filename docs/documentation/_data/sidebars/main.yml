@@ -57,8 +57,8 @@ entries:
                 ru: Сборка и публикация
               url: /module-development/build/
             - title:
-                en: Running in the cluster
-                ru: Запуск в кластере
+                en: Running and verifying in the cluster
+                ru: Запуск и проверка в кластере
               url: /module-development/run/
             - title:
                 en: Module dependencies
@@ -225,6 +225,44 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/cloud-provider-aws/faq.html
+            - title:
+                en: DVP
+                ru: DVP
+              moduleName: cloud-provider-dvp
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-dvp/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-dvp/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-dvp/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-dvp/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-dvp/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/cloud-provider-dvp/cr.html
             - title:
                 en: Google Cloud Platform
                 ru: Google Cloud Platform
@@ -1181,7 +1219,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/operator-prometheus/configuration.html
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/operator-prometheus/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/operator-prometheus/cr.html
             - title:
                 en: okmeter
                 ru: okmeter

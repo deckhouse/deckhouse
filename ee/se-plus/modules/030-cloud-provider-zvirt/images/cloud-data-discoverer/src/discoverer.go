@@ -17,7 +17,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
 )
 
@@ -69,8 +68,8 @@ func newCloudConfig() (*CloudConfig, error) {
 }
 
 // Client Creates a zvirt client
-func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
-	logger := ovirtclientlog.NewGoLogger()
+func (c *CloudConfig) client(logger *log.Logger) (ovirtclient.ClientWithLegacySupport, error) {
+	oVirtLog := NewOvirtLogger(logger)
 
 	tls := ovirtclient.TLS()
 
@@ -86,7 +85,7 @@ func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
 		c.Username,
 		c.Password,
 		tls,
-		logger,
+		oVirtLog,
 		nil,
 	)
 	if err != nil {
@@ -123,7 +122,7 @@ func (d *Discoverer) DiscoveryData(
 		}
 	}
 
-	zvirtClient, err := d.config.client()
+	zvirtClient, err := d.config.client(d.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zvirt client: %v", err)
 	}

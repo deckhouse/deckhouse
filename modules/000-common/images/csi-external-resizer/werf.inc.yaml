@@ -33,10 +33,13 @@ git:
     install:
     - '**/*'
     {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git .
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-csi/external-resizer.git .
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
@@ -44,21 +47,26 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - make build
   - cp bin/csi-resizer /csi-resizer
   - chown 64535:64535 /csi-resizer
