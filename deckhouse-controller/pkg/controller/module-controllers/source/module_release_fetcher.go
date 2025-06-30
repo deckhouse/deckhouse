@@ -108,7 +108,7 @@ func (r *reconciler) fetchModuleReleases(
 	defer span.End()
 
 	// client watch only one channel
-	// registry.deckhouse.io/deckhouse/ce/modules/$module/release-channel:$release-channel
+	// registry.deckhouse.io/deckhouse/ce/modules/$module/release:$release
 	registryClient, err := r.dc.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
@@ -172,12 +172,12 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	def, err := f.moduleDownloader.DownloadModuleDefinitionByVersion(f.moduleName, f.targetReleaseMeta.ModuleVersion)
+	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
 	if err != nil {
 		return fmt.Errorf("download module definition: %w", err)
 	}
 
-	f.targetReleaseMeta.ModuleDefinition = def
+	f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
@@ -288,14 +288,14 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		ensureErr := func() error {
 			logger.Debug("ensure module release", slog.String("version", ver.String()))
 
-			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
+			m, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
 			if err != nil {
 				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
 				return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
 			}
 
-			err = f.ensureModuleRelease(ctx, &m, "step-by-step")
+			err = f.ensureModuleRelease(ctx, m, "step-by-step")
 			if err != nil {
 				f.logger.Error("ensure module release", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 

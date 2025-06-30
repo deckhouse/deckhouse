@@ -415,6 +415,18 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
+	if len(release.Annotations) == 0 {
+		release.Annotations = make(map[string]string, 1)
+	}
+
+	if r.isModuleReady(ctx, r.moduleManager, release.GetModuleName()) {
+		release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
+		release.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = "true"
+	} else {
+		release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "true"
+		needsUpdate = true
+	}
+
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
@@ -670,7 +682,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
+	if !task.IsSingle && !task.IsPatch && !r.isModuleReady(ctx, r.moduleManager, release.GetModuleName()) {
 		logger.Debug("module is not ready, waiting")
 
 		drs := &v1alpha1.ModuleReleaseStatus{
@@ -1034,7 +1046,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	}()
 
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, logger)
-	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
+	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, logger.Named("downloader"), options)
 
 	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
 	if err != nil {
@@ -1087,7 +1099,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 			logger.Debug("successfully updated module conditions")
 		}
 
-		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+		if err := r.updateReleaseStatus(ctx, release, status); err != nil {
 			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
@@ -1483,10 +1495,22 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 	}
 }
 
-func isModuleReady(moduleManager moduleManager, moduleName string) bool {
+func (r *reconciler) isModuleReady(ctx context.Context, moduleManager moduleManager, moduleName string) bool {
+	module := new(v1alpha1.Module)
+	err := r.client.Get(ctx, types.NamespacedName{Name: moduleName}, module)
+	if err != nil {
+		r.log.Error("cannot find module", slog.String("module-name", moduleName), log.Err(err))
+		return false
+	}
+
 	basicModule := moduleManager.GetModule(moduleName)
 	if basicModule == nil {
 		return false
+	}
+
+	if module.Status.Phase == v1alpha1.ModulePhaseReady {
+		basicModule.SetPhase(addonmodules.Ready)
+		return true
 	}
 
 	return basicModule.GetPhase() == addonmodules.Ready
