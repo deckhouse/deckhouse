@@ -19,7 +19,6 @@ package transform
 import (
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -85,11 +84,6 @@ func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 		source = vrl.ParseJSONMessage(e.JSON.Depth)
 	case v1alpha1.FormatKlog:
 		source = vrl.ParseKlogMessage.String()
-	case v1alpha1.FormatNginxLog:
-		if !slices.Contains(v1alpha1.NginxLogFormat, e.NginxLog.Format) {
-			return nil, fmt.Errorf("transformations parseMessage NginxLog: Format is not valid")
-		}
-		source = vrl.ParseNginxLogMessage(e.NginxLog.Format)
 	case v1alpha1.FormatCLF:
 		source = vrl.ParseCLFMessage.String()
 	case v1alpha1.FormatSysLog:

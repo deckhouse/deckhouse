@@ -18,7 +18,6 @@ package vrl
 
 import (
 	"fmt"
-	"strings"
 )
 
 //VRL for transformations destination logs.
@@ -64,12 +63,6 @@ func ParseJSONMessage(depth int) string {
 		maxDepth = fmt.Sprintf(", max_depth: %d", depth)
 	}
 	return fmt.Sprintf("if is_string(.message) {\n.message = parse_json(.message%s) ?? .message\n}", maxDepth)
-}
-
-// Parse message nginx log with format to json object
-func ParseNginxLogMessage(format string) string {
-	return fmt.Sprintf("if is_string(.message) {\n.message = parse_nginx_log(.message, \"%s\") ?? .message\n}",
-		strings.ToLower(format))
 }
 
 // Delete label

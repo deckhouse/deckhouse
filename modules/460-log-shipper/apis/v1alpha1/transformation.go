@@ -41,21 +41,19 @@ type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
 }
 type ParseMessageSpec struct {
-	SourceFormat SourceFormat             `json:"sourceFormat"`
-	String       SourceFormatStringSpec   `json:"string,omitempty"`
-	JSON         SourceFormatJSONSpec     `json:"json,omitempty"`
-	NginxLog     SourceFormatNginxLogSpec `json:"nginxLog,omitempty"`
+	SourceFormat SourceFormat           `json:"sourceFormat"`
+	String       SourceFormatStringSpec `json:"string,omitempty"`
+	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
 }
 type SourceFormat string
 
 const (
-	FormatString   SourceFormat = "String"
-	FormatJSON     SourceFormat = "JSON"
-	FormatKlog     SourceFormat = "Klog"
-	FormatNginxLog SourceFormat = "NginxLog"
-	FormatSysLog   SourceFormat = "SysLog"
-	FormatCLF      SourceFormat = "CLF"
-	FormatLogfmt   SourceFormat = "Logfmt"
+	FormatString SourceFormat = "String"
+	FormatJSON   SourceFormat = "JSON"
+	FormatKlog   SourceFormat = "Klog"
+	FormatSysLog SourceFormat = "SysLog"
+	FormatCLF    SourceFormat = "CLF"
+	FormatLogfmt SourceFormat = "Logfmt"
 )
 
 type SourceFormatStringSpec struct {
@@ -64,8 +62,3 @@ type SourceFormatStringSpec struct {
 type SourceFormatJSONSpec struct {
 	Depth int `json:"depth,omitempty"`
 }
-type SourceFormatNginxLogSpec struct {
-	Format string `json:"format,omitempty"`
-}
-
-var NginxLogFormat = []string{"combined", "error", "ingress_upstreaminfo", "main"}
