@@ -13,16 +13,6 @@ data:
     version: v1
     flags:
       migStrategy: none
-  MPS: |-
-    version: v1
-    flags:
-      migStrategy: none
-    sharing:
-      mps:
-        renameByDefault: false
-        resources:
-        - name: nvidia.com/gpu
-          replicas: 4
   MIG: |-
     version: v1
     flags:

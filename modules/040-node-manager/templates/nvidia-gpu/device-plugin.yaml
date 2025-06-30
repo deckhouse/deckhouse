@@ -166,8 +166,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
         command: ["/nvidia-device-plugin"]
         env:
-          - name: MPS_ROOT
-            value: "/run/nvidia/mps"
           - name: FAIL_ON_INIT_ERROR
             value: "true"
           - name: PASS_DEVICE_SPECS
@@ -194,11 +192,6 @@ spec:
           - name: driver-root
             mountPath: /driver-root
             readOnly: true
-          # The MPS /dev/shm is needed to allow for MPS daemon health-checking.
-          - name: mps-shm
-            mountPath: /dev/shm
-          - name: mps-root
-            mountPath: /mps
           - name: cdi-root
             mountPath: /var/run/cdi
           - name: available-configs
@@ -216,13 +209,6 @@ spec:
         - name: device-plugin
           hostPath:
             path: /var/lib/kubelet/device-plugins
-        - name: mps-root
-          hostPath:
-            path: /run/nvidia/mps
-            type: DirectoryOrCreate
-        - name: mps-shm
-          hostPath:
-            path: /run/nvidia/mps/shm
         - name: driver-root
           hostPath:
             path: "/run/nvidia/driver"
