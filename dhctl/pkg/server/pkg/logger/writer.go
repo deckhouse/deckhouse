@@ -110,11 +110,17 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 
 	if len(lines) > 0 {
 		for _, line := range lines {
-			fmt.Fprintf(os.Stderr, "debudlogwriter: send to logger: %s\n", line)
-			w.l.Debug(line)
-			fmt.Fprintf(os.Stderr, "debudlogwriter: sent to logger: %s\n", line)
+			fmt.Fprintf(os.Stderr, "debudlogwriter: write to sterr: %s\n", line)
+			//w.l.Debug(line)
+			//fmt.Fprintf(os.Stderr, "debudlogwriter: sent to logger: %s\n", line)
 		}
 	}
 
-	return len(p), nil
+	fmt.Fprintf(os.Stderr, "debudlogwriter: starting getting len of bufffer\n")
+
+	llen := len(p)
+
+	fmt.Fprintf(os.Stderr, "debudlogwriter: got len of buffer %d\n", llen)
+
+	return llen, nil
 }
