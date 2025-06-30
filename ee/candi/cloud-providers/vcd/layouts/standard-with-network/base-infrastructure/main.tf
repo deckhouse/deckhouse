@@ -18,3 +18,8 @@ resource "vcd_vapp_org_network" "vapp_network" {
   org_network_name       = module.network.name
   reboot_vapp_on_removal = true
 }
+
+module "nat" {
+  source                       = "../../../terraform-modules/nat"
+  providerClusterConfiguration = var.providerClusterConfiguration
+}

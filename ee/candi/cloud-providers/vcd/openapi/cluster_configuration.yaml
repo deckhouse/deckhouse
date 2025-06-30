@@ -283,6 +283,18 @@ apiVersions:
             VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
           enum: ["NSX-V", "NSX-T"]
           example: "NSX-T"
+        edgeGatewayExternalIP:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+          description:
+            External IP for build DNAT rule for master node.
+        edgeGatewayExternalPort:
+          type: integer
+          description: |
+            External port for build DNAT rule for master node.
+          minimum: 1
+          maximum: 65535
+          example: 10022
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
