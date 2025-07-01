@@ -11,14 +11,14 @@ Horizontal Pod Autoscaler (HPA) is a mechanism for automatically adjusting (up o
 
 Horizontal scaling in DKP can be based on any available metrics, such as:
 
-1. Pod CPU and memory usage.
+1. [Pod CPU and memory usage](hpa.html#scaling-based-on-cpu-and-memory).
    - Configured using the [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/) resource.  
-     For example, you can define a Resource-type metric with `averageUtilization = 70` for CPU, so that the application scales up when average CPU usage reaches 70% (see [HPA Configuration Examples](hpa.html#scaling-based-on-cpu-and-memory)).
+     For example, you can define a Resource-type metric with `averageUtilization = 70` for CPU, so that the application scales up when average CPU usage reaches 70%.
 
-1. DKP object metrics (Ingress, Service) or pod-based metrics (sum or average across all pods of a controller) (see [HPA Configuration Examples](hpa.html#scaling-based-on-object-metrics)).
+1. [DKP object metric](hpa.html#scaling-based-on-object-metrics) (Ingress, Service) or pod-based metrics (sum or average across all pods of a controller).
    - Enables scaling based on metrics attached to DKP objects (e.g., Ingress, Service), or metrics aggregated from pods (sum or average per controller). Resources like ServiceMetric and IngressMetric are used for this.
 
-1. Any other metrics, including external data (e.g., Amazon SQS metrics, cloud load balancers, SaaS services, etc.) (see [HPA Configuration Examples](hpa.html#scaling-based-on-external-data)).
+1. [Any other metrics, including external data](hpa.html#scaling-based-on-external-data) (e.g., Amazon SQS metrics, cloud load balancers, SaaS services, etc.).
    - Useful when the metric source is outside the cluster (e.g., Amazon SQS, cloud Load Balancer, SaaS services). Configured using the CustomPrometheusRules resource.
 
 ## HPA recommendations

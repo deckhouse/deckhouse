@@ -844,6 +844,14 @@ entries:
             draft: true
             url: /user/access-platform.html
         - title:
+            en: Application scaling and resource management
+            ru: Масштабирование приложений и управление ресурсами
+          folders:
+            - title:
+                en: Vertical Pod Autoscaling
+                ru: Вертикальное масштабирование
+              url: /user/configuration/app-scaling/vpa.html      
+        - title:
             en: Network
             ru: Сеть
           folders:
@@ -1115,7 +1123,7 @@ entries:
         - title:
             en: VPA
             ru: VPA
-          url: /architecture/vpa.html
+          url: /architecture/vpa.html 
         - title:
             en: Authentication
             ru: Аутентификация
