@@ -1533,6 +1533,8 @@ spec:
                           description: |
                             Count of partition per GPU with TimeSlicing.
                           x-doc-default: 4
+                          minimum: 1
+                          maximum: 100
                     exclusive:
                       type: object
                       description: |
