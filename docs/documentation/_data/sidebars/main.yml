@@ -852,8 +852,8 @@ entries:
                 ru: Обработка входящего трафика
               folders:
                 - title:
-                    en: General information about NLB and ALB
-                    ru: Общая информация про NLB и ALB
+                    en: Overview
+                    ru: Обзор
                   url: /user/network/ingress/
                 - title:
                     en: NLB
@@ -881,7 +881,7 @@ entries:
               url: /user/network/app_istio_activation.html
             - title:
                 en: Managing request balancing between service Endpoints with Istio
-                ru: Управление балансировкой запросов между endpoint’ами сервиса с Istio
+                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
                 en: Locality failover with Istio

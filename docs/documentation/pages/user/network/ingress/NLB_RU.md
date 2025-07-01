@@ -10,7 +10,11 @@ NLB обеспечивается за счет использования сер
 
 ## Примеры настроек для Service
 
-Для создания Services с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/load-balancer-shared-ip-key`:
+### Общий IP-адрес для нескольких Service
+
+Для того, чтобы Services использовали одни и те же IP-адреса, добавьте к ним аннотацию `network.deckhouse.io/load-balancer-shared-ip-key`:
+
+Пример:
 
 ```yaml
 apiVersion: v1
@@ -48,7 +52,11 @@ spec:
     app: dns
 ```
 
-Для создания Service с принудительно выбранным адресом необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+### Принудительное назначение IP-адреса
+
+Чтобы задать для Service с принудительно выбранный адрес, добавьте аннотацию `network.deckhouse.io/load-balancer-ips`:
+
+Пример:
 
 ```yaml
 apiVersion: v1
@@ -66,7 +74,12 @@ spec:
   type: LoadBalancer
 ```
 
-Создание Service и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
+### Назначение IPAddressPool (режим BGP)
+
+В режиме BGP LoadBalancer получение IP-адреса возможно из определённого пула адресов через аннотацию `metallb.universe.tf/address-pool`.
+Для режима L2 LoadBalancer необходимо использовать настройки [MetalLoadBalancerClass](../../../admin/configuration/network/ingress/nlb/metallb.html#пример-использования-metallb-в-режиме-l2-loadbalancer).
+
+Пример:
 
 ```yaml
 apiVersion: v1
