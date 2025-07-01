@@ -1,28 +1,11 @@
 # Copyright 2025 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-locals {
-  useNSXT       = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
-  edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
-}
-
-data "vcd_nsxt_edgegateway" "gateway" {
-  count = local.useNSXT ? 1 : 0
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
-}
-
-data "vcd_edgegateway" "gateway" {
-  count = local.useNSXT ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
-}
-
 resource "vcd_network_routed_v2" "network" {
   org  = var.providerClusterConfiguration.organization
   name = var.providerClusterConfiguration.mainNetwork
 
-  edge_gateway_id = local.edgeGatewayId
+  edge_gateway_id = var.edgeGatewayId
 
   gateway       = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 1)
   prefix_length = tonumber(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1])
@@ -31,7 +14,7 @@ resource "vcd_network_routed_v2" "network" {
 }
 
 resource "vcd_nsxt_network_dhcp" "pools" {
-  count = local.useNSXT ? 1 : 0
+  count = var.useNSXT ? 1 : 0
 
   org_network_id = vcd_network_routed_v2.network.id
   dns_servers    = var.providerClusterConfiguration.internalNetworkDNSServers

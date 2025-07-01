@@ -4,11 +4,3 @@
 output "name" {
   value = vcd_network_routed_v2.network.name  
 }
-
-output "networkId" {
-  value = vcd_network_routed_v2.network.id
-}
-
-output "edgeGatewayId" {
-  value = local.edgeGatewayId
-}
