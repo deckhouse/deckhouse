@@ -150,6 +150,7 @@ shell:
   - ln -sf /usr/lib lib
   - ln -sf /usr/lib64 lib64
   - mkdir run
+  - echo "export PS1='\u@\h:\w\\$ '" >> profile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
@@ -167,6 +168,10 @@ import:
   - lib
   - lib64
   - run
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /base-items/profile
+  to: /etc/profile
   before: install
 imageSpec:
   config:
