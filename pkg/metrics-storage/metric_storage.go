@@ -48,6 +48,7 @@ type MetricStorage struct {
 
 func NewMetricStorage(ctx context.Context, prefix string, newRegistry bool, logger *log.Logger) *MetricStorage {
 	cctx, cancel := context.WithCancel(ctx)
+
 	m := &MetricStorage{
 		ctx:    cctx,
 		cancel: cancel,
@@ -62,6 +63,7 @@ func NewMetricStorage(ctx context.Context, prefix string, newRegistry bool, logg
 
 		logger: logger.With("operator.component", "metricsStorage"),
 	}
+
 	m.groupedVault = vault.NewGroupedVault(m.resolveMetricName)
 	m.groupedVault.SetRegisterer(m.Registerer)
 
@@ -83,6 +85,7 @@ func (m *MetricStorage) resolveMetricName(name string) string {
 	if strings.Contains(name, PrefixTemplate) {
 		return strings.Replace(name, PrefixTemplate, m.Prefix, 1)
 	}
+
 	return name
 }
 
@@ -92,6 +95,7 @@ func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string
 	if m == nil {
 		return
 	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			m.logger.Error("Metric gauge set",
@@ -109,6 +113,7 @@ func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string
 	if m == nil {
 		return
 	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			m.logger.Error("Metric gauge add",
@@ -150,6 +155,7 @@ func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *
 
 	m.gaugesLock.Lock()
 	defer m.gaugesLock.Unlock()
+
 	// double check
 	vec, ok := m.Gauges[metric]
 	if ok {
@@ -164,8 +170,10 @@ func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *
 		},
 		labelspkg.LabelNames(labels),
 	)
+
 	m.Registerer.MustRegister(vec)
 	m.Gauges[metric] = vec
+
 	return vec
 }
 
@@ -175,6 +183,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 	if m == nil {
 		return
 	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			m.logger.Error("Metric counter add",
@@ -184,6 +193,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 				slog.String("recover", fmt.Sprintf("%v", r)))
 		}
 	}()
+
 	m.Counter(metric, labels).With(labels).Add(value)
 }
 
@@ -215,6 +225,7 @@ func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string)
 
 	m.countersLock.Lock()
 	defer m.countersLock.Unlock()
+
 	// double check
 	vec, ok := m.Counters[metric]
 	if ok {
@@ -229,8 +240,10 @@ func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string)
 		},
 		labelspkg.LabelNames(labels),
 	)
+
 	m.Registerer.MustRegister(vec)
 	m.Counters[metric] = vec
+
 	return vec
 }
 
@@ -240,6 +253,7 @@ func (m *MetricStorage) HistogramObserve(metric string, value float64, labels ma
 	if m == nil {
 		return
 	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			m.logger.Error("Metric histogram observe",
@@ -249,6 +263,7 @@ func (m *MetricStorage) HistogramObserve(metric string, value float64, labels ma
 				slog.String("recover", fmt.Sprintf("%v", r)))
 		}
 	}()
+
 	m.Histogram(metric, labels, buckets).With(labels).Observe(value)
 }
 
@@ -259,6 +274,7 @@ func (m *MetricStorage) Histogram(metric string, labels map[string]string, bucke
 	if ok {
 		return vec
 	}
+
 	return m.RegisterHistogram(metric, labels, buckets)
 }
 
@@ -277,6 +293,7 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 
 	m.histogramsLock.Lock()
 	defer m.histogramsLock.Unlock()
+
 	// double check
 	vec, ok := m.Histograms[metric]
 	if ok {
@@ -302,6 +319,7 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 
 	m.Registerer.MustRegister(vec)
 	m.Histograms[metric] = vec
+
 	return vec
 }
 
@@ -311,6 +329,7 @@ func (m *MetricStorage) sendBatchV0(ops []operation.MetricOperation, labels map[
 	if m == nil {
 		return nil
 	}
+
 	// Apply metric operations
 	for _, metricOp := range ops {
 		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
@@ -329,6 +348,7 @@ func (m *MetricStorage) sendBatchV0(ops []operation.MetricOperation, labels map[
 		}
 		return fmt.Errorf("no operation in metric from module hook, name=%s", metricOp.Name)
 	}
+
 	return nil
 }
 
@@ -351,9 +371,11 @@ func (m *MetricStorage) SendBatch(ops []operation.MetricOperation, labels map[st
 			nonGroupedOps = append(nonGroupedOps, op)
 			continue
 		}
+
 		if _, ok := groupedOps[op.Group]; !ok {
 			groupedOps[op.Group] = make([]operation.MetricOperation, 0)
 		}
+
 		groupedOps[op.Group] = append(groupedOps[op.Group], op)
 	}
 
@@ -378,20 +400,24 @@ func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabel
 		m.CounterAdd(op.Name, *op.Value, labels)
 		return
 	}
+
 	//nolint:staticcheck
 	if op.Add != nil {
 		m.CounterAdd(op.Name, *op.Add, labels)
 		return
 	}
+
 	if op.Action == "set" && op.Value != nil {
 		m.GaugeSet(op.Name, *op.Value, labels)
 		return
 	}
+
 	//nolint:staticcheck
 	if op.Set != nil {
 		m.GaugeSet(op.Name, *op.Set, labels)
 		return
 	}
+
 	if op.Action == "observe" && op.Value != nil && op.Buckets != nil {
 		m.HistogramObserve(op.Name, *op.Value, labels, op.Buckets)
 	}
@@ -408,17 +434,21 @@ func (m *MetricStorage) applyGroupOperations(group string, ops []operation.Metri
 			m.groupedVault.ExpireGroupMetrics(group)
 			continue
 		}
+
 		labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 		if op.Action == "add" && op.Value != nil {
 			m.groupedVault.CounterAdd(group, op.Name, *op.Value, labels)
 		}
+
 		//nolint:staticcheck
 		if op.Add != nil {
 			m.groupedVault.CounterAdd(group, op.Name, *op.Add, labels)
 		}
+
 		if op.Action == "set" && op.Value != nil {
 			m.groupedVault.GaugeSet(group, op.Name, *op.Value, labels)
 		}
+
 		//nolint:staticcheck
 		if op.Set != nil {
 			m.groupedVault.GaugeSet(group, op.Name, *op.Set, labels)
