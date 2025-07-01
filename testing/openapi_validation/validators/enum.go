@@ -142,7 +142,7 @@ var (
 			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
-			"properties.internal.properties.providerClusterConfiguration.properties.edgeGatewayType",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.type",
 		},
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
 			// ignore internal values
@@ -224,7 +224,7 @@ var (
 		},
 		"candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
 			// ignore enum values
-			"apiVersions[*].openAPISpec.properties.edgeGatewayType",
+			"apiVersions[*].openAPISpec.properties.edgeGateway.type",
 		},
 	}
 
