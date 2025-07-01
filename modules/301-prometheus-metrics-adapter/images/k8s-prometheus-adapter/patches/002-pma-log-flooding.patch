@@ -1,5 +1,5 @@
 diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
-index de59e70..af756aa 100644
+index de59e70..1908703 100644
 --- a/pkg/resourceprovider/provider.go
 +++ b/pkg/resourceprovider/provider.go
 @@ -180,6 +180,7 @@ func (p *resourceProvider) GetPodMetrics(pods ...*metav1.PartialObjectMetadata)
@@ -10,13 +10,11 @@ index de59e70..af756aa 100644
  	// check to make sure everything is present
  	nsRes, nsResPresent := resultsByNs[pod.Namespace]
  	if !nsResPresent {
-@@ -187,13 +188,24 @@ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resul
- 		return nil
+@@ -188,12 +189,23 @@ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resul
  	}
  	cpuRes, hasResult := nsRes.cpu[pod.Name]
--	if !hasResult {
+ 	if !hasResult {
 -		klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
-+	if !hasResult && pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
 +		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
 +			klog.V(4).Infof("unable to fetch cpu metrics for pod %s (young pod, age < window), skipping",
 +				pod.Name)
