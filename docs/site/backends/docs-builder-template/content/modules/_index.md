@@ -1,6 +1,6 @@
 ---
 title: Modules overview
-url: modules/
+url: modules/readme.html
 layout: modules
 ---
 

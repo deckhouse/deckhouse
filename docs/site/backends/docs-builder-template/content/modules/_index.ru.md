@@ -1,6 +1,6 @@
 ---
 title: Обзор модулей
-url: modules/
+url: modules/readme.html
 layout: modules
 ---
 
