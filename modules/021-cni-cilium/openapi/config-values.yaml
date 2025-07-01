@@ -95,7 +95,9 @@ properties:
     type: boolean
     default: false
     description: |
-      Enables service-level annotation for configuring BPF load balancing algorithm.
+      Allows selectively overriding the load balancing algorithm using eBPF between backends for individual services. The annotation `cilium.io/bpf-lb-algorithm` is used for overriding with one of the following values: `random`, `maglev`, or `least-conn`.
+
+      > Note! This option requires the Linux kernel version on the nodes to be at least 5.15.
   resourcesManagement:
     description: |
       Settings for CPU and memory requests and limits by cilium agent pods.
