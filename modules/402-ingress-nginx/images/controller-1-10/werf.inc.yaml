@@ -278,7 +278,7 @@ shell:
   - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
-  - chown {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
 ---
