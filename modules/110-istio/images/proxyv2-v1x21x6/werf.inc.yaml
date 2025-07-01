@@ -235,7 +235,7 @@ fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-fromImage: common/alt-p11-artifact
+fromImage: builder/alt
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
