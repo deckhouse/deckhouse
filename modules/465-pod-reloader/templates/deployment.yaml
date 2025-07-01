@@ -61,6 +61,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: {{ $.Chart.Name }}
+      automountServiceAccountToken: true
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
@@ -115,6 +116,27 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: https-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /livez
+              port: https-metrics
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
           env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:

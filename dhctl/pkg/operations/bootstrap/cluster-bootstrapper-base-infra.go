@@ -35,11 +35,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
-
 	if err != nil {
 		return err
 	}
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)

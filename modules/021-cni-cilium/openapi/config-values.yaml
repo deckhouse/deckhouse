@@ -58,6 +58,13 @@ properties:
       recommends disabling the `svcSourceRangeCheck` option.
 
       Do not enable if another balancer or any type of SNAT is running in front of the services.
+  loadBalancerSourceRangeAllTypes:
+    type: boolean
+    default: true
+    description: |
+      Enable loadBalancerSourceRanges CIDR filtering for all service types, not just LoadBalancer services.
+      The corresponding NodePort and ClusterIP will also apply the CIDR filter.
+      For more detailed information, please visit the [link](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
   policyAuditMode:
     type: boolean
     default: false
@@ -243,17 +250,30 @@ properties:
                 - type: number
                 description: |
                   Configuring memory limits.
-  encryptionMode:
-    type: string
-    enum: ["Disabled", "WireGuard"]
-    default: "Disabled"
+  encryption:
+    type: object
     description: |
-      Encryption mode:
-      - `Disabled` — encryption is disabled.
-      - `WireGuard` — enables traffic encryption between pods and nodes using WireGuard.
+      CNI Cilium encryption settings.
+    default: {}
+    properties:
+      mode:
+        type: string
+        enum: ["Disabled", "WireGuard"]
+        default: "Disabled"
+        description: |
+          Encryption mode:
+          - `Disabled` — encryption is disabled.
+          - `WireGuard` — enables traffic encryption between pods using WireGuard.
 
-      > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either via the CONFIG_WIREGUARD=m kernel config option on Linux 5.6 and newer, or using an external WireGuard module for older kernels).
+            > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either via the CONFIG_WIREGUARD=m kernel config option on Linux 5.6 and newer, or using an external WireGuard module for older kernels).
 
-      > Note! Using WireGuard may cause significant CPU consumption by Cilium agent pods.
+            > Note! Using WireGuard may cause significant CPU consumption by Cilium agent pods.
+      nodeToNodeModeEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enabling traffic encryption between nodes and pods in HostNetwork.
 
-      > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
+            > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
+
+          > Note! When this mode is active, `NodePort` and `HostPort` are not available from the `PodNetwork`.

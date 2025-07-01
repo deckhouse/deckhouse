@@ -227,12 +227,9 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        The Cilium configuration specifies a non-standard VXLAN port `{{$labels.port}}`. This port falls outside the recommended range:
+        The Cilium configuration specifies a non-standard VXLAN port `{{ $labels.current_port }}`. The recommended port number is `{{ $labels.recommended_port }}`.
 
-        - `4298`: When the virtualization module is enabled.
-        - `4299`: For a standard Deckhouse setup.
-
-        To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended range.
+        To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended port.
 
         If you configured the non-standard port on purpose, ignore this alert.
       summary: |
@@ -597,81 +594,6 @@ alerts:
       summary: |
         Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
-      markupFormat: markdown
-    - name: D8CheckCloudProviderConfig
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |
-        The provider-cluster-configuration in the cluster contains fields that aren't defined in the schema.
-
-        Steps to troubleshoot:
-
-        1. Check the logs for details:
-
-           ```bash
-           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
-           ```
-
-        1. Remove the unsupported fields from the provider-cluster-configuration:
-
-           ```bash
-           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
-           ```
-      summary: |
-        Provider-cluster-configuration contains unsupported fields.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8CheckClusterConfig
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |
-        The cluster-configuration in the cluster contains fields that aren't defined in the schema.
-
-        Steps to troubleshoot:
-
-        1. Check the logs for details:
-
-           ```bash
-           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
-           ```
-
-        1. Remove the unsupported fields from the cluster-configuration:
-
-           ```bash
-           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
-           ```
-      summary: |
-        Cluster-configuration contains unsupported fields.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8CheckStaticClusterConfig
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |
-        The static-cluster-configuration in the cluster contains fields that aren't defined in the schema.
-
-        Steps to troubleshoot:
-
-        1. Check the logs for details:
-
-           ```bash
-           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
-           ```
-
-        1. Remove the unsupported fields from the static-cluster-configuration:
-
-           ```bash
-           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
-           ```
-      summary: |
-        Static-cluster-configuration contains unsupported fields.
-      severity: "4"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -1086,6 +1008,16 @@ alerts:
         A new suitable policy will be detected automatically.
       summary: |
         Module update policy not found for {{ $labels.module_release }}.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8DeckhouseModuleValidationError
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n \n```bash\nkubectl get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
+      summary: |
+        Module configuration failed for module {{ $labels.module }}.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
@@ -1863,7 +1795,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.29)
+        Please migrate to the next kubernetes version (at least 1.30)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
@@ -2332,9 +2264,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8NodeHasUnmetKernelRequirements
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/kernel-requirements.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/kernel-requirements.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
       edition: ce
       description: |-
         Deckhouse has detected that some nodes don't meet the required kernel constraints.
@@ -2342,10 +2274,7 @@ alerts:
 
         Kernel requirements for each module:
 
-        - **Cilium module**: Kernel version must be **>= 4.9.17**.
-        - **Cilium with Istio**: Kernel version must be **>= 5.7**.
-        - **Cilium with OpenVPN**: Kernel version must be **>= 5.7**.
-        - **Cilium with Node-local-dns**: Kernel version must be **>= 5.7**.
+        - **Cilium module**: Kernel version must be **>= 5.8**.
 
         To list all affected nodes, use the `d8_node_kernel_does_not_satisfy_requirements == 1` expression in Prometheus.
       summary: |
@@ -2729,146 +2658,6 @@ alerts:
       summary: |
         Smoke-mini has unbound or lost PersistentVolumeClaims.
       severity: "9"
-      markupFormat: markdown
-    - name: D8SnapshotControllerPodIsNotReady
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-controller.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Troubleshooting steps:
-
-        1. Examine the Deployment's details:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
-           ```
-
-        2. Check the Pod's status to determine the cause why it is not running:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
-           ```
-      summary: |
-        Snapshot-controller Pod is NOT Ready.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8SnapshotControllerPodIsNotRunning
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-controller.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Troubleshooting steps:
-
-        1. Examine the Deployment's details:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
-           ```
-
-        2. Check the Pod's status to determine the cause why it is not running:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
-           ```
-      summary: |
-        Snapshot-controller Pod is NOT Running.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8SnapshotControllerTargetAbsent
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-controller.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Troubleshooting options:
-
-        - Check the Pod's status:
-
-          ```shell
-          kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
-          ```
-
-        - Check the Pod's logs:
-
-          ```shell
-          kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
-          ```
-      summary: |
-        Snapshot-controller target is missing in Prometheus.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8SnapshotControllerTargetDown
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-controller.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Prometheus is unable to scrape metrics from the `snapshot-controller`.
-
-        Troubleshooting options:
-
-        - Check the Pod's status:
-
-          ```shell
-          kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
-          ```
-
-        - Check the Pod's logs:
-
-          ```shell
-          kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
-          ```
-      summary: |
-        Prometheus cannot scrape the snapshot-controller metrics.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8SnapshotValidationWebhookPodIsNotReady
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-validation-webhook.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Troubleshooting steps:
-
-        1. Examine the Deployment's details:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
-           ```
-
-        2. Check the Pod's status to determine the cause why it is not running:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook
-           ```
-      summary: |
-        Snapshot-validation-webhook Pod is NOT Ready.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8SnapshotValidationWebhookPodIsNotRunning
-      sourceFile: modules/045-snapshot-controller/monitoring/prometheus-rules/snapshot-validation-webhook.yaml
-      moduleUrl: 045-snapshot-controller
-      module: snapshot-controller
-      edition: ce
-      description: |
-        Troubleshooting steps:
-
-        1. Examine the Deployment's details:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
-           ```
-
-        2. Check the Pod's status to determine the cause why it is not running:
-
-           ```shell
-           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook
-           ```
-      summary: |
-        Snapshot-validation-webhook Pod is NOT Running.
-      severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged
       sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
@@ -3648,6 +3437,56 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseHighMemoryUsage
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Deckhouse memory usage is too high.
+      summary: |
+        Deckhouse pod {{ $labels.pod }} on node {{ $labels.node }} has high memory usage.  Please, if possible, get the memory dump for debugging purpose: curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap&quot; &gt; /tmp/heap and send this file (/tmp/heap) to the support team.
+      severity: "3"
+      markupFormat: markdown
+    - name: DeckhouseModuleUpdatingFailedBrokenSequence
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Current version: {{ $labels.actual_version }}.
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The necessary versions of the Module image is not available in the registry.
+
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+      summary: |
+        Module update has failed. Updating sequence is broken.
+      severity: "4"
+      markupFormat: markdown
+    - name: DeckhouseModuleUpdatingFailedModuleIsNotValid
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+      summary: |
+        Module update has failed. Module is not valid.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseModuleUseEmptyDir
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
       moduleUrl: 300-prometheus
@@ -3724,7 +3563,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "6"
@@ -3734,7 +3580,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "9"
@@ -4930,7 +4783,7 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiRetentionPerionViolation
+    - name: LokiInsufficientDiskForRetention
       sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
       moduleUrl: 462-loki
       module: loki
@@ -5845,24 +5698,78 @@ alerts:
       module: openvpn
       edition: ce
       description: |-
-        There are {{ $value }} expired OpenVPN client certificates.
+        The OpenVPN client certificate for **{{ $labels.client }}** has expired.
 
-        Renew the expired certificates if needed.
+        Check the certificate information and make sure it actually expires:
+
+        ```shell
+        kubectl -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+
+        Renew or delete the expired certificate.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
       summary: |
-        Some OpenVPN client certificates have expired.
+        OpenVPN client certificate expired for {{ $labels.client }}
       severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
+
+        Renewal of certificate required.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+      summary: |
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
+
+        Renewal of certificate required.
+        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+      summary: |
+        OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+      severity: "6"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |-
-        The OpenVPN CA certificate has expired.
-
-        To restore VPN functionality, renew the expired certificate as soon as possible.
+      description: "OpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
       summary: |
         OpenVPN CA certificate has expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpiresTomorrow
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: "\nOpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
+      summary: |
+        OpenVPN CA certificate will expire tomorrow
       severity: "4"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpiringInAWeek
@@ -5870,10 +5777,7 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |-
-        The OpenVPN CA certificate will expire in less than 7 days.
-
-        Immediate renewal is recommended.
+      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```               "
       summary: |
         OpenVPN CA certificate expires in less than 7 days.
       severity: "5"
@@ -5883,10 +5787,7 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |-
-        The OpenVPN CA certificate will expire in less than 30 days.
-
-        Renew the CA certificate if necessary.
+      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```                              "
       summary: |
         OpenVPN CA certificate expires in less than 30 days.
       severity: "5"
@@ -5896,39 +5797,20 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |-
-        The OpenVPN server certificate has expired.
-
-        To restore VPN functionality, renew the expired certificate as soon as possible.
+      description: "The OpenVPN server certificate has expired.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
       summary: |
         OpenVPN server certificate has expired.
       severity: "4"
       markupFormat: markdown
-    - name: OpenVPNServerCertificateExpiringInAWeek
+    - name: OpenVPNServerCertificateExpiresTomorrow
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |-
-        The OpenVPN server certificate will expire in less than 7 days.
-
-        Immediate renewal is recommended.
+      description: "The OpenVPN server certificate is set to expire in less than 1 day.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
       summary: |
-        OpenVPN server certificate expires in less than 7 days.
-      severity: "5"
-      markupFormat: markdown
-    - name: OpenVPNServerCertificateExpiringSoon
-      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
-      moduleUrl: 500-openvpn
-      module: openvpn
-      edition: ce
-      description: |-
-        The OpenVPN server certificate will expire in less than 30 days.
-
-        Renew the certificate if necessary.
-      summary: |
-        OpenVPN server certificate expires in less than 30 days.
-      severity: "5"
+        OpenVPN server certificate will expire tomorrow.
+      severity: "4"
       markupFormat: markdown
     - name: OperationPolicyViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
@@ -6476,7 +6358,6 @@ modules-having-alerts:
     - prometheus
     - runtime-audit-engine
     - secret-copier
-    - snapshot-controller
     - terraform-manager
     - upmeter
     - user-authn

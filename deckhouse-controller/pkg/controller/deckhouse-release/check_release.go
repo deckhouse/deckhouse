@@ -28,6 +28,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -53,8 +54,9 @@ import (
 )
 
 const (
-	metricUpdatingFailedGroup = "d8_updating_failed"
+	metricUpdatingFailedGroup = "d8_updating_is_failed"
 	serviceName               = "check-release"
+	ltsChannelName            = "lts"
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
@@ -438,8 +440,19 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		notificationShiftTime *metav1.Time
 	)
 
+	// if no releases in cluster - create from channel
 	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+		}
+
+		return releaseMetadata, nil
+	}
+
+	// if release channel is LTS - create release from channel
+	if strings.EqualFold(f.releaseChannel, ltsChannelName) {
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -497,12 +510,12 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta

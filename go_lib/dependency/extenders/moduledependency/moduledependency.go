@@ -195,6 +195,12 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 			}
 		}
 
+		// if parent version is empty, we think that module is not deployed
+		if parentVersion == "" {
+			validateErr = multierror.Append(validateErr, fmt.Errorf(`"%s" is not deployed`, parentModule))
+			continue
+		}
+
 		parsedParentVersion, err := parseParentVersion(parentVersion)
 		if err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))

@@ -44,7 +44,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debug("refresh module status", slog.String("name", moduleName))
+	r.logger.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -69,10 +69,10 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debug("refresh module config status", slog.String("name", configName))
+	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
-	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
+	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
@@ -80,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debug("module config not found", slog.String("name", configName))
+					r.logger.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
@@ -144,8 +144,10 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
 		case modules.Ready:
-			module.Status.Phase = v1alpha1.ModulePhaseReady
-			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			if !basicModule.HasReadiness() {
+				module.Status.Phase = v1alpha1.ModulePhaseReady
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			}
 
 		case modules.Startup:
 			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {
@@ -204,7 +206,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 
 	case d7sversionextender.Name:
 		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
-		_, errMsg := d7sversionextender.Instance().Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.DeckhouseVersion.Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()

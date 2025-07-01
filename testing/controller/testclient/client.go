@@ -64,6 +64,7 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		WithStatusSubresource(
 			&v1alpha1.ModuleSource{},
 			&v1alpha1.ModuleRelease{},
+			&v1alpha1.Module{},
 		).
 		Build()
 

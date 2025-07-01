@@ -42,7 +42,7 @@ shell:
     {{- if $patch }}
     - git apply /patches/*.patch --verbose
     {{- end }}
-    - rm -rf .git vendor
+    - rm -rf .git vendor tests/e2e
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

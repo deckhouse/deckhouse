@@ -151,6 +151,7 @@ extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" 
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
 extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
+extra-file-webhook-admission-config.yaml: {{ include "webhookAdmissionConfig" $context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1
@@ -218,6 +219,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager

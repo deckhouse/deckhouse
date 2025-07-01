@@ -49,6 +49,7 @@ const (
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
 	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
+	ModuleReleaseAnnotationChangeCause           = "modules.deckhouse.io/change-cause"
 
 	ModuleReleaseAnnotationDryrun            = "dryrun"
 	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
@@ -184,6 +185,11 @@ func (mr *ModuleRelease) GetReinstall() bool {
 
 func (mr *ModuleRelease) GetApplyNow() bool {
 	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
+}
+
+func (mr *ModuleRelease) GetIsUpdating() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationIsUpdating]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) GetNotified() bool {

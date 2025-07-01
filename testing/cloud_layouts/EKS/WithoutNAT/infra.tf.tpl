@@ -8,7 +8,7 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
-      version = "4.50.0"
+      version = "5.83.1"
     }
 
     random = {
@@ -44,7 +44,7 @@ locals {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.19.0"
+  version = "5.21.0"
 
   name = "${local.cluster_name}-vpc"
 

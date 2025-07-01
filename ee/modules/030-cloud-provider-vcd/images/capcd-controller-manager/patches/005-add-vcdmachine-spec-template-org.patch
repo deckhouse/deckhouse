@@ -1,0 +1,38 @@
+Subject: [PATCH] Add TemplateOrg field to VCDMachine spec
+---
+Index: controllers/vcdmachine_controller.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
+--- a/controllers/vcdmachine_controller.go	(revision fab75bca4f8a790138f8533a62906fb4eba201e7)
++++ b/controllers/vcdmachine_controller.go	(date 1744972617471)
+@@ -553,7 +553,7 @@
+ `
+ 		// vcda-4391 fixed
+ 		err = vdcManager.AddNewVM(vmName, vcdCluster.Name, 1,
+-			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.PlacementPolicy,
++			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.TemplateOrg, vcdMachine.Spec.PlacementPolicy,
+ 			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, guestCustScript, false)
+ 		if err != nil {
+ 			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
+Index: api/v1beta2/vcdmachine_types.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
+--- a/api/v1beta2/vcdmachine_types.go	(revision fab75bca4f8a790138f8533a62906fb4eba201e7)
++++ b/api/v1beta2/vcdmachine_types.go	(date 1744972414293)
+@@ -46,6 +46,10 @@
+ 	// +optional
+ 	Template string `json:"template,omitempty"`
+
++	// TemplateOrg is the organization of the template OVA that is to be used
++	// +optional
++	TemplateOrg string `json:"templateOrg,omitempty"`
++
+ 	// SizingPolicy is the sizing policy to be used on this machine.
+ 	// If no sizing policy is specified, default sizing policy will be used to create the nodes
+ 	// +optional

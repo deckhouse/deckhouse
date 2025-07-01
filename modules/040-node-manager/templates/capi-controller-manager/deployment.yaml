@@ -3,7 +3,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
+{{- if include "capi_controller_manager_enabled" . }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -68,6 +68,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: capi-controller-manager
       terminationGracePeriodSeconds: 10
       hostNetwork: true

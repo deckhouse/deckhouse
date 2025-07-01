@@ -67,6 +67,7 @@ type InternalValuesDeschedulerSpec struct {
 	PodLabelSelector       *metav1.LabelSelector              `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *dsv1alpha2.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	EvictLocalStoragePods  *dsv1alpha2.EvictLocalStoragePods  `json:"evictLocalStoragePods,omitempty" yaml:"evictLocalStoragePods,omitempty"`
 	Strategies             dsv1alpha2.Strategies              `json:"strategies" yaml:"strategies"`
 }
 
@@ -92,6 +93,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 		if item.Spec.PriorityClassThreshold != nil {
 			ds.PriorityClassThreshold = item.Spec.PriorityClassThreshold
+		}
+		if item.Spec.EvictLocalStoragePods != nil {
+			ds.EvictLocalStoragePods = item.Spec.EvictLocalStoragePods
 		}
 
 		internalValues = append(internalValues, *ds)

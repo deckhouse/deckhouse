@@ -18,7 +18,7 @@
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Схема размещения и взаимодействия ресурсов в облаке..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Схема размещения ресурсов (layout) определяет расположение ресурсов в облаке и их сетевое взаимодействие. Существует несколько предопределённых схем размещения, о которых подробнее вы можете узнать [в документации]({{ layout_doc_path }}).
 
 При установке будет использоваться схема размещения ресурсов `{{ layout.name }}`.
@@ -128,10 +128,12 @@
    - **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - наличие одного из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`).
 
-     **Важно.** — в РЕД ОС по умолчанию может отсутствовать `yum`, поэтому при необходимости его следует установить;
+     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому при необходимости их следует установить;
    - установленный Python;
    {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - при использовании частного хранилища образов необходимо предварительно [загрузить образы](../../documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry)
+     Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в частное хранилище;
    - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
    {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
@@ -150,3 +152,10 @@
 </li>
 {%- endif %}
 </ol>
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
+{% alert level="warning" %}
+В рекомендациях выше приведены минимальные {% if page.platform_type == "cloud" %}суммарные{% endif %} ресурсы, необходимые для начального развёртывания кластера с одним master-узлом и одним worker-узлом.
+Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](../../guides/production.html)
+и [инструкцией](../../guides/hardware-requirements.html) по выбору типов и количества узлов кластера, а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
+{% endalert %}
+{%- endif %}

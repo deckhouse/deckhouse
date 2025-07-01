@@ -51,7 +51,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.28.3"
+  kubernetesVersion: "1.29.14"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -213,7 +213,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	BeforeSuite(func() {
 		err := os.Symlink("/deckhouse/ee/modules/015-admission-policy-engine/templates/trivy-provider", "/deckhouse/modules/015-admission-policy-engine/templates/trivy-provider")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		err = os.Symlink("/deckhouse/ee/se-plus/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

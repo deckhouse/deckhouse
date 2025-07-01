@@ -51,6 +51,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "api")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -59,7 +60,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "api") }}
         args:
         - --namespace=d8-{{ .Chart.Name }}
-        - --metrics-scraper-service-name=metrics-scraper
+        - --metrics-scraper-service-name=metrics-scraper:http
         - --insecure-bind-address=127.0.0.1
         - --v=3
         env:

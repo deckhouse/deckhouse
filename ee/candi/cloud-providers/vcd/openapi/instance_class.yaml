@@ -49,13 +49,17 @@ spec:
                   x-doc-examples: [ssd]
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of catalog and template name or template identifier.
+                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template name or template identifier.
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
                     You can find the template identifier in the URL when you open the template in the vCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
                   type: string
-                  x-doc-examples: [Linux/ubuntu2204-cloud-ova, Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7]
+                  x-doc-examples:
+                    - Linux/ubuntu2204-cloud-ova
+                    - MyOrg/Linux/ubuntu2204-cloud-ova
+                    - Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                    - MyOrg/Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
                 mainNetwork:
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
