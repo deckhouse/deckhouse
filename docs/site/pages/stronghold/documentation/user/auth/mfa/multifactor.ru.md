@@ -91,7 +91,7 @@ data:
     </configuration>
 ```
 
-В конфигурации укажите адрес своего LDAP-сервера и значения `multifactor-nas-identifier` и `multifactor-shared-secret` из панели управления Multifactor
+В конфигурации укажите адрес своего LDAP-сервера и значения `multifactor-nas-identifier` и `multifactor-shared-secret` из панели управления Multifactor.
 
 ## Настройка Stronghold
 
