@@ -11,6 +11,11 @@ import (
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
 )
 
+var (
+	_ ConstCollector = (*ConstCounterCollector)(nil)
+	_ ConstCollector = (*ConstGaugeCollector)(nil)
+)
+
 type ConstCollector interface {
 	Describe(ch chan<- *prometheus.Desc)
 	Collect(ch chan<- prometheus.Metric)

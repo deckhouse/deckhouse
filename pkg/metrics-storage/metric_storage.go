@@ -46,7 +46,31 @@ type MetricStorage struct {
 	logger *log.Logger
 }
 
-func NewMetricStorage(ctx context.Context, prefix string, newRegistry bool, logger *log.Logger) *MetricStorage {
+// Option represents a MetricStorage option
+type Option func(*MetricStorage)
+
+// WithNewRegistry is an option to create a new prometheus registry
+func WithNewRegistry() Option {
+	return func(m *MetricStorage) {
+		m.Registry = prometheus.NewRegistry()
+		m.Gatherer = m.Registry
+		m.Registerer = m.Registry
+
+		if m.groupedVault != nil {
+			m.groupedVault.SetRegisterer(m.Registry)
+		}
+	}
+}
+
+// WithLogger is an option to set a custom logger
+func WithLogger(logger *log.Logger) Option {
+	return func(m *MetricStorage) {
+		m.logger = logger
+	}
+}
+
+// NewMetricStorage creates a new metric storage with provided options
+func NewMetricStorage(ctx context.Context, prefix string, opts ...Option) *MetricStorage {
 	cctx, cancel := context.WithCancel(ctx)
 
 	m := &MetricStorage{
@@ -61,17 +85,15 @@ func NewMetricStorage(ctx context.Context, prefix string, newRegistry bool, logg
 		Gatherer:         prometheus.DefaultGatherer,
 		Registerer:       prometheus.DefaultRegisterer,
 
-		logger: logger.With("operator.component", "metricsStorage"),
+		logger: log.NewLogger(log.Options{}).Named("metrics-storage"),
 	}
 
 	m.groupedVault = vault.NewGroupedVault(m.resolveMetricName)
 	m.groupedVault.SetRegisterer(m.Registerer)
 
-	if newRegistry {
-		m.Registry = prometheus.NewRegistry()
-		m.Gatherer = m.Registry
-		m.Registerer = m.Registry
-		m.groupedVault.SetRegisterer(m.Registry)
+	// Apply provided options
+	for _, opt := range opts {
+		opt(m)
 	}
 
 	return m
@@ -334,18 +356,21 @@ func (m *MetricStorage) sendBatchV0(ops []operation.MetricOperation, labels map[
 	for _, metricOp := range ops {
 		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
 
-		if metricOp.Action == "add" && metricOp.Value != nil {
+		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
 			m.CounterAdd(metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
-		if metricOp.Action == "set" && metricOp.Value != nil {
+
+		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
 			m.GaugeSet(metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
-		if metricOp.Action == "observe" && metricOp.Value != nil && metricOp.Buckets != nil {
+
+		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
 			m.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
 			continue
 		}
+
 		return fmt.Errorf("no operation in metric from module hook, name=%s", metricOp.Name)
 	}
 
@@ -396,29 +421,17 @@ func (m *MetricStorage) SendBatch(ops []operation.MetricOperation, labels map[st
 func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) {
 	labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 
-	if op.Action == "add" && op.Value != nil {
+	if op.Action == operation.ActionAdd && op.Value != nil {
 		m.CounterAdd(op.Name, *op.Value, labels)
 		return
 	}
 
-	//nolint:staticcheck
-	if op.Add != nil {
-		m.CounterAdd(op.Name, *op.Add, labels)
-		return
-	}
-
-	if op.Action == "set" && op.Value != nil {
+	if op.Action == operation.ActionSet && op.Value != nil {
 		m.GaugeSet(op.Name, *op.Value, labels)
 		return
 	}
 
-	//nolint:staticcheck
-	if op.Set != nil {
-		m.GaugeSet(op.Name, *op.Set, labels)
-		return
-	}
-
-	if op.Action == "observe" && op.Value != nil && op.Buckets != nil {
+	if op.Action == operation.ActionObserve && op.Value != nil && op.Buckets != nil {
 		m.HistogramObserve(op.Name, *op.Value, labels, op.Buckets)
 	}
 }
@@ -430,28 +443,18 @@ func (m *MetricStorage) applyGroupOperations(group string, ops []operation.Metri
 
 	// Apply metric operations one-by-one.
 	for _, op := range ops {
-		if op.Action == "expire" {
+		if op.Action == operation.ActionExpire {
 			m.groupedVault.ExpireGroupMetrics(group)
 			continue
 		}
 
 		labels := labelspkg.MergeLabels(op.Labels, commonLabels)
-		if op.Action == "add" && op.Value != nil {
+		if op.Action == operation.ActionAdd && op.Value != nil {
 			m.groupedVault.CounterAdd(group, op.Name, *op.Value, labels)
 		}
 
-		//nolint:staticcheck
-		if op.Add != nil {
-			m.groupedVault.CounterAdd(group, op.Name, *op.Add, labels)
-		}
-
-		if op.Action == "set" && op.Value != nil {
+		if op.Action == operation.ActionSet && op.Value != nil {
 			m.groupedVault.GaugeSet(group, op.Name, *op.Value, labels)
-		}
-
-		//nolint:staticcheck
-		if op.Set != nil {
-			m.groupedVault.GaugeSet(group, op.Name, *op.Set, labels)
 		}
 	}
 }

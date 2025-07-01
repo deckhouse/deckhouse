@@ -1,10 +1,7 @@
 package labels
 
 import (
-	"log/slog"
 	"sort"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // MergeLabels merges several maps into one. Last map keys overrides keys from first maps.
@@ -18,18 +15,6 @@ func MergeLabels(labelsMaps ...map[string]string) map[string]string {
 		}
 	}
 	return labels
-}
-
-func EnrichLoggerWithLabels(logger *log.Logger, labelsMaps ...map[string]string) *log.Logger {
-	loggerEntry := logger
-
-	for _, labels := range labelsMaps {
-		for k, v := range labels {
-			loggerEntry = loggerEntry.With(slog.String(k, v))
-		}
-	}
-
-	return loggerEntry
 }
 
 // LabelNames returns sorted label keys
@@ -48,13 +33,6 @@ func LabelValues(labels map[string]string, labelNames []string) []string {
 		values = append(values, labels[name])
 	}
 	return values
-}
-
-func DefaultIfEmpty(m map[string]string, def map[string]string) map[string]string {
-	if len(m) == 0 {
-		return def
-	}
-	return m
 }
 
 // IsSubset checks if a set contains b subset
