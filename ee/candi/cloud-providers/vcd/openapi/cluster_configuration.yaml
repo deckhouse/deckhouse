@@ -273,28 +273,32 @@ apiVersions:
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
           description: |
             VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
-        edgeGatewayName:
-          type: string
+        edgeGateway:
+          type: object
+          additionalProperties: false
           description: |
-            VMware Cloud Director Edge Gateway name (belongs to Virtual Data Center).
-        edgeGatewayType:
-          type: string
-          description: |
-            VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
-          enum: ["NSX-V", "NSX-T"]
-          example: "NSX-T"
-        edgeGatewayExternalIP:
-          type: string
-          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
-          description:
-            External IP for build DNAT rule for master node.
-        edgeGatewayExternalPort:
-          type: integer
-          description: |
-            External port for build DNAT rule for master node.
-          minimum: 1
-          maximum: 65535
-          example: 10022
+            VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
+          properties:
+            name:
+              type: string
+              description: |
+                VMware Cloud Director Edge Gateway name.
+            type:
+              type: string
+              description: |
+                VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
+            externalIP:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+              description: |
+                External IP for build DNAT rule for master node.
+            externalPort:
+              type: integer
+              description: |
+                External port for build DNAT rule for master node.
+              minimum: 1
+              maximum: 65535
+              example: 10022
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
@@ -370,12 +374,16 @@ apiVersions:
               not: {}
             edgeGatewayType:
               not: {}
-        - required: [layout, internalNetworkDNSServers, edgeGatewayName, edgeGatewayType]
+        - required: [layout, internalNetworkDNSServers, edgeGateway]
           properties:
             layout:
               enum:
                 - StandardWithNetwork
               type: string
+            edgeGateway:
+              required: [name, type, externalIP, externalPort]
+              type: object
+              additionalProperties: false
       - oneOf:
         - properties:
             provider:
