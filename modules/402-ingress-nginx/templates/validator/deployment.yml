@@ -151,7 +151,7 @@ spec:
               cpu: "350m"
               memory: "500Mi"
               {{- end }}
-          {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 8 }}
+          {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 10 }}
           ports:
             - name: webhook
               containerPort: 8443
