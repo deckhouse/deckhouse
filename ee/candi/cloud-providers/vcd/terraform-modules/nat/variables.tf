@@ -18,3 +18,7 @@ variable "providerClusterConfiguration" {
 variable "edgeGatewayId" {
   type = string
 }
+
+variable "useNSXT" {
+  type = bool
+}
