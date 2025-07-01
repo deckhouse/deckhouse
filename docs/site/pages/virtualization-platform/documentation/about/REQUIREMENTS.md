@@ -90,11 +90,11 @@ The platform has no other restrictions and is compatible with any hardware that 
 
 ## Supported OS for platform nodes
 
-| Linux distribution          | Supported versions              |
-| --------------------------- | ------------------------------- |
-| CentOS                      | 7, 8, 9                         |
-| Debian                      | 10, 11, 12                      |
-| Ubuntu                      | 20.04, 22.04, 24.04      |
+| Linux distribution | Supported versions  |
+| ------------------ | ------------------- |
+| CentOS             | 7, 8, 9             |
+| Debian             | 10, 11, 12          |
+| Ubuntu             | 20.04, 22.04, 24.04 |
 
 {% alert level="warning" %}
 Ensuring stable operation of live migration mechanisms requires the use of an identical version of the Linux kernel on all cluster nodes.
@@ -108,9 +108,9 @@ The virtualization platform supports operating systems running on `x86` and `x86
 
 Successful startup of the operating system is determined by the following criteria:
 
-- correct installation and booting of the OS;
-- uninterrupted operation of key components such as networking and storage;
-- no crashes or errors during operation.
+- Correct installation and booting of the OS;
+- Uninterrupted operation of key components such as networking and storage;
+- No crashes or errors during operation.
 
 For Linux family operating systems, it is recommended to use guest OS images with `cloud-init` support, which allows initializing virtual machines after their creation.
 
@@ -126,12 +126,12 @@ For Windows family operating systems, the platform supports initialization with 
 
 Virtual machines use PersistentVolume resources. To manage these resources and allocate disk space within the cluster, one or more supported storage systems must be installed:
 
-| Storage System                              | Disk Location              |
-|---------------------------------------------|----------------------------|
-| sds-local-volume                            | Local                      |
-| sds-replicated-volume                       | Replicas on cluster nodes  |
-| Ceph Cluster                                | External storage           |
-| NFS (Network File System)                   | External storage           |
-| TATLIN.UNIFIED (Yadro)                      | External storage           |
-| Huawei Dorado                               | External storage           |
-| HPE 3par                                    | External storage           |
+| Storage System            | Disk Location             |
+| ------------------------- | ------------------------- |
+| sds-local-volume          | Local                     |
+| sds-replicated-volume     | Replicas on cluster nodes |
+| Ceph Cluster              | External storage          |
+| NFS (Network File System) | External storage          |
+| TATLIN.UNIFIED (Yadro)    | External storage          |
+| Huawei Dorado             | External storage          |
+| HPE 3par                  | External storage          |

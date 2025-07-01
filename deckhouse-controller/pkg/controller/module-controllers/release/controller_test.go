@@ -842,6 +842,7 @@ func TestValidateModule(t *testing.T) {
 				Weight: 900,
 				Path:   filepath.Join("./testdata", name),
 			}
+
 			err := def.Validate(values, log.NewNop())
 			if !failed {
 				require.NoError(t, err, "%s: unexpected error: %v", name, err)
@@ -872,7 +873,7 @@ func TestValidateModule(t *testing.T) {
 	check("validation/virtualization", true, nil)
 }
 
-const repeatCount = 2
+const repeatCount = 3
 
 func repeatTest(fn func()) {
 	for range repeatCount {

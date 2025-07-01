@@ -90,7 +90,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: parca
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 properties: {}
 status:
   conditions:

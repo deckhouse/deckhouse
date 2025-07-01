@@ -76,7 +76,7 @@ func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
 	}
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
+Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()

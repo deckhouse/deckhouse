@@ -145,9 +145,7 @@ standard:
   internalNetworkDNSServers:
     - 8.8.8.8
     - 8.8.4.4
-  # [<en>] SecurityGroups are not supported by Selectel VPC.
-  # [<ru>] SecurityGroups не поддерживаются в Selectel VPC.
-  internalNetworkSecurity: false
+  internalNetworkSecurity: true
 # [<en>] OpenStack API access parameters
 # [<ru>] параметры доступа к OpenStack API
 provider:

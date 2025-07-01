@@ -84,6 +84,10 @@ vm-route-forge-nq9xr                         1/1     Running   0             10m
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
 
+{% alert level="warning" %}
+Хранилище, обслуживающее класс хранения (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
+{% endalert %}
+
 #### Сетевые настройки
 
 В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.

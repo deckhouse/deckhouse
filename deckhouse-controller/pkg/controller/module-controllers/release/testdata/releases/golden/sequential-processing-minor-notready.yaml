@@ -129,7 +129,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: upmeter
-  resourceVersion: "1002"
+  resourceVersion: "1004"
 properties: {}
 status:
   conditions:

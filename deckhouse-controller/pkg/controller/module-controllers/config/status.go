@@ -144,8 +144,10 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
 		case modules.Ready:
-			module.Status.Phase = v1alpha1.ModulePhaseReady
-			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			if !basicModule.HasReadiness() {
+				module.Status.Phase = v1alpha1.ModulePhaseReady
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			}
 
 		case modules.Startup:
 			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {

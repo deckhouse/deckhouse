@@ -51,7 +51,8 @@ securityContext:
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
-  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -299,4 +300,5 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
+  {{- end }}
 {{- end }}
