@@ -15,7 +15,9 @@
 package logger
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 )
 
@@ -79,10 +81,17 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
-	defer w.m.Unlock()
+	defer func() {
+		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
+		w.m.Unlock()
+		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
+	}()
 
 	var lines []string
+
+	fmt.Fprintf(os.Stderr, "Split log %s by line\n", string(p))
 
 	for _, b := range p {
 		switch b {
@@ -97,11 +106,21 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "Splited log %s by line; lines %d\n", string(p), len(lines))
+
 	if len(lines) > 0 {
 		for _, line := range lines {
-			w.l.Debug(line)
+			fmt.Fprintf(os.Stderr, "debudlogwriter: write to sterr: %s\n", line)
+			//w.l.Debug(line)
+			//fmt.Fprintf(os.Stderr, "debudlogwriter: sent to logger: %s\n", line)
 		}
 	}
 
-	return len(p), nil
+	fmt.Fprintf(os.Stderr, "debudlogwriter: starting getting len of bufffer\n")
+
+	llen := len(p)
+
+	fmt.Fprintf(os.Stderr, "debudlogwriter: got len of buffer %d\n", llen)
+
+	return llen, nil
 }
