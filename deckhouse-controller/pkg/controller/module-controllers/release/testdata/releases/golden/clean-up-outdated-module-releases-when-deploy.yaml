@@ -124,8 +124,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    modules.deckhouse.io/isUpdating: "true"
-    modules.deckhouse.io/notified: "false"
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
@@ -143,7 +143,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: echo
   version: 0.4.54
@@ -169,3 +169,4 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: LastReleaseDeployed
+  phase: Ready

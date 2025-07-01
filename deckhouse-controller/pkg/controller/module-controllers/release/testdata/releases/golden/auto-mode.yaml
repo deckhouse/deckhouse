@@ -34,9 +34,9 @@ metadata:
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
-    status: deployed
+    status: superseded
   name: parca-1.26.2
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -54,8 +54,8 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-    modules.deckhouse.io/isUpdating: "true"
-    modules.deckhouse.io/notified: "false"
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -70,7 +70,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1004"
+  resourceVersion: "1005"
 spec:
   moduleName: parca
   version: 1.27.0

@@ -872,7 +872,7 @@ func TestValidateModule(t *testing.T) {
 	check("validation/virtualization", true, nil)
 }
 
-const repeatCount = 2
+const repeatCount = 3
 
 func repeatTest(fn func()) {
 	for range repeatCount {

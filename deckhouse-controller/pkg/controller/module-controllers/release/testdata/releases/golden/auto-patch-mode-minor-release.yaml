@@ -1,5 +1,30 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  generation: 1
+  name: test
+  resourceVersion: "406077724"
+  uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
@@ -9,6 +34,12 @@ metadata:
     module: parca
     status: deployed
   name: parca-1.26.2
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
   resourceVersion: "1001"
 spec:
   moduleName: parca
@@ -33,6 +64,12 @@ metadata:
     module: parca
     modules.deckhouse.io/update-policy: ""
   name: parca-1.27.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
   resourceVersion: "1004"
 spec:
   moduleName: parca
@@ -51,7 +88,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: parca
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 properties: {}
 status:
   conditions:
