@@ -33,7 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const taskCalculatorServiceName = "task-calculator"
+const (
+	taskCalculatorServiceName = "task-calculator"
+	maxMinorVersionDiffForLTS = 10
+)
 
 type TaskCalculator struct {
 	k8sclient client.Client
@@ -41,21 +44,25 @@ type TaskCalculator struct {
 	listFunc func(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error)
 
 	log *log.Logger
+
+	releaseChannel string
 }
 
-func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger, releaseChannel string) *TaskCalculator {
 	return &TaskCalculator{
-		k8sclient: k8sclient,
-		listFunc:  listDeckhouseReleases,
-		log:       logger,
+		k8sclient:      k8sclient,
+		listFunc:       listDeckhouseReleases,
+		log:            logger,
+		releaseChannel: releaseChannel,
 	}
 }
 
 func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
 	return &TaskCalculator{
-		k8sclient: k8sclient,
-		listFunc:  listModuleReleases,
-		log:       logger,
+		k8sclient:      k8sclient,
+		listFunc:       listModuleReleases,
+		log:            logger,
+		releaseChannel: "",
 	}
 }
 
@@ -96,6 +103,8 @@ func isPatchRelease(a, b *semver.Version) bool {
 	return false
 }
 
+const ltsReleaseChannel = "lts"
+
 // CalculatePendingReleaseTask calculate task with information about current reconcile
 //
 // calculating flow:
@@ -105,7 +114,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
 	defer span.End()
 
-	logger := p.log.With(slog.String("release", release.GetName()))
+	logger := p.log.With(slog.String("release_name", release.GetName()))
 
 	if release.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
@@ -136,6 +145,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 		// if forced version is greater than the pending one, this pending release should be skipped
 		if forcedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
+			logger.Debug("release must be skipped because force release is greater")
+
 			return &Task{
 				TaskType: Skip,
 			}, nil
@@ -146,12 +157,14 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
-		logger = logger.With(logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original())))
+		logger = logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original()))
 
 		logger.Debug("deployed release found")
 
 		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
+			logger.Debug("release must be skipped, because deployed release is greater")
+
 			return &Task{
 				TaskType: Skip,
 			}, nil
@@ -159,6 +172,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 		// if we patch between reconcile start and calculating
 		if deployedReleaseInfo.Version.Equal(release.GetVersion()) {
+			logger.Debug("release version are equal deployed version")
+
 			return nil, ErrReleaseIsAlreadyDeployed
 		}
 	}
@@ -167,11 +182,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return a.GetVersion().Compare(b)
 	})
 
-	releaseQueueDepth := len(releases) - 1 - releaseIdx
 	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
-	if releaseQueueDepth > 3 {
-		releaseQueueDepth = 3
-	}
+	releaseQueueDepth := min(len(releases)-1-releaseIdx, 3)
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
@@ -203,11 +215,33 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			}
 
 			// here we have only Deployed phase releases in prevRelease
-			// it must await if deployed release has minor version more than one
-			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
-				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
+			ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 
-				logger.Debug("release awaiting", slog.String("reason", msg))
+			// it must await if deployed release has minor version more than one
+			if !ltsRelease && release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
+				msg := fmt.Sprintf(
+					"minor version is greater than deployed %s by one",
+					prevRelease.GetVersion().Original(),
+				)
+
+				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+
+				return &Task{
+					TaskType:            Await,
+					Message:             msg,
+					DeployedReleaseInfo: deployedReleaseInfo,
+				}, nil
+			}
+
+			// it must await if deployed release has minor version more than acceptable LTS channel limitation
+			if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+				msg := fmt.Sprintf(
+					"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+					prevRelease.GetVersion().Original(),
+					release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+				)
+
+				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
 				return &Task{
 					TaskType:            Await,

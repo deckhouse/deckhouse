@@ -74,45 +74,6 @@ func (c *podReadinessChecker) Check() check.Error {
 	return check.ErrFail("no ready pods found %s,%s", c.namespace, c.labelSelector)
 }
 
-// podRunningOrReadyChecker checks that there is a pod in Ready condition in reasonable time.
-//   - if pod is running, but not ready in the `readinessTimeout` time, the check status is considered unknown.
-//   - if pod is running, but not ready in `readinessTimeout` or more, the check status is considered failed.
-//   - if pod is terminating, the status is unknown
-//   - otherwise, the status is success.
-type podRunningOrReadyChecker struct {
-	namespace        string
-	labelSelector    string
-	readinessTimeout time.Duration
-	access           kubernetes.Access
-}
-
-func (c *podRunningOrReadyChecker) Check() check.Error {
-	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: c.labelSelector})
-	if err != nil {
-		return check.ErrUnknown("cannot get pods %s,%s: %v", c.namespace, c.labelSelector, err)
-	}
-
-	var cherr check.Error
-	for _, pod := range podList.Items {
-		err := isPodWorking(&pod, c.readinessTimeout)
-		if err == nil {
-			// the pod is fine
-			return nil
-		}
-		if cherr == nil {
-			// got error, saving it for comparison with other pods
-			cherr = err
-			continue
-		}
-		if cherr.Status() == check.Unknown {
-			// got at least second error, we should not make the status worse anyway
-			continue
-		}
-		cherr = err
-	}
-	return cherr
-}
-
 func isPodRunning(pod *v1.Pod) bool {
 	return pod.Status.Phase == v1.PodRunning
 }
@@ -135,28 +96,6 @@ func isPodReady(pod *v1.Pod) bool {
 	}
 
 	return false
-}
-
-func isPodWorking(pod *v1.Pod, readinessTimeout time.Duration) check.Error {
-	if pod.DeletionTimestamp != nil {
-		return check.ErrUnknown("pod is terminating")
-	}
-
-	if isPodReady(pod) {
-		return nil
-	}
-
-	if !isPodRunning(pod) {
-		return check.ErrFail("pod is not running")
-	}
-
-	// Let's see how long it is running
-	readinessThreshold := pod.CreationTimestamp.Add(readinessTimeout)
-	if time.Now().After(readinessThreshold) {
-		return check.ErrFail("pod is not ready for too long (%s)", readinessTimeout.String())
-	}
-
-	return check.ErrUnknown("pod is running, but not ready")
 }
 
 func createPodObject(podName, nodeName, agentID string, image *kubernetes.ProbeImage) *v1.Pod {

@@ -73,7 +73,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.28"
+			"kubernetesVersion": "1.29"
 		},
 		"modulesImages": {
 			"registry": {
@@ -1006,6 +1006,73 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+		})
+	})
+	suite.Run("LTS Release channel", func() {
+		suite.Run("auto", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-release-channel-update.yaml", initValues, mup)
+			// first run - change status to pending
+			dr := suite.getDeckhouseRelease("v1.37.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			// second run - process pending release
+			dr = suite.getDeckhouseRelease("v1.37.0")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("several releases", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-release-channel-update-several-versions.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.65.6")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.70.7")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("cannot upgrade", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-release-channel-cannot-upgrade.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.65.6")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.76.7")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("clear data after deploy", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusNotFound,
+				}, nil)
+			suite.setupController("clear-data-after-deploy.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.31.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			require.Empty(suite.T(), dr.Status.Message)
 		})
 	})
 }

@@ -63,6 +63,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "controller")) | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
@@ -111,9 +112,20 @@ spec:
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
           ports:
             - containerPort: 7475
               name: https-metrics
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 7475
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 7475
+              scheme: HTTPS
           env:
             - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
               valueFrom:

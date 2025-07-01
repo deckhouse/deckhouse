@@ -57,7 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.0"
+  WERF_VERSION: "v2.36.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -168,33 +168,36 @@ jobs:
   # </template: git_info_job>
 
 
-  # </template: block-e2e-until-image-is-not-ready>
-  block-e2e-until-image-is-not-ready:
-    name: Block e2e until the docker image is not ready
+  # </template: block-until-image-is-not-ready>
+  block-until-image-is-not-ready:
+    name: Block until the docker image is not ready
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.5.2
-      - name: Block e2e until the docker image is not ready
-        id: block-e2e
+      - name: Block until the docker image is not ready
+        id: block-image-dont-ready
         uses: actions/github-script@v6.4.1
         with:
           script: |
             const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
             const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
 
-            let branchName = context.payload.inputs.ci_commit_ref_name;
+            let branchName;
+            let prNum;
+
+            if (context.eventName === 'pull_request') {
+              branchName = context.payload.pull_request.head.ref;
+              prNum = context.payload.pull_request.number;
+            } else if (context.eventName === 'workflow_dispatch') {
+              branchName = context.payload.inputs.ci_commit_ref_name;
+              prNum = context.payload.inputs.issue_number;
+            }
+
             if (!branchName) {
               branchName = githubAction.GetBranchNameFromContext(context);
             }
 
             if (branchName) {
-              let prNum = context.payload.inputs.issue_number;
-              // if the pull request id is not found, search it by the branch name
-              if (!prNum && branchName !== 'main') {
-                const prInfo = await githubAction.GetPullRequestByBranchName(branchName);
-                prNum = prInfo.number;
-              }
-
               let infoText = `Check build workflow is completed for branch: ${branchName}`;
               if (prNum) {
                 infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
@@ -204,10 +207,9 @@ jobs:
               const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
               try {
                 let workflowName = 'Build and test for dev branches';
-                let jobName = 'Build Deckhouse';
+                let jobName = 'Build FE';
                 if (isReleaseBranch(branchName)) {
                   workflowName = 'Build and test for release branches';
-                  jobName = 'Build Deckhouse FE';
                 }
                 if (branchName === 'main') {
                   return true;
@@ -216,9 +218,11 @@ jobs:
               } catch(error) {
                 core.setFailed(error);
               }
+            } else {
+              core.setFailed("Branch name not found.");
             }
 
-  # </template: block-e2e-until-image-is-not-ready>
+  # </template: block-until-image-is-not-ready>
 
   # <template: check_e2e_labels_job>
   check_e2e_labels:
@@ -236,6 +240,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -262,7 +267,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_28 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -518,6 +523,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -533,6 +539,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -578,6 +585,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -700,7 +708,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_28
@@ -781,7 +789,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_29 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1037,6 +1045,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -1052,6 +1061,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1097,6 +1107,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1219,7 +1230,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_29
@@ -1300,7 +1311,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_30 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1556,6 +1567,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -1571,6 +1583,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1616,6 +1629,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1738,7 +1752,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_30
@@ -1819,7 +1833,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_31 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2075,6 +2089,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -2090,6 +2105,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2135,6 +2151,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2257,7 +2274,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_31
@@ -2338,7 +2355,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_32 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2594,6 +2611,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -2609,6 +2627,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2654,6 +2673,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2776,7 +2796,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_32
@@ -2857,7 +2877,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_33 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -3113,6 +3133,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -3128,6 +3149,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3173,6 +3195,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3295,7 +3318,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_1_33
@@ -3376,7 +3399,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
+      - block-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_Automatic == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -3632,6 +3655,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -3647,6 +3671,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3692,6 +3717,7 @@ jobs:
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3814,7 +3840,7 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vsphere_containerd_Automatic

@@ -1,0 +1,52 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Run build on release tag
+
+#  Start build when new commits are pushed in main branch or new tags are pushed.
+#
+#  Variations:
+#  1. Default branch and tags with v* and test-* prefixes:
+#    - Search for related milestone and issue labeled with issue/release.
+#    - Add new comment to the release issue.
+#    - Build workflow will update comment with report its status to.
+#  2. Tags with dev- or pr- prefixes:
+#    - Related milestone, so just run build workflow.
+#  3. Other tags and branches:
+#    - No auto build by this workflow.
+#    - Build workflow can be triggered manually using ui or by running curl.
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'test-*'
+      - 'dev-*'
+      - 'pr-*'
+
+jobs:
+  start_release_build_workflow:
+    name: Start build for release
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Find latest milestone and issue
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.runBuildForRelease({ github, context, core })
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+

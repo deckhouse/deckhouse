@@ -12,6 +12,30 @@
     //width: 300px;
     width: 297px;
     margin-right: 64px;
+
+    @media screen and (width < 1500px) {
+      margin-right: 54px;
+    }
+
+    &--link {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+      border-radius: 4px;
+      border: 1px solid #bbb;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    &--descr {
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 24px;
+      letter-spacing: 1%;
+      color: #0D69F2;
+    }
 }
 
 .breadcrumbs__right {
@@ -327,6 +351,12 @@
   @media screen and (width < 1500px) {
     gap: 54px;
   }
+
+  &__tile {
+      @media screen and (width < 1100px) {
+          gap: 35px;
+      }
+  }
 }
 
 .layout-sidebar__wrap {
@@ -360,7 +390,7 @@
   position: sticky;
   top: 135.5px;
   //width: 260px;
-  height: calc(100vh - 105px);
+  height: calc(100vh - 135.5px);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -369,7 +399,7 @@
   padding-top: 5px;
 }
 
-.layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) {
+.layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) .layout-sidebar__sidebar--guides :not(.layout-sidebar__sidebar_right) {
   height: calc(100vh - 400px);
 }
 
@@ -384,12 +414,20 @@
     flex: 1;
 
     @media screen and (width < 1500px) {
+      &:not(.layout-sidebar__content--guides) {
         max-width: 720px;
+      }
     }
 
     @media screen and (max-width: 1000px) {
         background: #fff;
         z-index: 1;
+    }
+
+    &--tile {
+      @media screen and (width < 1500px) {
+        max-width: 100%;
+      }
     }
 }
 
@@ -926,10 +964,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-left: 24px;
 }
 
-.docs .resources pre.highlight {
-  padding-left: 16px;
-}
-
 .docs ol {
     list-style-type: decimal;
 }
@@ -1120,6 +1154,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .highlight {
     border-radius: 4px;
+  
+    .code__transfer {
+      position: relative;
+      padding-right: 70px;
+      padding-left: 48px;
+    }
 }
 
 .docs div.highlight {
@@ -1137,6 +1177,18 @@ a.comparison-table__module-proprietaryOkmeter::after {
     line-height: 1.428571429;
     word-break: break-all;
     word-wrap: break-word;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 36px;
+        background-color: #F6F7F8;
+        border-right: 1px solid #C4CAD4;
+        color: #A7B0BE;
+    }
 
     .icon--copy {
         cursor: pointer;
@@ -1563,8 +1615,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .snippetcut_limited pre.highlight {
   max-height: 200px;
-  display: block; }
-
+  display: block; 
+}
 
 .action-toast {
   display: none;
@@ -1961,7 +2013,15 @@ select#contact-select {
 
 .tippy-box {
   min-width: 255px;
-}
+
+  &:has(.tippy-content) {
+      min-width: 0;
+  }
+
+  &:has(.icon--copy) {
+    min-width: 0;
+  }
+} 
 
 .tippy-box[data-theme~='light'] {
   border: 1px solid #C4CAD4;
@@ -1971,6 +2031,11 @@ select#contact-select {
   .tippy-content {
     text-align: start;
     color: #00122C;
+  }
+
+  .tippy-content pre::before {
+    content: none;
+    // display: none;
   }
 
   .tippy-content code {
@@ -2010,3 +2075,81 @@ select#contact-select {
   }
 }
 
+.layout-sidebar__content--guides {
+  flex: 4;
+
+  .docs {
+    h1 {
+        margin: 0;
+        margin-bottom: 22px;
+    }
+
+    h2 {
+      margin: 0;
+      margin-bottom: 28px;
+    }
+  }
+}
+
+.docs {
+  .code__transfer {
+    overflow-x: auto;
+    white-space: pre;
+    overflow-x: auto;
+    display: block;
+
+    .wrap {
+      white-space: pre-wrap;
+      overflow-x: auto;
+      word-wrap: break-word;
+    }
+
+    button.wrap__button {
+      position: absolute;
+      top: 10px;
+      right: 41px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+      transition: opacity .25s;
+
+      .wrap__icon {
+        width: 25px;
+        height: 23px;
+      }
+
+      &.show {
+        opacity: .75;
+
+        &:hover {
+            opacity: 1;
+        }
+      }
+    }
+
+    .code__wrapper {
+      display: flex;
+    }
+
+    .line-number {
+      position: absolute;
+      left: 10px;
+      display: inline-block;
+      line-height: 22px;
+      user-select: none;
+      list-style-type: none;
+      color: #9e9e9e;
+
+      li {
+        padding: 0;
+        margin: 0;
+
+        &::before {
+          content: none;
+        }
+      }
+    }
+  }
+}

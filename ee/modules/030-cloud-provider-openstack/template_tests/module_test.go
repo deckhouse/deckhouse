@@ -267,12 +267,12 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("Openstack with k8s 1.29", func() {
-		openstackCheck(f, "1.29")
+	Context("Openstack with k8s 1.30", func() {
+		openstackCheck(f, "1.30")
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.28")
+		openstackCheck(f, "1.29")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {

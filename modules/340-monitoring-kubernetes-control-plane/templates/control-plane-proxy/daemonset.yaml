@@ -44,6 +44,7 @@ spec:
         app: control-plane-proxy
     spec:
       serviceAccountName: control-plane-proxy
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}

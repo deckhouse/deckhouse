@@ -7,7 +7,7 @@ metadata:
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: empty
+    projects.deckhouse.io/project-template: ""
   name: test
 spec: {}
 status: {}

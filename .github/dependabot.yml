@@ -88,15 +88,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/025-static-routing-manager/images/agent"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
@@ -116,6 +107,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer-legacy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/040-node-manager/images/d8-shutdown-inhibitor/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -629,15 +629,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/failover-cleaner/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/geoip-updater/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

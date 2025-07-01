@@ -19,7 +19,22 @@ spec:
   scanInterval: <image digest check interval. Default: 15s>
 ```
 
+The `maintenance mode` can also be used for development purposes. In this mode, Deckhouse disables resource management for the module and does not apply changes automatically. This mode is not intended for use in production clusters.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+...
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  settings: 
+```
+
 Requirements for the resource parameters:
+
 * The module name (`metadata.name`) must match the module name in the ModuleSource (`.status.modules.[].name`).
 
 * The container image tag (`spec.imageTag`) can be anything, e.g., `pr333`, `my-branch`.
@@ -40,6 +55,7 @@ example1  10s       Ready     false
 ```
 
 Requirements for the module:
+
 * The module must exist; otherwise the message for ModulePullOverride will be *The module not found*.
 
   An example:
@@ -95,6 +111,33 @@ To update the module without waiting for the next update cycle to begin, you can
 ```sh
 kubectl annotate mpo <name> renew=""
 ```
+
+## Module auto-update logic
+
+![Module auto-update logic](../../images/module-development/module_update_flow.svg)
+
+> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+
+1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
+
+1. **Module disabling**. When a module is disabled (`disable module <module name>`):
+   - The module stops receiving new releases.
+   - The currently deployed version remains in the cluster with the `Deployed` status.
+
+1. **Behavior on re-enabling**.
+
+   If the module is re-enabled within 72 hours:
+   - The previously deployed version (ModuleRelease v1.0.0) is used.
+   - New releases are checked.
+   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
+   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+
+   If the module is re-enabled after 72 hours:
+   - The old version is deleted (`delete ModuleRelease v1.0.0`).
+   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
+   - The cycle starts again as if the module was enabled for the first time (see step 1).
+
+1. **Behavior of a disabled module**. If a module is disabled, no new releases are downloaded. The previously deployed version (the last one that was enabled) is removed after 72 hours if the module is not re-enabled within that time.
 
 ## How it works
 

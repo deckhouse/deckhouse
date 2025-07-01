@@ -4,6 +4,8 @@
 
 | Table of contents |
 |---|
+| **Admission Client** |
+| [helm_lib_admission_webhook_client_ca_certificate](#helm_lib_admission_webhook_client_ca_certificate) |
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
@@ -112,6 +114,22 @@
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
+
+## Admission Client
+
+### helm_lib_admission_webhook_client_ca_certificate
+
+Renders a ConfigMap with the public CA certificate used to verify client TLS certificates for AdmissionReview requests, ensuring secure mTLS authentication
+
+#### Usage
+
+`{{ include "helm_lib_admission_webhook_client_ca_certificate" (list . "namespace") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc
+-  Namespace where CA configmap will be created
 
 ## Api Version And Kind
 

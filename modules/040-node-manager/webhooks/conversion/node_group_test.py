@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import typing
+import unittest
 
 from dotmap import DotMap
+from node_group import NodeGroupConversion, main
+
 from deckhouse import hook, tests
-from node_group import main, NodeGroupConversion
 
 
 def test_dispatcher_for_unit_tests(snapshots: dict | None) -> NodeGroupConversion:
@@ -661,7 +662,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0
@@ -690,7 +691,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
             # assert some fields cannot changed
             t.assertIn("aaaa", obj.spec.nodeTemplate.labels)
             t.assertEqual(obj.spec.nodeTemplate.labels.aaaa, "bbbb")
-            t.assertEqual(obj.status.kubernetesVersion, "1.28")
+            t.assertEqual(obj.status.kubernetesVersion, "1.29")
             t.assertEqual(obj.status.ready, 0)
 
 
@@ -916,7 +917,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                 "desired": 0,
                                 "error": "",
                                 "instances": 0,
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "lastMachineFailures": [],
                                 "max": 0,
                                 "min": 0,
@@ -954,7 +955,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
 
             # assert some fields cannot changed
             t.assertEqual(obj.spec.nodeTemplate.labels.aaaaa, "")
-            t.assertEqual(obj.status.kubernetesVersion, "1.28")
+            t.assertEqual(obj.status.kubernetesVersion, "1.29")
             t.assertEqual(obj.status.ready, 0)
 
 
@@ -1210,7 +1211,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "statusMessage": ""
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "nodes": 1,
                                 "ready": 1,
                                 "upToDate": 1
@@ -1333,7 +1334,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "nodes": 1,
                                 "ready": 1,
                                 "upToDate": 1
@@ -1477,7 +1478,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0
@@ -1564,7 +1565,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                 "desired": 0,
                                 "error": "",
                                 "instances": 0,
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "lastMachineFailures": [],
                                 "max": 0,
                                 "min": 0,
@@ -1730,7 +1731,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.28",
+                                "kubernetesVersion": "1.29",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0

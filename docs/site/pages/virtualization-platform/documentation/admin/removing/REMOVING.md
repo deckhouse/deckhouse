@@ -35,8 +35,8 @@ To delete a cluster, several steps need to be followed:
 
    where:
    - `<MOUNT_OPTIONS>` — the options for mounting files into the installer container, such as SSH access keys;
-   - `<DECKHOUSE_REVISION>` — [edition](../editions.html) of the platform (e.g., `ee` — for Enterprise Edition, `ce` — for Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — [update channel](../release-channels.html) of the platform in kebab-case:
+   - `<DECKHOUSE_REVISION>` — [edition](../../about/editions.html) of the platform (e.g., `ee` — for Enterprise Edition, `ce` — for Community Edition, etc.)
+   - `<RELEASE_CHANNEL>` — [update channel](../../about/release-channels.html) of the platform in kebab-case:
      - `alpha` — for the *Alpha* update channel;
      - `beta` — for the *Beta* update channel;
      - `early-access` — for the *Early Access* update channel;

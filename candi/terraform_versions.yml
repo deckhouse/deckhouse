@@ -9,7 +9,7 @@ aws:
   namespace: hashicorp
   cloudName: AWS
   type: aws
-  version: 4.50.0
+  version: 5.83.1
   # artifact name with provider binary
   artifact: terraform-provider-aws
   # provider binary name with artifact and destination image
@@ -32,7 +32,7 @@ azure:
   namespace: hashicorp
   cloudName: Azure
   type: azurerm
-  version: 2.36.0
+  version: 3.117.1
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm

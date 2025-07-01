@@ -1,0 +1,112 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  name: test-source-1
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: parca
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-alpha
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
+properties:
+  version: 1.4.1
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: foxtrot-alpha
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: foxtrot
+  name: parca-v1.4.1
+spec:
+  changelog:
+    features:
+      - Bump parca version
+  moduleName: parca
+  version: 1.4.1
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: foxtrot-alpha
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: foxtrot
+  name: parca-v1.4.2
+spec:
+  changelog:
+    features:
+      - Bump parca version
+  moduleName: parca
+  version: 1.4.2
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: foxtrot-alpha
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: foxtrot
+  name: parca-v1.4.3
+spec:
+  changelog:
+    features:
+      - Bump parca version
+  moduleName: parca
+  version: 1.4.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"

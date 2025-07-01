@@ -5,6 +5,7 @@ metadata:
   name: descheduler
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
+automountServiceAccountToken: false
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1

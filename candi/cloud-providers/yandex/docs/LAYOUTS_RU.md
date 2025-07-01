@@ -12,7 +12,7 @@ description: "Описание схем размещения и взаимоде
 {% endalert %}
 
 ![Схема размещения Standard в Yandex Cloud](../../images/cloud-provider-yandex/yandex-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10422&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -89,7 +89,7 @@ dhcpOptions:
 > **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../images/cloud-provider-yandex/yandex-withoutnat.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10557&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -156,18 +156,18 @@ dhcpOptions:
 ## WithNATInstance
 
 В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на 0.0.0.0/0 с NAT-инстансом в качестве nexthop'а.
-Эта отдельная подсеть необходима для избежания петли маршрутизации.
+Подсеть выделяется для предотвращения петли маршрутизации и не должна пересекаться с другими сетями, используемыми в кластере.
 
-Если задан `withNATInstance.internalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
+Для размещения NAT-инстанса в существующей подсети используйте параметр `withNATInstance.internalSubnetID` — инстанс будет создан в зоне, соответствующей этой подсети.
 
-Если задан `withNATInstance.internalSubnetCIDR` — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети.
+Если необходимо создать новую подсеть, укажите параметр `withNATInstance.internalSubnetCIDR` — в ней будет размещён NAT-инстанс.
 
-Один из параметров, `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`, обязателен
+Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
 
 Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
 
 ![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/yandex-withnatinstance.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10034&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 

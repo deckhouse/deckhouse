@@ -12,7 +12,7 @@ The minimal preset will be used during the installation:
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
 
 The `{{ layout.name }}` layout will be used during the installation.
@@ -121,7 +121,9 @@ Scheme of Deckhouse installation in a private environment:<br />
    - one of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) should be installed
    - Python should be installed
    {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry or to a private container image registry containing Deckhouse images
+   - access to a proxy registry or to a private container image registry containing Deckhouse images;
+   - when using private image storage, you must first [upload images](../../documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry)
+     of the Deckhouse Kubernetes Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry
@@ -140,3 +142,12 @@ Scheme of Deckhouse installation in a private environment:<br />
 </li>
 {%- endif %}
 </ol>
+
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
+{% alert level="warning" %}
+The recommendations above provide the minimum {% if page.platform_type == "cloud" %}summary{% endif %} resources required for the initial deployment of a cluster with one master node and one worker node.
+This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read [the recommendations for preparing
+for production](../../guides/production.html) and [the instructions](../../guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
+for the operation of the future cluster.
+{% endalert %}
+{%- endif %}
