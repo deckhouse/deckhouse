@@ -2,12 +2,11 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXT       = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
   main_ip_addresses = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "mainNetworkIPAddresses", [])
 }
 
 resource "vcd_nsxt_nat_rule" "snat" {
-  count = local.useNSXT ? 1 : 0
+  count = var.useNSXT ? 1 : 0
   org = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
@@ -22,14 +21,14 @@ resource "vcd_nsxt_nat_rule" "snat" {
 }
 
 data "vcd_nsxt_app_port_profile" "ssh" {
-  count = local.useNSXT ? 1 : 0
+  count = var.useNSXT ? 1 : 0
   org   = var.providerClusterConfiguration.organization
   name  = "SSH"
   scope = "SYSTEM"
 }
 
 resource "vcd_nsxt_nat_rule" "masters-dnat" {
-  count = (local.useNSXT && length(local.main_ip_addresses) > 0) ? 1 : 0
+  count = (var.useNSXT && length(local.main_ip_addresses) > 0) ? 1 : 0
   org = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId

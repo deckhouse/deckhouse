@@ -14,3 +14,11 @@ variable "providerClusterConfiguration" {
     error_message = "Address in mainNetworkIPAddresses not in internalNetworkCIDR."
   }
 }
+
+variable "edgeGatewayId" {
+  type = string
+}
+
+variable "useNSXT" {
+  type = bool
+}
