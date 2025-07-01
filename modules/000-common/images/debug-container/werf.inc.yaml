@@ -104,7 +104,6 @@ import:
 shell:
   install:
   - mkdir -p /relocate/{bin,lib}
-  - ln -sf /usr/lib lib64
   # From the base_image repository
   - cp -r /coreutils/usr/* /relocate/
   - cp -r /bash/usr/* /relocate/
@@ -115,9 +114,9 @@ shell:
   - cp -r /less/usr/* /relocate/
   - cp -r /sed/usr/* /relocate/
   - cp -r /vim/usr/* /relocate/
-  - cp -r /openssl/usr/* /relocate/
-  - cp -r /openssl/lib/* /relocate/lib
   - cp -r /musl/usr/* /relocate/
+  - cp -r /musl/lib/* /relocate/lib
+  - cp -r /openssl/usr/* /relocate/
   - cp -r /openssl/lib/* /relocate/lib
 
   # TODO: Move to the base_image repository
