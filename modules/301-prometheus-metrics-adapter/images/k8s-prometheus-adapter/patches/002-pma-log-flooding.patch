@@ -15,7 +15,7 @@ index de59e70..1908703 100644
  	cpuRes, hasResult := nsRes.cpu[pod.Name]
  	if !hasResult {
 -		klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
-+		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++		if pod.CreationTimestamp.Time.Before(now.Add(-p.window)) {
 +			klog.V(4).Infof("unable to fetch cpu metrics for pod %s (young pod, age < window), skipping",
 +				pod.Name)
 +		} else {
@@ -26,7 +26,7 @@ index de59e70..1908703 100644
  	memRes, hasResult := nsRes.mem[pod.Name]
  	if !hasResult {
 -		klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
-+		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++		if pod.CreationTimestamp.Time.Before(now.Add(-p.window)) {
 +			klog.V(4).Infof("unable to fetch memory metrics for pod %s (young pod, age < window), skipping",
 +				pod.Name)
 +		} else {
