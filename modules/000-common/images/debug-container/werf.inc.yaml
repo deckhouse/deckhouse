@@ -115,9 +115,9 @@ shell:
   - cp -r /sed/usr /relocate/
   - cp -r /vim/usr /relocate/
   - cp -r /openssl/usr /relocate/
-  - cp -r /openssl/lib /relocate/lib
+  - cp -r /openssl/lib/* /relocate/lib
   - cp -r /musl/usr /relocate/
-  - cp -r /musl/lib /relocate/lib
+  - cp -r /openssl/lib/* /relocate/lib
 
   # TODO: Move to the base_image repository
   - cp /common/pwru /relocate/bin/
