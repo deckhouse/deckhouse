@@ -67,7 +67,7 @@ func SnapshotToList[TValue any](input *go_hook.HookInput, name string) ([]TValue
 		value, ok := snap.(TValue)
 
 		if !ok {
-			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", snap, value, ErrNoSnapshot)
+			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", snap, value, ErrSnapshotTypeError)
 		}
 
 		ret = append(ret, value)
