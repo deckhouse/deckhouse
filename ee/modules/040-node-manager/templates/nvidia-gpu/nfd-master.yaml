@@ -57,8 +57,10 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       serviceAccountName: node-feature-discovery-master
-      priorityClassName: cluster-medium
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       enableServiceLinks: false
       containers:
         - name: master
@@ -111,28 +113,4 @@ spec:
             items:
               - key: nfd-master.conf
                 path: nfd-master.conf
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 1
-              preference:
-                matchExpressions:
-                  - key: "node-role.kubernetes.io/master"
-                    operator: In
-                    values: [""]
-            - weight: 1
-              preference:
-                matchExpressions:
-                  - key: "node-role.kubernetes.io/control-plane"
-                    operator: In
-                    values: [""]
-      tolerations:
-      - key: "node-role.kubernetes.io/master"
-        operator: "Equal"
-        value: ""
-        effect: "NoSchedule"
-      - key: "node-role.kubernetes.io/control-plane"
-        operator: "Equal"
-        value: ""
-        effect: "NoSchedule"
 {{- end }}

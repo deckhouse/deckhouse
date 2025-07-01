@@ -52,6 +52,7 @@ spec:
         app: gpu-feature-discovery
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -76,7 +77,6 @@ spec:
                     operator: In
                     values:
                       - "true"
-      priorityClassName: system-node-critical
       serviceAccountName: nvidia-gpu-feature-discovery
       shareProcessNamespace: true
       initContainers:

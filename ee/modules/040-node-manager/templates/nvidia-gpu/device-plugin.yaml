@@ -73,7 +73,7 @@ spec:
                     operator: In
                     values:
                       - "true"
-      priorityClassName: system-node-critical
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       serviceAccountName: nvidia-device-plugin
