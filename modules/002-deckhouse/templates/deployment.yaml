@@ -272,13 +272,14 @@ spec:
             periodSeconds: 5
             failureThreshold: 120
           resources:
+            {{- if .Values.global.clusterIsBootstrapped }}
+            {{/* VPA is not exist at bootstrap and k8s will set requests == limits */}}
             limits:
               memory: 6Gi # heavy load usage ~2Gi (x3)
+            {{- end }}
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
-{{- end }}
           workingDir: /deckhouse
           volumeMounts:
           - mountPath: /tmp
