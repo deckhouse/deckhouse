@@ -48,7 +48,7 @@ d8 stronghold write -field=barcode \
 ## Включение MFA
 
 Например, мы хотим включить проверку MFA для метода аутентификации Userpass.
-Для начала нам потребуется идентификатор метода.
+Для начала потребуется идентификатор метода:
 
 ```shell
 LDAP_ACCESSOR=$(d8 stronghold auth list -format=json \
