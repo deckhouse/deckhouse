@@ -11,24 +11,8 @@
 
 ## 002-Allow-delete-logs.patch
 
-TODO
+Enable/disable `/loki/api/v1/delete` endpoints by setting `ALLOW_DELETE_LOGS` env value to true/false.
 
 ## 003-Force-expiration.patch
 
-TODO
-
-## 004-Force-expiration-index-sort.patch
-
-Fix incorrect indices sort function used in disk-based retention.  
-
-Use `sortTablesByRangeOldestFirst` sort function to mark the oldest chunks as expired.  
-
-Add new metrics:
-- `force_expiration_hook_index_range`
-- `force_expiration_hook_first_expired_chunk_timestamp_seconds`
-
-to monitor the sorting results along with existing `force_expiration_hook_last_expired_chunk_timestamp_seconds`
-
-## 005-Force-expiration-sparse-file-size-eval.patch
-
-Refactor `evaluateFileSize` to work with sparse files. Use `syscall` directly, instead of `os.Lstat`.  
+Automatically delete old logs by setting `force_expiration_threshold` higher than 0.
