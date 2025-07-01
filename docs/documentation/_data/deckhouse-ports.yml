@@ -218,7 +218,7 @@ groups:
     en: External traffic to masters
     ru: Внешний трафик к master-узлам
   destinations:
-  - ports: "22, 22322"
+  - ports: "22"
     protocol: TCP
     description:
       en: SSH for Deckhouse Kubernetes Platform initialization
