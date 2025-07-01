@@ -1,5 +1,5 @@
 diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
-index de59e70..3957715 100644
+index de59e70..1846752 100644
 --- a/pkg/resourceprovider/provider.go
 +++ b/pkg/resourceprovider/provider.go
 @@ -180,6 +180,7 @@ func (p *resourceProvider) GetPodMetrics(pods ...*metav1.PartialObjectMetadata)
@@ -18,8 +18,8 @@ index de59e70..3957715 100644
 +		// Check if the pod was created before the start of the metrics collection window.
 +		// If the pod is newer than this window, CPU metrics might not be available yet.
 +		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
-+			klog.Infof("pod %s is newer than metrics collection window (%v), skipping as expected",
-+				pod.Name, p.window)
++			klog.Infof("pod %s in namespace %s is newer than metrics collection window (%v), skipping as expected",
++				pod.Name, pod.Namespace, p.window)
 +		} else {
 +			klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
 +		}
@@ -31,8 +31,8 @@ index de59e70..3957715 100644
 +		// Check if the pod was created before the start of the metrics collection window.
 +		// If the pod is newer than this window, CPU metrics might not be available yet.
 +		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
-+			klog.Infof("pod %s is newer than metrics collection window (%v), skipping as expected",
-+				pod.Name, p.window)
++			klog.Infof("pod %s in namespace %s is newer than metrics collection window (%v), skipping as expected",
++				pod.Name, pod.Namespace, p.window)
 +		} else {
 +			klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
 +		}
