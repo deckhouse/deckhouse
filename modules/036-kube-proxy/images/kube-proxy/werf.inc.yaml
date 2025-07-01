@@ -7,9 +7,9 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
-    {{- include "alt packages proxy" . | nindent 2 }}
-    - apt-get install conntrack-tools -y
-    {{- include "alt packages clean" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install conntrack-tools -y
+  {{- include "alt packages clean" . | nindent 2 }}
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir -p /relocate/sbin
