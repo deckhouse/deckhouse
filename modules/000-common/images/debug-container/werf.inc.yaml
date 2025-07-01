@@ -105,18 +105,18 @@ shell:
   install:
   - mkdir -p /relocate/{bin,lib}
   # From the base_image repository
-  - cp -r /coreutils/usr /relocate/
-  - cp -r /bash/usr /relocate/
-  - cp -r /findutils/usr /relocate/
-  - cp -r /gawk/usr /relocate/
-  - cp -r /grep/usr /relocate/
-  - cp -r /jq/usr /relocate/
-  - cp -r /less/usr /relocate/
-  - cp -r /sed/usr /relocate/
-  - cp -r /vim/usr /relocate/
-  - cp -r /openssl/usr /relocate/
+  - cp -r /coreutils/usr/* /relocate/
+  - cp -r /bash/usr/* /relocate/
+  - cp -r /findutils/usr/* /relocate/
+  - cp -r /gawk/usr/* /relocate/
+  - cp -r /grep/usr/* /relocate/
+  - cp -r /jq/usr/* /relocate/
+  - cp -r /less/usr/* /relocate/
+  - cp -r /sed/usr/* /relocate/
+  - cp -r /vim/usr/* /relocate/
+  - cp -r /openssl/usr/* /relocate/
   - cp -r /openssl/lib/* /relocate/lib
-  - cp -r /musl/usr /relocate/
+  - cp -r /musl/usr/* /relocate/
   - cp -r /openssl/lib/* /relocate/lib
 
   # TODO: Move to the base_image repository
