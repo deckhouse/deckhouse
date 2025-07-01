@@ -38,7 +38,7 @@ provides a convenient set of high-level roles:
 | **SuperAdmin** | Any actions are allowed (including `*` in RBAC), but with consideration to `limitNamespaces` | Limitations can be applied only using cluster policies |
 
 {% alert level="warning" %}
-The multitenancy mode (namespace-based authorization) is currently implemented as a temporary solution and **does not guarantee security**.
+The multitenancy mode (namespace-based authorization) is currently implemented as a temporary solution and **does not provide full isolation guarantees**.
 {% endalert %}
 
 If the `namespaceSelector` parameter is used in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource,

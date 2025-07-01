@@ -30,7 +30,7 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
    EOF
    ```
 
-1. Assign permissions to the ServiceAccount as described in [Granting permissions to users and service accounts](granting.html).
+1. Grant permissions to the ServiceAccount as described in [Granting permissions to users and service accounts](granting.html).
 
    For the current role model:
 
