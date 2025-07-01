@@ -424,7 +424,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 		if r.isModuleReady(ctx, release.GetModuleName()) {
 			release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
-			release.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = "true"
 		}
 	}
 
