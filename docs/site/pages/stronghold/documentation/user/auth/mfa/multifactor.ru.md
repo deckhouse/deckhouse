@@ -1,6 +1,6 @@
 ---
 title: "Мультифактор"
-permalink: ru/stronghold/documentation/user/auth/mfa/mutlifactor.html
+permalink: ru/stronghold/documentation/user/auth/mfa/multifactor.html
 lang: ru
 ---
 
@@ -17,14 +17,14 @@ Stronghold может осуществлять двухфакторную аут
 
 ### Настройка MULTIFACTOR
 
-- Зайдите в [систему управления MULTIFACTOR](https://admin.multifactor.ru/account/login), далее в разделе «Ресурсы» создайте новое LDAP приложение;
-- После создания вам будут доступны два параметра: `NAS Identifier` и `Shared Secret`, они потребуются для последующих шагов;
+- Зайдите в [систему управления MULTIFACTOR](https://admin.multifactor.ru/account/login), в разделе «Ресурсы» создайте новое LDAP приложение.
+  После создания будут доступны два параметра: `NAS Identifier` и `Shared Secret`, они потребуются для последующих шагов.
 - Загрузите и установите [MULTIFACTOR LDAP Adapter](https://multifactor.ru/docs/ldap-adapter/ldap-adapter/).
 
 ### Запуск LDAP Adapter в Kubernetes
 
 Для запуска можно воспользоваться образом [trublast/multifactor-ldap-adapter](https://hub.docker.com/r/trublast/multifactor-ldap-adapter/tags)
-и следующим манифестом
+и следующим манифестом:
 
 ```yaml
 ---
@@ -95,7 +95,7 @@ data:
 
 ## Настройка Stronghold
 
-Потребуется создать и сконфигурировать метод аутентификации `ldap`, где в качестве сервера указать адрес `ldap-adapter`. Если для запуска адаптера вы использовали манифест из примера выше, то адрес будет `ldap://ldap-adapter.default.svc`
+Потребуется создать и сконфигурировать метод аутентификации `ldap`, где в качестве сервера указать адрес `ldap-adapter`. Если для запуска адаптера вы использовали манифест из примера выше, то адрес будет `ldap://ldap-adapter.default.svc`:
 
 ```shell
 d8 stronghold auth enable ldap
@@ -107,7 +107,7 @@ d8 stronghold write auth/ldap/config url="ldap://ldap-adapter.default.svc" \
 
 ## Тестирование с помощью локального сервера openldap
 
-Ниже приведен пример манифеста, с помощь. которого можно запустить сервис OpenLDAP в Kubernetes для целей тестирования
+Ниже приведен пример манифеста, с помощью которого можно запустить сервис OpenLDAP в Kubernetes для целей тестирования:
 
 ```yaml
 ---
@@ -152,13 +152,15 @@ spec:
     app: openldap
 ```
 
-После того, как запустите контейнер, необходимо создать пользователя. Для этого выполните вход в контейнер openldap
+После того как запустите контейнер, создайте пользователя (в качестве примера приведено создание пользователя `alice` с паролем `D3mo-Passw0rd`).
+
+Сначала выполните вход в контейнер openldap:
 
 ```shell
 d8 kubectl exec svc/openldap -it -- bash
 ```
 
-Создайте пользователя следующими командами:
+Создайте пользователя с помощью следующих команд:
 
 ```shell
 cd /tmp

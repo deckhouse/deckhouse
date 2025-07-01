@@ -1,6 +1,6 @@
 ---
 title: "Multifactor"
-permalink: en/stronghold/documentation/user/auth/mfa/mutlifactor.html
+permalink: en/stronghold/documentation/user/auth/mfa/multifactor.html
 lang: en
 ---
 

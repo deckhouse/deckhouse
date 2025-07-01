@@ -294,7 +294,7 @@ entries:
                 ru: 2FA / MFA
               folders:
               - title:
-                  en: Mutlifactor.ru
+                  en: Multifactor.ru
                   ru: Мультифактор.ру
                 url: /stronghold/documentation/user/auth/mfa/multifactor.html
               - title:
