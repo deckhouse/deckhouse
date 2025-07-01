@@ -8,7 +8,7 @@ lang: ru
 
 ### Схема работы
 
-Stronghold может осуществлять двухфакторную аутентификацию пользователей из каталога LDAP или Active Directory
+Stronghold может осуществлять двухфакторную аутентификацию пользователей из каталога LDAP или Active Directory:
 
 - Пользователь подключается к Stronghold, вводит логин и пароль;
 - Stronghold по протоколу LDAP подключается к компоненту [MULTIFACTOR LDAP Adapter](https://multifactor.ru/docs/ldap-adapter/ldap-adapter/);
