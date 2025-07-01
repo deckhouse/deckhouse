@@ -168,7 +168,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-01"
+fromCacheVersion: "2025-07-01.1"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -284,7 +284,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-01"
+fromCacheVersion: "2025-07-01.1"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
