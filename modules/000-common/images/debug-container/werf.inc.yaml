@@ -104,6 +104,7 @@ import:
 shell:
   install:
   - mkdir -p /relocate/{bin,lib}
+  - ln -sf /usr/lib lib64
   # From the base_image repository
   - cp -r /coreutils/usr/* /relocate/
   - cp -r /bash/usr/* /relocate/
