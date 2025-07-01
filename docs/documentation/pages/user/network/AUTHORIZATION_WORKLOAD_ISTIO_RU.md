@@ -32,7 +32,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#authorizationpolicy -->
 
-Подробнее ознакомиться с AuthorizationPolicy можно в документации [istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+Подробнее ознакомиться с AuthorizationPolicy можно в документации [Istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
 
 Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила, описанные выше.
 
