@@ -2,20 +2,20 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXT       = var.providerClusterConfiguration.edgeGatewayType == "NSX-T"
+  useNSXT       = var.providerClusterConfiguration.edgeGateway.type == "NSX-T"
   edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
   count = local.useNSXT ? 1 : 0
   org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
+  name  = var.providerClusterConfiguration.edgeGateway.name
 }
 
 data "vcd_edgegateway" "gateway" {
   count = local.useNSXT ? 0 : 1
   org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGatewayName
+  name  = var.providerClusterConfiguration.edgeGateway.name
 }
 
 module "network" {

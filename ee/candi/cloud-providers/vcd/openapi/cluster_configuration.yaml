@@ -370,9 +370,7 @@ apiVersions:
               type: string
             internalNetworkDNSServers:
               not: {}
-            edgeGatewayName:
-              not: {}
-            edgeGatewayType:
+            edgeGateway:
               not: {}
         - required: [layout, internalNetworkDNSServers, edgeGateway]
           properties:

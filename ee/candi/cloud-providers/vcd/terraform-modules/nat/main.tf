@@ -7,7 +7,7 @@ locals {
 
 resource "vcd_nsxt_nat_rule" "snat" {
   count = var.useNSXT ? 1 : 0
-  org = var.providerClusterConfiguration.organization
+  org   = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
 
@@ -15,7 +15,7 @@ resource "vcd_nsxt_nat_rule" "snat" {
   rule_type   = "SNAT"
   description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
 
-  external_address = var.providerClusterConfiguration.edgeGatewayExternalIP
+  external_address = var.providerClusterConfiguration.edgeGateway.externalIP
   internal_address = var.providerClusterConfiguration.internalNetworkCIDR
   logging          = false
 }
@@ -27,9 +27,9 @@ data "vcd_nsxt_app_port_profile" "ssh" {
   scope = "SYSTEM"
 }
 
-resource "vcd_nsxt_nat_rule" "masters-dnat" {
+resource "vcd_nsxt_nat_rule" "master-dnat" {
   count = (var.useNSXT && length(local.main_ip_addresses) > 0) ? 1 : 0
-  org = var.providerClusterConfiguration.organization
+  org   = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
 
@@ -37,9 +37,41 @@ resource "vcd_nsxt_nat_rule" "masters-dnat" {
   rule_type   = "DNAT"
   description = format("DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
 
-  external_address    = var.providerClusterConfiguration.edgeGatewayExternalIP
-  dnat_external_port  = var.providerClusterConfiguration.edgeGatewayExternalPort
+  external_address    = var.providerClusterConfiguration.edgeGateway.externalIP
+  dnat_external_port  = var.providerClusterConfiguration.edgeGateway.externalPort
   internal_address    = local.main_ip_addresses[count.index]
   logging             = false
   app_port_profile_id = data.vcd_nsxt_app_port_profile.ssh[0].id
+}
+
+resource "vcd_nsxv_snat" "snat" {
+  count = var.useNSXT ? 0 : 1
+
+  enabled     = true
+  description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  org         = var.providerClusterConfiguration.organization
+
+  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  network_type = "org"
+  network_name = var.providerClusterConfiguration.mainNetwork
+
+  original_address   = var.providerClusterConfiguration.internalNetworkCIDR
+  translated_address = var.providerClusterConfiguration.edgeGateway.externalIP
+}
+
+
+resource "vcd_nsxv_dnat" "master-dnat" {
+  count = var.useNSXT ? 0 : 1
+
+  enabled     = true
+  description = format("DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  org         = var.providerClusterConfiguration.organization
+
+  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  network_type = "org"
+  network_name = var.providerClusterConfiguration.mainNetwork
+
+  original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
+  original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
+  translated_address = local.main_ip_addresses[0]
 }
