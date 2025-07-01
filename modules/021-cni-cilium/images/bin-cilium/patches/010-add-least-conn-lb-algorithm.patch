@@ -1,4 +1,4 @@
-From 683aa06d0c401d1b1313111d0174d4aaaf67dae3 Mon Sep 17 00:00:00 2001
+From 2568d4d20ca55adef3a0afc42a489593bf681d7b Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -7,7 +7,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
  bpf/bpf_lxc.c                           |   2 +
  bpf/include/bpf/helpers.h               |   5 +
- bpf/lib/lb.h                            | 270 +++++++++++++++++++++++-
+ bpf/lib/lb.h                            | 289 +++++++++++++++++++++++-
  daemon/cmd/daemon_main.go               |   4 +-
  daemon/cmd/datapath.go                  |   7 +
  daemon/cmd/kube_proxy_replacement.go    |   3 +-
@@ -16,15 +16,15 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/datapath/maps/map.go                |   8 +
  pkg/datapath/types/lbmap.go             |   2 +-
  pkg/loadbalancer/loadbalancer.go        |  10 +-
- pkg/maps/lbmap/lbmap.go                 |  25 ++-
+ pkg/maps/lbmap/lbmap.go                 |  25 +-
  pkg/maps/lbmap/leastconn.go             |  68 ++++++
  pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
- pkg/maps/lbmap/leastconn_service_map.go |  48 +++++
+ pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
  pkg/metrics/features/metrics.go         |   1 +
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  22 +-
  pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 19 files changed, 516 insertions(+), 18 deletions(-)
+ 19 files changed, 535 insertions(+), 18 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -61,7 +61,7 @@ index 65ba8cf604..5892d1c4f1 100644
  static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
  static int BPF_FUNC(map_update_elem, const void *map, const void *key,
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..8f0b51f1b8 100644
+index 15dacfa4df..f80a17c3ae 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
 @@ -3,6 +3,8 @@
@@ -81,7 +81,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  
  #ifndef SKIP_CALLS_MAP
  #include "drop.h"
-@@ -188,6 +191,56 @@ struct {
+@@ -188,6 +191,59 @@ struct {
  	});
  } LB4_MAGLEV_MAP_OUTER __section_maps_btf;
  #endif /* LB_SELECTION == LB_SELECTION_MAGLEV */
@@ -91,6 +91,8 @@ index 15dacfa4df..8f0b51f1b8 100644
 +#ifndef LEAST_CONN_TIMEOUT
 +#define LEAST_CONN_TIMEOUT 10000000ULL
 +#endif
++
++#define LEAST_CONN_NEXT_ITER_TIMEOUT 1000000ULL
 +
 +#define UINT32_MAX 0xffffffff
 +#define CLOCK_MONOTONIC 1
@@ -107,14 +109,15 @@ index 15dacfa4df..8f0b51f1b8 100644
 +	__u32 is_tmr_active;
 +	__u32 backend_id;
 +	__u16 last_slot;
-+	__u8 pad[6];
++	__u16 rest_count;
++	__u8 pad[4];
 +	struct bpf_timer tmr;
 +};
 +
 +#define LEAST_CONN_MAX_ENTRIES 65536
-+/* the limit was selected due to verifier restriction on executing instructions  (LEAST_CONN_MAX_ENTRIES / 1000)*/
-+#define LEAST_CONN_FOREACH_MAX_ENTRIES 500
-+#define LEAST_CONN_THRESHOLD 10
++/* the limit was selected due to verifier restriction on executing instructions */
++#define LEAST_CONN_FOREACH_MAX_ENTRIES 100
++#define LEAST_CONN_THRESHOLD 5
 +
 +struct {
 +	__uint(type, BPF_MAP_TYPE_HASH);
@@ -138,7 +141,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  #endif /* ENABLE_IPV4 */
  
  #ifdef ENABLE_SESSION_AFFINITY
-@@ -692,7 +745,7 @@ struct lb6_service *lb6_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
+@@ -692,7 +748,7 @@ struct lb6_service *lb6_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
  	return NULL;
  }
  
@@ -147,7 +150,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  static __always_inline __u32
  lb6_select_backend_id_random(struct __ctx_buff *ctx,
  			     struct lb6_key *key,
-@@ -754,7 +807,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
+@@ -754,7 +810,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
  		return 0;
  	}
  }
@@ -156,7 +159,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  # define lb6_select_backend_id	lb6_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb6_select_backend_id	lb6_select_backend_id_maglev
-@@ -1425,7 +1478,7 @@ lb4_select_backend_id_random(struct __ctx_buff *ctx,
+@@ -1425,7 +1481,7 @@ lb4_select_backend_id_random(struct __ctx_buff *ctx,
  
  	return be ? be->backend_id : 0;
  }
@@ -165,7 +168,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  
  #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
  static __always_inline __u32
-@@ -1457,6 +1510,199 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+@@ -1457,6 +1513,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
  }
  #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
  
@@ -197,9 +200,10 @@ index 15dacfa4df..8f0b51f1b8 100644
 +		.backend_id = svc->backend_id,
 +	};
 +
-+	svc->is_tmr_active = 0;
 +	lb4_svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, k);
 +	if (lb4_svc == NULL) {
++		printk("FAILED lookup svc from callback\n");
++		svc->is_tmr_active = 0;
 +		return 0;
 +	}
 +
@@ -208,15 +212,17 @@ index 15dacfa4df..8f0b51f1b8 100644
 +		max_count = bck->count;
 +	}
 +
-+	/* always start from next slot */
++	/* always start searching from next slot */
 +	svc->last_slot++;
 +	slot = lb4_least_conn_get_slot(svc, lb4_svc->count);
-+	max = lb4_svc->count <= LEAST_CONN_FOREACH_MAX_ENTRIES ?
-+		lb4_svc->count : LEAST_CONN_FOREACH_MAX_ENTRIES;
++	max = svc->rest_count <= LEAST_CONN_FOREACH_MAX_ENTRIES ?
++		svc->rest_count : LEAST_CONN_FOREACH_MAX_ENTRIES;
 +	for (i = 0; i < max; i++) {
 +		struct lb4_service *lb4_bck;
 +		__u32 conn_count = 0;
-+		slot = ((slot - 1 + i) % lb4_svc->count) + 1;
++		
++		svc->rest_count--;
++		slot = ((slot + i - 1) % lb4_svc->count) + 1;
 +		key.backend_slot = slot;
 +		lb4_bck = __lb4_lookup_backend_slot(&key);
 +		if (lb4_bck == NULL || !is_backend_active(lb4_bck->backend_id))
@@ -232,8 +238,19 @@ index 15dacfa4df..8f0b51f1b8 100644
 +			max_count = conn_count;
 +			svc->backend_id = lb4_bck->backend_id;
 +			if (max_count <= LEAST_CONN_THRESHOLD) {
++				svc->rest_count = 0;
 +				break;
 +			}
++		}
++	}
++	if (svc->rest_count == 0) {
++		svc->is_tmr_active = 0;
++	} else {
++		/* too big backend list - continue searching backend in next iteration */
++		if (timer_start(&svc->tmr, LEAST_CONN_NEXT_ITER_TIMEOUT, 0)) {
++			printk("FAILED start timer\n");
++			svc->rest_count = 0;
++			svc->is_tmr_active = 0;
 +		}
 +	}
 +	svc->last_slot = slot;
@@ -241,7 +258,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +}
 +
 +static __always_inline void
-+start_timer(struct lb4_lct_service *svc, __u64 timeout)
++start_timer(struct lb4_lct_service *svc, __u64 timeout, __u16 svc_count)
 +{
 +	if (svc->is_tmr_active)
 +		return;
@@ -258,6 +275,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +		return;
 +	}
 +
++	svc->rest_count = svc_count;
 +	svc->is_tmr_active = 1;
 +}
 +
@@ -288,6 +306,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +		struct lb4_lct_service new_val = {
 +			.is_tmr_active = 0,
 +			.last_slot = 1,
++			.rest_count = 0,
 +		};
 +
 +		new_val.backend_id = lb4_least_conn_select_backend_id_random(ctx, key, svc, &new_val.last_slot);
@@ -314,7 +333,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +			return new_val.backend_id;
 +		}
 +
-+		start_timer(val, is_backend_active(new_val.backend_id) ? LEAST_CONN_TIMEOUT : 1000);
++		start_timer(val, is_backend_active(new_val.backend_id) ? LEAST_CONN_TIMEOUT : 1000, svc->count);
 +		return new_val.backend_id;
 +	}
 +
@@ -322,7 +341,7 @@ index 15dacfa4df..8f0b51f1b8 100644
 +		val->backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
 +	}
 +
-+	start_timer(val, LEAST_CONN_TIMEOUT);
++	start_timer(val, LEAST_CONN_TIMEOUT, svc->count);
 +	return val->backend_id;
 +}
 +
@@ -365,7 +384,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  #ifdef LB_SELECTION_PER_SERVICE
  static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
  {
-@@ -1473,6 +1719,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1473,6 +1738,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
  	case LB_SELECTION_RANDOM:
  		return lb4_select_backend_id_random(ctx, key, tuple, svc);
@@ -374,7 +393,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  	default:
  		return 0;
  	}
-@@ -1481,6 +1729,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1481,6 +1748,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  # define lb4_select_backend_id	lb4_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb4_select_backend_id	lb4_select_backend_id_maglev
@@ -383,7 +402,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  #elif LB_SELECTION == LB_SELECTION_FIRST
  /* Backend selection for tests that always chooses first slot. */
  static __always_inline __u32
-@@ -1762,6 +2012,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1762,6 +2031,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		if (IS_ERR(ret))
  			goto drop_err;
  
@@ -394,7 +413,7 @@ index 15dacfa4df..8f0b51f1b8 100644
  #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
  		_lb_act_conn_open(state->rev_nat_index, backend->zone);
  #endif
-@@ -1775,6 +2029,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1775,6 +2048,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		 * session we are likely to get a TCP RST.
  		 */
  		backend = lb4_lookup_backend(ctx, backend_id);
@@ -779,7 +798,7 @@ index 0000000000..02f8817d5e
 +}
 diff --git a/pkg/maps/lbmap/leastconn_service_map.go b/pkg/maps/lbmap/leastconn_service_map.go
 new file mode 100644
-index 0000000000..2b07705139
+index 0000000000..cf93bc3e07
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn_service_map.go
 @@ -0,0 +1,48 @@
@@ -803,13 +822,13 @@ index 0000000000..2b07705139
 +	_ [16]byte `align:"bpf_timer"`
 +}
 +
-+type pad6uint8 [6]uint8
++type pad4uint8 [4]uint8
 +
 +type LeastConnServiceVal struct {
 +	IsTmrActive uint32    `align:"is_tmr_active"`
 +	BackendID   uint32    `align:"backend_id"`
 +	LastSlot    uint16    `align:"last_slot"`
-+	Pad         pad6uint8 `align:"pad"`
++	Pad         pad4uint8 `align:"pad"`
 +	Tmr         BPFTimer  `align:"tmr"`
 +}
 +
