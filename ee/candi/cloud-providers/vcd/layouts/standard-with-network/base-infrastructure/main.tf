@@ -22,4 +22,5 @@ resource "vcd_vapp_org_network" "vapp_network" {
 module "nat" {
   source                       = "../../../terraform-modules/nat"
   providerClusterConfiguration = var.providerClusterConfiguration
+  edgeGatewayId               = module.network.edgeGatewayId
 }
