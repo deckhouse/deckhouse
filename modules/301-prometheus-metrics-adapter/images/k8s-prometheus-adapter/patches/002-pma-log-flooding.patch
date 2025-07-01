@@ -1,5 +1,5 @@
 diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
-index de59e70..38a8081 100644
+index de59e70..3957715 100644
 --- a/pkg/resourceprovider/provider.go
 +++ b/pkg/resourceprovider/provider.go
 @@ -180,6 +180,7 @@ func (p *resourceProvider) GetPodMetrics(pods ...*metav1.PartialObjectMetadata)
