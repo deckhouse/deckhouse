@@ -15,9 +15,9 @@ lang: ru
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/user-authz/#%D1%8D%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D0%B8%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C -->
 
-В отличие [от текущей ролевой модели](rbac-current.html) DKP, экспериментальная ролевая модель не использует ресурсы ClusterAuthorizationRule и AuthorizationRule. Права доступа настраиваются стандартным способом Kubernetes RBAC: через ресурсы RoleBinding или ClusterRoleBinding, , в которых указывается одна из ролей, созданных модулем `user-authz`.
+В отличие [от текущей ролевой модели](rbac-current.html) DKP, экспериментальная ролевая модель не использует ресурсы [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) и [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Права доступа настраиваются стандартным способом Kubernetes RBAC: через ресурсы [RoleBinding или ClusterRoleBinding](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding), в которых указывается одна из ролей, созданных модулем `user-authz`.
 
-Модуль создаёт специальные агрегированные кластерные роли (ClusterRole). Используя эти роли в RoleBinding или ClusterRoleBinding можно решать следующие задачи:
+Модуль создаёт специальные агрегированные кластерные роли (ClusterRole). Используя эти роли в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) или [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) можно решать следующие задачи:
 
 - Управлять доступом к модулям, относящимся к определённой [подсистеме](#подсистемы-ролевой-модели) платформы.
 
@@ -35,7 +35,7 @@ lang: ru
 ## Use-роли
 
 {% alert level="warning" %}
-Use-роль можно использовать только в ресурсе RoleBinding.
+Use-роль можно использовать только в ресурсе [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
 {% endalert %}
 
 Use-роли предназначены для назначения прав пользователю **в конкретном пространстве имён**. Пользователями считаются, например, разработчики, использующие настроенный администратором кластер для развёртывания своих приложений. Таким пользователям не нужно управлять модулями DKP или кластером, но им нужно иметь возможность, например, создавать свои Ingress-ресурсы, настраивать аутентификацию приложений и сбор логов с приложений.
@@ -95,14 +95,14 @@ Manage-роль определяет права на доступ:
 
 Каждый модуль DKP принадлежит определённой подсистеме. Для каждой подсистемы существует набор ролей с разными уровнями доступа. Роли обновляются автоматически при включении или отключении модуля.
 
-Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в ClusterRoleBinding:
+Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 - `d8:manage:networking:viewer`;
 - `d8:manage:networking:manager`.
 
 Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
 
-### Cостав подсистем ролевой модели
+### Состав подсистем ролевой модели
 
 {% include rbac/rbac-subsystems-list.liquid %}
 
@@ -290,7 +290,7 @@ rules:
   - watch
 ```
 
-Хук отслеживает ресурсы ClusterRoleBinding и при их создании проверяет manage-роли, чтобы найти все агрегированные роли по правилу `aggregationRule`. Из каждой из них он извлекает пространство имён из лейбла `rbac.deckhouse.io/namespace` и создаёт use-роль в этом пространстве.
+Хук отслеживает ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и при их создании проверяет manage-роли, чтобы найти все агрегированные роли по правилу `aggregationRule`. Из каждой из них он извлекает пространство имён из лейбла `rbac.deckhouse.io/namespace` и создаёт use-роль в этом пространстве.
 
 ## Расширение существующих use-ролей
 

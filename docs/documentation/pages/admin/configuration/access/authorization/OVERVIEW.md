@@ -13,7 +13,7 @@ DKP supports two role models:
 - [Current](../authorization/rbac-current.html): The end-to-end authorization subsystem extends the standard RBAC mechanism
   using custom resources — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
 - [Experimental](../authorization/rbac-experimental.html): This model also relies on the standard RBAC mechanism.
-  Access is configured by creating RoleBinding or ClusterRoleBinding resources.
+  Access is configured by creating [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources.
 
 Both models are supported by the [`user-authz`](/modules/user-authz/) module.
 The choice of model depends on security requirements and usage scenarios.

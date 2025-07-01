@@ -82,11 +82,11 @@ spec:
 
 ## Предоставление прав с помощью ClusterRoleBinding и RoleBinding (экспериментальная ролевая модель)
 
-При использовании экспериментальной ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы ClusterRoleBinding и RoleBinding.
+При использовании экспериментальной ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
 
 ### Назначение прав администратору кластера (экспериментальная ролевая модель)
 
-Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в ClusterRoleBinding.
+Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Пример назначения прав администратору кластера (User `joe`):
 
@@ -121,7 +121,7 @@ roleRef:
 
 ### Назначение прав сетевому администратору (экспериментальная ролевая модель)
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в ClusterRoleBinding.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Пример назначения прав сетевому администратору (User `joe`):
 
@@ -232,9 +232,9 @@ roleRef:
 
 ### Назначение административных прав пользователю в рамках пространства имён (экспериментальная ролевая модель)
 
-Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в RoleBinding [use-роль](../authorization/rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
+Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) [use-роль](../authorization/rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
 
-Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в RoleBinding в соответствующем пространстве имён.
+Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) в соответствующем пространстве имён.
 
 Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
 

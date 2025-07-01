@@ -183,7 +183,7 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 
 ## Пример AuthorizationRule
 
-Используйте AuthorizationRule для установки правил доступа для пользователей внутри определённого пространства имен.
+Используйте [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) для установки правил доступа для пользователей внутри определённого пространства имен.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -199,7 +199,7 @@ spec:
 
 ## Пример ClusterAuthorizationRule
 
-ClusterAuthorizationRule можно использовать для установки правил доступа для пользователей как на уровне всего кластера, так и на уровне определенных пространств имен.
+[ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) можно использовать для установки правил доступа для пользователей как на уровне всего кластера, так и на уровне определенных пространств имен.
 
 ```yaml
 apiVersion: deckhouse.io/v1

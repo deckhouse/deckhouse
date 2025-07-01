@@ -189,7 +189,7 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 
 ## AuthorizationRule example
 
-Use AuthorizationRule to set access rules for users within a specific namespace.
+Use [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) to set access rules for users within a specific namespace.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -205,7 +205,7 @@ spec:
 
 ## ClusterAuthorizationRule example
 
-Use ClusterAuthorizationRule to set access rules for users either cluster-wide or for specific namespaces.
+Use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) to set access rules for users either cluster-wide or for specific namespaces.
 
 ```yaml
 apiVersion: deckhouse.io/v1

@@ -9,7 +9,7 @@ lang: ru
 Платформа поддерживает две ролевые модели:
 
 - [Текущая](../authorization/rbac-current.html). Подсистема сквозной авторизации расширяет стандартный RBAC-механизм за счёт пользовательских ресурсов — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) и [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
-- [Экспериментальная](../authorization/rbac-experimental.html). Эта модель также предполагает использование стандартного механизма RBAC. Доступ настраивается с помощью создания ресурсов RoleBinding или ClusterRoleBinding.
+- [Экспериментальная](../authorization/rbac-experimental.html). Эта модель также предполагает использование стандартного механизма RBAC. Доступ настраивается с помощью создания ресурсов [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) или [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Обе модели поддерживаются модулем [`user-authz`](/modules/user-authz/). Выбор модели зависит от требований безопасности и сценариев использования.
 

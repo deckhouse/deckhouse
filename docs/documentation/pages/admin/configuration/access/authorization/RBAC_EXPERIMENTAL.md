@@ -20,12 +20,12 @@ Automatic conversion of resources is not possible.
 {% endalert %}
 
 Unlike the [current role model](rbac-current.html) in DKP,
-the experimental model does not use ClusterAuthorizationRule or AuthorizationRule resources.
+the experimental model does not use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) resources.
 Access control is configured using the standard Kubernetes RBAC approach
-via RoleBinding or ClusterRoleBinding resources referencing a role created by the `user-authz` module.
+via [RoleBinding or ClusterRoleBinding](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding) resources referencing a role created by the `user-authz` module.
 
 The module creates special aggregated cluster roles (ClusterRole).
-By using these roles in RoleBinding or ClusterRoleBinding, you can achieve the following:
+By using these roles in [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/), you can achieve the following:
 
 - Control access to modules associated with a specific [DKP subsystem](#role-model-subsystems).
 
@@ -48,7 +48,7 @@ The roles created by the module fall into two categories:
 ## Use roles
 
 {% alert level="warning" %}
-Use rules can only be used in RoleBinding resources.
+Use rules can only be used in [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
 {% endalert %}
 
 Use roles are intended for granting permissions to users *within a specific namespace*.
@@ -135,7 +135,7 @@ Each DKP module belongs to a specific subsystem.
 For each subsystem, there is a set of roles with different access levels.
 These roles are automatically updated when a module is enabled or disabled.
 
-For example, the `networking` subsystem includes the following manage roles, which can be used in ClusterRoleBinding:
+For example, the `networking` subsystem includes the following manage roles, which can be used in [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
@@ -336,7 +336,7 @@ rules:
   - watch
 ```
 
-The hook watches ClusterRoleBinding resources and, upon their creation, inspects the associated manage roles
+The hook watches [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources and, upon their creation, inspects the associated manage roles
 to find all aggregated roles defined via the `aggregationRule`.
 For each aggregated role, it extracts the namespace from the `rbac.deckhouse.io/namespace` label
 and creates a corresponding use role in that namespace.

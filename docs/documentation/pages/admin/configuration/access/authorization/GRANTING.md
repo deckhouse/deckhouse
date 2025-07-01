@@ -92,11 +92,11 @@ spec:
 ## Granting permissions using ClusterRoleBinding and RoleBinding (experimental role model)
 
 When using the experimental role model in DKP,
-you can grant permissions to users via the ClusterRoleBinding and RoleBinding resources.
+you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
 
 ### Assigning cluster administrator permissions (experimental role model)
 
-To assign cluster administrator permissions, use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:all:manager` in a ClusterRoleBinding resource.
+To assign cluster administrator permissions, use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:all:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
 Example of assigning cluster administrator permissions to the user `joe`:
 
@@ -133,7 +133,7 @@ The user will have the following permissions:
 ### Assigning networking administrator permissions (experimental role model)
 
 To assign networking administrator permissions for managing the cluster’s networking subsystem,
-use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:networking:manager` in a ClusterRoleBinding resource.
+use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:networking:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
 Example of assigning networking administrator permissions to the user `joe`:
 
@@ -251,9 +251,9 @@ The user will have the following permissions:
 ### Granting administrator permissions to a user within a namespace (experimental role model)
 
 To assign or restrict user permissions to specific namespaces,
-apply a [use role](rbac-experimental.html#use-roles) with the corresponding access level in a RoleBinding resource.
+apply a [use role](rbac-experimental.html#use-roles) with the corresponding access level in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource.
 
-For example, to allow a user to manage application resources in a namespace (without giving them access to DKP module configurations), use the `d8:use:role:admin` role in a RoleBinding resource for the corresponding namespace.
+For example, to allow a user to manage application resources in a namespace (without giving them access to DKP module configurations), use the `d8:use:role:admin` role in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource for the corresponding namespace.
 
 Example of granting application developer `app-developer` permissions within the `myapp` namespace:
 
