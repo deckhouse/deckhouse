@@ -415,6 +415,18 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
+	if len(release.Annotations) == 0 {
+		release.Annotations = make(map[string]string, 1)
+	}
+
+	if release.GetIsUpdating() {
+		needsUpdate = true
+
+		if r.isModuleReady(ctx, release.GetModuleName()) {
+			release.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
+		}
+	}
+
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
@@ -670,7 +682,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	if !task.IsSingle && !task.IsPatch && !r.isModuleReady(ctx, r.moduleManager, release.GetModuleName()) {
+	if !task.IsSingle && !task.IsPatch && !r.isModuleReady(ctx, release.GetModuleName()) {
 		logger.Debug("module is not ready, waiting")
 
 		drs := &v1alpha1.ModuleReleaseStatus{
@@ -807,7 +819,7 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 	if err != nil {
 		r.log.Error("failed to get update policy", slog.String("release", release.GetName()), log.Err(err))
 
-		if err = r.updateReleaseStatusMessage(ctx, release, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
+		if err := r.updateReleaseStatusMessage(ctx, release, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
 			r.log.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
 			return nil, nil, err
@@ -1483,11 +1495,14 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 	}
 }
 
-func (r *reconciler) isModuleReady(_ context.Context, moduleManager moduleManager, moduleName string) bool {
-	basicModule := moduleManager.GetModule(moduleName)
-	if basicModule == nil {
+func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool {
+	module := new(v1alpha1.Module)
+	err := r.client.Get(ctx, types.NamespacedName{Name: moduleName}, module)
+	if err != nil {
+		r.log.Warn("cannot find module", slog.String("module-name", moduleName), log.Err(err))
+
 		return false
 	}
 
-	return basicModule.GetPhase() == addonmodules.Ready
+	return module.Status.Phase == v1alpha1.ModulePhaseReady
 }

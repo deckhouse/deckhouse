@@ -319,9 +319,19 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
 	}
 
-	var values = make(addonutils.Values)
-	if basicModule := r.moduleManager.GetModule(moduleDef.Name); basicModule != nil {
-		values = basicModule.GetConfigValues(false)
+	values := make(addonutils.Values)
+	if module := r.moduleManager.GetModule(mpo.GetModuleName()); module != nil {
+		values = module.GetConfigValues(false)
+	} else {
+		config := new(v1alpha1.ModuleConfig)
+		if err = r.client.Get(ctx, client.ObjectKey{Name: mpo.GetModuleName()}, config); err != nil {
+			if !apierrors.IsNotFound(err) {
+				r.log.Error("failed to get the module config", slog.String("name", mpo.GetModuleName()), log.Err(err))
+				return ctrl.Result{}, err
+			}
+		} else {
+			values = addonutils.Values(config.Spec.Settings)
+		}
 	}
 
 	if err = moduleDef.Validate(values, r.log); err != nil {

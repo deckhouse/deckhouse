@@ -289,6 +289,18 @@ entries:
                 en: Kubernetes
                 ru: Kubernetes
               url: /stronghold/documentation/user/auth/kubernetes.html
+            - title:
+                en: 2FA / MFA
+                ru: 2FA / MFA
+              folders:
+              - title:
+                  en: Multifactor.ru
+                  ru: Мультифактор.ру
+                url: /stronghold/documentation/user/auth/mfa/multifactor.html
+              - title:
+                  en: TOTP
+                  ru: TOTP
+                url: /stronghold/documentation/user/auth/mfa/totp.html
         - title:
             en: Secrets engines
             ru: Механизмы секретов
