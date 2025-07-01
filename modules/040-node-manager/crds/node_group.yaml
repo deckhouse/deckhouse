@@ -1529,7 +1529,7 @@ spec:
                       type: object
                       properties:
                         partitionCount:
-                          type: integer
+                          type: number
                           description: |
                             Count of partition per GPU with TimeSlicing.
                           x-doc-default: 4
