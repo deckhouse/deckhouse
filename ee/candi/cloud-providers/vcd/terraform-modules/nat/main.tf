@@ -11,7 +11,7 @@ resource "vcd_nsxt_nat_rule" "snat" {
 
   edge_gateway_id = var.edgeGatewayId
 
-  name        = format("%-snat", var.providerClusterConfiguration.mainNetwork)
+  name        = format("%s-snat", var.providerClusterConfiguration.mainNetwork)
   rule_type   = "SNAT"
   description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
 
