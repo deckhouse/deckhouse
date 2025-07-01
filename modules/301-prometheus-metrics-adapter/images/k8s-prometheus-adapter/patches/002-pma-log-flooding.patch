@@ -19,7 +19,7 @@ index de59e70..eb248ca 100644
 +		klog.Infof("if statment check is: %b", pod.CreationTimestamp.Time.Before(now.Add(-p.window)))
 +		// Check if the pod was created before the start of the metrics collection window.
 +		// If the pod is newer than this window, CPU metrics might not be available yet.
-+		if pod.CreationTimestamp.Time.Before(now.Add(-p.window)) {
++		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
 +			klog.V(4).Infof("Pod %s is too new (age < %v); "+
 +				"cpu metrics not yet available, skipping as expected", pod.Name, p.window)
 +		} else {
@@ -32,7 +32,7 @@ index de59e70..eb248ca 100644
 -		klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
 +		// Check if the pod was created before the start of the metrics collection window.
 +		// If the pod is newer than this window, CPU metrics might not be available yet.
-+		if pod.CreationTimestamp.Time.Before(now.Add(-p.window)) {
++		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
 +			klog.V(4).Infof("Pod %s is too new (age < %v); "+
 +				"memory metrics not yet available, skipping as expected", pod.Name, p.window)
 +		} else {
