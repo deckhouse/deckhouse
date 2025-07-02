@@ -1,0 +1,28 @@
+- name: oom-kills
+  rules:
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container, container_id) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(klog_oomkill{task_memcg=~".*burstable/pod.*"}, "uid", "$1", "task_memcg", ".*burstable/pod(.*)"))
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container, container_id) (
+        label_replace(kube_pod_container_info{container_id!=""}, "raw_container_id", "$1", "container_id", "containerd://(.+)")
+        * on (raw_container_id) group_left
+        max by (raw_container_id) (label_replace(klog_oomkill{task_memcg=~".*burstable/pod.*"}, "raw_container_id", "$1", "task_memcg", ".*burstable/pod.*/(.+)"))
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container, container_id) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(klog_oomkill{task_memcg=~".*kubepods/pod.*"}, "uid", "$1", "task_memcg", ".*kubepods/pod(.*)"))
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container, container_id) (
+        label_replace(kube_pod_container_info{container_id!=""}, "raw_container_id", "$1", "container_id", "containerd://(.+)")
+        * on (raw_container_id) group_left
+        max by (raw_container_id) (label_replace(klog_oomkill{task_memcg=~".*kubepods/pod.*"}, "raw_container_id", "$1", "task_memcg", ".*kubepods/pod.*/(.+)"))
+      )
