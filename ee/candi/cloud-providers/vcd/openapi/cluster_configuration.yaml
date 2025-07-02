@@ -284,6 +284,7 @@ apiVersions:
               type: string
               description: |
                 VMware Cloud Director Edge Gateway name.
+              enum: ["NSX-V", "NSX-T"]
             type:
               type: string
               description: |
@@ -308,7 +309,7 @@ apiVersions:
             externalNetworkType:
               type: string
               description: |
-                External network type for build DNAT rule for master node.
+                External network type for build DNAT rule for master node (one of "org" or "ext").
                 Required only if `type` is `NSX-V`.
               enum: [org, ext]
         mainNetwork:
@@ -388,6 +389,23 @@ apiVersions:
             layout:
               enum: [StandardWithNetwork]
               type: string
+            edgeGateway:
+              type: object
+              oneOf:
+              - properties:
+                  type:
+                    type: string
+                    enum: [NSX-V]
+                required: [type, name, externalIP, externalPort, externalNetworkName, externalNetworkType]
+              - properties:
+                  type:
+                    type: string
+                    enum: [NSX-T]
+                  externalNetworkName:
+                    not: {}
+                  externalNetworkType:
+                    not: {}
+                required: [type, name, externalIP, externalPort]
       - oneOf:
         - properties:
             provider:
