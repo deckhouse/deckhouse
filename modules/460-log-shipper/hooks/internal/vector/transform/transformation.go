@@ -19,7 +19,6 @@ package transform
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
@@ -57,31 +56,32 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 }
 
 func replaceKeys(r v1alpha1.ReplaceKeysSpec) (apis.LogTransform, error) {
-	sources := []string{}
 	vrlName := "tf_replaceKeys"
 	if r.Source == "" {
 		return nil, fmt.Errorf("transformations replaceKeys: Source is empty")
 	}
-	for _, l := range r.Labels {
-		if !validLabel(l) {
-			return nil, fmt.Errorf("transformations replaceKeys label: %s not valid", l)
-		}
-		sources = append(sources, vrl.ReplaceKeys(l, r.Source, r.Target))
+	if label, valide := validLabels(r.Labels); !valide {
+		return nil, fmt.Errorf("transformations dropLabels label: %s not valid", label)
 	}
-	return NewTransformation(vrlName, strings.Join(sources, "\n")), nil
+	source, err := vrl.ReplaceKeys.Render(vrl.Args{"spec": r})
+	if err != nil {
+		return nil, fmt.Errorf("transformations replaceKeys render error: %v", err)
+	}
+	return NewTransformation(vrlName, source), nil
 }
 
 func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	var source string
+	var err error
 	vrlName := fmt.Sprintf("tf_parseMessage_%s", e.SourceFormat)
 	switch e.SourceFormat {
 	case v1alpha1.FormatString:
 		if e.String.TargetField == "" {
 			return nil, fmt.Errorf("transformations parseMessage string: TargetField is empty")
 		}
-		source = vrl.ParseStringMessage(e.String.TargetField)
+		source, err = vrl.ParseStringMessage.Render(vrl.Args{"targetField": e.String.TargetField})
 	case v1alpha1.FormatJSON:
-		source = vrl.ParseJSONMessage(e.JSON.Depth)
+		source, err = vrl.ParseJSONMessage.Render(vrl.Args{"depth": e.JSON.Depth})
 	case v1alpha1.FormatKlog:
 		source = vrl.ParseKlogMessage.String()
 	case v1alpha1.FormatCLF:
@@ -93,19 +93,22 @@ func parseMessage(e v1alpha1.ParseMessageSpec) (apis.LogTransform, error) {
 	default:
 		return nil, fmt.Errorf("transformations parseMessage: sourceFormat %s not valid", e.SourceFormat)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("transformations parseMessage render %s error: %v", e.SourceFormat, err)
+	}
 	return NewTransformation(vrlName, source), nil
 }
 
 func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
-	sources := []string{}
 	vrlName := "tf_dropLabels"
-	for _, l := range d.Labels {
-		if !validLabel(l) {
-			return nil, fmt.Errorf("transformations dropLabels label: %s not valid", l)
-		}
-		sources = append(sources, vrl.DropLabels(l))
+	if label, valide := validLabels(d.Labels); !valide {
+		return nil, fmt.Errorf("transformations dropLabels label: %s not valid", label)
 	}
-	return NewTransformation(vrlName, strings.Join(sources, "\n")), nil
+	source, err := vrl.DropLabels.Render(vrl.Args{"spec": d})
+	if err != nil {
+		return nil, fmt.Errorf("transformations dropLabels render error: %v", err)
+	}
+	return NewTransformation(vrlName, source), nil
 }
 
 func NewTransformation(name, source string) *DynamicTransform {
@@ -125,6 +128,11 @@ func NewTransformation(name, source string) *DynamicTransform {
 	}
 }
 
-func validLabel(label string) bool {
-	return vectorLabelTemplate.MatchString(label)
+func validLabels(labels []string) (string, bool) {
+	for _, l := range labels {
+		if !vectorLabelTemplate.MatchString(l) {
+			return l, false
+		}
+	}
+	return "", true
 }

@@ -37,7 +37,7 @@ var testCases = []struct {
 				String:       v1alpha1.SourceFormatStringSpec{TargetField: "text"},
 			},
 		},
-		"if is_string(.message) {\n.message =  { \"text\": .message }\n}",
+		"if is_string(.message) {\n  .message = {\"text\": .message}\n}",
 	},
 	{"ParseMessage JSON Format ",
 		v1alpha1.TransformationSpec{
@@ -47,7 +47,7 @@ var testCases = []struct {
 				JSON:         v1alpha1.SourceFormatJSONSpec{Depth: 1},
 			},
 		},
-		"if is_string(.message) {\n.message = parse_json(.message, max_depth: 1) ?? .message\n}",
+		"if is_string(.message) {\n  .message = parse_json(.message, max_depth: 1) ?? .message\n}",
 	},
 	{"ParseMessage Klog Format",
 		v1alpha1.TransformationSpec{
@@ -92,8 +92,8 @@ var testCases = []struct {
 				Labels: []string{".first", ".second"},
 			},
 		},
-		"if exists(.first) {\n del(.first)\n}\n" +
-			"if exists(.second) {\n del(.second)\n}",
+		"if exists(.first) {\n  del(.first)\n}\n" +
+			"if exists(.second) {\n  del(.second)\n}",
 	},
 	{"ReplaceKeys",
 		v1alpha1.TransformationSpec{
@@ -105,9 +105,9 @@ var testCases = []struct {
 			},
 		},
 		"if exists(.pod_labels) {\n" +
-			".pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n" +
+			"  .pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n" +
 			"if exists(.examples) {\n" +
-			".examples = map_keys(object!(.examples), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
+			"  .examples = map_keys(object!(.examples), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
 	},
 }
 

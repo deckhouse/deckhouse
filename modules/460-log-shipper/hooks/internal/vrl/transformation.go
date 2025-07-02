@@ -16,55 +16,61 @@ limitations under the License.
 
 package vrl
 
-import (
-	"fmt"
-)
+// ParseJSONMEssage If it can parse the log into a json with parsing depth
+// or leaves the log in its original state
+const ParseJSONMessage Rule = `
+if is_string(.message) {
+  .message = parse_json(.message{{if ne .depth 0}}, max_depth: {{.depth}}{{end}}) ?? .message
+}`
 
-// VRL for transformations destination logs.
-const (
-	// Parse message klog to json. If message string and parse without error.
-	ParseKlogMessage Rule = `
+// ParseKlogMessage If it can parse the log from the klog format to json
+// or leaves the log in its original state
+const ParseKlogMessage Rule = `
 if is_string(.message) {
   .message = parse_klog(.message) ?? .message
 }`
-	// Parse message CLF to json. If message string and parse without error.
-	ParseCLFMessage Rule = `
+
+// ParseCLFMessage If it can parse the log from the CLF format to json
+// or leaves the log in its original state
+const ParseCLFMessage Rule = `
 if is_string(.message) {
   .message = parse_common_log(.message) ?? .message
 }`
-	// Parse message syslog to json. If message string and parse without error.
-	ParseSysLogMessage Rule = `
+
+// ParseSysLogMessage If it can parse the log from the syslog format to json
+// or leaves the log in its original state
+const ParseSysLogMessage Rule = `
 if is_string(.message) {
   .message = parse_syslog(.message) ?? .message
 }`
-	// Parse message logfmt to json. If message string and parse without error.
-	ParseLogfmtMessage Rule = `
+
+// ParseLogfmtMessage If it can parse the log from the logfmt format to json
+// or leaves the log in its original state
+const ParseLogfmtMessage Rule = `
 if is_string(.message) {
   .message = parse_logfmt(.message) ?? .message
 }`
-)
 
-// Recursive replace keys in the label
-func ReplaceKeys(label, source, target string) string {
-	return fmt.Sprintf("if exists(%s) {\n%s = map_keys(object!(%s), recursive: true) "+
-		"-> |key| { replace(key, \"%s\", \"%s\")}\n}", label, label, label, source, target)
-}
+// ParseStringMessage Packs the log as a string into a json with a key targetField
+const ParseStringMessage Rule = `
+if is_string(.message) {
+  .message = {"{{.targetField}}": .message}
+}`
 
-// Parse message from string to json object. If message string
-func ParseStringMessage(targetField string) string {
-	return fmt.Sprintf("if is_string(.message) {\n.message =  { \"%s\": .message }\n}", targetField)
+// ReplaceKeys recursive replace keys in the labels.
+const ReplaceKeys Rule = `
+{{ range $label := $.spec.Labels }}
+if exists({{$label}}) {
+  {{$label}} = map_keys(object!({{$label}}), recursive: true) -> |key| { replace(key, "{{$.spec.Source}}", "{{$.spec.Target}}")}
 }
+{{- end }}
+`
 
-// Parse message json with depth
-func ParseJSONMessage(depth int) string {
-	maxDepth := ""
-	if depth > 0 {
-		maxDepth = fmt.Sprintf(", max_depth: %d", depth)
-	}
-	return fmt.Sprintf("if is_string(.message) {\n.message = parse_json(.message%s) ?? .message\n}", maxDepth)
+// DropLabels delete labels.
+const DropLabels Rule = `
+{{ range $label := $.spec.Labels }}
+if exists({{$label}}) {
+  del({{$label}})
 }
-
-// Delete label
-func DropLabels(label string) string {
-	return fmt.Sprintf("if exists(%s) {\n del(%s)\n}", label, label)
-}
+{{- end }}
+`
