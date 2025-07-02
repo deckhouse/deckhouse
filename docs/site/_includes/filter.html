@@ -123,13 +123,20 @@
         }
 
         function filterArticles() {
-            const selectedTags = Array.from(filterCheckboxes.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.value);
+            const checkboxesChecked = filterCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedTags = Array.from(checkboxesChecked).map(checkbox => checkbox.value);
             articles.forEach(article => {
                 const tagElement = Array.from(article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')).map(tag => tag.textContent);
 
                 const shoulShow = selectedTags.length === 0 || selectedTags.some(tag => tagElement.includes(tag));
                 article.style.display = shoulShow ? 'flex' : 'none';
             });
+
+            if(checkboxesChecked.length > 0) {
+                resetButton.classList.add('active');
+            } else {
+                resetButton.classList.remove('active');
+            }
         }
         
         function createFilters() {
@@ -183,7 +190,9 @@
     {%- else %}
         <h2 class="filter__container--title">Category</h2>
     {%- endif %}
+
     <div class="filter__checkboxes"></div>
+
     {%- if page.lang == "ru" %}
         <button class="reset-check">Сбросить фильтры</button>
     {%- else %}

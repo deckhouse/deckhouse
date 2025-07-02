@@ -134,7 +134,7 @@
         background-position: calc(100% - 50px) center;
         background-repeat: no-repeat;
         cursor: pointer;
-        transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+        transition: opacity 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
 
         &__en {
             font-size: 18px;
@@ -144,11 +144,31 @@
         &:hover {
             border-color: #222a5e;
             background-color: #f5f5fb;
+            color: #8c8d8f;
         }
 
         &:active {
-            opacity: 0.8;
+            opacity: 0.7;
             transform: scale(0.95);
+        }
+
+        &.active {
+            opacity: 0.5;
+            border-color: #222a5e;
+            background-color: #f5f5fb;
+            color: #8c8d8f;
+
+            &:hover {
+                opacity: 1;
+                border-color: #222a5e;
+                background-color: #f5f5fb;
+                color: #8c8d8f;
+            }
+
+            &:active {
+                opacity: 0.7;
+                transform: scale(0.95);
+            }
         }
     }
 }
