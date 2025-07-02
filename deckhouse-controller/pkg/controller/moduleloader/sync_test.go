@@ -207,7 +207,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			name:     "NoWeightNoDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,
@@ -217,7 +217,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			name:     "NoWeightWithDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,

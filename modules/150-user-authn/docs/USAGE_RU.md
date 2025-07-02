@@ -66,7 +66,7 @@ metadata:
   name: gitlab
 spec:
   type: Gitlab
-  displayName: Dedicated Gitlab
+  displayName: Dedicated GitLab
   gitlab:
     baseURL: https://gitlab.example.com
     clientID: plainstring
@@ -81,7 +81,7 @@ spec:
 Для этого выполните следующие шаги:
 * **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
+* (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
 
 Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
@@ -174,6 +174,7 @@ spec:
     issuer: https://keycloak.my-company.com/realms/myrealm # Используйте имя вашего realm
     clientID: plainstring
     clientSecret: plainstring
+    insecureSkipEmailVerified: true
     getUserInfo: true
     scopes:
       - openid
@@ -181,6 +182,10 @@ spec:
       - email
       - groups
 ```
+
+{% alert level="warning" %}
+При использовании Keycloak, как Identity Provider [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»). Это необходимо для корректной обработки значения `true` поля [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
+{% endalert %}
 
 #### Okta
 

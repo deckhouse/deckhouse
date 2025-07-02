@@ -41,7 +41,7 @@ locals {
       "enableParavirtualization" = true
       "osType"                   = "Generic"
       "runPolicy"                = "AlwaysOn"
-      "virtualMachineClassName"  = "generic"
+      "virtualMachineClassName"  = var.virtual_machine_class_name
 
       "disruptions" = {
         "restartApprovalMode" = "Automatic"

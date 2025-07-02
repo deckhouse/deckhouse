@@ -7,6 +7,7 @@ package ee
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -17,6 +18,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -41,7 +45,7 @@ type IstioMulticlusterDiscoveryCrdInfo struct {
 	PrivateMetadataEndpoint  string
 }
 
-func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
+func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
 	labels := map[string]string{
 		"multicluster_name": i.Name,
 		"endpoint":          endpoint,
@@ -60,7 +64,7 @@ func (i *IstioMulticlusterDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchC
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", i.Name, object_patch.WithSubresource("/status"))
+	pc.PatchWithMerge(patch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", i.Name, object_patch.WithSubresource("/status"))
 	return nil
 }
 
@@ -119,8 +123,10 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	for _, multicluster := range input.Snapshots["multiclusters"] {
-		multiclusterInfo := multicluster.(IstioMulticlusterDiscoveryCrdInfo)
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over multiclusters: %v", err)
+		}
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata

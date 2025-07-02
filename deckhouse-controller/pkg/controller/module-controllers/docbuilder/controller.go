@@ -375,7 +375,7 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		}
 		defer f.Close()
 
-		r.logger.Warn("copy file", slog.String("path", file))
+		r.logger.Debug("copy file", slog.String("path", file))
 
 		if _, err = io.Copy(tw, f); err != nil {
 			return err

@@ -156,6 +156,11 @@ properties:
                             description: |
                               Amount of memory resources allowed for VM.
                             example: 4Gi
+                      virtualMachineClassName:
+                        type: string
+                        description: |
+                          The VirtualMachineClass resource is intended for centralized configuration of preferred virtual machine parameters.
+                          It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                       bootloader:
                         type: string
                         enum:

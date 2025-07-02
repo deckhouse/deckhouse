@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"flag"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 )
@@ -34,7 +35,6 @@ const (
 	nldLabelSelector string = "app=node-local-dns"
 	nldDstPort       uint16 = 53
 	scanInterval            = 10 * time.Second
-	listenAddress           = "127.0.0.1:8001"
 	// netlink const
 	familyIPv4          = syscall.AF_INET
 	protoUDP            = unix.IPPROTO_UDP
@@ -56,6 +56,7 @@ type ConnectionsCleaner struct {
 var (
 	native       = nl.NativeEndian()
 	networkOrder = binary.BigEndian
+	listenAddress string
 )
 
 func main() {
@@ -70,6 +71,8 @@ func main() {
 	log.Infof("  - Retrieve the current IP address of the node-local-dns pod.")
 	log.Infof("  - Retrieve all UDP sockets on the node and search for those with dst_port 53 and dsp_ip belonging to PodCidr, but not equal to the current IP address of the node-local-dns pod.")
 	log.Infof("  - If such sockets are found, delete them.")
+	flag.StringVar(&listenAddress, "health-probe-bind-address", "127.0.0.1:8768", "The address the probe endpoint binds to.")
+	flag.Parse()
 
 	// Init kubeClient
 	config, err := rest.InClusterConfig()

@@ -22,6 +22,10 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
+- image: tools/util-linux
+  add: /bin/lsblk
+  to: /bin/lsblk
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/dynamix-csi-driver"]
@@ -35,8 +39,8 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.3.0"
-  - export VERSION_COMMON="v0.4.0"
+  - export VERSION="v0.4.0"
+  - export VERSION_COMMON="v0.5.0"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
   - cd /src
@@ -66,7 +70,7 @@ shell:
   - chown 64535:64535 /dynamix-csi-driver
   - chmod 0755 /dynamix-csi-driver
 ---
-{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
@@ -77,4 +81,3 @@ shell:
   - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
   install:
   - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-

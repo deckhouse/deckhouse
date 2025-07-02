@@ -1,0 +1,272 @@
+spec:
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: PodMonitor определяет мониторинг для набора подов.
+        properties:
+          apiVersion:
+            description: 'APIVersion определяет версионную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения. Более подробно: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          kind:
+            description: 'Kind — это строковое значение, представляющее ресурс REST, который представляет этот объект. Серверы могут определять это из эндпойнта, к которому клиент отправляет запросы. Не может быть обновлено. Используется CamelCase. Более подробно: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          spec:
+            description: Спецификация желаемого выбора подов для обнаружения целей Prometheus.
+            properties:
+              attachMetadata:
+                description: Присоединяет метаданные узла к обнаруженным целям. Требуется Prometheus версии не ниже v2.35.0.
+                properties:
+                  node:
+                    description: Если установлено в true, Prometheus должен иметь разрешения на получение узлов.
+              jobLabel:
+                description: Лейбл, используемый для получения имени задачи.
+              keepDroppedTargets:
+                description: "Предел на количество целей, отклоненных переименованием, которые будут оставаться в памяти. 0 означает отсутствие ограничения. \n Требуется Prometheus >= v2.47.0."
+              labelLimit:
+                description: Предел на количество лейблов, которые будут приниматься за одно сканирование. Действительно только в версиях Prometheus 2.27.0 и выше.
+              labelNameLengthLimit:
+                description: Предел на длину имён лейблов, которые будут приниматься за одно сканирование. Действительно только в версиях Prometheus 2.27.0 и выше.
+              labelValueLengthLimit:
+                description: Предел на длину значений лейблов, которые будут приниматься за одно сканирование. Действительно только в версиях Prometheus 2.27.0 и выше.
+              namespaceSelector:
+                description: Селектор для выбора, из каких пространств имён обнаруживать объекты Endpoints.
+                properties:
+                  any:
+                    description: Логическое значение, описывающее, выбраны ли все пространства имён в отличие от списка, ограничивающего их.
+                  matchNames:
+                    description: Список имён пространств имён для выбора.
+              podMetricsEndpoints:
+                description: Список эндпойнтов, разрешённых в рамках этого PodMonitor.
+                items:
+                  description: PodMetricsEndpoint определяет эндпойнт Kubernetes Pod, поддерживающий сканирование метрик Prometheus.
+                  properties:
+                    authorization:
+                      description: Раздел авторизации для этого эндпойнта.
+                      properties:
+                        credentials:
+                          description: Выбирает ключ Секрета в пространстве имён, который содержит учетные данные для аутентификации.
+                          properties:
+                            key:
+                              description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                            name:
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            optional:
+                              description: Укажите, должен ли быть определён Secret или его ключ.
+                        type:
+                          description: "Определяет тип аутентификации. Значение нечувствительно к регистру. \n \"Basic\" не поддерживается. \n По умолчанию: \"Bearer\""
+                    basicAuth:
+                      description: 'BasicAuth позволяет эндпойнту аутентифицироваться с использованием базовой аутентификации. Подробнее: https://prometheus.io/docs/operating/configuration/#endpoint'
+                      properties:
+                        password:
+                          description: Секрет в пространстве имён мониторинга сервиса, который содержит пароль для аутентификации.
+                          properties:
+                            key:
+                              description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                            name:
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            optional:
+                              description: Укажите, должен ли быть определён Secret или его ключ.
+                        username:
+                          description: Секрет в пространстве имён мониторинга сервиса, который содержит имя пользователя для аутентификации.
+                          properties:
+                            key:
+                              description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                            name:
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            optional:
+                              description: Укажите, должен ли быть определён Secret или его ключ.
+                    bearerTokenSecret:
+                      description: Секрет для монтирования, чтобы считывать маркер доступа для целей сканирования. Секрет должен находиться в том же пространстве имён, что и мониторинг подов, и быть доступным для оператора Prometheus.
+                      properties:
+                        key:
+                          description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                        name:
+                          description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        optional:
+                          description: Укажите, должен ли быть определён Secret или его ключ.
+                    enableHttp2:
+                      description: Включить ли HTTP2.
+                    filterRunning:
+                      description: 'Исключать поды, которые не работают. (Неудавшиеся, Завершенные). Включено по умолчанию. Подробнее: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase'
+                    followRedirects:
+                      description: FollowRedirects настраивает, следуют ли запросы на сканирование перенаправлениям HTTP 3xx.
+                    honorLabels:
+                      description: HonorLabels выбирает лейблы метрик при столкновении с целевыми лейблами.
+                    honorTimestamps:
+                      description: HonorTimestamps управляет тем, соблюдает ли Prometheus временные лейблы, присутствующие в собранных данных.
+                    interval:
+                      description: Интервал, на котором должны собираться метрики. Если не указано, используется глобальный интервал сбора Prometheus.
+                    metricRelabelings:
+                      description: MetricRelabelConfigs для применения к выборкам до ввода данных.
+                      items:
+                        description: "RelabelConfig позволяет динамически переписывать набор лейблов для целей, оповещений, собранных выборок и выборок удаленной записи. \n Подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config"
+                        properties:
+                          action:
+                            description: "Действие на основе сопоставления с регулярным выражением. \n Действия `Uppercase` и `Lowercase` требуют Prometheus версии не ниже v2.36.0. Действия `DropEqual` и `KeepEqual` требуют Prometheus версии не ниже v2.41.0. \n По умолчанию: \"Replace\""
+                          modulus:
+                            description: "Модуль для вычисления хеша значений исходных лейблов. \n Применимо только в случае, когда действие — `HashMod`."
+                          regex:
+                            description: Регулярное выражение, с которым сопоставляется извлеченное значение.
+                          replacement:
+                            description: "Значение замены для действия Replace, если регулярное выражение совпадает. \n Доступны группы захвата из регулярного выражения."
+                          separator:
+                            description: Разделитель — это строка между объединенными исходными лейблами (SourceLabels).
+                          sourceLabels:
+                            description: Исходные лейблы выбирают значения из существующих лейблов. Их содержимое объединяется с использованием настроенного разделителя и сопоставляется с настроенным регулярным выражением.
+                            items:
+                              description: LabelName — это допустимое имя лейбла Prometheus, которое может содержать только буквы ASCII, цифры, а также символы подчеркивания.
+                          targetLabel:
+                            description: "Лейбл, в который записывается результирующая строка при замене. \n Она обязательна для действий `Replace`, `HashMod`, `Lowercase`, `Uppercase`, `KeepEqual` и `DropEqual`. \n Доступны группы захвата из регулярного выражения."
+                    oauth2:
+                      description: OAuth2 для URL. Действительно только в версиях Prometheus 2.27.0 и выше.
+                      properties:
+                        clientId:
+                          description: Секрет или ConfigMap, содержащие идентификатор клиента OAuth2.
+                          properties:
+                            configMap:
+                              description: ConfigMap, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ для выбора.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён ConfigMap или его ключ.
+                            secret:
+                              description: Секрет, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён Secret или его ключ.
+                        clientSecret:
+                          description: Секрет, содержащий секрет клиента OAuth2.
+                          properties:
+                            key:
+                              description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                            name:
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            optional:
+                              description: Укажите, должен ли быть определён Secret или его ключ.
+                        endpointParams:
+                          description: Параметры для добавления к URL токена.
+                        scopes:
+                          description: Области OAuth2, используемые для запроса токена.
+                        tokenUrl:
+                          description: URL для получения токена.
+                    params:
+                      description: Необязательные параметры URL HTTP.
+                    path:
+                      description: HTTP-путь для сбора метрик. Если не указано, Prometheus использует значение по умолчанию (например, `/metrics`).
+                    port:
+                      description: Имя порта пода, к которому относится этот эндпойнт. Взаимоисключается с targetPort.
+                    proxyUrl:
+                      description: ProxyURL, например http://proxyserver:2195. Направляет запросы на сканирование через прокси посредством этого эндпойнта.
+                    relabelings:
+                      description: 'RelabelConfigs для применения к выборкам перед сбором. Оператор Prometheus автоматически добавляет переименования для некоторых стандартных полей Kubernetes. Имя изначальной задачи сбора доступно через лейбл `__tmp_prometheus_job_name`. Подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                      items:
+                        description: "RelabelConfig позволяет динамически переписывать набор лейблов для целей, оповещений, собранных выборок и выборок удаленной записи. \n Подробнее: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config"
+                        properties:
+                          action:
+                            description: "Действие на основе сопоставления с регулярным выражением. \n Действия `Uppercase` и `Lowercase` требуют Prometheus версии не ниже v2.36.0. Действия `DropEqual` и `KeepEqual` требуют Prometheus версии не ниже v2.41.0. \n По умолчанию: \"Replace\""
+                          modulus:
+                            description: "Модуль для вычисления хеша значений исходных лейблов. \n Применимо только в случае, когда действие — `HashMod`."
+                          regex:
+                            description: Регулярное выражение, с которым сопоставляется извлеченное значение.
+                          replacement:
+                            description: "Значение замены для действия Replace, если регулярное выражение совпадает. \n Доступны группы захвата из регулярного выражения."
+                          separator:
+                            description: Разделитель — это строка между объединенными исходными лейблами (SourceLabels).
+                          sourceLabels:
+                            description: Исходные лейблы выбирают значения из существующих лейблов. Их содержимое объединяется с использованием настроенного разделителя и сопоставляется с настроенным регулярным выражением.
+                            items:
+                              description: LabelName — это допустимое имя лейбла Prometheus, которое может содержать только буквы ASCII, цифры, а также символы подчеркивания.
+                          targetLabel:
+                            description: "Лейбл, в который записывается результирующая строка при замене. \n Она обязательна для действий `Replace`, `HashMod`, `Lowercase`, `Uppercase`, `KeepEqual` и `DropEqual`. \n Доступны группы захвата из регулярного выражения."
+                    scheme:
+                      description: HTTP-схема для использования при сканировании. Ожидаемые значения — `http` и `https`, если вы не переписываете лейбл `__scheme__` посредством переименования. Если не указано, Prometheus использует значение по умолчанию — `http`.
+                    scrapeTimeout:
+                      description: Таймаут, после которого сбор данных прекращается. Если не указано, используется глобальный интервал сбора Prometheus.
+                    targetPort:
+                      description: 'Устарело: используйте port вместо этого.'
+                    tlsConfig:
+                      description: Конфигурация TLS для использования при сканировании с эндпойнта.
+                      properties:
+                        ca:
+                          description: Удостоверяющий центр, используемый при проверке сертификатов сервера.
+                          properties:
+                            configMap:
+                              description: ConfigMap, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ для выбора.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён ConfigMap или его ключ.
+                            secret:
+                              description: Секрет, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён Secret или его ключ.
+                        cert:
+                          description: Клиентский сертификат, который предъявляется для аутентификации клиента.
+                          properties:
+                            configMap:
+                              description: ConfigMap, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ для выбора.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён ConfigMap или его ключ.
+                            secret:
+                              description: Секрет, содержащий данные для использования в целях.
+                              properties:
+                                key:
+                                  description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                                name:
+                                  description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                optional:
+                                  description: Укажите, должен ли быть определён Secret или его ключ.
+                        insecureSkipVerify:
+                          description: Отключить проверку сертификата цели.
+                        keySecret:
+                          description: Секрет, содержащий клиентский ключевой файл для целей.
+                          properties:
+                            key:
+                              description: Ключ секрета для выбора. Должен быть допустимым секретным ключом.
+                            name:
+                              description: 'Имя объекта, на который ссылаются. Дополнительная информация: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            optional:
+                              description: Укажите, должен ли быть определён Secret или его ключ.
+                        serverName:
+                          description: Используется для проверки имени хоста для целей.
+              podTargetLabels:
+                description: PodTargetLabels переносят лейблы с Kubernetes Pod на цель.
+              sampleLimit:
+                description: SampleLimit определяет предел на количество выборок, которое будет принято за одно сканирование.
+              selector:
+                description: Селектор для выбора объектов типа Pod.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions — это список требований селектора лейблов. Требования объединены с помощью логического оператора И (AND).
+                    items:
+                      description: Требование селектора лейблов — это селектор, который содержит значения, ключ и оператор, связывающий ключ и значения.
+                      properties:
+                        key:
+                          description: key — это ключ лейбла, к которому применяется селектор.
+                        operator:
+                          description: "operator представляет взаимоотношение ключа с набором значений. Допустимые операторы: In, NotIn, Exists и DoesNotExist."
+                        values:
+                          description: values — это массив строковых значений. Если оператор In или NotIn, массив values должен быть непустым. Если оператор Exists или DoesNotExist, массив values должен быть пустым. Этот массив заменяется во время стратегического объединения патчей.
+                  matchLabels:
+                    description: matchLabels — это карта пар {ключ, значение}. Один {ключ, значение} в карте matchLabels эквивалентен элементу matchExpressions, у которого поле ключа — "key", оператор — "In", а массив values содержит только "value". Требования объединены с помощью логического оператора И (AND).
+              targetLimit:
+                description: TargetLimit определяет предел количества целей, которые будут приняты для сбора.

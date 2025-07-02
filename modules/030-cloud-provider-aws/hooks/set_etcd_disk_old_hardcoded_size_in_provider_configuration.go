@@ -30,6 +30,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,18 +56,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, patchClusterConfiguration)
 
 func patchClusterConfiguration(input *go_hook.HookInput) error {
-	if len(input.Snapshots["provider_cluster_configuration"]) == 0 {
-		return fmt.Errorf("%s", "Can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "provider_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
+	}
+	if len(secrets) == 0 {
+		return fmt.Errorf("can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
 	}
 
-	secret := input.Snapshots["provider_cluster_configuration"][0].(*v1.Secret)
+	secret := secrets[0]
 
 	data := secret.Data["cloud-provider-cluster-configuration.yaml"]
 
 	var clusterConfiguration map[string]interface{}
 
-	err := yaml.Unmarshal(data, &clusterConfiguration)
-	if err != nil {
+	if err := yaml.Unmarshal(data, &clusterConfiguration); err != nil {
 		return err
 	}
 
@@ -103,7 +108,7 @@ func patchClusterConfiguration(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(patch, "v1", "Secret", secret.Namespace, secret.Name)
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", secret.Namespace, secret.Name)
 
 	return nil
 }

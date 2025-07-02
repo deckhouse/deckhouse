@@ -17,8 +17,6 @@
   {{- $required_patches_from_ee_dir := list }}
 
   {{- if $.isEE}}
-    {{- $patch = true }}
-
     {{- $patches_names_for_verification := dict }}
     {{- $patches_from_ee_dir := (printf "/%see/modules/%s-%s/images/%s/patches/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName $version) }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches_from_ee_dir) }}
@@ -35,6 +33,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
+fromCacheVersion: "2025-06-07.0"
 final: false
   {{- if $patch }}
 git:
@@ -76,7 +75,7 @@ shell:
   - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
@@ -91,15 +90,18 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
+{{- if eq $.SVACE_ENABLED "false" }}
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash rsync
+{{- end }}
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"`) | indent 4 }}
   - rm -rf vendor
 {{- end }}
 

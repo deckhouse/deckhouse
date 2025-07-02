@@ -27,8 +27,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -53,9 +55,9 @@ type ciliumConfigStruct struct {
 }
 
 type cniSecretStruct struct {
-	cni     string
-	flannel flannelConfigStruct
-	cilium  ciliumConfigStruct
+	CNI     string
+	Flannel flannelConfigStruct
+	Cilium  ciliumConfigStruct
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -103,14 +105,14 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 		// d8-cni-configuration secret does not contain "cni" field
 		return nil, nil
 	}
-	cniSecret.cni = string(cniBytes)
-	switch cniSecret.cni {
+	cniSecret.CNI = string(cniBytes)
+	switch cniSecret.CNI {
 	case "simple-bridge":
 		return cniSecret, nil
 	case "flannel":
 		flannelConfigJSON, ok := secret.Data["flannel"]
 		if ok {
-			err = json.Unmarshal(flannelConfigJSON, &cniSecret.flannel)
+			err = json.Unmarshal(flannelConfigJSON, &cniSecret.Flannel)
 			if err != nil {
 				return nil, fmt.Errorf("cannot unmarshal flannel config json: %v", err)
 			}
@@ -119,7 +121,7 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 	case "cilium":
 		ciliumConfigJSON, ok := secret.Data["cilium"]
 		if ok {
-			err = json.Unmarshal(ciliumConfigJSON, &cniSecret.cilium)
+			err = json.Unmarshal(ciliumConfigJSON, &cniSecret.Cilium)
 			if err != nil {
 				return nil, fmt.Errorf("cannot unmarshal cilium config json: %v", err)
 			}
@@ -169,11 +171,15 @@ func checkCni(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
+	}
 
 	// Let's check secret.
 	// Secret d8-cni-configuration does not exist or exist but contain nil.
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	if len(input.Snapshots["cni_configuration_secret"]) == 0 || input.Snapshots["cni_configuration_secret"][0] == nil {
+	if len(cniSecrets) == 0 {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -181,8 +187,8 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// Secret d8-cni-configuration exist but key "cni" does not equal "cilium".
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
-	if cniSecret.cni != cni {
+	cniSecret := cniSecrets[0]
+	if cniSecret.CNI != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -200,25 +206,28 @@ func checkCni(input *go_hook.HookInput) error {
 			Name: cniName,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:  pointer.Bool(true),
+			Enabled:  ptr.To(true),
 			Version:  1,
 			Settings: v1alpha1.SettingsValues{},
 		},
 	}
-
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
 	// Let's check what mc exist and explicitly enabled.
-	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
+	if len(cniModuleConfigs) == 0 {
 		needUpdateMC = true
 	} else {
-		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
+		cniModuleConfig := cniModuleConfigs[0]
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
 	// Skip comparison if in secret d8-cni-configuration key "cilium" does not exist or empty.
-	if cniSecret.cilium != (ciliumConfigStruct{}) {
+	if cniSecret.Cilium != (ciliumConfigStruct{}) {
 		// Secret d8-cni-configuration exist, key "cni" eq "cilium" and key "cilium" does not empty.
 		// Let's compare secret with module configuration.
-		switch cniSecret.cilium.Mode {
+		switch cniSecret.Cilium.Mode {
 		case "VXLAN":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "VXLAN" {
@@ -245,13 +254,13 @@ func checkCni(input *go_hook.HookInput) error {
 		default:
 			setCNIMiscMetricAndReq(input, true)
 			input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-			return fmt.Errorf("unknown cilium mode %s", cniSecret.cilium.Mode)
+			return fmt.Errorf("unknown cilium mode %s", cniSecret.Cilium.Mode)
 		}
-		switch cniSecret.cilium.MasqueradeMode {
+		switch cniSecret.Cilium.MasqueradeMode {
 		case "Netfilter", "BPF":
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-			if !ok || value.String() != cniSecret.cilium.MasqueradeMode {
-				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.cilium.MasqueradeMode
+			if !ok || value.String() != cniSecret.Cilium.MasqueradeMode {
+				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.Cilium.MasqueradeMode
 				needUpdateMC = true
 			}
 		case "":
@@ -263,7 +272,7 @@ func checkCni(input *go_hook.HookInput) error {
 		default:
 			setCNIMiscMetricAndReq(input, true)
 			input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-			return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.cilium.MasqueradeMode)
+			return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.Cilium.MasqueradeMode)
 		}
 	}
 

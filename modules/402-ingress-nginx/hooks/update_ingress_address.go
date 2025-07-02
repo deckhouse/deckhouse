@@ -27,9 +27,9 @@ import (
 )
 
 type loadBalancerService struct {
-	name     string
-	hostname string
-	ip       string
+	Name     string
+	Hostname string
+	IP       string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -63,9 +63,9 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 	if len(svc.Status.LoadBalancer.Ingress) != 0 {
 		return loadBalancerService{
-			name:     svc.Labels["name"],
-			ip:       svc.Status.LoadBalancer.Ingress[0].IP,
-			hostname: svc.Status.LoadBalancer.Ingress[0].Hostname,
+			Name:     svc.Labels["name"],
+			IP:       svc.Status.LoadBalancer.Ingress[0].IP,
+			Hostname: svc.Status.LoadBalancer.Ingress[0].Hostname,
 		}, nil
 	}
 	return nil, nil
@@ -81,13 +81,13 @@ func updateIngressAddress(input *go_hook.HookInput) error {
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
 				"loadBalancer": map[string]interface{}{
-					"ip":       svc.ip,
-					"hostname": svc.hostname,
+					"ip":       svc.IP,
+					"hostname": svc.Hostname,
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "IngressNginxController",
-			"", svc.name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
+		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController",
+			"", svc.Name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}
 	return nil
 }

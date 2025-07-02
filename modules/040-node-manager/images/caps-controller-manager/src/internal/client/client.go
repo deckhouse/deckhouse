@@ -22,6 +22,7 @@ import (
 	"caps-controller-manager/internal/event"
 
 	"k8s.io/client-go/util/workqueue"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // Client is a client that executes commands on hosts using the OpenSSH client.
@@ -40,11 +41,11 @@ type Client struct {
 // NewClient creates a new Client.
 func NewClient(recorder *event.Recorder) *Client {
 	return &Client{
-		checkTaskManager:     newTaskManager(),
-		bootstrapTaskManager: newTaskManager(),
-		cleanupTaskManager:   newTaskManager(),
-		adoptTaskManager:     newTaskManager(),
-		tcpCheckTaskManager:  newTaskManager(),
+		checkTaskManager:     newTaskManager(ctrl.Log.WithName("checkTaskManager")),
+		bootstrapTaskManager: newTaskManager(ctrl.Log.WithName("bootstrapTaskManager")),
+		cleanupTaskManager:   newTaskManager(ctrl.Log.WithName("cleanupTaskManager")),
+		adoptTaskManager:     newTaskManager(ctrl.Log.WithName("adoptTaskManager")),
+		tcpCheckTaskManager:  newTaskManager(ctrl.Log.WithName("tcpCheckTaskManager")),
 		tcpCheckRateLimiter:  workqueue.NewItemExponentialFailureRateLimiter(250*time.Millisecond, time.Minute),
 		recorder:             recorder,
 	}

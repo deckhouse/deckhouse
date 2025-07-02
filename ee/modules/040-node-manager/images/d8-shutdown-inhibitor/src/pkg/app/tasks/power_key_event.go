@@ -48,7 +48,9 @@ func (p *PowerKeyEvent) Run(ctx context.Context, errCh chan error) {
 	case <-powerKeyWatcher.Pressed():
 		// Trigger poweroff to ShutdownInhibitor catch the PrepareShutdownSignal from logind.
 		fmt.Printf("powerKeyReader(s1): power key press detected, initiate graceful shutdown\n")
-		err := exec.Command("systemctl", "poweroff", "--check-inhibitors=yes").Run()
+		// Run systemctl poweroff -i so systemd will send shutdown signal to all inhibit locks holders
+		// (ShutdownInhibitor task will catch it as well as a kubelet).
+		err := exec.Command("systemctl", "poweroff", "-i").Run()
 		if err != nil {
 			fmt.Printf("powerKeyReader(s1): poweroff error: %v\n", err)
 		}

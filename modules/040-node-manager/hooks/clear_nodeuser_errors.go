@@ -108,7 +108,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	nodes := golibset.NewFromSnapshot(input.Snapshots[nodeForClearSnapName])
+	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
@@ -156,7 +156,7 @@ func clearNodeUserIncorrectErrors(
 	}
 
 	input.Logger.Debug("clearErrors", slog.Any("patch", patch))
-	input.PatchCollector.MergePatch(
+	input.PatchCollector.PatchWithMerge(
 		patch,
 		"deckhouse.io/v1",
 		"NodeUser",

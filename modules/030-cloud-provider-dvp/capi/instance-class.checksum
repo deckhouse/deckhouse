@@ -1,6 +1,7 @@
 {{- $options := dict -}}
 
-{{- $_ := set $options "vmClassName" "generic" -}}
+{{- $_ := set $options "vmClassName" .nodeGroup.instanceClass.virtualMachine.virtualMachineClassName -}}
+{{- $_ := set $options "bootloader" .nodeGroup.instanceClass.virtualMachine.bootloader -}}
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.virtualMachine.memory.size -}}
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDisk.size -}}
 {{- $_ := set $options "rootDiskStorageClass" .nodeGroup.instanceClass.rootDisk.storageClass -}}

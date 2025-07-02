@@ -19,7 +19,18 @@ import (
 )
 
 type (
-	OperationPhase string
+	Operation         string
+	OperationPhase    string
+	OperationSubPhase string
+)
+
+const (
+	OperationBootstrap       Operation = "Bootstrap"
+	OperationConverge        Operation = "Converge"
+	OperationCheck           Operation = "Check"
+	OperationDestroy         Operation = "Destroy"
+	OperationCommanderAttach Operation = "CommanderAttach"
+	OperationCommanderDetach Operation = "CommanderDetach"
 )
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
@@ -44,6 +55,20 @@ const (
 	FinalizationPhase OperationPhase = "Finalization"
 )
 
+// commander attach phases
+const (
+	CommanderAttachScanPhase    OperationPhase = "Scan"
+	CommanderAttachCapturePhase OperationPhase = "Capture"
+	CommanderAttachCheckPhase   OperationPhase = "Check"
+)
+
 var (
 	StopOperationCondition = errors.New("StopOperationCondition")
+)
+
+// bootstrap sub phases
+const (
+	InstallDeckhouseSubPhaseConnect OperationSubPhase = "ConnectToMaster"
+	InstallDeckhouseSubPhaseInstall OperationSubPhase = "InstallDeckhouse"
+	InstallDeckhouseSubPhaseWait    OperationSubPhase = "WaitForFirstMasterReady"
 )

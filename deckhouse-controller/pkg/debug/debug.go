@@ -211,12 +211,12 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "d8-istio-envoy-config.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl port-forward daemonset/ingressgateway -n d8-istio 15000:15000 & sleep 5; (curl http://localhost:15000/config_dump?include_eds=true | jq 'del(.configs[6].dynamic_active_secrets)' && kill $!) || { kill $!; exit 1; }`},
+			Args: []string{"-c", `kubectl port-forward daemonset/ingressgateway -n d8-istio 15000:15000 & sleep 5; (curl http://localhost:15000/config_dump?include_eds=true | jq 'del(.configs[6].dynamic_active_secrets)' && kill $!) || { kill $!; exit 0; }`},
 		},
 		{
 			File: "d8-istio-system-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl -n d8-istio logs deployments -l app=istiod`},
+			Args: []string{"-c", `kubectl -n d8-istio logs -l app=istiod || true`},
 		},
 		{
 			File: "d8-istio-ingress-logs.txt",

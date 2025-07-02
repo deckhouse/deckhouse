@@ -92,41 +92,94 @@ func capsConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
+	input.Logger.Info("Starting hook that set flags for rendering CAPI and CAPS managers")
+	defer input.Logger.Info("Finish hook that set flags for rendering CAPI and CAPS managers")
+
+	capiControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
+	capsControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
+
+	input.Logger.Info("Flags before executing.",
+		"capiControllerManagerEnabled_exists",
+		capiControllerManagerEnabledBeforeExecuting.Exists(),
+		"capiControllerManagerEnabled",
+		capiControllerManagerEnabledBeforeExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
+		capsControllerManagerEnabledBeforeExecuting.Exists(),
+		"capsControllerManagerEnabled",
+		capsControllerManagerEnabledBeforeExecuting.Bool(),
+	)
+
 	var hasStaticInstancesField bool
 
 	nodeGroupSnapshots := input.Snapshots["node_group"]
 	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
 		hasStaticInstancesField = nodeGroupSnapshot.(bool)
 		if hasStaticInstancesField {
+			input.Logger.Info("Found staticInstances field in node group")
 			break // we need at least one NodeGroup with staticInstances field
 		}
 	}
 
+	input.Logger.Info("hasStaticInstancesField", "value", hasStaticInstancesField)
+
 	capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
 	hasCapiProvider := capiClusterName != ""
+
+	input.Logger.Info("capiClusterName discovered", "capiClusterName", capiClusterName, "hasCapiProvider", hasCapiProvider)
 
 	var capiEnabled bool
 	var capsEnabled bool
 
 	configMapSnapshots := input.Snapshots["config_map"]
 	if len(configMapSnapshots) > 0 {
-		capiEnabled = hasCapiProvider || configMapSnapshots[0].(bool)
+		capiEnabledFromCM := configMapSnapshots[0].(bool)
+		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capiEnabledFromCM)
+
+		capiEnabled = hasCapiProvider || capiEnabledFromCM
 		capsEnabled = configMapSnapshots[0].(bool)
+
+		input.Logger.Info("Calculated flags", "capiEnabled", capiEnabled, "capsEnabled", capsEnabled)
 	} else {
+		input.Logger.Info("ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed not found")
+
 		capiEnabled = hasCapiProvider || hasStaticInstancesField
+
+		input.Logger.Info("Calculated flags (capsEnabled not set)", "capiEnabled", capiEnabled)
 	}
 
 	if capiEnabled {
+		input.Logger.Info("nodeManager.internal.capiControllerManagerEnabled set to true")
+
 		input.Values.Set("nodeManager.internal.capiControllerManagerEnabled", true)
 	} else {
+		input.Logger.Info("nodeManager.internal.capiControllerManagerEnabled removed from values")
+
 		input.Values.Remove("nodeManager.internal.capiControllerManagerEnabled")
 	}
 
 	if capsEnabled || hasStaticInstancesField {
+		input.Logger.Info("nodeManager.internal.capsControllerManagerEnabled set to true")
+
 		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
 	} else {
+		input.Logger.Info("nodeManager.internal.capsControllerManagerEnable removed from values")
+
 		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
 	}
+
+	capiControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
+	capsControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
+
+	input.Logger.Info("Flags after executing",
+		"capiControllerManagerEnabled_exists",
+		capiControllerManagerEnabledAfterExecuting.Exists(),
+		"capiControllerManagerEnabled",
+		capiControllerManagerEnabledAfterExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
+		capsControllerManagerEnabledAfterExecuting.Exists(),
+		"capsControllerManagerEnabled",
+		capsControllerManagerEnabledAfterExecuting.Bool(),
+	)
 
 	return nil
 }

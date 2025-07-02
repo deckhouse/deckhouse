@@ -191,7 +191,7 @@ spec:
 
 ## Установка платформы
 
-> При установке платформы, отличной от [редакции](../../editions.html) Community Edition, из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
+> При установке платформы, отличной от [редакции](../../../about/editions.html) Community Edition, из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
 >
 > ```shell
 > docker login -u license-token registry.deckhouse.io
@@ -204,7 +204,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 где:
-- `<REVISION>` — [редакция](../../editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+- `<REVISION>` — [редакция](../../../about/editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как:
   - SSH-ключи доступа;
   - файл конфигурации;

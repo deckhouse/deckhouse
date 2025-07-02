@@ -35,7 +35,7 @@ func enableExtendedMonitoring(input *go_hook.HookInput) error {
 			},
 		},
 	}
-	input.PatchCollector.MergePatch(d8SystemPatch, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.PatchWithMerge(d8SystemPatch, "v1", "Namespace", "", "d8-system")
 
 	kubeSystemPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -44,7 +44,7 @@ func enableExtendedMonitoring(input *go_hook.HookInput) error {
 			},
 		},
 	}
-	input.PatchCollector.MergePatch(kubeSystemPatch, "v1", "Namespace", "", "kube-system")
+	input.PatchCollector.PatchWithMerge(kubeSystemPatch, "v1", "Namespace", "", "kube-system")
 
 	input.PatchCollector.PatchWithMutatingFunc(removeDeprecatedAnnotation, "v1", "Namespace", "", "d8-system")
 	input.PatchCollector.PatchWithMutatingFunc(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")

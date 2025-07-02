@@ -13,8 +13,8 @@ import (
 const (
 	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
 	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days
-	WallBroadcastInterval    = 30 * time.Second
-	PodsCheckingInterval     = 5 * time.Second
+	WallBroadcastInterval    = 42 * time.Second
+	PodsCheckingInterval     = 30 * time.Second
 )
 
 type AppConfig struct {

@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	projectEmpty = "empty"
-
 	managedByHelm = "Helm"
 )
 

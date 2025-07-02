@@ -60,7 +60,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "api") }}
         args:
         - --namespace=d8-{{ .Chart.Name }}
-        - --metrics-scraper-service-name=metrics-scraper
+        - --metrics-scraper-service-name=metrics-scraper:http
         - --insecure-bind-address=127.0.0.1
         - --v=3
         env:

@@ -18,12 +18,15 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks/internal/v1alpha1"
 )
@@ -79,28 +82,32 @@ func applyModuleCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func storageClasses(input *go_hook.HookInput) error {
-	if len(input.Snapshots["module_storageclasses"]) == 0 || len(input.Snapshots["module_crds"]) == 0 {
+	moduleStorageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal module_storageclasses snapshot: %w", err)
+	}
+	moduleCRDs, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_crds")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal module_crds snapshot: %w", err)
+	}
+
+	if len(moduleStorageClasses) == 0 || len(moduleCRDs) == 0 {
 		return nil
 	}
 
-	existedStorageClasses := make([]StorageClass, 0, len(input.Snapshots["module_storageclasses"]))
+	existedStorageClasses := moduleStorageClasses
 
-	for _, snapshot := range input.Snapshots["module_storageclasses"] {
-		sc := snapshot.(StorageClass)
-		existedStorageClasses = append(existedStorageClasses, sc)
-	}
-
-	for _, snapshot := range input.Snapshots["module_crds"] {
-		crd := snapshot.(StorageClass)
+	for _, crd := range moduleCRDs {
 		for _, storageClass := range existedStorageClasses {
 			if storageClass.Name == crd.Name {
 				if storageClass.ReclaimPolicy != crd.ReclaimPolicy {
-					input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", storageClass.Name)
+					input.Logger.Info("Deleting storageclass because its parameters have been changed", slog.String("storage_class", storageClass.Name))
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClass.Name)
 				}
 				break
 			}
 		}
 	}
+
 	return nil
 }

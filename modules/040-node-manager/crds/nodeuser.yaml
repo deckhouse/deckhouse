@@ -37,7 +37,6 @@ spec:
                 - sshPublicKeys
               required:
                 - uid
-                - passwordHash
               properties:
                 uid:
                   type: number
@@ -143,7 +142,6 @@ spec:
                 - sshPublicKeys
               required:
                 - uid
-                - passwordHash
               properties:
                 uid:
                   type: number

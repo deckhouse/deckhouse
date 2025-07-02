@@ -124,6 +124,11 @@ variable "ssh_public_key" {
   type = string
 }
 
+variable "virtual_machine_class_name" {
+  type    = string
+  default = "generic"
+}
+
 variable "timeouts" {
   default = { "create" = "30m", "update" = "5m", "delete" = "5m" }
   type = object({

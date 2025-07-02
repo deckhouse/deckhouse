@@ -17,9 +17,13 @@ limitations under the License.
 package smokemini
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
@@ -53,9 +57,11 @@ func scrapeState(input *go_hook.HookInput) error {
 	}
 
 	const statePath = "upmeter.internal.smokeMini.sts"
-
 	// Parse the state from values
-	statefulSets := snapshot.ParseStatefulSetSlice(input.Snapshots["statefulsets"])
+	statefulSets, err := sdkobjectpatch.UnmarshalToStruct[snapshot.StatefulSet](input.NewSnapshots, "statefulsets")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal statefulsets snapshot: %w", err)
+	}
 	state, err := parseState(input.Values.Get(statePath))
 	if err != nil {
 		return err

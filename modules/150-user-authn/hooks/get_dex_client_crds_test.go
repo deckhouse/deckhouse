@@ -121,13 +121,8 @@ spec:
   "legacyID": "dex-client-opendistro:test",
   "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "clientSecret": "test",
-  "labels": {
-    "test-label": "test-value"
-  },
-  "annotations": {
-    "test-annotation": "test-value",
-    "new-annotation": "test-new-value"
-  },
+  "labels": {},
+  "annotations": {},
   "allowAccessToKubernetes": false
 }]`))
 			})
@@ -285,7 +280,6 @@ metadata:
   labels:
     test-label: test-value
     certmanager.k8s.io/certificate-name: test-cert-name
-    argocd.argoproj.io/instance: test-instance
     argocd.argoproj.io/secret-type: secret-type
     app.kubernetes.io/managed-by: Helm
     app: should-be-removed
@@ -294,7 +288,6 @@ metadata:
     name: should-be-removed
   annotations:
     test-annotation: test-value
-    new-annotation: test-new-value
     kubectl.kubernetes.io/last-applied-configuration: should-be-removed
     meta.helm.sh/release-name: opendistro
     meta.helm.sh/release-namespace: test
@@ -312,6 +305,11 @@ metadata:
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback
+  secretMetadata:
+    labels:
+      test-label: test-value
+    annotations:
+      test-annotation: test-value
 ---
 apiVersion: deckhouse.io/v1
 kind: DexClient
@@ -346,14 +344,25 @@ spec:
   "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "name": "opendistro",
   "namespace": "test",
-  "spec": {"redirectURIs": ["https://opendistro.example.com/callback"]},
+  "spec": {
+    "redirectURIs": [
+      "https://opendistro.example.com/callback"
+    ],
+    "secretMetadata": {
+      "annotations": {
+        "test-annotation": "test-value"
+      },
+      "labels": {
+        "test-label": "test-value"
+      }
+    }
+  },
   "clientSecret": "test",
   "labels": {
     "test-label": "test-value"
   },
   "annotations": {
-    "test-annotation": "test-value",
-    "new-annotation": "test-new-value"
+    "test-annotation": "test-value"
   },
   "allowAccessToKubernetes": false
 }]`))
