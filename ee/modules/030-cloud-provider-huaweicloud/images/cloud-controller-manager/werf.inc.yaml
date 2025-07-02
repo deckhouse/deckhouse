@@ -28,6 +28,7 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
