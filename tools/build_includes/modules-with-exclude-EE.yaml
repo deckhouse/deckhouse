@@ -330,6 +330,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/040-node-manager/images/d8-shutdown-inhibitor
+  to: /deckhouse/modules/040-node-manager/images/d8-shutdown-inhibitor
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/040-node-manager/images/node-feature-discovery
   to: /deckhouse/modules/040-node-manager/images/node-feature-discovery
   excludePaths:
