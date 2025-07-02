@@ -669,7 +669,7 @@ To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrad
 
 ## Customizing istio-proxy sidecar resource management
 
-You can override the global Istio sidecar resource limits for specific workloads by adding annotations to your Deployment, ReplicaSet, or Pod resources.
+You can override the global istio-proxy sidecar resource limits for specific workloads by adding annotations to your application Pods.
 
 ### Supported Annotations
 
