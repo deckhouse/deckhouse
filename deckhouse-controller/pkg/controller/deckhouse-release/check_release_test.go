@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -596,8 +597,8 @@ disable:
 			},
 		}, nil)
 
-		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha2.ModuleUpdatePolicySpec{
+			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 				Mode: v1alpha1.UpdateModeAuto.String(),
 			},
 			ReleaseChannel: "LTS",

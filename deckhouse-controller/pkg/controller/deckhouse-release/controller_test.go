@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -62,8 +63,8 @@ func init() {
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
-var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
-	Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+var embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
+	Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 		Mode: v1alpha1.UpdateModeAuto.String(),
 	},
 	ReleaseChannel: "Stable",
@@ -152,7 +153,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
-	mup *v1alpha1.ModuleUpdatePolicySpec,
+	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
@@ -979,8 +980,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("AutoPatch", func() {
 		suite.Run("patch update respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00"}},
 				},
@@ -994,8 +995,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("minor update don't respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00"}},
 				},
@@ -1010,8 +1011,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 	suite.Run("LTS Release channel", func() {
 		suite.Run("auto", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
@@ -1028,8 +1029,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("several releases", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
@@ -1044,8 +1045,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("cannot upgrade", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
