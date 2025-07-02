@@ -82,9 +82,6 @@ shell:
     - /tools/setcap cap_net_admin,cap_net_raw=+eip /usr/sbin/xtables-legacy-multi
     - /tools/setcap cap_net_admin,cap_net_raw=+eip /usr/sbin/xtables-nft-multi
 
-
 imageSpec:
   config:
-    workingDir: /tools
-    clearWorkingDir: true # a hack to delete the setcap binary from final image
     entrypoint: ["/failover"]

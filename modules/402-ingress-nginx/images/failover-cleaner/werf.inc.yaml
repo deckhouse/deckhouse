@@ -67,5 +67,3 @@ shell:
 imageSpec:
   config:
     entrypoint: ["/failover-cleaner"]
-    workingDir: /tools
-    clearWorkingDir: true # a hack to delete the setcap binary from final image
