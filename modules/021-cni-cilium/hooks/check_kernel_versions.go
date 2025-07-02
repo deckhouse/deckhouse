@@ -97,7 +97,7 @@ func handleNodes(input *go_hook.HookInput) error {
 			modulesListInUse:        []string{"cni-cilium"},
 		},
 	}
-	extraLoadBalancerAlgorithmsEnabled := input.Values.Get("cniCilium.internal.extraLoadBalancerAlgorithmsEnabled").Bool()
+	extraLoadBalancerAlgorithmsEnabled := input.Values.Get("cniCilium.extraLoadBalancerAlgorithmsEnabled").Bool()
 	if extraLoadBalancerAlgorithmsEnabled {
 		currentConstraint := constraints[0].kernelVersionConstraint
 		currentVersionStr := strings.TrimSpace(strings.TrimPrefix(currentConstraint, ">="))
