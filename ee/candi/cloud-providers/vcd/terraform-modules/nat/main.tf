@@ -35,7 +35,7 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
   name        = format("%s-dnat-ssh", var.providerClusterConfiguration.mainNetwork)
   rule_type   = "DNAT"
-  description = format("DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  description = format("SSH DNAT rule for first master of %s", var.providerClusterConfiguration.virtualApplicationName)
 
   external_address    = var.providerClusterConfiguration.edgeGateway.externalIP
   dnat_external_port  = var.providerClusterConfiguration.edgeGateway.externalPort
@@ -64,7 +64,7 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   count = var.useNSXV ? 1 : 0
 
   enabled     = true
-  description = format("SSH DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  description = format("SSH DNAT rule for first master of %s", var.providerClusterConfiguration.virtualApplicationName)
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
@@ -75,4 +75,5 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
   translated_address = local.main_ip_addresses[0]
   protocol           = "tcp"
+  translated_port    = 22
 }
