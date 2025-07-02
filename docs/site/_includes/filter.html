@@ -93,26 +93,56 @@
         //     }
         // }
 
-        const checkboxes = document.querySelectorAll('.filter__checkboxes input[type="checkbox"]');
+        const filterCheckboxes = document.querySelector('.filter__checkboxes');
         const articles = document.querySelectorAll('.button-tile');
         const resetButton = document.querySelector('.reset-check');
 
-        function filterArticles() {
-            const selectedTags = Array.from(checkboxes).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+        function getTags() {
+            const tags = new Set();
             articles.forEach(article => {
-                const tagElement = article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2');
-                const articleTags = Array.from(tagElement).map(tag => tag.textContent);
+                article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
+                    tags.add(tag.textContent);
+                });
+            });
+            return Array.from(tags);
+        }
 
-                const shoulShow = selectedTags.length === 0 || selectedTags.every(tag => articleTags.includes(tag));
+        function createCheckboxes(tag) {
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = tag;
+            input.value = tag;
+
+            const label = document.createElement('label');
+            label.htmlFor = tag;
+            label.textContent = tag;
+            label.style.textTransform = 'capitalize';
+
+            filterCheckboxes.appendChild(input);
+            filterCheckboxes.appendChild(label);
+        }
+
+        function filterArticles() {
+            const selectedTags = Array.from(filterCheckboxes.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.value);
+            articles.forEach(article => {
+                const tagElement = Array.from(article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')).map(tag => tag.textContent);
+
+                const shoulShow = selectedTags.length === 0 || selectedTags.some(tag => tagElement.includes(tag));
                 article.style.display = shoulShow ? 'flex' : 'none';
             });
         }
+        
+        function createFilters() {
+            const tags = getTags();
+            tags.forEach(tag => {
+                createCheckboxes(tag);
+            });
 
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', filterArticles);
-        })
+            filterCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.addEventListener('change', filterArticles));
+        }
 
         resetButton.addEventListener('click', () => {
+            const checkboxes = filterCheckboxes.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 checkbox.checked = false;
             });
@@ -126,6 +156,7 @@
             // updateValue();
         })
 
+        createFilters();
         filterArticles();
     })
 </script>
@@ -152,42 +183,7 @@
     {%- else %}
         <h2 class="filter__container--title">Category</h2>
     {%- endif %}
-    <div class="filter__checkboxes">
-        <input type="checkbox" id="cloud" value="cloud">
-        <label for="cloud">Cloud</label>
-        <input type="checkbox" id="baremetal" value="baremetal">
-        <label for="baremetal">Baremetal</label>
-        <input type="checkbox" id="io" value="io">
-        <label for="io">IO</label>
-        <input type="checkbox" id="dataAccess" value="dataAccess">
-        <label for="dataAccess">Data Access</label>
-        <input type="checkbox" id="security" value="security">
-        <label for="security">Security</label>
-        <input type="checkbox" id="messaging" value="messaging">
-        <label for="messaging">Messaging</label>
-        <input type="checkbox" id="ops" value="ops">
-        <label for="ops">Ops</label>
-        <input type="checkbox" id="batchProcessing" value="batchProcessing">
-        <label for="batchProcessing">Batch Processing</label>
-        <input type="checkbox" id="web" value="web">
-        <label for="web">Web</label>
-        <input type="checkbox" id="caching" value="caching">
-        <label for="caching">Caching</label>
-        <input type="checkbox" id="microservices" value="microservices">
-        <label for="microservices">Microservices</label>
-        <input type="checkbox" id="testing" value="testing">
-        <label for="testing">Testing</label>
-        <input type="checkbox" id="documentation" value="documentation">
-        <label for="documentation">Documentation</label>
-        <input type="checkbox" id="cloudPlatform" value="cloudPlatform">
-        <label for="cloudPlatform">Cloud Platform</label>
-        <input type="checkbox" id="streaming" value="streaming">
-        <label for="streaming">Streaming</label>
-        <input type="checkbox" id="graphQL" value="graphQL">
-        <label for="graphQL">GraphQL</label>
-        <input type="checkbox" id="misc" value="misc">
-        <label for="misc">Misc</label>
-    </div>
+    <div class="filter__checkboxes"></div>
     {%- if page.lang == "ru" %}
         <button class="reset-check">Сбросить фильтры</button>
     {%- else %}
