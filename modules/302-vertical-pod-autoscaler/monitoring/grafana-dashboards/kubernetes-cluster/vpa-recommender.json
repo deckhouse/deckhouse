@@ -743,7 +743,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "d8-monitoring",
           "value": "d8-monitoring"
         },
@@ -803,10 +803,10 @@
         "current": {
           "selected": true,
           "text": [
-            "All"
+            "prometheus-main-0"
           ],
           "value": [
-            "$__all"
+            "prometheus-main-0"
           ]
         },
         "datasource": {
