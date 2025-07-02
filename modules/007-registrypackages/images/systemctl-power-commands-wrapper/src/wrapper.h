@@ -17,11 +17,15 @@ limitations under the License.
 #ifndef WRAPPER_H
 #define WRAPPER_H
 
+#include <stdbool.h>
+
 static const char USAGE[] =
-  "Wrapper to run systemctl with additional flag --check-inhibitors=yes.\n"
+  "Wrapper for legacy power commands to invoke shutdown via logind\n"
+  "to send shutdown signal to all processes that hold inhibitor locks.\n"
+  "It translates legacy commands into:\n"
+  "systemctl halt|poweroff|reboot -i.\n"
   "\n"
-  "Direct invocation just prints this help.\n"
-  "Create symlink with alias to invoke systemctl power command:\n"
+  "Create symlink with alias to invoke systemctl:\n"
   "\n"
   "reboot                   Shut down and reboot the system\n"
   "poweroff                 Shut down and power-off the system\n"
@@ -29,33 +33,33 @@ static const char USAGE[] =
   "halt                     Shut down and halt the system\n"
   "\n"
   "Options:\n"
-  "      --dry-run          Print systemctl command line, not run it.\n";
-
-
-static const char ECHO[] = "echo";
-static const char DRY_RUN[] = "--dry-run";
+  "          --dry-run      Print systemctl command line, not run it.\n"
+  "   -r     --reboot       shutdown command compatibility: reboot.\n"
+  "   -P, -p --poweroff     halt command compatibility: poweroff.\n"
+  "   -H, -h --halt         poweroff command compatibility: halt.\n"
+  "\n"
+  "Other legacy options are silently ignored\n";
 
 static const char SYSTEMCTL[] = "systemctl";
 
-static const char ACTION_HALT[] = "halt";
-static const char ACTION_REBOOT[] = "reboot";
-static const char ACTION_POWEROFF[] = "poweroff";
-static const char ACTION_SHUTDOWN[] = "shutdown";
+static const char CMD_HALT[] = "halt";
+static const char CMD_REBOOT[] = "reboot";
+static const char CMD_POWEROFF[] = "poweroff";
 
-static const char* KNOWN_ACTIONS[] = {
-    ACTION_HALT,
-    ACTION_REBOOT,
-    ACTION_POWEROFF,
-    ACTION_SHUTDOWN,
+static const char IGNORE_INHIBITORS_FLAG[] = "-i";
+
+enum action {
+  ACTION_HALT,
+  ACTION_POWEROFF,
+  ACTION_REBOOT,
 };
-static const int KNOWN_ACTIONS_COUNT = (int)(sizeof(KNOWN_ACTIONS)/sizeof(KNOWN_ACTIONS[0]));
 
-static const char CHECK_INHIBITORS_FLAG[] = "--check-inhibitors=yes";
+extern enum action arg_action;
+extern int arg_dry_run;
+extern int arg_help;
 
-
-
-int detect_action(char const* argv0, char const **action_name);
-
-int detect_dry_run(int argc, char ** argv);
+int parse_argv(int argc, char *argv[]);
+int detect_action(int argc, char *argv[]);
+bool run_with_alias(char *argv[], const char *alias);
 
 #endif
