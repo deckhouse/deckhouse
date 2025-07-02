@@ -275,6 +275,7 @@ apiVersions:
             VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
         edgeGateway:
           type: object
+          required: [name, type, externalIP, externalPort]
           additionalProperties: false
           description: |
             VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
@@ -365,8 +366,7 @@ apiVersions:
         - required: [layout]
           properties:
             layout:
-              enum:
-                - Standard
+              enum: [Standard]
               type: string
             internalNetworkDNSServers:
               not: {}
@@ -375,13 +375,8 @@ apiVersions:
         - required: [layout, internalNetworkDNSServers, edgeGateway]
           properties:
             layout:
-              enum:
-                - StandardWithNetwork
+              enum: [StandardWithNetwork]
               type: string
-            edgeGateway:
-              required: [name, type, externalIP, externalPort]
-              type: object
-              additionalProperties: false
       - oneOf:
         - properties:
             provider:
