@@ -94,6 +94,7 @@ properties:
   extraLoadBalancerAlgorithmsEnabled:
     type: boolean
     default: false
+    x-experimental: true
     description: |
       Allows selectively overriding the load balancing algorithm using eBPF between backends for individual services. The annotation `cilium.io/bpf-lb-algorithm` is used for overriding with one of the following values: `random`, `maglev`, or `least-conn`.
 
