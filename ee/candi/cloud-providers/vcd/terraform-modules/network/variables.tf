@@ -19,6 +19,6 @@ variable "edgeGatewayId" {
   type = string
 }
 
-variable "useNSXT" {
+variable "useNSXV" {
   type = bool
 }
