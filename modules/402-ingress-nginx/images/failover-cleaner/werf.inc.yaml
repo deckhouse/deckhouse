@@ -62,7 +62,7 @@ import:
   before: setup
 shell:
   setup:
-    - /tools/setcap cap_net_raw,cap_net_admin=+eip /failover  # Need for run from deckhouse user
+    - /tools/setcap cap_net_raw,cap_net_admin=+eip /failover-cleaner  # Need for run from deckhouse user
 imageSpec:
   config:
     entrypoint: ["/failover-cleaner"]
