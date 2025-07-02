@@ -47,6 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -261,7 +262,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 // patchManualRelease modify deckhouse release with approved status
 func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	if r.updateSettings.Get().Update.Mode != v1alpha1.UpdateModeManual.String() {
+	if r.updateSettings.Get().Update.Mode != v1alpha2.UpdateModeManual.String() {
 		return nil
 	}
 
@@ -544,7 +545,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		// if we have wrong mode - autopatch
-		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
+		Mode:    v1alpha2.ParseUpdateMode(us.Update.Mode),
 		Windows: us.Update.Windows,
 		Subject: releaseUpdater.SubjectDeckhouse,
 	}

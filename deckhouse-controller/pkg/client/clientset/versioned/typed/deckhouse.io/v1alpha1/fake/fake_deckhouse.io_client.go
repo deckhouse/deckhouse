@@ -60,10 +60,6 @@ func (c *FakeDeckhouseV1alpha1) ModuleSources() v1alpha1.ModuleSourceInterface {
 	return &FakeModuleSources{c}
 }
 
-func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePolicyInterface {
-	return &FakeModuleUpdatePolicies{c}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeDeckhouseV1alpha1) RESTClient() rest.Interface {

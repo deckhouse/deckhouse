@@ -599,7 +599,7 @@ disable:
 
 		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-				Mode: v1alpha1.UpdateModeAuto.String(),
+				Mode: v1alpha2.UpdateModeAuto.String(),
 			},
 			ReleaseChannel: "LTS",
 		})
