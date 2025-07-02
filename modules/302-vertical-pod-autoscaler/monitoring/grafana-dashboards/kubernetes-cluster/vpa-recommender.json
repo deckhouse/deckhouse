@@ -724,7 +724,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "main",
           "value": "P0D6E4079E36703EB"
         },
@@ -743,7 +743,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "d8-monitoring",
           "value": "d8-monitoring"
         },
@@ -897,6 +897,6 @@
   "timezone": "browser",
   "title": "VPA Recommendations",
   "uid": "_BFbbSg7k",
-  "version": 1,
+  "version": 1
   "weekStart": ""
 }
