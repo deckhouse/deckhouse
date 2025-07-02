@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 	"sync"
 )
 
@@ -81,6 +82,15 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	fmt.Fprintln(os.Stderr, "---Gorutines in running---")
+	// 10 mb
+	buf := make([]byte, 10485760)  // Allocate a buffer for the stack trace
+	nn := runtime.Stack(buf, true) // Pass 'true' to get all goroutine stack traces
+	fmt.Fprintf(os.Stderr, "%s\n", string(buf[:nn]))
+	fmt.Fprintln(os.Stderr, "---")
+
+	buf = nil
+
 	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
 	defer func() {
