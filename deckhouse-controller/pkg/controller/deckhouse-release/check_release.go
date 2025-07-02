@@ -842,7 +842,7 @@ func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, ac
 
 	vers, err := f.getNewVersions(ctx, actual, target)
 	if err != nil {
-		return nil, fmt.Errorf("get next version: %w", err)
+		return nil, fmt.Errorf("get next versions: %w", err)
 	}
 
 	result := make([]ReleaseMetadata, 0, len(vers))

@@ -278,7 +278,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
-		return fmt.Errorf("get next version: %w", err)
+		return fmt.Errorf("get new versions: %w", err)
 	}
 
 	var ErrModuleIsCorrupted = errors.New("module is corrupted")
