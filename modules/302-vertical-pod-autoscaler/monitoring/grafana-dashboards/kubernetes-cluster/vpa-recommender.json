@@ -313,7 +313,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -592,7 +592,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -743,7 +743,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "d8-monitoring",
           "value": "d8-monitoring"
         },
@@ -752,11 +752,6 @@
           "uid": "${ds_prometheus}"
         },
         "definition": "label_values(kube_pod_info,namespace)",
-        "error": {
-          "data": {
-            "message": "Unexpected error"
-          }
-        },
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -777,7 +772,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "prometheus-main",
           "value": "prometheus-main"
         },
