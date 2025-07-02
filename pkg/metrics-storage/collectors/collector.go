@@ -135,49 +135,56 @@ func (c *ConstCounterCollector) ExpireGroupMetrics(group string) {
 // The collection is recalculated in accordance with new label list.
 func (c *ConstCounterCollector) UpdateLabels(labels []string) {
 	c.mtx.Lock()
-	var mustUpdate bool
+	defer c.mtx.Unlock()
+
+	// Create a map of current labels for quick lookup
 	previousLabelsMap := make(map[string]int, len(c.labelNames))
 	for idx, label := range c.labelNames {
 		previousLabelsMap[label] = idx
 	}
 
-	previousLabelSet := make([]string, len(c.labelNames))
-	copy(previousLabelSet, c.labelNames)
-
+	// Check if we need to update labels
+	var mustUpdate bool
 	for _, label := range labels {
 		if _, found := previousLabelsMap[label]; !found {
 			mustUpdate = true
 			c.labelNames = append(c.labelNames, label)
 		}
 	}
+
+	// If no new labels, return early
+	if !mustUpdate {
+		return
+	}
+
+	// Sort labels for consistency
 	sort.Strings(c.labelNames)
 
-	if mustUpdate {
-		c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
-		newCollection := make(map[uint64]GroupedCounterMetric)
-		for hash, metric := range c.collection {
-			if len(metric.LabelValues) != len(c.labelNames) {
-				newLabelsValues := make([]string, 0, len(c.labelNames))
-				for _, labelName := range c.labelNames {
-					if idx, found := previousLabelsMap[labelName]; found {
-						newLabelsValues = append(newLabelsValues, metric.LabelValues[idx])
-					} else {
-						newLabelsValues = append(newLabelsValues, "")
-					}
-				}
-				newLabelsHash := HashLabelValues(newLabelsValues)
-				newCollection[newLabelsHash] = GroupedCounterMetric{
-					Value:       metric.Value,
-					LabelValues: newLabelsValues,
-					Group:       metric.Group,
-				}
+	// Create new description and collection with updated labels
+	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
+	newCollection := make(map[uint64]GroupedCounterMetric)
+
+	// Update each metric in the collection
+	for _, metric := range c.collection {
+		newLabelsValues := make([]string, len(c.labelNames))
+
+		for i, labelName := range c.labelNames {
+			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
+				newLabelsValues[i] = metric.LabelValues[idx]
 			} else {
-				newCollection[hash] = c.collection[hash]
+				newLabelsValues[i] = ""
 			}
 		}
-		c.collection = newCollection
+
+		newLabelsHash := HashLabelValues(newLabelsValues)
+		newCollection[newLabelsHash] = GroupedCounterMetric{
+			Value:       metric.Value,
+			LabelValues: newLabelsValues,
+			Group:       metric.Group,
+		}
 	}
-	c.mtx.Unlock()
+
+	c.collection = newCollection
 }
 
 type ConstGaugeCollector struct {
@@ -260,49 +267,56 @@ func (c *ConstGaugeCollector) ExpireGroupMetrics(group string) {
 // The collection is recalculated in accordance with new label list.
 func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
 	c.mtx.Lock()
-	var mustUpdate bool
+	defer c.mtx.Unlock()
+
+	// Create a map of current labels for quick lookup
 	previousLabelsMap := make(map[string]int, len(c.labelNames))
 	for idx, label := range c.labelNames {
 		previousLabelsMap[label] = idx
 	}
 
-	previousLabelSet := make([]string, len(c.labelNames))
-	copy(previousLabelSet, c.labelNames)
-
+	// Check if we need to update labels
+	var mustUpdate bool
 	for _, label := range labels {
 		if _, found := previousLabelsMap[label]; !found {
 			mustUpdate = true
 			c.labelNames = append(c.labelNames, label)
 		}
 	}
+
+	// If no new labels, return early
+	if !mustUpdate {
+		return
+	}
+
+	// Sort labels for consistency
 	sort.Strings(c.labelNames)
 
-	if mustUpdate {
-		c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
-		newCollection := make(map[uint64]GroupedGaugeMetric)
-		for hash, metric := range c.collection {
-			if len(metric.LabelValues) != len(c.labelNames) {
-				newLabelsValues := make([]string, 0, len(c.labelNames))
-				for _, labelName := range c.labelNames {
-					if idx, found := previousLabelsMap[labelName]; found {
-						newLabelsValues = append(newLabelsValues, metric.LabelValues[idx])
-					} else {
-						newLabelsValues = append(newLabelsValues, "")
-					}
-				}
-				newLabelsHash := HashLabelValues(newLabelsValues)
-				newCollection[newLabelsHash] = GroupedGaugeMetric{
-					Value:       metric.Value,
-					LabelValues: newLabelsValues,
-					Group:       metric.Group,
-				}
+	// Create new description and collection with updated labels
+	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
+	newCollection := make(map[uint64]GroupedGaugeMetric)
+
+	// Update each metric in the collection
+	for _, metric := range c.collection {
+		newLabelsValues := make([]string, len(c.labelNames))
+
+		for i, labelName := range c.labelNames {
+			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
+				newLabelsValues[i] = metric.LabelValues[idx]
 			} else {
-				newCollection[hash] = c.collection[hash]
+				newLabelsValues[i] = ""
 			}
 		}
-		c.collection = newCollection
+
+		newLabelsHash := HashLabelValues(newLabelsValues)
+		newCollection[newLabelsHash] = GroupedGaugeMetric{
+			Value:       metric.Value,
+			LabelValues: newLabelsValues,
+			Group:       metric.Group,
+		}
 	}
-	c.mtx.Unlock()
+
+	c.collection = newCollection
 }
 
 const labelsSeparator = byte(255)

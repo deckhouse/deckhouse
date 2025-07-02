@@ -15,7 +15,6 @@
 package metricsstorage
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -37,9 +36,6 @@ const (
 
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-
 	Prefix string
 
 	Counters         map[string]*prometheus.CounterVec
@@ -84,13 +80,8 @@ func WithLogger(logger *log.Logger) Option {
 }
 
 // NewMetricStorage creates a new metric storage with provided options
-func NewMetricStorage(ctx context.Context, prefix string, opts ...Option) *MetricStorage {
-	cctx, cancel := context.WithCancel(ctx)
-
+func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
-		ctx:    cctx,
-		cancel: cancel,
-
 		Prefix:           prefix,
 		Gauges:           make(map[string]*prometheus.GaugeVec),
 		Counters:         make(map[string]*prometheus.CounterVec),

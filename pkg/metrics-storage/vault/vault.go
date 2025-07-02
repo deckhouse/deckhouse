@@ -26,17 +26,36 @@ import (
 )
 
 type GroupedVault struct {
-	collectors            map[string]collectors.ConstCollector
+	collectors map[string]collectors.ConstCollector
+
 	mtx                   sync.Mutex
 	registerer            prometheus.Registerer
 	resolveMetricNameFunc func(name string) string
+
+	logger *log.Logger
 }
 
-func NewGroupedVault(resolveMetricNameFunc func(name string) string) *GroupedVault {
-	return &GroupedVault{
+type Option func(*GroupedVault)
+
+// WithLogger sets the logger for the GroupedVault.
+func WithLogger(logger *log.Logger) Option {
+	return func(v *GroupedVault) {
+		v.logger = logger
+	}
+}
+
+func NewGroupedVault(resolveMetricNameFunc func(name string) string, options ...Option) *GroupedVault {
+	vault := &GroupedVault{
 		collectors:            make(map[string]collectors.ConstCollector),
 		resolveMetricNameFunc: resolveMetricNameFunc,
+		logger:                log.NewLogger(log.Options{}).Named("grouped-vault"),
 	}
+
+	for _, option := range options {
+		option(vault)
+	}
+
+	return vault
 }
 
 func (v *GroupedVault) Registerer() prometheus.Registerer {
@@ -71,59 +90,82 @@ func (v *GroupedVault) GetOrCreateCounterCollector(name string, labelNames []str
 	metricName := v.resolveMetricNameFunc(name)
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
+
 	collector, ok := v.collectors[metricName]
 	if !ok {
 		collector = collectors.NewConstCounterCollector(metricName, labelNames)
+
 		if err := v.registerer.Register(collector); err != nil {
 			return nil, fmt.Errorf("counter '%s' %v registration: %v", metricName, labelNames, err)
 		}
+
 		v.collectors[metricName] = collector
-	} else if !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
+	}
+
+	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
 		collector.UpdateLabels(labelNames)
 	}
-	if counter, ok := collector.(*collectors.ConstCounterCollector); ok {
-		return counter, nil
+
+	counter, ok := collector.(*collectors.ConstCounterCollector)
+	if !ok {
+		return nil, fmt.Errorf("counter %v collector requested, but %s %v collector exists",
+			labelNames, collector.Type(), collector.LabelNames())
 	}
-	return nil, fmt.Errorf("counter %v collector requested, but %s %v collector exists", labelNames, collector.Type(), collector.LabelNames())
+
+	return counter, nil
 }
 
 func (v *GroupedVault) GetOrCreateGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
+
 	collector, ok := v.collectors[metricName]
 	if !ok {
 		collector = collectors.NewConstGaugeCollector(metricName, labelNames)
+
 		if err := v.registerer.Register(collector); err != nil {
 			return nil, fmt.Errorf("gauge '%s' %v registration: %v", metricName, labelNames, err)
 		}
+
 		v.collectors[metricName] = collector
-	} else if !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
+	}
+
+	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
 		collector.UpdateLabels(labelNames)
 	}
 
-	if gauge, ok := collector.(*collectors.ConstGaugeCollector); ok {
-		return gauge, nil
+	gauge, ok := collector.(*collectors.ConstGaugeCollector)
+	if !ok {
+		return nil, fmt.Errorf("gauge %v collector requested, but %s %v collector exists",
+			labelNames, collector.Type(), collector.LabelNames())
 	}
-	return nil, fmt.Errorf("gauge %v collector requested, but %s %v collector exists", labelNames, collector.Type(), collector.LabelNames())
+
+	return gauge, nil
 }
 
 func (v *GroupedVault) CounterAdd(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
+
 	c, err := v.GetOrCreateCounterCollector(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
-		log.Error("CounterAdd", log.Err(err))
+		v.logger.Error("CounterAdd", log.Err(err))
+
 		return
 	}
+
 	c.Add(group, value, labels)
 }
 
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
+
 	c, err := v.GetOrCreateGaugeCollector(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
-		log.Error("GaugeSet", log.Err(err))
+		v.logger.Error("GaugeSet", log.Err(err))
+
 		return
 	}
+
 	c.Set(group, value, labels)
 }
