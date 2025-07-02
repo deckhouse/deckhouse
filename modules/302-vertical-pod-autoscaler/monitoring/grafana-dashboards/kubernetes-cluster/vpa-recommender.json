@@ -287,7 +287,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -300,7 +300,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -313,7 +313,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -413,7 +413,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(vpa_target_recommendation{resource=\"cpu\", namespace=\"$namespace\", target_name=~\"$targetName\", container=~\"$container\", job=\"kube-state-metrics\"}) by (controller_type, controller_name, container) * 1000",
+          "expr": "sum(vpa_target_recommendation{resource=\"cpu\", namespace=\"$namespace\", target_name=~\"$targetName\", container=\"$container\", job=\"kube-state-metrics\"}) by (controller_type, controller_name, container) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{controller_type}}/{{controller_name}}, container: {{container}}",
@@ -566,7 +566,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -579,7 +579,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -592,7 +592,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -743,15 +743,20 @@
       },
       {
         "current": {
-          "selected": true,
-          "text": "d8-monitoring",
-          "value": "d8-monitoring"
+          "selected": false,
+          "text": "d8-admission-policy-engine",
+          "value": "d8-admission-policy-engine"
         },
         "datasource": {
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
-        "definition": "label_values(kube_pod_info,namespace)",
+        "definition": "label_values(kube_pod_info{node=~\".*\"},namespace)",
+        "error": {
+          "data": {
+            "message": "Unexpected error"
+          }
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -760,7 +765,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(kube_pod_info,namespace)",
+          "query": "label_values(kube_pod_info{node=~\".*\"},namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -773,8 +778,8 @@
         "allValue": ".*",
         "current": {
           "selected": false,
-          "text": "prometheus-main",
-          "value": "prometheus-main"
+          "text": "gatekeeper-audit",
+          "value": "gatekeeper-audit"
         },
         "datasource": {
           "type": "prometheus",
@@ -803,10 +808,10 @@
         "current": {
           "selected": true,
           "text": [
-            "prometheus-main-0"
+            "gatekeeper-audit-68c6966f8c-lqmf9"
           ],
           "value": [
-            "prometheus-main-0"
+            "gatekeeper-audit-68c6966f8c-lqmf9"
           ]
         },
         "datasource": {
@@ -836,17 +841,17 @@
         "current": {
           "selected": true,
           "text": [
-            "prometheus"
+            "constraint-exporter"
           ],
           "value": [
-            "prometheus"
+            "constraint-exporter"
           ]
         },
         "datasource": {
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
-        "definition": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=~\"$pod\"},container)",
+        "definition": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\"},container)",
         "hide": 0,
         "includeAll": true,
         "label": "Container",
@@ -855,7 +860,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=~\"$pod\"},container)",
+          "query": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\"},container)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -897,6 +902,6 @@
   "timezone": "browser",
   "title": "VPA Recommendations",
   "uid": "_BFbbSg7k",
-  "version": 1
+  "version": 4,
   "weekStart": ""
 }
