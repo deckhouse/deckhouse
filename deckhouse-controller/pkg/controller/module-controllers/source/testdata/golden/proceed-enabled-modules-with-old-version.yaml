@@ -57,6 +57,8 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: enabledmodule
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.2.3
   weight: 900
 status:
@@ -88,6 +90,8 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: withpolicymodule
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.2.3
   weight: 900
 status:

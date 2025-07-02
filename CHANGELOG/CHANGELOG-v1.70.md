@@ -94,6 +94,7 @@
  - **[cloud-provider-vcd]** Removed trailing slash from `VCDClusterConfiguration.provider.server`. [#13204](https://github.com/deckhouse/deckhouse/pull/13204)
  - **[cloud-provider-vcd]** The usage of `VCDCluster.spec.proxyConfigSpec` removed. [#13138](https://github.com/deckhouse/deckhouse/pull/13138)
  - **[cloud-provider-vcd]** Add support for searching `vAppTemplates` by an organization name in the `VCDInstanceClass` resource. [#13079](https://github.com/deckhouse/deckhouse/pull/13079)
+ - **[cloud-provider-vsphere]** Add /tmp emptyDir for csi-node-legacy [#14197](https://github.com/deckhouse/deckhouse/pull/14197)
  - **[cloud-provider-vsphere]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-vsphere]** Added condition that values for `settings.storageClass.compatibilityFlag` must be capitalized. [#13434](https://github.com/deckhouse/deckhouse/pull/13434)
  - **[cloud-provider-yandex]** Handle hybrid clusters case in the to_tofu_migrate_metric hook [#13911](https://github.com/deckhouse/deckhouse/pull/13911)

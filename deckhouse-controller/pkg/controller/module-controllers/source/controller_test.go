@@ -523,12 +523,26 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 				imageTag = versionInChannel
 			}
 
+			moduleYaml := `
+name: ` + module + `
+weight: 900
+stage: "General Availability"
+requirements:
+  kubernetes: ">= 1.27"
+disable:
+  confirmation: true
+  message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+`
+
 			return &crfake.FakeImage{
 				ManifestStub: manifestStub,
 				LayersStub: func() ([]crv1.Layer, error) {
 					return []crv1.Layer{
 						&utils.FakeLayer{},
-						&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + imageTag + `"}`}},
+						&utils.FakeLayer{FilesContent: map[string]string{
+							"module.yaml":  moduleYaml,
+							"version.json": `{"version": "` + imageTag + `"}`,
+						}},
 					}, nil
 				},
 				DigestStub: func() (crv1.Hash, error) {

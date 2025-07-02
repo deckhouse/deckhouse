@@ -276,9 +276,7 @@ spec:
               memory: 6Gi # heavy load usage ~2Gi (x3)
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
-{{- end }}
           workingDir: /deckhouse
           volumeMounts:
           - mountPath: /tmp
