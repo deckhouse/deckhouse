@@ -171,8 +171,10 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "proxy_resources" . | nindent 12 }}
   {{- end }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "proxy_limits" . | nindent 12 }}
+  {{- end }}
       volumes:
       - name: client-certs
         secret:
