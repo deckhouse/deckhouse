@@ -667,7 +667,7 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 
-## Customizing Istio Sidecar Resources
+## Customizing istio-proxy sidecar resource management
 
 You can override the global Istio sidecar resource limits for specific workloads by adding annotations to your Deployment, ReplicaSet, or Pod resources.
 
