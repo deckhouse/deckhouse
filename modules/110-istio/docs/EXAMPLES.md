@@ -673,7 +673,7 @@ You can override the global istio-proxy sidecar resource limits for specific wor
 
 ### Supported annotations
 
-Use these annotations to customize sidecar resources:
+Use these Pod annotations to customize sidecar resources:
 | Annotation                          | Description                 | Example Value |
 |-------------------------------------|-----------------------------|---------------|
 | `sidecar.istio.io/proxyCPU`         | CPU request for sidecar     | `200m`        |
