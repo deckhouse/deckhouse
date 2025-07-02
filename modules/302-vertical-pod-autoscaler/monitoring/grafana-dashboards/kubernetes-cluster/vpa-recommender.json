@@ -313,7 +313,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -413,7 +413,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(vpa_target_recommendation{resource=\"cpu\", namespace=\"$namespace\", target_name=~\"$targetName\", job=\"kube-state-metrics\"}) by (controller_type, controller_name, container) * 1000",
+          "expr": "sum(vpa_target_recommendation{resource=\"cpu\", namespace=\"$namespace\", target_name=~\"$targetName\", container=~\"$container\", job=\"kube-state-metrics\"}) by (controller_type, controller_name, container) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{controller_type}}/{{controller_name}}, container: {{container}}",
@@ -592,7 +592,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
