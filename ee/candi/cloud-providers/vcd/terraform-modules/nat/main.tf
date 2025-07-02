@@ -64,14 +64,15 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   count = var.useNSXT ? 0 : 1
 
   enabled     = true
-  description = format("DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  description = format("SSH DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
   network_type = "org"
-  network_name = var.providerClusterConfiguration.mainNetwork
+  network_name = var.nsxvExternalNetwork
 
   original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
   translated_address = local.main_ip_addresses[0]
+  protocol           = "tcp"
 }

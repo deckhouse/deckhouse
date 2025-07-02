@@ -2,8 +2,9 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXT       = var.providerClusterConfiguration.edgeGateway.type == "NSX-T"
-  edgeGatewayId = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
+  useNSXT                    = var.providerClusterConfiguration.edgeGateway.type == "NSX-T"
+  edgeGatewayId              = local.useNSXT ? data.vcd_nsxt_edgegateway.gateway[0].id : data.vcd_edgegateway.gateway[0].id
+  edgeGatewayExternalNetwork = local.useNSXT ? "" : data.vcd_edgegateway.gateway[0].external_network
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -21,8 +22,8 @@ data "vcd_edgegateway" "gateway" {
 module "network" {
   source                       = "../../../terraform-modules/network"
   providerClusterConfiguration = var.providerClusterConfiguration
-  edgeGatewayId = local.edgeGatewayId
-  useNSXT = local.useNSXT
+  edgeGatewayId                = local.edgeGatewayId
+  useNSXT                      = local.useNSXT
 }
 
 module "vapp" {
@@ -41,7 +42,8 @@ resource "vcd_vapp_org_network" "vapp_network" {
 module "nat" {
   source                       = "../../../terraform-modules/nat"
   providerClusterConfiguration = var.providerClusterConfiguration
-  edgeGatewayId               = local.edgeGatewayId
-  useNSXT                     = local.useNSXT
-  depends_on                  = [vcd_vapp_org_network.vapp_network]
+  edgeGatewayId                = local.edgeGatewayId
+  useNSXT                      = local.useNSXT
+  nsxvExternalNetwork          = local.edgeGatewayExternalNetwork
+  depends_on                   = [vcd_vapp_org_network.vapp_network]
 }
