@@ -369,7 +369,7 @@ function prepare_environment() {
 
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
