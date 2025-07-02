@@ -27,7 +27,10 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.21.1")
+		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "test")
+		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "testcert")
+		hec.ValuesSet("userAuthn.internal.dexTLS.key", "testkey")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -35,10 +38,22 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
-
-		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSetFromYaml("userAuthn.resources.dexAuthenticator", `
+requests:
+  cpu: "10m"
+  memory: "25Mi"
+limits:
+  cpu: "20m"
+  memory: "50Mi"
+`)
+		hec.ValuesSetFromYaml("userAuthn.resources.redis", `
+requests:
+  cpu: "10m"
+  memory: "25Mi"
+limits:
+  cpu: "20m"
+  memory: "50Mi"
+`)
 	})
 
 	Context("Without dex authenticator", func() {
