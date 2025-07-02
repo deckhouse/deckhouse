@@ -22,7 +22,7 @@
     ]
   },
   "description": "A dashboard to visualize metrics about the Vertical Pod Autoscalar (https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 14588,
   "graphTooltip": 1,
