@@ -39,6 +39,22 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSetFromYaml("userAuthn.resources.dexAuthenticator", `
+requests:
+  cpu: "10m"
+  memory: "25Mi"
+limits:
+  cpu: "20m"
+  memory: "50Mi"
+`)
+		hec.ValuesSetFromYaml("userAuthn.resources.redis", `
+requests:
+  cpu: "10m"
+  memory: "25Mi"
+limits:
+  cpu: "20m"
+  memory: "50Mi"
+`)
 	})
 	Context("With DexAuthenticator object", func() {
 		BeforeEach(func() {
