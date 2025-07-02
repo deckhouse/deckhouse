@@ -38,20 +38,21 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	Counters         map[string]*prometheus.CounterVec
-	Gauges           map[string]*prometheus.GaugeVec
-	Histograms       map[string]*prometheus.HistogramVec
-	HistogramBuckets map[string][]float64
+	countersLock sync.RWMutex
+	counters     map[string]*prometheus.CounterVec
 
-	countersLock   sync.RWMutex
-	gaugesLock     sync.RWMutex
-	histogramsLock sync.RWMutex
+	gaugesLock sync.RWMutex
+	gauges     map[string]*prometheus.GaugeVec
+
+	histogramsLock   sync.RWMutex
+	histograms       map[string]*prometheus.HistogramVec
+	histogramBuckets map[string][]float64
 
 	groupedVault *vault.GroupedVault
 
-	Registry   *prometheus.Registry
-	Gatherer   prometheus.Gatherer
-	Registerer prometheus.Registerer
+	registry   *prometheus.Registry
+	gatherer   prometheus.Gatherer
+	registerer prometheus.Registerer
 
 	logger *log.Logger
 }
@@ -62,13 +63,9 @@ type Option func(*MetricStorage)
 // WithNewRegistry is an option to create a new prometheus registry
 func WithNewRegistry() Option {
 	return func(m *MetricStorage) {
-		m.Registry = prometheus.NewRegistry()
-		m.Gatherer = m.Registry
-		m.Registerer = m.Registry
-
-		if m.groupedVault != nil {
-			m.groupedVault.SetRegisterer(m.Registry)
-		}
+		m.registry = prometheus.NewRegistry()
+		m.gatherer = m.registry
+		m.registerer = m.registry
 	}
 }
 
@@ -82,24 +79,26 @@ func WithLogger(logger *log.Logger) Option {
 // NewMetricStorage creates a new metric storage with provided options
 func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
-		Prefix:           prefix,
-		Gauges:           make(map[string]*prometheus.GaugeVec),
-		Counters:         make(map[string]*prometheus.CounterVec),
-		Histograms:       make(map[string]*prometheus.HistogramVec),
-		HistogramBuckets: make(map[string][]float64),
-		Gatherer:         prometheus.DefaultGatherer,
-		Registerer:       prometheus.DefaultRegisterer,
+		Prefix: prefix,
+
+		gauges:           make(map[string]*prometheus.GaugeVec),
+		counters:         make(map[string]*prometheus.CounterVec),
+		histograms:       make(map[string]*prometheus.HistogramVec),
+		histogramBuckets: make(map[string][]float64),
+
+		gatherer:   prometheus.DefaultGatherer,
+		registerer: prometheus.DefaultRegisterer,
 
 		logger: log.NewLogger(log.Options{}).Named("metrics-storage"),
 	}
-
-	m.groupedVault = vault.NewGroupedVault(m.resolveMetricName)
-	m.groupedVault.SetRegisterer(m.Registerer)
 
 	// Apply provided options
 	for _, opt := range opts {
 		opt(m)
 	}
+
+	m.groupedVault = vault.NewGroupedVault(m.resolveMetricName)
+	m.groupedVault.SetRegisterer(m.registerer)
 
 	return m
 }
@@ -157,7 +156,7 @@ func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string
 // Gauge return saved or register a new gauge.
 func (m *MetricStorage) Gauge(metric string, labels map[string]string) *prometheus.GaugeVec {
 	m.gaugesLock.RLock()
-	vec, ok := m.Gauges[metric]
+	vec, ok := m.gauges[metric]
 	m.gaugesLock.RUnlock()
 	if ok {
 		return vec
@@ -184,7 +183,7 @@ func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *
 	defer m.gaugesLock.Unlock()
 
 	// double check
-	vec, ok := m.Gauges[metric]
+	vec, ok := m.gauges[metric]
 	if ok {
 		return vec
 	}
@@ -198,8 +197,8 @@ func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *
 		labelspkg.LabelNames(labels),
 	)
 
-	m.Registerer.MustRegister(vec)
-	m.Gauges[metric] = vec
+	m.registerer.MustRegister(vec)
+	m.gauges[metric] = vec
 
 	return vec
 }
@@ -227,7 +226,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 // Counter ...
 func (m *MetricStorage) Counter(metric string, labels map[string]string) *prometheus.CounterVec {
 	m.countersLock.RLock()
-	vec, ok := m.Counters[metric]
+	vec, ok := m.counters[metric]
 	m.countersLock.RUnlock()
 	if ok {
 		return vec
@@ -254,7 +253,7 @@ func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string)
 	defer m.countersLock.Unlock()
 
 	// double check
-	vec, ok := m.Counters[metric]
+	vec, ok := m.counters[metric]
 	if ok {
 		return vec
 	}
@@ -268,8 +267,8 @@ func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string)
 		labelspkg.LabelNames(labels),
 	)
 
-	m.Registerer.MustRegister(vec)
-	m.Counters[metric] = vec
+	m.registerer.MustRegister(vec)
+	m.counters[metric] = vec
 
 	return vec
 }
@@ -296,7 +295,7 @@ func (m *MetricStorage) HistogramObserve(metric string, value float64, labels ma
 
 func (m *MetricStorage) Histogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
 	m.histogramsLock.RLock()
-	vec, ok := m.Histograms[metric]
+	vec, ok := m.histograms[metric]
 	m.histogramsLock.RUnlock()
 	if ok {
 		return vec
@@ -322,13 +321,13 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 	defer m.histogramsLock.Unlock()
 
 	// double check
-	vec, ok := m.Histograms[metric]
+	vec, ok := m.histograms[metric]
 	if ok {
 		return vec
 	}
 
 	m.logger.Info("Create metric histogram", slog.String("name", metricName))
-	b, has := m.HistogramBuckets[metric]
+	b, has := m.histogramBuckets[metric]
 	// This shouldn't happen except when entering this concurrently
 	// If there are buckets for this histogram about to be registered, keep them
 	// Otherwise, use the new buckets.
@@ -344,8 +343,8 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 		Buckets: buckets,
 	}, labelspkg.LabelNames(labels))
 
-	m.Registerer.MustRegister(vec)
-	m.Histograms[metric] = vec
+	m.registerer.MustRegister(vec)
+	m.histograms[metric] = vec
 
 	return vec
 }
@@ -465,11 +464,11 @@ func (m *MetricStorage) applyGroupOperations(group string, ops []operation.Metri
 }
 
 func (m *MetricStorage) Handler() http.Handler {
-	if m.Registry == nil {
+	if m.registry == nil {
 		return promhttp.Handler()
 	}
 
-	return promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{
-		Registry: m.Registry,
+	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
+		Registry: m.registry,
 	})
 }
