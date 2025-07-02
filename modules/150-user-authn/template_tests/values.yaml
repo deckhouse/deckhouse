@@ -12,3 +12,32 @@ userAuthn:
   controlPlaneConfigurator:
     enabled: true
     dexCAMode: "DoNotNeed"
+  resources:
+    dex:
+      requests:
+        cpu: "10m"
+        memory: "25Mi"
+      limits:
+        cpu: "20m"
+        memory: "50Mi"
+    kubeconfigGenerator:
+      requests:
+        cpu: "10m"
+        memory: "25Mi"
+      limits:
+        cpu: "20m"
+        memory: "50Mi"
+    basicAuthProxy:
+      requests:
+        cpu: "10m"
+        memory: "25Mi"
+      limits:
+        cpu: "20m"
+        memory: "50Mi"
+    dexAuthenticator:
+      requests:
+        cpu: "10m"
+        memory: "25Mi"
+      limits:
+        cpu: "20m"
+        memory: "50Mi"
