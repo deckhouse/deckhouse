@@ -351,6 +351,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
+		"nodeFeatureDiscovery":     "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nvidiaDevicePlugin":       "imageHash-nodeManager-nvidiaDevicePlugin",
+		"nvidiaMigManager129":      "imageHash-nodeManager-nvidiaMigManager129",
+		"nvidiaMigManager130":      "imageHash-nodeManager-nvidiaMigManager130",
+		"nvidiaMigManager131":      "imageHash-nodeManager-nvidiaMigManager131",
+		"nvidiaMigManager132":      "imageHash-nodeManager-nvidiaMigManager132",
+		"nvidiaMigManager133":      "imageHash-nodeManager-nvidiaMigManager133",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",

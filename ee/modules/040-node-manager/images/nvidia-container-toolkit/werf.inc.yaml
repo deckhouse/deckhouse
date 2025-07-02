@@ -1,0 +1,39 @@
+{{- $version := "1.17.8" }}
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/nvidia-container-toolkit.git /src
+  - cd /src
+  - rm -rf .git hack test
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.23.0.linux-amd64.tar.gz | tar -C /usr/local -xz
+  install:
+  - export GOPATH=/go
+  - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+  - export GIT_COMMIT=$(cat /src/.GIT_HASH)
+  - cd /src
+  - export CLI_VERSION_PACKAGE=github.com/NVIDIA/nvidia-container-toolkit/internal/info
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - make PREFIX=/usr/bin/ cmds
+  - chmod 0700 /usr/bin/nvidia-ctk
