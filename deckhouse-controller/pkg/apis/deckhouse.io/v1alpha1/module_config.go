@@ -28,7 +28,8 @@ const (
 
 	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disabling"
 
-	ModuleConfigFinalizer = "modules.deckhouse.io/module-config"
+	ModuleConfigFinalizerOld = "modules.deckhouse.io/module-config"
+	ModuleConfigFinalizer    = "modules.deckhouse.io/module-registered"
 
 	ModuleConfigMessageUnknownModule = "Ignored: unknown module name"
 )

@@ -431,6 +431,10 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			needsUpdate = true
 		}
+		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
+			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
+			needsUpdate = true
+		}
 		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 			needsUpdate = true
