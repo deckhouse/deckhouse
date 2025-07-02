@@ -101,6 +101,7 @@ func (b *ExtendersStack) DeleteConstraints(module string) {
 
 func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
 	if requirements == nil {
+		// no requirements
 		return nil
 	}
 
