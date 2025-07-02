@@ -22,7 +22,9 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y ca-certificates openssl vim-console bash-completion gettext libexpat libcrypto3 glibc-pthread locale
+  {{- include "alt packages clean" . | nindent 2 }}
   install:
   - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
   - rm -rf /wheels
