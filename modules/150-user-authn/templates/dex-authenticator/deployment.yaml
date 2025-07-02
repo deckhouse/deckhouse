@@ -215,8 +215,10 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" . | nindent 12 }}
   {{- end }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "dex_authenticator_limits" . | nindent 12 }}
+  {{- end }}
         ports:
         - name: dex-https
           containerPort: 8443
@@ -237,6 +239,8 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "redis_resources" . | nindent 12 }}
   {{- end }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "redis_limits" . | nindent 12 }}
+  {{- end }}
 {{- end }}
