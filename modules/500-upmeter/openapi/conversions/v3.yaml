@@ -1,3 +1,6 @@
 version: 3
 conversions:
   - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
+description:
+  ru: "Удалите `.smokeMini.ingressClass` и целиком `.smokeMini`, если его значение пустое."
+  en: "Remove `.smokeMini.ingressClass`, and `.smokeMini` if empty."
