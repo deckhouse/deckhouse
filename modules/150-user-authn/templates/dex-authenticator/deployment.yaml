@@ -1,11 +1,21 @@
 {{- define "dex_authenticator_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: {{ .Values.userAuthn.resources.dexAuthenticator.requests.cpu | default "10m" }}
+memory: {{ .Values.userAuthn.resources.dexAuthenticator.requests.memory | default "25Mi" }}
+{{- end }}
+
+{{- define "dex_authenticator_limits" }}
+cpu: {{ .Values.userAuthn.resources.dexAuthenticator.limits.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.dexAuthenticator.limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- define "redis_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: {{ .Values.userAuthn.resources.redis.requests.cpu | default "10m" }}
+memory: {{ .Values.userAuthn.resources.redis.requests.memory | default "25Mi" }}
+{{- end }}
+
+{{- define "redis_limits" }}
+cpu: {{ .Values.userAuthn.resources.redis.limits.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.redis.limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- $context := . }}
@@ -31,14 +41,12 @@ spec:
       minAllowed:
         {{- include "dex_authenticator_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        {{- include "dex_authenticator_limits" . | nindent 8 }}
     - containerName: "redis"
       minAllowed:
         {{- include "redis_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        {{- include "redis_limits" . | nindent 8 }}
   {{- end }}
 ---
 apiVersion: policy/v1
@@ -119,6 +127,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           limits:
             memory: 10Mi
+            cpu: 20m
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
       containers:
       - name: dex-authenticator
@@ -206,6 +215,8 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" . | nindent 12 }}
   {{- end }}
+          limits:
+            {{- include "dex_authenticator_limits" . | nindent 12 }}
         ports:
         - name: dex-https
           containerPort: 8443
@@ -226,4 +237,6 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "redis_resources" . | nindent 12 }}
   {{- end }}
+          limits:
+            {{- include "redis_limits" . | nindent 12 }}
 {{- end }}
