@@ -52,8 +52,8 @@ resource "vcd_nsxv_snat" "snat" {
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = "org"
-  network_name = var.providerClusterConfiguration.mainNetwork
+  network_type = var.providerClusterConfiguration.edgeGateway.externalNetworkType
+  network_name = var.providerClusterConfiguration.edgeGateway.externalNetworkName
 
   original_address   = var.providerClusterConfiguration.internalNetworkCIDR
   translated_address = var.providerClusterConfiguration.edgeGateway.externalIP
