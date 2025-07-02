@@ -56,6 +56,15 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: setup
+shell:
+  setup:
+    - /tools/setcap cap_net_raw,cap_net_admin=+eip /failover  # Need for run from deckhouse user
 imageSpec:
   config:
     entrypoint: ["/failover-cleaner"]
+    workingDir: /tools
+    clearWorkingDir: true # a hack to delete the setcap binary from final image
