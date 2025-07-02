@@ -6,7 +6,7 @@ locals {
 }
 
 resource "vcd_nsxt_nat_rule" "snat" {
-  count = var.useNSXT ? 1 : 0
+  count = var.useNSXV ? 0 : 1
   org   = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
@@ -21,14 +21,14 @@ resource "vcd_nsxt_nat_rule" "snat" {
 }
 
 data "vcd_nsxt_app_port_profile" "ssh" {
-  count = var.useNSXT ? 1 : 0
+  count = var.useNSXV ? 0 : 1
   org   = var.providerClusterConfiguration.organization
   name  = "SSH"
   scope = "SYSTEM"
 }
 
 resource "vcd_nsxt_nat_rule" "master-dnat" {
-  count = (var.useNSXT && length(local.main_ip_addresses) > 0) ? 1 : 0
+  count = (!var.useNSXV && length(local.main_ip_addresses) > 0) ? 1 : 0
   org   = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
@@ -45,7 +45,7 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 }
 
 resource "vcd_nsxv_snat" "snat" {
-  count = var.useNSXT ? 0 : 1
+  count = var.useNSXV ? 1 : 0
 
   enabled     = true
   description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
@@ -61,15 +61,15 @@ resource "vcd_nsxv_snat" "snat" {
 
 
 resource "vcd_nsxv_dnat" "master-dnat" {
-  count = var.useNSXT ? 0 : 1
+  count = var.useNSXV ? 1 : 0
 
   enabled     = true
   description = format("SSH DNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = "org"
-  network_name = var.nsxvExternalNetwork
+  network_type = var.providerClusterConfiguration.edgeGateway.externalNetworkType
+  network_name = var.providerClusterConfiguration.edgeGateway.externalNetworkName
 
   original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort

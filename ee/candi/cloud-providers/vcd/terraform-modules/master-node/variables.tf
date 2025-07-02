@@ -26,7 +26,7 @@ variable "nodeIndex" {
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -35,14 +35,14 @@ variable "clusterUUID" {
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }
 
 locals {
-  prefix = var.clusterConfiguration.cloud.prefix
-  vapp_name = var.providerClusterConfiguration.virtualApplicationName
+  prefix                = var.clusterConfiguration.cloud.prefix
+  vapp_name             = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
-  main_ip_addresses = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
-  main_network_name = var.providerClusterConfiguration.mainNetwork
+  main_ip_addresses     = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
+  main_network_name     = var.providerClusterConfiguration.mainNetwork
 }
