@@ -1,97 +1,97 @@
 <script>
     $(document).ready(function () {
-        // const sliderContainer = document.querySelector('.filter__slider');
-        // const sliderLeft = document.querySelector('.slider-left');
-        // const sliderRight = document.querySelector('.slider-right');
-        // const sliderRange = document.querySelector('.slider-range');
+        /* const sliderContainer = document.querySelector('.filter__slider');
+        const sliderLeft = document.querySelector('.slider-left');
+        const sliderRight = document.querySelector('.slider-right');
+        const sliderRange = document.querySelector('.slider-range');
 
-        // const minTime = document.querySelectorAll('.min_time');
-        // const maxTime = document.querySelectorAll('.max_time');
+        const minTime = document.querySelectorAll('.min_time');
+        const maxTime = document.querySelectorAll('.max_time');
 
-        // const minValue = 0;
-        // const maxValue = 60;
-        // const sliderWidth = sliderContainer.offsetWidth;
+        const minValue = 0;
+        const maxValue = 60;
+        const sliderWidth = sliderContainer.offsetWidth;
 
-        // let leftPos = 0;
-        // let rightPos = sliderWidth;
-        // let isLeftDragging = false;
-        // let isRightDragging = false;
+        let leftPos = 0;
+        let rightPos = sliderWidth;
+        let isLeftDragging = false;
+        let isRightDragging = false;
 
-        // let initialLeftValue = 0;
-        // let initialRightValue = 60;
+        let initialLeftValue = 0;
+        let initialRightValue = 60;
 
-        // function valueToPossition(value) {
-        //     return ((value - minValue) / (maxValue - minValue)) * sliderWidth;
-        // }
+        function valueToPossition(value) {
+            return ((value - minValue) / (maxValue - minValue)) * sliderWidth;
+        }
 
-        // function positionToValue(position) {
-        //     return minValue + (position / sliderWidth) * (maxValue - minValue);
-        // }
+        function positionToValue(position) {
+            return minValue + (position / sliderWidth) * (maxValue - minValue);
+        }
         
-        // leftPos = valueToPossition(initialLeftValue);
-        // rightPos = valueToPossition(initialRightValue);
+        leftPos = valueToPossition(initialLeftValue);
+        rightPos = valueToPossition(initialRightValue);
 
-        // sliderLeft.style.left = (leftPos - 1) + 'px';
-        // sliderRight.style.left = (rightPos - 15) + 'px';
+        sliderLeft.style.left = (leftPos - 1) + 'px';
+        sliderRight.style.left = (rightPos - 15) + 'px';
 
-        // updateRange();
+        updateRange();
 
-        // sliderLeft.addEventListener('mousedown', e => {
-        //     isLeftDragging = true;
-        //     sliderLeft.style.cursor = 'grabbing';
-        // })
+        sliderLeft.addEventListener('mousedown', e => {
+            isLeftDragging = true;
+            sliderLeft.style.cursor = 'grabbing';
+        })
 
-        // sliderRight.addEventListener('mousedown', e => {
-        //     isRightDragging = true;
-        //     sliderRight.style.cursor = 'grabbing';
-        // })
+        sliderRight.addEventListener('mousedown', e => {
+            isRightDragging = true;
+            sliderRight.style.cursor = 'grabbing';
+        })
 
-        // document.addEventListener('mouseup', () => {
-        //     isLeftDragging = false;
-        //     isRightDragging = false;
-        //     sliderLeft.style.cursor = 'grab';
-        //     sliderRight.style.cursor = 'grab';
-        // })
+        document.addEventListener('mouseup', () => {
+            isLeftDragging = false;
+            isRightDragging = false;
+            sliderLeft.style.cursor = 'grab';
+            sliderRight.style.cursor = 'grab';
+        })
 
-        // document.addEventListener('mousemove', e => {
-        //     if(isLeftDragging) {
-        //         const rect = sliderContainer.getBoundingClientRect();
-        //         let newLeftPos = e.clientX - rect.left;
-        //         newLeftPos = Math.max(0, Math.min(newLeftPos, rightPos));
-        //         leftPos = newLeftPos;
-        //         sliderLeft.style.left = (leftPos - 1) + 'px';
-        //         updateRange();
-        //         updateValue();
-        //     }
+        document.addEventListener('mousemove', e => {
+            if(isLeftDragging) {
+                const rect = sliderContainer.getBoundingClientRect();
+                let newLeftPos = e.clientX - rect.left;
+                newLeftPos = Math.max(0, Math.min(newLeftPos, rightPos));
+                leftPos = newLeftPos;
+                sliderLeft.style.left = (leftPos - 1) + 'px';
+                updateRange();
+                updateValue();
+            }
 
-        //     if(isRightDragging) {
-        //         const rect = sliderContainer.getBoundingClientRect();
-        //         let newRightPos = e.clientX - rect.left;
-        //         newRightPos = Math.min(sliderWidth, Math.max(newRightPos, leftPos));
-        //         rightPos = newRightPos;
-        //         sliderRight.style.left = (rightPos - 15) + 'px';
-        //         updateRange();
-        //         updateValue();
-        //     }
-        // })
+            if(isRightDragging) {
+                const rect = sliderContainer.getBoundingClientRect();
+                let newRightPos = e.clientX - rect.left;
+                newRightPos = Math.min(sliderWidth, Math.max(newRightPos, leftPos));
+                rightPos = newRightPos;
+                sliderRight.style.left = (rightPos - 15) + 'px';
+                updateRange();
+                updateValue();
+            }
+        })
 
-        // function updateRange() {
-        //     sliderRange.style.left = leftPos + 'px';
-        //     sliderRange.style.width = (rightPos - leftPos) + 'px';
-        // }
+        function updateRange() {
+            sliderRange.style.left = leftPos + 'px';
+            sliderRange.style.width = (rightPos - leftPos) + 'px';
+        }
 
-        // function updateValue() {
-        //     let leftValue = Math.round(positionToValue(leftPos));
-        //     let rightValue = Math.round(positionToValue(rightPos));
+        function updateValue() {
+            let leftValue = Math.round(positionToValue(leftPos));
+            let rightValue = Math.round(positionToValue(rightPos));
 
-        //     for(const time of minTime) {
-        //         time.textContent = leftValue;
-        //     }
+            for(const time of minTime) {
+                time.textContent = leftValue;
+            }
 
-        //     for(const time of maxTime) {
-        //         time.textContent = rightValue;
-        //     }
-        // }
+            for(const time of maxTime) {
+                time.textContent = rightValue;
+            }
+        } */
 
         const filterCheckboxes = document.querySelector('.filter__checkboxes');
         const articles = document.querySelectorAll('.button-tile');
@@ -148,12 +148,12 @@
             });
             filterArticles();
 
-            // leftPos = valueToPossition(initialLeftValue);
-            // rightPos = valueToPossition(initialRightValue);
-            // sliderLeft.style.left = (leftPos - 1) + 'px';
-            // sliderRight.style.left = (rightPos - 15) + 'px';
-            // updateRange();
-            // updateValue();
+            /*leftPos = valueToPossition(initialLeftValue);
+            rightPos = valueToPossition(initialRightValue);
+            sliderLeft.style.left = (leftPos - 1) + 'px';
+            sliderRight.style.left = (rightPos - 15) + 'px';
+            updateRange();
+            updateValue();*/
         })
 
         createFilters();
