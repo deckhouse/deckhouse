@@ -22,11 +22,10 @@
     ]
   },
   "description": "A dashboard to visualize metrics about the Vertical Pod Autoscalar (https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 14588,
   "graphTooltip": 1,
-  "id": 34,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -132,7 +131,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(vpa_target_recommendation{resource=\"memory\", namespace=\"$namespace\", target_name=~\"$targetName\",  job=\"kube-state-metrics\"}) by (controller_type, controller_name, container)",
+          "expr": "sum(vpa_target_recommendation{resource=\"memory\", namespace=\"$namespace\", target_name=~\"$targetName\", container=~\"$container\", job=\"kube-state-metrics\"}) by (controller_type, controller_name, container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{controller_type}}/{{controller_name}}, container: {{container}}",
@@ -288,7 +287,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$targetName(.+)\", container!=\"\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -301,7 +300,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -567,7 +566,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$targetName-(.+)\", container!=\"\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -580,7 +579,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$targetName(.+)\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -725,9 +724,9 @@
     "list": [
       {
         "current": {
-          "selected": true,
-          "text": "default",
-          "value": "default"
+          "selected": false,
+          "text": "main",
+          "value": "P0D6E4079E36703EB"
         },
         "hide": 0,
         "includeAll": false,
@@ -744,15 +743,20 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "d8-admission-policy-engine",
-          "value": "d8-admission-policy-engine"
+          "selected": true,
+          "text": "d8-monitoring",
+          "value": "d8-monitoring"
         },
         "datasource": {
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
         "definition": "label_values(kube_pod_info,namespace)",
+        "error": {
+          "data": {
+            "message": "Unexpected error"
+          }
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -773,9 +777,9 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
-          "text": "gatekeeper-controller-manager",
-          "value": "gatekeeper-controller-manager"
+          "selected": true,
+          "text": "prometheus-main",
+          "value": "prometheus-main"
         },
         "datasource": {
           "type": "prometheus",
@@ -797,6 +801,72 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "prometheus-main-0"
+          ],
+          "value": [
+            "prometheus-main-0"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(kube_controller_pod{namespace=\"$namespace\", controller_name=~\"$targetName\"},pod)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(kube_controller_pod{namespace=\"$namespace\", controller_name=~\"$targetName\"},pod)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "prometheus"
+          ],
+          "value": [
+            "prometheus"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=~\"$pod\"},container)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Container",
+        "multi": true,
+        "name": "container",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=~\"$pod\"},container)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
         "type": "query"
       }
     ]
