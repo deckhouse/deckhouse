@@ -670,9 +670,9 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 
-## Настройка ресурсов Sidecar в Istio
+## Настройка ресурсов istio-proxy sidecar
 
-Для переопределения глобальных ограничений ресурсов для Sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
+Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
 
 ### Поддерживаемые аннотации
 
@@ -691,11 +691,15 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
+  ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
 # ... остальная часть манифеста
 ```
 
@@ -705,11 +709,15 @@ metadata:
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  annotations:
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
+  ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
 # ... остальная часть манифеста
 ```
 

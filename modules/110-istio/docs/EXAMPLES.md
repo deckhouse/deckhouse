@@ -707,12 +707,16 @@ For ReplicaSets:
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  annotations:
-    sidecar.istio.io/proxyCPU: 200m
-    sidecar.istio.io/proxyCPULimit: "1"
-    sidecar.istio.io/proxyMemory: 128Mi
-    sidecar.istio.io/proxyMemoryLimit: 512Mi
-# ... rest of your replicaset spec
+  ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your deployment spec
 ```
 
 For Pod:
