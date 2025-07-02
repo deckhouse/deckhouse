@@ -1,6 +1,11 @@
 {{- define "kubeconfig_generator_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: {{ .Values.userAuthn.resources.kubeconfigGenerator.requests.cpu | default "10m" }}
+memory: {{ .Values.userAuthn.resources.kubeconfigGenerator.requests.memory | default "25Mi" }}
+{{- end }}
+
+{{- define "kubeconfig_generator_limits" }}
+cpu: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
@@ -25,8 +30,7 @@ spec:
       minAllowed:
         {{- include "kubeconfig_generator_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        {{- include "kubeconfig_generator_limits" . | nindent 8 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -96,4 +100,6 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "kubeconfig_generator_resources" . | nindent 12 }}
   {{- end }}
+          limits:
+            {{- include "kubeconfig_generator_limits" . | nindent 12 }}
 {{- end }}

@@ -237,3 +237,199 @@ properties:
       dexCustomCA:
         type: string
         description: 'The CA to use if `dexCAMode` is `Custom`. Plain text (no base64).'
+  resources:
+    type: object
+    default: {}
+    description: 'Resource limits and requests configuration for user-authn components.'
+    x-examples:
+    - dex:
+        requests:
+          cpu: "10m"
+          memory: "25Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+      kubeconfigGenerator:
+        requests:
+          cpu: "10m"
+          memory: "25Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+      basicAuthProxy:
+        requests:
+          cpu: "10m"
+          memory: "25Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+      dexAuthenticator:
+        requests:
+          cpu: "10m"
+          memory: "25Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+      redis:
+        requests:
+          cpu: "10m"
+          memory: "25Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+    properties:
+      dex:
+        type: object
+        default: {}
+        description: 'Resource configuration for Dex OIDC provider.'
+        properties:
+          requests:
+            type: object
+            default: {}
+            description: 'Resource requests for Dex container.'
+            properties:
+              cpu:
+                type: string
+                default: '10m'
+                description: 'CPU request for Dex container.'
+              memory:
+                type: string
+                default: '25Mi'
+                description: 'Memory request for Dex container.'
+          limits:
+            type: object
+            default: {}
+            description: 'Resource limits for Dex container.'
+            properties:
+              cpu:
+                type: string
+                default: '20m'
+                description: 'CPU limit for Dex container.'
+              memory:
+                type: string
+                default: '50Mi'
+                description: 'Memory limit for Dex container.'
+      kubeconfigGenerator:
+        type: object
+        default: {}
+        description: 'Resource configuration for kubeconfig generator.'
+        properties:
+          requests:
+            type: object
+            default: {}
+            description: 'Resource requests for kubeconfig generator container.'
+            properties:
+              cpu:
+                type: string
+                default: '10m'
+                description: 'CPU request for kubeconfig generator container.'
+              memory:
+                type: string
+                default: '25Mi'
+                description: 'Memory request for kubeconfig generator container.'
+          limits:
+            type: object
+            default: {}
+            description: 'Resource limits for kubeconfig generator container.'
+            properties:
+              cpu:
+                type: string
+                default: '20m'
+                description: 'CPU limit for kubeconfig generator container.'
+              memory:
+                type: string
+                default: '50Mi'
+                description: 'Memory limit for kubeconfig generator container.'
+      basicAuthProxy:
+        type: object
+        default: {}
+        description: 'Resource configuration for basic auth proxy.'
+        properties:
+          requests:
+            type: object
+            default: {}
+            description: 'Resource requests for basic auth proxy container.'
+            properties:
+              cpu:
+                type: string
+                default: '10m'
+                description: 'CPU request for basic auth proxy container.'
+              memory:
+                type: string
+                default: '25Mi'
+                description: 'Memory request for basic auth proxy container.'
+          limits:
+            type: object
+            default: {}
+            description: 'Resource limits for basic auth proxy container.'
+            properties:
+              cpu:
+                type: string
+                default: '20m'
+                description: 'CPU limit for basic auth proxy container.'
+              memory:
+                type: string
+                default: '50Mi'
+                description: 'Memory limit for basic auth proxy container.'
+      dexAuthenticator:
+        type: object
+        default: {}
+        description: 'Resource configuration for Dex authenticator.'
+        properties:
+          requests:
+            type: object
+            default: {}
+            description: 'Resource requests for Dex authenticator container.'
+            properties:
+              cpu:
+                type: string
+                default: '10m'
+                description: 'CPU request for Dex authenticator container.'
+              memory:
+                type: string
+                default: '25Mi'
+                description: 'Memory request for Dex authenticator container.'
+          limits:
+            type: object
+            default: {}
+            description: 'Resource limits for Dex authenticator container.'
+            properties:
+              cpu:
+                type: string
+                default: '20m'
+                description: 'CPU limit for Dex authenticator container.'
+              memory:
+                type: string
+                default: '50Mi'
+                description: 'Memory limit for Dex authenticator container.'
+      redis:
+        type: object
+        default: {}
+        description: 'Resource configuration for Redis container (used by Dex authenticator).'
+        properties:
+          requests:
+            type: object
+            default: {}
+            description: 'Resource requests for Redis container.'
+            properties:
+              cpu:
+                type: string
+                default: '10m'
+                description: 'CPU request for Redis container.'
+              memory:
+                type: string
+                default: '25Mi'
+                description: 'Memory request for Redis container.'
+          limits:
+            type: object
+            default: {}
+            description: 'Resource limits for Redis container.'
+            properties:
+              cpu:
+                type: string
+                default: '20m'
+                description: 'CPU limit for Redis container.'
+              memory:
+                type: string
+                default: '50Mi'
+                description: 'Memory limit for Redis container.'

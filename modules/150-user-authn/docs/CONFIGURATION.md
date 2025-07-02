@@ -11,3 +11,63 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 **Caution!** When this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to Dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, go to `https://kubeconfig.<modules.publicDomainTemplate>/`, log in to your external provider's account and copy the shell commands to your console.
 
 **Caution!** The API server requires [additional configuration](faq.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/control-plane-manager/) module (enabled by default) automates this process.
+
+## Resource Configuration
+
+The module allows you to configure resource limits and requests for all components. By default, the following values are used:
+
+- **Dex OIDC Provider**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+
+### Example Configuration
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: v1
+  settings:
+    resources:
+      dex:
+        requests:
+          cpu: "20m"
+          memory: "50Mi"
+        limits:
+          cpu: "50m"
+          memory: "100Mi"
+      kubeconfigGenerator:
+        requests:
+          cpu: "15m"
+          memory: "40Mi"
+        limits:
+          cpu: "30m"
+          memory: "80Mi"
+      basicAuthProxy:
+        requests:
+          cpu: "10m"
+          memory: "30Mi"
+        limits:
+          cpu: "25m"
+          memory: "60Mi"
+      dexAuthenticator:
+        requests:
+          cpu: "15m"
+          memory: "40Mi"
+        limits:
+          cpu: "40m"
+          memory: "80Mi"
+      redis:
+        requests:
+          cpu: "10m"
+          memory: "30Mi"
+        limits:
+          cpu: "20m"
+          memory: "50Mi"
+```
+
+**Note:** When Vertical Pod Autoscaler (VPA) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.

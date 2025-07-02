@@ -1,6 +1,11 @@
 {{- define "dex_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "10m" }}
+memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "25Mi" }}
+{{- end }}
+
+{{- define "dex_limits" }}
+cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -24,8 +29,7 @@ spec:
       minAllowed:
         {{- include "dex_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        {{- include "dex_limits" . | nindent 8 }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
@@ -132,6 +136,8 @@ spec:
 {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_resources" . | nindent 12 }}
 {{- end }}
+          limits:
+            {{- include "dex_limits" . | nindent 12 }}
 
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -172,6 +178,8 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
+          limits:
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
         livenessProbe:
           httpGet:
             path: /healthz/live
