@@ -17,12 +17,12 @@ limitations under the License.
 package client
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 
 	"caps-controller-manager/internal/event"
 
 	"k8s.io/client-go/util/workqueue"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // Client is a client that executes commands on hosts using the OpenSSH client.
