@@ -100,6 +100,8 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "kubeconfig_generator_resources" . | nindent 12 }}
   {{- end }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "kubeconfig_generator_limits" . | nindent 12 }}
+  {{- end }}
 {{- end }}
