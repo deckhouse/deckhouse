@@ -22,3 +22,8 @@ variable "edgeGatewayId" {
 variable "useNSXT" {
   type = bool
 }
+
+variable "nsxvExternalNetwork" {
+  type    = string
+  default = "value"
+}
