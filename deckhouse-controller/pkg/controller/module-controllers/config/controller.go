@@ -191,17 +191,11 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	var needsUpdate bool
-
-	var patch client.Patch
-
+	// TODO: remove after 1.73+
 	if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
-		patch = client.MergeFrom(moduleConfig.DeepCopy())
+		patch := client.MergeFrom(moduleConfig.DeepCopy())
 		controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
-		needsUpdate = true
-	}
 
-	if needsUpdate {
 		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
 			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
 			return ctrl.Result{}, err

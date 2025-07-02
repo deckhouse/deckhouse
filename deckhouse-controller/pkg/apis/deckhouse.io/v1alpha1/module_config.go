@@ -28,6 +28,7 @@ const (
 
 	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disabling"
 
+	// TODO: remove after 1.73+
 	ModuleConfigFinalizerOld = "modules.deckhouse.io/module-config"
 	ModuleConfigFinalizer    = "modules.deckhouse.io/module-registered"
 
