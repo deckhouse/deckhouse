@@ -34,30 +34,9 @@
 
 {{- define "nvidia_node_selector" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $strategy := index . 1 }} {{- /* strategy, one of "device-plugin" "gfd" "mig-manager" "any" */ -}}
-  {{- $name := index . 2 | default "" }}
-  
-  {{- if eq $strategy "device-plugin" }}
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: nvidia.com/gpu.deploy.device-plugin
-              operator: In
-              values:
-              - "true"
-        - matchExpressions:
-            - key: nvidia.com/gpu.count
-              operator: Gt
-              values:
-              - "0"
-        - matchExpressions:
-            - key: node.deckhouse.io/group
-              operator: In
-              values:
-              - {{ $name | quote }}
-  {{- else if eq $strategy "gfd" }}
+  {{- $strategy := index . 1 }} {{- /* strategy, one of "gfd" "mig-manager" "any" */ -}}
+
+  {{- if eq $strategy "gfd" }}
 affinity:
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
