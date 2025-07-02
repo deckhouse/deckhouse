@@ -31,3 +31,25 @@
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- define "nvidia_node_selector" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $strategy := index . 1 }} {{- /* strategy, one of "device-plugin" "gfd" "mig-manager" "any" */ -}}
+  
+  {{- if eq $strategy "device-plugin" }}
+nodeSelector:
+  nvidia.com/gpu.deploy.device-plugin: "true"
+  {{- else if eq $strategy "gfd" }}
+nodeSelector:
+  feature.node.kubernetes.io/pci-10de.present: "true"
+  feature.node.kubernetes.io/pci-0302_10de.present: "true"
+  feature.node.kubernetes.io/pci-0300_10de.present: "true"
+  fnvidia.com/gpu.deploy.gpu-feature-discovery: "true"
+  {{- else if eq $strategy "mig-manager" }}
+nodeSelector:
+  nvidia.com/mig.capable: "true"
+  {{- else if eq $strategy "any" }}
+nodeSelector:
+  node.deckhouse.io/gpu: "" 
+  {{- end }}
+{{- end }}
