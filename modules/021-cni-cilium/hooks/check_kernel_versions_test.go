@@ -103,11 +103,11 @@ status:
 		})
 	})
 
-	Context("Module cni-cilium with extraLBAlgorithmsEnabled parameter is enabled", func() {
+	Context("Module cni-cilium with extraLoadBalancerAlgorithmsEnabled parameter is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
 			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
-			f.ValuesSet("cniCilium.internal.extraLBAlgorithmsEnabled", true)
+			f.ValuesSet("cniCilium.internal.extraLoadBalancerAlgorithmsEnabled", true)
 			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 
 			f.RunHook()

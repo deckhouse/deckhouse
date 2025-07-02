@@ -65,7 +65,7 @@ properties:
   activeL2NeighborDiscoveryEnabled:
     description: |
       Включает механизм `L2 neighbor discovery`, который помогает гарантировать актуальность записей в таблице ARP на всех узлах кластера.
-  extraLBAlgorithmsEnabled:
+  extraLoadBalancerAlgorithmsEnabled:
     description: |
       Позволяет избирательно переопределить алгоритм балансировки с помощью eBPF между бэкендами для отдельных сервисов. Для переопределения используется аннотация `cilium.io/bpf-lb-algorithm` с одним из значений: `random`, `maglev` или `least-conn`.
       

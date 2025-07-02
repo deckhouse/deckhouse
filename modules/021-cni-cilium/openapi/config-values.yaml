@@ -91,7 +91,7 @@ properties:
     default: true
     description: |
       Enables the Cilium `L2 neighbor discovery` mechanism, which helps ensure that ARP table entries are kept up-to-date on all cluster nodes.
-  extraLBAlgorithmsEnabled:
+  extraLoadBalancerAlgorithmsEnabled:
     type: boolean
     default: false
     description: |
