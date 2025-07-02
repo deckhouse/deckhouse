@@ -30,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+// !
+
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
 	return fmt.Errorf("cluster managed by another commander %s unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
 }
