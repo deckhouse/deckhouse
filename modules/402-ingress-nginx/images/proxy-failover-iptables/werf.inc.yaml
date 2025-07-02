@@ -82,13 +82,8 @@ shell:
     - |
       echo "🔍 Scanning /usr/sbin for iptables binaries..."
       for bin in /usr/sbin/iptables*; do
-        if [ -f "$bin" ] && file "$bin" | grep -q 'ELF'; then
           echo "✅ Found binary: $bin"
           /tools/setcap cap_net_raw,cap_net_admin=+eip "$bin"
-          getcap "$bin"
-        else
-          echo "⚠️ Skipping non-ELF or non-regular file: $bin"
-        fi
       done
 
 imageSpec:
