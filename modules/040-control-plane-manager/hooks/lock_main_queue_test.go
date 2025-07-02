@@ -54,7 +54,7 @@ metadata:
 status:
   conditions:
   - type: Ready
-    status: 'True'
+    status: 'False'
 ---
 `
 		runningNotReadyPods = `
