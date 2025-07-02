@@ -40,11 +40,30 @@
 nodeSelector:
   nvidia.com/gpu.deploy.device-plugin: "true"
   {{- else if eq $strategy "gfd" }}
-nodeSelector:
-  feature.node.kubernetes.io/pci-10de.present: "true"
-  feature.node.kubernetes.io/pci-0302_10de.present: "true"
-  feature.node.kubernetes.io/pci-0300_10de.present: "true"
-  fnvidia.com/gpu.deploy.gpu-feature-discovery: "true"
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-0302_10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-0300_10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: nvidia.com/gpu.deploy.gpu-feature-discovery
+              operator: In
+              values:
+                - "true"
   {{- else if eq $strategy "mig-manager" }}
 nodeSelector:
   nvidia.com/mig.capable: "true"
