@@ -147,7 +147,12 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	readyCount := 0
 	for _, spod := range snap {
 		pod := spod.(controlPlaneManagerPod)
-		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
+
+		if pod.Generation < dsGenerationStr {
+			return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
+		}
+
+		if pod.NodeName == "" {
 			continue
 		}
 		expectedReadyPodsCount++
