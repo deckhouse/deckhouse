@@ -300,6 +300,17 @@ apiVersions:
               minimum: 1
               maximum: 65535
               example: 10022
+            externalNetworkName:
+              type: string
+              description: |
+                External network name for build DNAT rule for master node.
+                Required only if `type` is `NSX-V`.
+            externalNetworkType:
+              type: string
+              description: |
+                External network type for build DNAT rule for master node.
+                Required only if `type` is `NSX-V`.
+              enum: [isolated, routed, direct, external]
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).

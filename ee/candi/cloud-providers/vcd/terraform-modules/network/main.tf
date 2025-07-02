@@ -14,7 +14,7 @@ resource "vcd_network_routed_v2" "network" {
 }
 
 resource "vcd_nsxt_network_dhcp" "pools" {
-  count = var.useNSXT ? 1 : 0
+  count = var.useNSXV ? 0 : 1
 
   org_network_id = vcd_network_routed_v2.network.id
   dns_servers    = var.providerClusterConfiguration.internalNetworkDNSServers
