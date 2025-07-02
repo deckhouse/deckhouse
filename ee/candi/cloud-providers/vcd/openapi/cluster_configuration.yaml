@@ -310,7 +310,7 @@ apiVersions:
               description: |
                 External network type for build DNAT rule for master node.
                 Required only if `type` is `NSX-V`.
-              enum: [isolated, routed, direct, external]
+              enum: [org, ext]
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
