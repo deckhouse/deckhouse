@@ -89,6 +89,12 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 		}
 	}
 
+	if len(requirements.AllowExperimentalModules) > 0 {
+		if err := b.Experimental.AddConstraint(module, requirements.AllowExperimentalModules); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -97,6 +103,7 @@ func (b *ExtendersStack) DeleteConstraints(module string) {
 	b.KubernetesVersion.DeleteConstraint(module)
 	b.Bootstrapped.DeleteConstraint(module)
 	b.ModuleDependency.DeleteConstraint(module)
+	b.Experimental.DeleteConstraint(module)
 }
 
 func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
@@ -132,5 +139,6 @@ func (b *ExtendersStack) IsExtendersField(field string) bool {
 		v1alpha1.DeckhouseRequirementFieldName,
 		v1alpha1.BootstrappedRequirementFieldName,
 		v1alpha1.ModuleDependencyRequirementFieldName,
+		v1alpha1.AllowExperimentalModulesRequirementFieldName,
 	}, field)
 }

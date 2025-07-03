@@ -84,10 +84,11 @@ const (
 	ModuleMessageInstalling                  = "installing"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
 
-	DeckhouseRequirementFieldName        string = "deckhouse"
-	KubernetesRequirementFieldName       string = "kubernetes"
-	BootstrappedRequirementFieldName     string = "bootstrapped"
-	ModuleDependencyRequirementFieldName string = "modules"
+	DeckhouseRequirementFieldName                string = "deckhouse"
+	KubernetesRequirementFieldName               string = "kubernetes"
+	BootstrappedRequirementFieldName             string = "bootstrapped"
+	ModuleDependencyRequirementFieldName         string = "modules"
+	AllowExperimentalModulesRequirementFieldName string = "allowExperimentalModules"
 )
 
 var (
@@ -142,9 +143,10 @@ type ModuleRequirements struct {
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
-	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	Deckhouse                string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes               string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	Bootstrapped             string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	AllowExperimentalModules string `json:"allowExperimentalModules,omitempty" yaml:"allowExperimentalModules,omitempty"`
 }
 
 type ModuleProperties struct {
