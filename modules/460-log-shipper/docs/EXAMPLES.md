@@ -828,7 +828,7 @@ spec:
         source: "."
         target: "_"
         labels:
-          - pod_labels
+          - .pod_labels
 ```
 
 Example original log entry:
@@ -867,7 +867,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - example
+          - .example
 ```
 
 #### Example of removing a specific label from a structured message
@@ -890,7 +890,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - message.example
+          - .message.example
 ```
 
 Example original log entry:

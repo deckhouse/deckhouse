@@ -826,7 +826,7 @@ spec:
         source: "."
         target: "_"
         labels:
-          - pod_labels
+          - .pod_labels
 ```
 
 Пример изначальной записи в логе:
@@ -865,7 +865,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - example
+          - .example
 ```
 
 #### Пример удаления заданного лейбла из структурированного сообщения
@@ -888,7 +888,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - message.example
+          - .message.example
 ```
 
 Пример изначальной записи в логе:

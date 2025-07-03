@@ -432,7 +432,7 @@ spec:
                             source: "."
                             target: "_"
                             labels:
-                              - pod_labels
+                              - .pod_labels
                         ```
 
                       - `ParseMessage`: Если может преобразует поле `message` из заданого в `sourceFormat` формата в обект.
@@ -475,8 +475,8 @@ spec:
                         - action: DropLabels
                           dropLabels:
                             labels:
-                              - first
-                              - second
+                              - .first
+                              - .second
                         ```
 
                   items:
