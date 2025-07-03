@@ -144,11 +144,15 @@ mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/build
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}  
 shell:
   install:
   - export CGO_ENABLED=1
   - export ALTWRAP_LLVM_VERSION=18.1
   - export GCC_VERSION=12
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - mkdir -p /out/usr/share/falco/plugins
   {{- if $.DistroPackagesProxy }}
   - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" /src/plugins/k8smeta/test/CMakeLists.txt
