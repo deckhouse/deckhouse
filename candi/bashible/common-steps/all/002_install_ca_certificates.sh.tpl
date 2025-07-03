@@ -21,7 +21,7 @@ mkdir -p /opt/deckhouse/share/ca-certificates/
     {{- range $mirror := $host_values.mirrors }}
       {{- if $mirror.ca }}
 
-bb-log-info "Sync CA for {{ $mirror.host }}"
+bb-log-info "Sync registry CA for {{ $mirror.host }}"
 bb-sync-file "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt" - << "EOF"
 {{ $mirror.ca }}
 EOF

@@ -276,7 +276,14 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			return fmt.Errorf("unable to unmarshal registry configuration: %v", err)
 		}
 	}
-
+	if m.RegistryConfig.DirectModeProperties != nil {
+		m.RegistryConfig.DirectModeProperties.ImagesRepo = strings.TrimRight(
+			strings.TrimSpace(m.RegistryConfig.DirectModeProperties.ImagesRepo), "/")
+	}
+	if m.RegistryConfig.ProxyModeProperties != nil {
+		m.RegistryConfig.ProxyModeProperties.ImagesRepo = strings.TrimRight(
+			m.RegistryConfig.ProxyModeProperties.ImagesRepo, "/")
+	}
 	var err error
 	m.Registry, m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable, err = NewRegistryCfg(m.RegistryConfig)
 	return err
@@ -297,13 +304,6 @@ func (m *MetaConfig) GetClusterDomain() (string, error) {
 		return clusterDomain, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
 	}
 	return clusterDomain, nil
-}
-
-func validateHTTPRegistryScheme(scheme string, CA string) error {
-	if strings.ToLower(scheme) == "http" && len(CA) > 0 {
-		return fmt.Errorf("registry CA is not allowed for HTTP scheme")
-	}
-	return nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -434,7 +434,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.KubeadmTemplatesContext()
+	registryData, err := m.Registry.KubeadmTemplatesCtx()
 	if err != nil {
 		return nil, err
 	}
@@ -487,6 +487,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
+	registryData, err := m.Registry.BashibleBundleTemplateCtx()
+	if err != nil {
+		return nil, err
+	}
+
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -511,11 +516,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		if proxyData != nil {
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
-	}
-
-	registryData, err := m.Registry.BashibleBundleTemplateContext()
-	if err != nil {
-		return nil, err
 	}
 
 	configForBashibleBundleTemplate["registry"] = registryData

@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 type Registry struct {
@@ -72,38 +73,6 @@ type RegistryPKI struct {
 type CertKey struct {
 	Cert string
 	Key  string
-}
-
-type BashibleCtxRegistry struct {
-	RegistryModuleEnable bool                                `json:"registryModuleEnable" yaml:"registryModuleEnable"`
-	Mode                 registry_const.ModeType             `json:"mode" yaml:"mode"`
-	Version              string                              `json:"version" yaml:"version"`
-	ImagesBase           string                              `json:"imagesBase" yaml:"imagesBase"`
-	ProxyEndpoints       []string                            `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
-	Hosts                map[string]BashibleCtxRegistryHosts `json:"hosts" yaml:"hosts"`
-}
-
-type BashibleCtxRegistryHosts struct {
-	Mirrors []BashibleCtxRegistryMirrorHost `json:"mirrors" yaml:"mirrors"`
-}
-
-type BashibleCtxRegistryMirrorHost struct {
-	Host     string                       `json:"host" yaml:"host"`
-	Scheme   string                       `json:"scheme" yaml:"scheme"`
-	CA       string                       `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Auth     BashibleCtxRegistryAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rewrites []BashibleCtxRegistryRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
-}
-
-type BashibleCtxRegistryAuth struct {
-	Username string `json:"username" yaml:"username"`
-	Password string `json:"password" yaml:"password"`
-	Auth     string `json:"auth" yaml:"auth"`
-}
-
-type BashibleCtxRegistryRewrite struct {
-	From string `json:"from" yaml:"from"`
-	To   string `json:"to" yaml:"to"`
 }
 
 func NewRegistryCfg(registryClusterCfg RegistryClusterConfig) (registryCfg Registry, isDataDeviceEnable bool, err error) {
@@ -284,11 +253,11 @@ func (r Registry) DeepCopy() Registry {
 	}
 }
 
-func (r Registry) KubeadmTemplatesContext() (map[string]interface{}, error) {
-	return r.Data.ConvertToMap()
+func (r Registry) KubeadmTemplatesCtx() (map[string]interface{}, error) {
+	return r.Data.toMap()
 }
 
-func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error) {
+func (r Registry) BashibleBundleTemplateCtx() (map[string]interface{}, error) {
 	// prepare common data
 	imagesBase := strings.TrimRight(r.Data.Address, "/")
 	if path := strings.TrimLeft(r.Data.Path, "/"); path != "" {
@@ -300,11 +269,11 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	}
 
 	// prepare mirrror and proxy endpoints
-	mirror := BashibleCtxRegistryMirrorHost{
+	mirror := bashible.ContextMirrorHost{
 		Host:   r.Data.Address,
 		CA:     r.Data.CA,
 		Scheme: r.Data.Scheme,
-		Auth: BashibleCtxRegistryAuth{
+		Auth: bashible.ContextAuth{
 			Auth: auth,
 		},
 	}
@@ -312,11 +281,11 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	registryModuleEnable := false
 	if registry_const.ShouldRunStaticPodRegistry(r.Mode()) {
 		// If static pod registry
-		mirror = BashibleCtxRegistryMirrorHost{
+		mirror = bashible.ContextMirrorHost{
 			Host:   registry_const.ProxyHost,
 			CA:     r.Data.CA,
 			Scheme: r.Data.Scheme,
-			Auth: BashibleCtxRegistryAuth{
+			Auth: bashible.ContextAuth{
 				Auth: auth,
 			},
 		}
@@ -326,18 +295,18 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		registryModuleEnable = true
 	}
 
-	cfg := BashibleCtxRegistry{
+	cfg := bashible.Context{
 		RegistryModuleEnable: registryModuleEnable,
 		Mode:                 r.Mode(),
 		Version:              registry_const.UnknownVersion,
 		ImagesBase:           imagesBase,
 		ProxyEndpoints:       proxyEndpoints,
-		Hosts: map[string]BashibleCtxRegistryHosts{
-			r.Data.Address: {Mirrors: []BashibleCtxRegistryMirrorHost{mirror}},
+		Hosts: map[string]bashible.ContextHosts{
+			r.Data.Address: {Mirrors: []bashible.ContextMirrorHost{mirror}},
 		},
 	}
 
-	mapData, err := ToMap(cfg)
+	mapData, err := cfg.ToMap()
 	if err != nil {
 		return nil, err
 	}
@@ -349,16 +318,16 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		proxyMapData := map[string]interface{}{}
 		var err error
 
-		proxyMapData["upstreamRegistryData"], err = modeSpecificFields.UpstreamRegistryData.ConvertToMap()
+		proxyMapData["upstreamRegistryData"], err = modeSpecificFields.UpstreamRegistryData.toMap()
 		if err != nil {
 			return nil, err
 		}
 		proxyMapData["internalRegistryTTL"] = modeSpecificFields.InternalRegistryTTL.String()
-		proxyMapData["internalRegistryPKI"], err = modeSpecificFields.InternalRegistryPKI.convertToMap()
+		proxyMapData["internalRegistryPKI"], err = modeSpecificFields.InternalRegistryPKI.toMap()
 		if err != nil {
 			return nil, err
 		}
-		proxyMapData["internalRegistryData"], err = r.Data.ConvertToMap()
+		proxyMapData["internalRegistryData"], err = r.Data.toMap()
 		if err != nil {
 			return nil, err
 		}
@@ -367,11 +336,11 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 		detachedMapData := map[string]interface{}{}
 		var err error
 
-		detachedMapData["internalRegistryPKI"], err = modeSpecificFields.InternalRegistryPKI.convertToMap()
+		detachedMapData["internalRegistryPKI"], err = modeSpecificFields.InternalRegistryPKI.toMap()
 		if err != nil {
 			return nil, err
 		}
-		detachedMapData["internalRegistryData"], err = r.Data.ConvertToMap()
+		detachedMapData["internalRegistryData"], err = r.Data.toMap()
 		if err != nil {
 			return nil, err
 		}
@@ -383,20 +352,22 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	return mapData, nil
 }
 
-func (rData *RegistryData) ConvertToMap() (map[string]interface{}, error) {
+func (r *RegistryData) toMap() (map[string]interface{}, error) {
+	log.DebugF("registry data: %v\n", r)
+
 	ret := map[string]interface{}{
-		"address":   rData.Address,
-		"path":      rData.Path,
-		"scheme":    rData.Scheme,
-		"ca":        rData.CA,
-		"dockerCfg": rData.DockerCfg,
+		"address":   r.Address,
+		"path":      r.Path,
+		"scheme":    r.Scheme,
+		"ca":        r.CA,
+		"dockerCfg": r.DockerCfg,
 	}
-	if rData.DockerCfg != "" {
-		auth, err := rData.Auth()
+
+	if r.DockerCfg != "" {
+		auth, err := r.Auth()
 		if err != nil {
 			return nil, err
 		}
-
 		ret["auth"] = auth
 	}
 	return ret, nil
@@ -459,14 +430,14 @@ func (r *UpstreamRegistryData) ToRegistryData() (registryData RegistryData, err 
 	return
 }
 
-func (rData *UpstreamRegistryData) ConvertToMap() (map[string]interface{}, error) {
+func (r *UpstreamRegistryData) toMap() (map[string]interface{}, error) {
 	data := map[string]interface{}{
-		"address":  rData.Address,
-		"path":     rData.Path,
-		"scheme":   rData.Scheme,
-		"ca":       rData.CA,
-		"username": rData.Username,
-		"password": rData.Password,
+		"address":  r.Address,
+		"path":     r.Path,
+		"scheme":   r.Scheme,
+		"ca":       r.CA,
+		"username": r.Username,
+		"password": r.Password,
 	}
 	return data, nil
 }
@@ -495,21 +466,21 @@ func (d RegistryPKI) DeepCopy() RegistryPKI {
 	}
 }
 
-func (d *RegistryPKI) convertToMap() (map[string]interface{}, error) {
+func (pki *RegistryPKI) toMap() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"ca": map[string]interface{}{
-			"cert": d.CA.Cert,
-			"key":  d.CA.Key,
+			"cert": pki.CA.Cert,
+			"key":  pki.CA.Key,
 		},
 		"userRW": map[string]interface{}{
-			"name":         d.UserRW.Name,
-			"password":     d.UserRW.Password,
-			"passwordHash": d.UserRW.PasswordHash,
+			"name":         pki.UserRW.Name,
+			"password":     pki.UserRW.Password,
+			"passwordHash": pki.UserRW.PasswordHash,
 		},
 		"userRO": map[string]interface{}{
-			"name":         d.UserRO.Name,
-			"password":     d.UserRO.Password,
-			"passwordHash": d.UserRO.PasswordHash,
+			"name":         pki.UserRO.Name,
+			"password":     pki.UserRO.Password,
+			"passwordHash": pki.UserRO.PasswordHash,
 		},
 	}, nil
 }
@@ -643,13 +614,9 @@ func validateRegistryDockerCfg(cfg string, repo string) error {
 	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
 }
 
-func ToMap(s interface{}) (map[string]interface{}, error) {
-	jsonData, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
+func validateHTTPRegistryScheme(scheme string, CA string) error {
+	if strings.ToLower(scheme) == "http" && len(CA) > 0 {
+		return fmt.Errorf("registry CA is not allowed for HTTP scheme")
 	}
-
-	var result map[string]interface{}
-	err = json.Unmarshal(jsonData, &result)
-	return result, err
+	return nil
 }

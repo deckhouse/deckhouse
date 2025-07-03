@@ -1,4 +1,4 @@
-# Copyright 2024 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 # ```
 # .
 # ├── deckhouse_hosts_state.json
-# ├── embedded-registry.d8-system.svc:5001
+# ├── registry.d8-system.svc:5001
 # │   ├── ca.crt
 # │   └── hosts.toml
 # └── registry.deckhouse.ru

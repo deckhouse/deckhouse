@@ -15,42 +15,25 @@
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
 
-# Description:
-#   Checks whether a containerd TOML configuration file contains custom registry sections:
-#   - plugins."io.containerd.grpc.v1.cri".registry.mirrors
-#   - plugins."io.containerd.grpc.v1.cri".registry.configs
-#
-# Input:
-#   $1: Path to the containerd configuration file (TOML format)
-#
-# Output:
-#   0: A registry configuration exists
-#   1: No registry configuration found
-#   >1: Parsing failed
-#
-# Example input (TOML format):
-#   [plugins]
-#     [plugins."io.containerd.grpc.v1.cri"]
-#       [plugins."io.containerd.grpc.v1.cri".registry]
-#         [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."my.registry"]
-#             endpoint = ["http://my.registry"]
-#         [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".auth]
-#             auth = "token"
-#           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".tls]
-#             insecure_skip_verify = true
-#
-_has_registry_field() {
-  local path="$1"
-  local has_registry_field
-  if ! has_registry_field=$(/opt/deckhouse/bin/yq -ptoml -oy \
-    '.plugins["io.containerd.grpc.v1.cri"] | has("registry")' "$path" 2>/dev/null); then
-    >&2 echo "ERROR: Failed to parse TOML config: $path"
-    exit 1
-  fi
-  echo "$has_registry_field" | grep -q "true"
-}
+{{/*
+Detect and label containerd configuration type for the current node.
+
+This code inspects the /etc/containerd/conf.d/*.toml configuration directory
+to determine whether the node uses a custom containerd configuration
+and whether a custom registry configuration is present.
+
+It writes the following node labels:
+
+  1. node.deckhouse.io/containerd-config:
+    - "default" — if no .toml files found in /etc/containerd/conf.d/
+    - "custom"  — if one or more files exist
+    This annotation is required for the transition to containerd v2.
+
+  2. node.deckhouse.io/containerd-config-registry:
+    - "default" — if no registry section found in custom config files
+    - "custom"  — if at least one file contains plugins."io.containerd.grpc.v1.cri".registry
+    This annotation is required for the registry module.
+*/}}
 
 mkdir -p /var/lib/node_labels
 
@@ -65,7 +48,7 @@ if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
 
   # Check each additional config file for a registry block
   for path in /etc/containerd/conf.d/*.toml; do
-    if _has_registry_field "${path}"; then
+    if bb-ctrd-has-registry-fields "${path}"; then
       registry_label_value="custom"
       break
     fi

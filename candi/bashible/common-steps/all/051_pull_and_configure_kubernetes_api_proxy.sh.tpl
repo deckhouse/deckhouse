@@ -14,7 +14,7 @@
 
 bb-set-proxy
 
-{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
 
 {{- if eq $.cri "Containerd" }}
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
