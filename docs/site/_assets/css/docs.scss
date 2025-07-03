@@ -2112,6 +2112,7 @@ select#contact-select {
       border: 0;
       opacity: 0;
       cursor: pointer;
+      user-select: none;
       z-index: 2;
       transition: opacity .25s;
 
