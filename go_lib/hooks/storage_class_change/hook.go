@@ -275,8 +275,10 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 	var filteredPvcs []PVC
 	for _, pvc := range pvcs {
 		if !pvc.IsDeleted {
+			filteredPvcs = append(filteredPvcs, pvc)
 			continue
 		}
+
 		pod, err := findPodByPVCName(pvc.Name)
 		if err == nil {
 			// if someone deleted pvc then evict the pod.
@@ -290,7 +292,6 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 			}
 		}
 
-		filteredPvcs = append(filteredPvcs, pvc)
 	}
 
 	var currentStorageClass string
