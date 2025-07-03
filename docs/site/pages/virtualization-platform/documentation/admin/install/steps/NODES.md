@@ -57,7 +57,7 @@ Create an [SSHCredentials](/products/virtualization-platform/reference/cr/sshcre
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps
@@ -100,7 +100,7 @@ Execute the following commands on the **master node**, specifying the IP address
 export NODE_IP=<NODE-IP-ADDRESS> # Specify the IP address of the node to be added to the cluster.
 export NODE_NAME=<NODE-NAME> # Specify the unique name of the node, for example, dvp-worker-1.
 sudo -i d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: "$NODE_NAME"
