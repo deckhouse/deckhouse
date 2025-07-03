@@ -167,6 +167,10 @@ func (m *MetricStorage) Gauge(metric string, labels map[string]string) *promethe
 
 // RegisterGauge registers a gauge.
 func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec {
+	if m == nil {
+		return nil
+	}
+
 	metricName := m.resolveMetricName(metric)
 
 	defer func() {
@@ -237,6 +241,10 @@ func (m *MetricStorage) Counter(metric string, labels map[string]string) *promet
 
 // RegisterCounter registers a counter.
 func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec {
+	if m == nil {
+		return nil
+	}
+
 	metricName := m.resolveMetricName(metric)
 
 	defer func() {
@@ -305,6 +313,10 @@ func (m *MetricStorage) Histogram(metric string, labels map[string]string, bucke
 }
 
 func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
+	if m == nil {
+		return nil
+	}
+
 	metricName := m.resolveMetricName(metric)
 
 	defer func() {
@@ -351,37 +363,7 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 
 // Batch operations for metrics from hooks
 
-func (m *MetricStorage) sendBatchV0(ops []operation.MetricOperation, labels map[string]string) error {
-	if m == nil {
-		return nil
-	}
-
-	// Apply metric operations
-	for _, metricOp := range ops {
-		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
-
-		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
-			m.CounterAdd(metricOp.Name, *metricOp.Value, labels)
-			continue
-		}
-
-		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
-			m.GaugeSet(metricOp.Name, *metricOp.Value, labels)
-			continue
-		}
-
-		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
-			m.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
-			continue
-		}
-
-		return fmt.Errorf("no operation in metric from module hook, name=%s", metricOp.Name)
-	}
-
-	return nil
-}
-
-func (m *MetricStorage) SendBatch(ops []operation.MetricOperation, labels map[string]string) error {
+func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error {
 	if m == nil {
 		return nil
 	}
@@ -410,11 +392,10 @@ func (m *MetricStorage) SendBatch(ops []operation.MetricOperation, labels map[st
 
 	// Expire each group and apply new metric operations.
 	for group, ops := range groupedOps {
-		m.applyGroupOperations(group, ops, labels)
+		m.applyGroupedOperations(group, ops, labels)
 	}
 
-	// Send non-grouped metrics.
-	err = m.sendBatchV0(nonGroupedOps, labels)
+	err = m.applyNonGroupedBatchOperations(nonGroupedOps, labels)
 	if err != nil {
 		return err
 	}
@@ -423,6 +404,10 @@ func (m *MetricStorage) SendBatch(ops []operation.MetricOperation, labels map[st
 }
 
 func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) {
+	if m == nil {
+		return
+	}
+
 	labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 
 	if op.Action == operation.ActionAdd && op.Value != nil {
@@ -440,8 +425,12 @@ func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabel
 	}
 }
 
-// applyGroupOperations set metrics for group to a new state defined by ops.
-func (m *MetricStorage) applyGroupOperations(group string, ops []operation.MetricOperation, commonLabels map[string]string) {
+// applyGroupedOperations set metrics for group to a new state defined by ops.
+func (m *MetricStorage) applyGroupedOperations(group string, ops []operation.MetricOperation, commonLabels map[string]string) {
+	if m == nil {
+		return
+	}
+
 	// Implicitly expire all metrics for group.
 	m.groupedVault.ExpireGroupMetrics(group)
 
@@ -453,6 +442,7 @@ func (m *MetricStorage) applyGroupOperations(group string, ops []operation.Metri
 		}
 
 		labels := labelspkg.MergeLabels(op.Labels, commonLabels)
+
 		if op.Action == operation.ActionAdd && op.Value != nil {
 			m.groupedVault.CounterAdd(group, op.Name, *op.Value, labels)
 		}
@@ -461,6 +451,36 @@ func (m *MetricStorage) applyGroupOperations(group string, ops []operation.Metri
 			m.groupedVault.GaugeSet(group, op.Name, *op.Value, labels)
 		}
 	}
+}
+
+func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOperation, labels map[string]string) error {
+	if m == nil {
+		return nil
+	}
+
+	// Apply metric operations
+	for _, metricOp := range ops {
+		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
+
+		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
+			m.CounterAdd(metricOp.Name, *metricOp.Value, labels)
+			continue
+		}
+
+		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
+			m.GaugeSet(metricOp.Name, *metricOp.Value, labels)
+			continue
+		}
+
+		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
+			m.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
+			continue
+		}
+
+		return fmt.Errorf("no operation in metric from module hook, name=%s", metricOp.Name)
+	}
+
+	return nil
 }
 
 func (m *MetricStorage) Handler() http.Handler {
