@@ -653,6 +653,12 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
+		r.logger.Debug("result of bump deckhouse deployment",
+			slog.String("module_name", dr.GetModuleName()),
+			slog.String("release_name", dr.GetName()),
+			slog.String("release_version", dr.Spec.Version),
+			log.Err(err))
+
 		return fmt.Errorf("deploy release: %w", err)
 	}
 
@@ -770,15 +776,19 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
-		if len(depl.Spec.Template.Spec.Containers) == 0 {
-			return ErrDeploymentContainerIsNotFound
-		}
+	patch := client.MergeFrom(depl.DeepCopy())
 
-		depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	if len(depl.Spec.Template.Spec.Containers) == 0 {
+		return ErrDeploymentContainerIsNotFound
+	}
+	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-		return nil
-	})
+	err = r.client.Patch(ctx, depl, patch)
+	if err != nil {
+		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+	}
+
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
