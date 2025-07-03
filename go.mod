@@ -55,7 +55,7 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.3.1
 	github.com/ettle/strcase v0.2.0
@@ -305,4 +305,4 @@ replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./go_li
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/dependency/k8s/drain
 
-replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ./go_lib/system-registry-manager
+replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry

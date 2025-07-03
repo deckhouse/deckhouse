@@ -12,8 +12,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 const (

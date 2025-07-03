@@ -30,7 +30,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - cd {{ $appAbsPath }}
     - go mod download
-    - cd /deckhouse/go_lib/system-registry-manager
+    - cd /deckhouse/go_lib/registry
     - go mod download
   setup:
     - cd {{ $appAbsPath }}
@@ -47,8 +47,8 @@ git:
         - '**/*.sum'
       setup:
         - "**/*"
-  - add: /go_lib/system-registry-manager
-    to: /deckhouse/go_lib/system-registry-manager
+  - add: /go_lib/registry
+    to: /deckhouse/go_lib/registry
     stageDependencies:
       install:
         - '**/*.mod'

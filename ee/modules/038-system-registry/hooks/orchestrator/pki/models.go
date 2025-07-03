@@ -10,7 +10,7 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type CertModel struct {

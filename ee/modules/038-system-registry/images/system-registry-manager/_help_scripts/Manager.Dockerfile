@@ -6,8 +6,8 @@ ARG BUILD_TAGS=log_plain
 
 ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
     APP_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
-    GO_LIB_PATH_FROM=./go_lib/system-registry-manager \
-    GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager
+    GO_LIB_PATH_FROM=./go_lib/registry \
+    GO_LIB_PATH_TO=/deckhouse/go_lib/registry
 
 # Set GOPROXY and GOSUMDB
 #ENV GOPROXY=http://10.211.55.2:8081/repository/golang-proxy

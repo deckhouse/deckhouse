@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 type MetaConfig struct {

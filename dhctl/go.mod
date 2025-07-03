@@ -12,8 +12,8 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/deckhouse/deckhouse-cli v0.7.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.2.0
 	github.com/flant/kube-client v1.2.2
@@ -181,7 +181,7 @@ replace github.com/deckhouse/deckhouse/pkg/log => ../pkg/log
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
 
-replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../go_lib/system-registry-manager
+replace github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
 
 // From https://github.com/deckhouse/deckhouse-cli/blob/v0.7.0/go.mod#L582
 replace github.com/deislabs/oras => github.com/werf/3p-oras v0.9.1-0.20240115121544-03962ecbd40a // upstream not maintained

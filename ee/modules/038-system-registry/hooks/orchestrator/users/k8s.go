@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
 func KubernetsConfig(name string) go_hook.KubernetesConfig {

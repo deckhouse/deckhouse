@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type Inputs = State

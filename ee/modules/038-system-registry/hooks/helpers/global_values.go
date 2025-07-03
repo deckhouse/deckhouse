@@ -11,7 +11,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
-	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 const (

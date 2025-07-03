@@ -17,8 +17,8 @@ import (
 	registryswither "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
 type Params struct {

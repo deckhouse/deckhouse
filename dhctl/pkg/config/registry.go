@@ -21,8 +21,8 @@ import (
 	"regexp"
 	"strings"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"

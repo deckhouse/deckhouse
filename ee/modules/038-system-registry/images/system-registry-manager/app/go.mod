@@ -2,10 +2,10 @@ module node-services-manager
 
 go 1.23.1
 
-replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
+replace github.com/deckhouse/deckhouse/go_lib/registry => ../../../../../../go_lib/registry
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.4.2
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	k8s.io/api v0.30.3

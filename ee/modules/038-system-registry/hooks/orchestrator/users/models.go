@@ -8,7 +8,7 @@ package users
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
 type User = users.User

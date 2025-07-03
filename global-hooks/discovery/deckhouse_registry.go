@@ -24,7 +24,7 @@ import (
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 

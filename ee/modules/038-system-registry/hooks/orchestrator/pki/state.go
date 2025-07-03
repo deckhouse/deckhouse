@@ -10,7 +10,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type State struct {

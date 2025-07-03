@@ -10,7 +10,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
 func processUserPasswordHash(log go_hook.Logger, user *users.User) error {

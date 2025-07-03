@@ -8,7 +8,7 @@ package orchestrator
 import (
 	"fmt"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 const (

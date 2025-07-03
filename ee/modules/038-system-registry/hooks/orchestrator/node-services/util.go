@@ -7,7 +7,7 @@ package nodeservices
 
 import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
 )
 
 func mapUser(user users.User) nodeservices.User {

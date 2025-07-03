@@ -16,7 +16,7 @@ package config
 
 import (
 	"fmt"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"sigs.k8s.io/yaml"
 	"strings"
 )

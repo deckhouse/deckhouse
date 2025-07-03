@@ -14,7 +14,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 const (

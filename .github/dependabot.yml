@@ -268,7 +268,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/go_lib/registry-packages-proxy"
+  directory: "/go_lib/registry"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -277,7 +277,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/go_lib/system-registry-manager"
+  directory: "/go_lib/registry-packages-proxy"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
