@@ -17,39 +17,13 @@ limitations under the License.
 package registry
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/stretchr/testify/assert"
 )
-
-func validRegistryData() *RegistryData {
-	return &RegistryData{
-		Mode:       "managed",
-		ImagesBase: "example.com/base",
-		Version:    "1.0",
-		Hosts: map[string]registryHosts{
-			"host1": validRegistryHost(),
-		},
-	}
-}
-
-func validRegistryHost() registryHosts {
-	return registryHosts{
-		Mirrors: []registryMirrorHost{
-			validRegistryMirrorHost(),
-		},
-	}
-}
-
-func validRegistryMirrorHost() registryMirrorHost {
-	return registryMirrorHost{
-		Host:     "mirror1.example.com",
-		Scheme:   "https",
-		Auth:     registryAuth{},
-		Rewrites: []registryRewrite{},
-	}
-}
 
 func TestRegistryDataValidate(t *testing.T) {
 	tests := []struct {
@@ -58,107 +32,37 @@ func TestRegistryDataValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "Valid config",
-			input:   validRegistryData(),
+			name: "Valid data",
+			input: &RegistryData{
+				RegistryModuleEnable: true,
+				Mode:                 "managed",
+				ImagesBase:           "example.com/base",
+				Version:              "1.0",
+				Hosts: map[string]bashible.ContextHosts{
+					"host1": {
+						Mirrors: []bashible.ContextMirrorHost{
+							{
+								Host:     "mirror1.example.com",
+								Scheme:   "https",
+								Auth:     bashible.ContextAuth{},
+								Rewrites: []bashible.ContextRewrite{},
+							},
+						},
+					},
+				},
+			},
 			wantErr: false,
 		},
 		{
-			name: "Missing required hosts",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.Hosts = map[string]registryHosts{}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required mirror hosts",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.Hosts = map[string]registryHosts{"host1": {}}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Mode",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.Mode = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required ImagesBase",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.ImagesBase = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Missing required Version",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.Version = ""
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Empty ProxyEndpoint is invalid",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				cfg.ProxyEndpoints = []string{""}
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Host is invalid",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				host := validRegistryHost()
-				mirror := validRegistryMirrorHost()
-				mirror.Host = ""
-				host.Mirrors = []registryMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Mirror with empty Scheme is invalid",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				host := validRegistryHost()
-				mirror := validRegistryMirrorHost()
-				mirror.Scheme = ""
-				host.Mirrors = []registryMirrorHost{mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
-			wantErr: true,
-		},
-		{
-			name: "Duplicate Mirrors",
-			input: func() *RegistryData {
-				cfg := validRegistryData()
-				host := validRegistryHost()
-				mirror := validRegistryMirrorHost()
-				host.Mirrors = []registryMirrorHost{mirror, mirror}
-				cfg.Hosts["host1"] = host
-				return cfg
-			}(),
+			name:    "Epmty data",
+			input:   nil,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
+			err := tt.input.validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
 					assert.Fail(t, "Internal validation error: %w", e.InternalError())
@@ -166,9 +70,60 @@ func TestRegistryDataValidate(t *testing.T) {
 			}
 
 			if tt.wantErr {
-				assert.Error(t, err, "Expected validation errors but got none")
+				assert.Error(t, err, "Expected errors but got none")
 			} else {
-				assert.NoError(t, err, "Expected no validation errors but got some")
+				assert.NoError(t, err, "Expected no errors but got some")
+			}
+		})
+	}
+}
+
+func TestRegistryDataToMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *RegistryData
+		wantErr bool
+	}{
+		{
+			name: "Valid data",
+			input: &RegistryData{
+				RegistryModuleEnable: true,
+				Mode:                 "unmanaged",
+				Version:              "unknown",
+				ImagesBase:           "registry.d8-system.svc/deckhouse/system",
+				ProxyEndpoints:       []string{"192.168.1.1"},
+				Hosts: map[string]bashible.ContextHosts{
+					"registry.d8-system.svc": {
+						Mirrors: []bashible.ContextMirrorHost{{
+							Host:   "r.example.com",
+							Scheme: "https",
+							CA:     "==exampleCA==",
+							Auth: bashible.ContextAuth{
+								Username: "user",
+								Password: "password",
+								Auth:     "auth"},
+							Rewrites: []bashible.ContextRewrite{{
+								From: "^deckhouse/system",
+								To:   "deckhouse/ce"}}},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "Enpty data",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.input.toMap()
+			if tt.wantErr {
+				assert.Error(t, err, "Expected errors but got none")
+			} else {
+				assert.NoError(t, err, "Expected no errors but got some")
 			}
 		})
 	}
@@ -195,9 +150,9 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 				Mode:                 "unmanaged",
 				ImagesBase:           "registry-1.com/test",
 				Version:              "unknown",
-				Hosts: map[string]registryHosts{
+				Hosts: map[string]bashible.ContextHosts{
 					"registry-1.com": {
-						Mirrors: []registryMirrorHost{{Host: "registry-1.com", Scheme: "https"}},
+						Mirrors: []bashible.ContextMirrorHost{{Host: "registry-1.com", Scheme: "https"}},
 					},
 				},
 			},
@@ -215,9 +170,9 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 				ImagesBase:     "registry-2.com/test",
 				Version:        "1",
 				ProxyEndpoints: []string{"endpoint-1", "endpoint-2"},
-				Hosts: map[string]bashibleConfigHosts{
+				Hosts: map[string]bashible.ConfigHosts{
 					"registry-2.com": {
-						Mirrors: []bashibleConfigMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
+						Mirrors: []bashible.ConfigMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
 					},
 				},
 			},
@@ -227,9 +182,9 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 				ImagesBase:           "registry-2.com/test",
 				Version:              "1",
 				ProxyEndpoints:       []string{"endpoint-1", "endpoint-2"},
-				Hosts: map[string]registryHosts{
+				Hosts: map[string]bashible.ContextHosts{
 					"registry-2.com": {
-						Mirrors: []registryMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
+						Mirrors: []bashible.ContextMirrorHost{{Host: "registry-2.com", Scheme: "https"}},
 					},
 				},
 			},
@@ -251,4 +206,41 @@ func TestRegistryDataLoadFromInput(t *testing.T) {
 			assert.Equal(t, tt.wantRegistryData, rData, "Expected and actual configurations do not match")
 		})
 	}
+}
+
+func TestRegistryDatahHashSum(t *testing.T) {
+	data := RegistryData{
+		RegistryModuleEnable: true,
+		Mode:                 "unmanaged",
+		Version:              "unknown",
+		ImagesBase:           "registry.d8-system.svc/deckhouse/system",
+		ProxyEndpoints:       []string{"192.168.1.1"},
+		Hosts: map[string]bashible.ContextHosts{
+			"registry.d8-system.svc": {
+				Mirrors: []bashible.ContextMirrorHost{{
+					Host:   "r.example.com",
+					Scheme: "https",
+					CA:     "==exampleCA==",
+					Auth: bashible.ContextAuth{
+						Username: "user",
+						Password: "password",
+						Auth:     "auth"},
+					Rewrites: []bashible.ContextRewrite{{
+						From: "^deckhouse/system",
+						To:   "deckhouse/ce"}}},
+				},
+			},
+		},
+	}
+
+	t.Run("Equal hash", func(t *testing.T) {
+		hash1, err1 := data.hashSum()
+		hash2, err2 := data.hashSum()
+
+		require.NoError(t, err1, "unexpected error while computing first hash")
+		require.NoError(t, err2, "unexpected error while computing second hash")
+
+		require.NotEmpty(t, hash1, "hash should not be empty")
+		assert.Equal(t, hash1, hash2, "hash should be deterministic and equal on repeated calls")
+	})
 }

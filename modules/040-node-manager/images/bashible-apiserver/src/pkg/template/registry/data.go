@@ -20,42 +20,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"strings"
-
-	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
-type RegistryData struct {
-	RegistryModuleEnable bool                     `json:"registryModuleEnable" yaml:"registryModuleEnable"`
-	Mode                 string                   `json:"mode" yaml:"mode"`
-	Version              string                   `json:"version" yaml:"version"`
-	ImagesBase           string                   `json:"imagesBase" yaml:"imagesBase"`
-	ProxyEndpoints       []string                 `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
-	Hosts                map[string]registryHosts `json:"hosts" yaml:"hosts"`
-}
-
-type registryHosts struct {
-	Mirrors []registryMirrorHost `json:"mirrors" yaml:"mirrors"`
-}
-
-type registryMirrorHost struct {
-	Host     string            `json:"host" yaml:"host"`
-	Scheme   string            `json:"scheme" yaml:"scheme"`
-	CA       string            `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Auth     registryAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rewrites []registryRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
-}
-
-type registryAuth struct {
-	Username string `json:"username" yaml:"username"`
-	Password string `json:"password" yaml:"password"`
-	Auth     string `json:"auth" yaml:"auth"`
-}
-
-type registryRewrite struct {
-	From string `json:"from" yaml:"from"`
-	To   string `json:"to" yaml:"to"`
-}
+type RegistryData bashible.Context
 
 func (rd *RegistryData) loadFromInput(deckhouseRegistrySecret deckhouseRegistrySecret, bashibleCfgSecret *bashibleConfigSecret) error {
 	if bashibleCfgSecret != nil {
@@ -81,59 +49,18 @@ func (rd *RegistryData) hashSum() (string, error) {
 	return fmt.Sprintf("%x", sum[:]), nil
 }
 
-func (rd *RegistryData) Validate() error {
-	if err := validation.ValidateStruct(rd,
-		validation.Field(&rd.Mode, validation.Required),
-		validation.Field(&rd.Version, validation.Required),
-		validation.Field(&rd.ImagesBase, validation.Required),
-		validation.Field(&rd.ProxyEndpoints, validation.Each(validation.Required)),
-		validation.Field(&rd.Hosts, validation.Required),
-	); err != nil {
-		return err
+func (rd *RegistryData) validate() error {
+	if rd == nil {
+		return fmt.Errorf("failed: is empty")
 	}
-
-	for name, host := range rd.Hosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("hosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-	return nil
+	ctx := bashible.Context(*rd)
+	return ctx.Validate()
 }
 
-func (h *registryHosts) Validate() error {
-	if err := validation.ValidateStruct(h,
-		validation.Field(&h.Mirrors, validation.Required),
-	); err != nil {
-		return err
+func (rd *RegistryData) toMap() (map[string]interface{}, error) {
+	if rd == nil {
+		return nil, fmt.Errorf("failed: is empty")
 	}
-
-	for i, mirror := range h.Mirrors {
-		if err := mirror.Validate(); err != nil {
-			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
-		}
-	}
-
-	seen := make(map[string]struct{})
-	for i, mirror := range h.Mirrors {
-		key := mirror.UniqueKey()
-		if _, ok := seen[key]; ok {
-			return fmt.Errorf("mirror[%d] validation failed: has duplicate", i)
-		}
-		seen[key] = struct{}{}
-	}
-	return nil
-}
-
-func (m *registryMirrorHost) Validate() error {
-	return validation.ValidateStruct(m,
-		validation.Field(&m.Host, validation.Required),
-		validation.Field(&m.Scheme, validation.Required),
-	)
-}
-
-func (m *registryMirrorHost) UniqueKey() string {
-	return m.Host + "|" + m.Scheme
+	ctx := bashible.Context(*rd)
+	return ctx.ToMap()
 }

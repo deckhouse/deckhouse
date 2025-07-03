@@ -3,13 +3,14 @@
 // Don't rename module, kubernetes generators are strictly dependent on the module name
 module bashible-apiserver
 
-go 1.23.0
+go 1.23.1
 
 toolchain go1.24.2
 
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.2.0
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/flant/kube-client v0.26.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
@@ -27,11 +28,11 @@ require (
 	k8s.io/client-go v0.26.10
 	k8s.io/code-generator v0.26.10
 	k8s.io/component-base v0.26.10
-	k8s.io/klog/v2 v2.100.1
+	k8s.io/klog/v2 v2.110.1
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
 	sigs.k8s.io/controller-runtime v0.14.7
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -137,3 +138,5 @@ require (
 
 // replace for flant/kube-client
 replace k8s.io/client-go => k8s.io/client-go v0.26.9
+
+replace github.com/deckhouse/deckhouse/go_lib/registry => ../../../../../go_lib/registry/

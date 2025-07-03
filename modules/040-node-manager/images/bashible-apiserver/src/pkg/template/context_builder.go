@@ -26,8 +26,6 @@ import (
 	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
-
-	"bashible-apiserver/pkg/template/registry"
 )
 
 type ContextBuilder struct {
@@ -35,7 +33,7 @@ type ContextBuilder struct {
 
 	stepsStorage *StepsStorage
 
-	registryData     registry.RegistryData
+	registryData     map[string]interface{}
 	clusterInputData inputData
 	versionMap       map[string]interface{}
 	imagesDigests    map[string]map[string]string // module: { image_name: tag }
@@ -65,7 +63,7 @@ type BashibleContextData struct {
 
 	Images     map[string]map[string]string `json:"images" yaml:"images"`
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
-	Registry   registry.RegistryData        `json:"registry" yaml:"registry"`
+	Registry   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
@@ -85,7 +83,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	return result
 }
 
-func (cb *ContextBuilder) SetRegistryData(rd registry.RegistryData) {
+func (cb *ContextBuilder) SetRegistryData(rd map[string]interface{}) {
 	cb.registryData = rd
 }
 
@@ -203,7 +201,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		RunType:   "Normal",
 
 		Images:            cb.imagesDigests,
-		Registry:          &cb.registryData,
+		Registry:          cb.registryData,
 		Proxy:             cb.clusterInputData.Proxy,
 		CloudProviderType: cb.getCloudProvider(),
 		PackagesProxy:     cb.clusterInputData.PackagesProxy,
@@ -384,7 +382,7 @@ type bashibleContext struct {
 
 	// Enrich with images and registry
 	Images            map[string]map[string]string `json:"images" yaml:"images"`
-	Registry          *registry.RegistryData       `json:"registry" yaml:"registry"`
+	Registry          map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
@@ -429,7 +427,7 @@ type tplContextCommon struct {
 	Normal  normal `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry registry.RegistryData        `json:"registry" yaml:"registry"`
+	Registry map[string]interface{}       `json:"registry" yaml:"registry"`
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`

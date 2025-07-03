@@ -18,9 +18,9 @@ package registry
 
 import (
 	"fmt"
-	"strings"
+	"slices"
 
-	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -29,36 +29,7 @@ const (
 	bashibleConfigSecretName = "registry-bashible-config"
 )
 
-type bashibleConfigSecret struct {
-	Mode           string                         `json:"mode" yaml:"mode"`
-	Version        string                         `json:"version" yaml:"version"`
-	ImagesBase     string                         `json:"imagesBase" yaml:"imagesBase"`
-	ProxyEndpoints []string                       `json:"proxyEndpoints,omitempty" yaml:"proxyEndpoints,omitempty"`
-	Hosts          map[string]bashibleConfigHosts `json:"hosts" yaml:"hosts"`
-}
-
-type bashibleConfigHosts struct {
-	Mirrors []bashibleConfigMirrorHost `json:"mirrors" yaml:"mirrors"`
-}
-
-type bashibleConfigMirrorHost struct {
-	Host     string                  `json:"host" yaml:"host"`
-	Scheme   string                  `json:"scheme" yaml:"scheme"`
-	CA       string                  `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Auth     bashibleConfigAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rewrites []bashibleConfigRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
-}
-
-type bashibleConfigAuth struct {
-	Username string `json:"username" yaml:"username"`
-	Password string `json:"password" yaml:"password"`
-	Auth     string `json:"auth" yaml:"auth"`
-}
-
-type bashibleConfigRewrite struct {
-	From string `json:"from" yaml:"from"`
-	To   string `json:"to" yaml:"to"`
-}
+type bashibleConfigSecret bashible.Config
 
 func (c *bashibleConfigSecret) decode(secret *corev1.Secret) error {
 	if err := yaml.Unmarshal(secret.Data["config"], c); err != nil {
@@ -67,61 +38,12 @@ func (c *bashibleConfigSecret) decode(secret *corev1.Secret) error {
 	return nil
 }
 
-func (c *bashibleConfigSecret) Validate() error {
-	if err := validation.ValidateStruct(c,
-		validation.Field(&c.Mode, validation.Required),
-		validation.Field(&c.Version, validation.Required),
-		validation.Field(&c.ImagesBase, validation.Required),
-		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
-		validation.Field(&c.Hosts, validation.Required),
-	); err != nil {
-		return err
+func (c *bashibleConfigSecret) validate() error {
+	if c == nil {
+		return fmt.Errorf("failed: is empty")
 	}
-
-	for name, host := range c.Hosts {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("hosts map contains empty key")
-		}
-		if err := host.Validate(); err != nil {
-			return fmt.Errorf("hosts[%q] validation failed: %w", name, err)
-		}
-	}
-	return nil
-}
-
-func (h *bashibleConfigHosts) Validate() error {
-	if err := validation.ValidateStruct(h,
-		validation.Field(&h.Mirrors, validation.Required),
-	); err != nil {
-		return err
-	}
-
-	for i, mirror := range h.Mirrors {
-		if err := mirror.Validate(); err != nil {
-			return fmt.Errorf("mirror[%d] validation failed: %w", i, err)
-		}
-	}
-
-	seen := make(map[string]struct{})
-	for i, mirror := range h.Mirrors {
-		key := mirror.UniqueKey()
-		if _, ok := seen[key]; ok {
-			return fmt.Errorf("mirror[%d] validation failed: has duplicate", i)
-		}
-		seen[key] = struct{}{}
-	}
-	return nil
-}
-
-func (m *bashibleConfigMirrorHost) Validate() error {
-	return validation.ValidateStruct(m,
-		validation.Field(&m.Host, validation.Required),
-		validation.Field(&m.Scheme, validation.Required),
-	)
-}
-
-func (m *bashibleConfigMirrorHost) UniqueKey() string {
-	return m.Host + "|" + m.Scheme
+	cfg := bashible.Config(*c)
+	return cfg.Validate()
 }
 
 func (c bashibleConfigSecret) toRegistryData() *RegistryData {
@@ -130,40 +52,34 @@ func (c bashibleConfigSecret) toRegistryData() *RegistryData {
 		Mode:                 c.Mode,
 		Version:              c.Version,
 		ImagesBase:           c.ImagesBase,
-		ProxyEndpoints:       append([]string(nil), c.ProxyEndpoints...),
-		Hosts:                make(map[string]registryHosts, len(c.Hosts)),
+		ProxyEndpoints:       slices.Clone(c.ProxyEndpoints),
+		Hosts:                make(map[string]bashible.ContextHosts, len(c.Hosts)),
 	}
 
 	for key, hosts := range c.Hosts {
-		ret.Hosts[key] = hosts.toRegistryHosts()
-	}
-	return ret
-}
+		rh := bashible.ContextHosts{
+			Mirrors: make([]bashible.ContextMirrorHost, 0, len(hosts.Mirrors)),
+		}
 
-func (h bashibleConfigHosts) toRegistryHosts() registryHosts {
-	ret := registryHosts{
-		Mirrors: make([]registryMirrorHost, 0, len(h.Mirrors)),
-	}
-	for _, m := range h.Mirrors {
-		ret.Mirrors = append(ret.Mirrors, m.toRegistryMirrorHost())
-	}
-	return ret
-}
+		for _, m := range hosts.Mirrors {
+			mh := bashible.ContextMirrorHost{
+				Host:   m.Host,
+				Scheme: m.Scheme,
+				CA:     m.CA,
+				Auth: bashible.ContextAuth{
+					Username: m.Auth.Username,
+					Password: m.Auth.Password,
+					Auth:     m.Auth.Auth,
+				},
+			}
+			for _, rw := range m.Rewrites {
+				mh.Rewrites = append(mh.Rewrites, bashible.ContextRewrite(rw))
+			}
 
-func (m bashibleConfigMirrorHost) toRegistryMirrorHost() registryMirrorHost {
-	ret := registryMirrorHost{
-		Host:   m.Host,
-		Scheme: m.Scheme,
-		CA:     m.CA,
-		Auth: registryAuth{
-			Username: m.Auth.Username,
-			Password: m.Auth.Password,
-			Auth:     m.Auth.Auth,
-		},
-	}
+			rh.Mirrors = append(rh.Mirrors, mh)
+		}
 
-	for _, rw := range m.Rewrites {
-		ret.Rewrites = append(ret.Rewrites, registryRewrite(rw))
+		ret.Hosts[key] = rh
 	}
 	return ret
 }

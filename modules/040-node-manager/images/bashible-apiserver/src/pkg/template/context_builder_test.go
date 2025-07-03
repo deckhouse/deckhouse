@@ -22,8 +22,6 @@ import (
 	"testing"
 
 	"sigs.k8s.io/yaml"
-
-	"bashible-apiserver/pkg/template/registry"
 )
 
 func TestBashibleChecksum(t *testing.T) {
@@ -108,11 +106,34 @@ updateEpoch: "1680009541"
 			},
 		},
 
-		Registry: &registry.RegistryData{
-			Mode:           "Direct",
-			ImagesBase:     "registry.deckhouse.io/deckhouse/ce",
-			Version:        "Unknown",
-			ProxyEndpoints: []string{},
+		Registry: map[string]interface{}{
+			"registryModuleEnable": true,
+			"mode":                 "unmanaged",
+			"version":              "unknown",
+			"imagesBase":           "registry.d8-system.svc/deckhouse/system",
+			"proxyEndpoints":       []interface{}{"192.168.1.1"},
+			"hosts": map[string]interface{}{
+				"registry.d8-system.svc": map[string]interface{}{
+					"mirrors": []interface{}{
+						map[string]interface{}{
+							"host":   "r.example.com",
+							"scheme": "https",
+							"ca":     "==exampleCA==",
+							"auth": map[string]interface{}{
+								"username": "user",
+								"password": "password",
+								"auth":     "auth",
+							},
+							"rewrites": []interface{}{
+								map[string]interface{}{
+									"from": "^deckhouse/system",
+									"to":   "deckhouse/ce",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 
 		Proxy: map[string]interface{}{
