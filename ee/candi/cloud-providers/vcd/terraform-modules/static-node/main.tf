@@ -6,7 +6,7 @@ locals {
   org              = length(local.template_parts) == 3 ? local.template_parts[0] : null
   catalog          = length(local.template_parts) == 3 ? local.template_parts[1] : local.template_parts[0]
   template         = length(local.template_parts) == 3 ? local.template_parts[2] : local.template_parts[1]
-  ip_address       = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
+  ip_address       = length(local.main_ip_addresses) > var.nodeIndex ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.instance_class, "placementPolicy", "")
 }
 
