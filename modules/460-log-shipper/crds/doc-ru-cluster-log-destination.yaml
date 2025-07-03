@@ -421,7 +421,7 @@ spec:
                     
                     Возможные варианты:
 
-                      - `ReplaceKeys` — заменяет `source` на `target` в заданных лейблах.
+                      - `ReplaceKeys`: заменяет `source` на `target` в заданных ключах лейблов.
 
                         Пример:
 
@@ -435,9 +435,10 @@ spec:
                               - pod_labels
                         ```
 
-                      - `ParseMessage` — Преобразует поле `message` из заданого формата `sourceFormat` в JSON-обект.
+                      - `ParseMessage`: Если может преобразует поле `message` из заданого в `sourceFormat` формата в обект.
+                         иначе оставит `message` неизменным.
 
-                        Пример:
+                        Примеры:
 
                         ```yaml
                         transformations:
@@ -448,7 +449,24 @@ spec:
                               targetField: msg
                         ```
 
-                      - `DropLabels` — удаляет указанные лейблы.
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels`: удаляет указанные лейблы.
 
                         Пример:
 

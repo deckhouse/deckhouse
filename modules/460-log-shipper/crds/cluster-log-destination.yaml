@@ -841,7 +841,7 @@ spec:
 
                     Available options:
 
-                      - `ReplaceKeys`: Replaces `source` with `target` in the specified labels.
+                      - `ReplaceKeys`: Replaces `source` with `target` in the given label keys.
 
                         Example:
 
@@ -855,12 +855,30 @@ spec:
                               - pod_labels
                         ```
 
-                      - `ParceMessage`: Ensures that the message is in JSON format and wraps it in a JSON object if needed.
+                      - `ParseMessage`: If it can, converts the `message` field from the format specified in `sourceFormat` to an object
+                         otherwise, leaves `message` unchanged.
                             
-                        Example:
+                        Examples:
 
                         ```yaml
                         transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
                         - action: ParseMessage
                           parseMessage:
                             sourceFormat: String
