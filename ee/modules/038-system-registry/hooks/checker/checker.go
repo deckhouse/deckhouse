@@ -7,72 +7,213 @@ package checker
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
-	"math/rand"
+	"net/http"
 	"sync"
-	"time"
+
+	"github.com/google/go-containerregistry/pkg/authn"
+	gcr_name "github.com/google/go-containerregistry/pkg/name"
+	gcr_remote "github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
-func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryParams) error {
+type checkRegistryResult struct {
+	Item    queueItem
+	Success bool
+}
+
+func checkRegistryItem(ctx context.Context, puller *gcr_remote.Puller, isHTTPS bool, refStr string) error {
 	var (
-		wg           sync.WaitGroup
-		mu           sync.Mutex
-		checkedCount int64
+		ref gcr_name.Reference
+		err error
 	)
 
-	if params.Address == "" {
-		return fmt.Errorf("invalid address")
+	if isHTTPS {
+		ref, err = gcr_name.ParseReference(refStr)
+	} else {
+		ref, err = gcr_name.ParseReference(refStr, gcr_name.Insecure)
 	}
 
-	worker := func(ctx context.Context, done func()) {
-		defer done()
+	if err != nil {
+		return fmt.Errorf("parse reference error: %w", err)
+	}
 
-		for {
-			mu.Lock()
-			if len(queue.Items) == 0 {
-				mu.Unlock()
-				break
+	_, err = puller.Head(ctx, ref)
+	if err != nil {
+		if ctx.Err() == nil {
+			return err
+		}
+
+		return fmt.Errorf("Request timeout")
+	}
+
+	return nil
+}
+
+func checkRegistryWorker(
+	ctx context.Context,
+	puller *gcr_remote.Puller,
+	isHTTPS bool,
+	queueCh <-chan queueItem,
+	resultsCh chan<- checkRegistryResult,
+	done func(),
+) {
+	defer done()
+
+	for {
+		select {
+		case item, ok := <-queueCh:
+			if !ok {
+				return
 			}
 
-			if ctx.Err() != nil && checkedCount > 0 {
-				mu.Unlock()
-				break
+			result := checkRegistryResult{
+				Item:    item,
+				Success: true,
 			}
 
-			item := queue.Items[0]
-			queue.Items = queue.Items[1:]
-			mu.Unlock()
-
-			var isErr bool
-			if params.Address != "dev-registry.deckhouse.io/sys/deckhouse-oss" {
-				isErr = true
-				item.Error = fmt.Sprintf("Unsupported registry %q", params.Address)
-			} else {
-				time.Sleep(1 * time.Second)
-				ri := rand.Intn(10)
-				isErr := ri%8 == 0 || ri%9 == 0
-
-				if isErr {
-					item.Error = fmt.Sprintf("Check error: %v", ri)
-				}
+			err := checkRegistryItem(ctx, puller, isHTTPS, item.Image)
+			if err != nil {
+				result.Item.Error = err.Error()
+				result.Success = false
 			}
 
-			mu.Lock()
-			if isErr {
-				queue.Retry = append(queue.Retry, item)
-			} else {
-				queue.Processed++
-			}
-			checkedCount++
-			mu.Unlock()
+			resultsCh <- result
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func buildPullerRoundTripper(ca string) (http.RoundTripper, error) {
+	ret := gcr_remote.DefaultTransport.(*http.Transport).Clone()
+
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get system CAs pool: %w", err)
+	}
+
+	if ca != "" {
+		cert, err := pki.DecodeCertificate([]byte(ca))
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode CA certificate: %w", err)
+		}
+		certPool.AddCert(cert)
+	}
+
+	ret.TLSClientConfig.RootCAs = certPool
+
+	return ret, nil
+}
+
+func buildPuller(params RegistryParams) (*gcr_remote.Puller, error) {
+	var (
+		auth      = authn.Anonymous
+		transport = gcr_remote.DefaultTransport
+		err       error
+	)
+
+	if params.Username != "" {
+		auth = &authn.Basic{
+			Username: params.Username,
+			Password: params.Password,
 		}
 	}
 
-	for range parallelizmPerRegistry {
-		wg.Add(1)
-		go worker(ctx, wg.Done)
+	if params.isHTTPS() {
+		transport, err = buildPullerRoundTripper(params.CA)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build puller transport: %w", err)
+		}
 	}
-	wg.Wait()
 
-	return nil
+	return gcr_remote.NewPuller(
+		gcr_remote.WithTransport(transport),
+		gcr_remote.WithAuth(auth),
+	)
+}
+
+func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryParams) (int, error) {
+	puller, err := buildPuller(params)
+	if err != nil {
+		return 0, fmt.Errorf("cannot create puller: %w", err)
+	}
+
+	var (
+		wg                       sync.WaitGroup
+		queueCh                  = make(chan queueItem, parallelizmPerRegistry*10)
+		resultsCh                = make(chan checkRegistryResult, parallelizmPerRegistry*10)
+		checkCtx, checkCtxCancel = context.WithCancel(context.Background())
+		checkedCount             int
+	)
+	defer checkCtxCancel()
+
+	// start workers
+	wg.Add(parallelizmPerRegistry)
+	for range parallelizmPerRegistry {
+		go checkRegistryWorker(
+			checkCtx,
+			puller,
+			params.isHTTPS(),
+			queueCh,
+			resultsCh,
+			wg.Done,
+		)
+	}
+
+	// enqueue and process first item
+	for len(queue.Items) > 0 && checkedCount == 0 {
+		item := queue.Items[0]
+
+		select {
+		case queueCh <- item:
+			queue.Items = queue.Items[1:]
+		case resultItem := <-resultsCh:
+			if resultItem.Success {
+				queue.Processed++
+			} else {
+				queue.Retry = append(queue.Retry, resultItem.Item)
+			}
+			checkedCount++
+		}
+	}
+
+	// process other items and handle ctx cancellation
+	for len(queue.Items) > 0 && checkCtx.Err() == nil {
+		item := queue.Items[0]
+
+		select {
+		case queueCh <- item:
+			queue.Items = queue.Items[1:]
+		case resultItem := <-resultsCh:
+			if resultItem.Success {
+				queue.Processed++
+			} else {
+				queue.Retry = append(queue.Retry, resultItem.Item)
+			}
+			checkedCount++
+		case <-ctx.Done():
+			checkCtxCancel()
+		}
+	}
+	close(queueCh)
+
+	// wait for workers
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	for resultItem := range resultsCh {
+		if resultItem.Success {
+			queue.Processed++
+		} else {
+			queue.Retry = append(queue.Retry, resultItem.Item)
+		}
+		checkedCount++
+	}
+
+	return checkedCount, nil
 }

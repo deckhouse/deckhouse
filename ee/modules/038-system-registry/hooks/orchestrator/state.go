@@ -624,7 +624,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 			Scheme:   strings.ToUpper(unmanagedParams.Scheme),
 			CA:       unmanagedParams.CA,
 			Username: unmanagedParams.Username,
-			Password: unmanagedParams.Username,
+			Password: unmanagedParams.Password,
 		}
 
 		checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)

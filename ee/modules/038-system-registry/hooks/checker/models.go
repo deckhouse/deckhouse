@@ -17,6 +17,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	validation "github.com/go-ozzo/ozzo-validation"
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 type deckhouseImagesModel struct {
@@ -59,13 +61,15 @@ func (rp RegistryParams) Validate() error {
 }
 
 func (rp *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
-	var opts []gcr_name.Option
-
-	if strings.ToUpper(rp.Scheme) == "HTTP" {
-		opts = append(opts, gcr_name.Insecure)
+	if rp.isHTTPS() {
+		return gcr_name.NewRepository(rp.Address)
 	}
 
-	return gcr_name.NewRepository(rp.Address, opts...)
+	return gcr_name.NewRepository(rp.Address, gcr_name.Insecure)
+}
+
+func (rp *RegistryParams) isHTTPS() bool {
+	return strings.ToUpper(rp.Scheme) == "HTTPS"
 }
 
 type Status struct {
@@ -89,6 +93,7 @@ type registryQueue struct {
 	Items       []queueItem `json:"items,omitempty"`
 	Retry       []queueItem `json:"retry,omitempty"`
 	LastAttempt *time.Time  `json:"last_attempt,omitempty"`
+	ParamsHash  string      `json:"params_hash,omitempty"`
 }
 
 func (q *registryQueue) any() bool {
@@ -188,7 +193,12 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 
 	t := time.Now().UTC()
 	for name, registryParams := range inputs.Params.Registries {
-		if q, ok := state.Queues[name]; ok {
+		hash, err := helpers.ComputeHash(registryParams)
+		if err != nil {
+			return fmt.Errorf("cannot compute registry %q params hash: %w", name, err)
+		}
+
+		if q, ok := state.Queues[name]; ok && q.ParamsHash == hash {
 			if len(q.Items) == 0 && len(q.Retry) > 0 {
 				q.Items = q.Retry
 				q.Retry = nil
@@ -213,7 +223,8 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 		}
 
 		q := registryQueue{
-			Items: repoImages,
+			Items:      repoImages,
+			ParamsHash: hash,
 		}
 
 		state.Queues[name] = q
@@ -241,12 +252,13 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		defer done()
 
 		log.Debug("Checking registry", "name", name)
-		err := checkRegistry(ctx, &queue, params)
+		count, err := checkRegistry(ctx, &queue, params)
 
 		r := result{
-			Name:  name,
-			Queue: queue,
-			Error: err,
+			Name:           name,
+			Queue:          queue,
+			Error:          err,
+			ProcessedCount: count,
 		}
 
 		if err == nil {
@@ -271,6 +283,10 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 			}
 
 			q.LastAttempt = nil
+		}
+
+		if len(q.Items) == 0 {
+			continue
 		}
 
 		wg.Add(1)

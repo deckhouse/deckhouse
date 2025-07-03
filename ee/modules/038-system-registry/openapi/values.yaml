@@ -296,6 +296,8 @@ properties:
                     last_attempt:
                       type: string
                       format: date-time
+                    params_hash:
+                      type: string
               version:
                 type: string
               ready:
