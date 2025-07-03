@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimental"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -35,6 +36,7 @@ type ExtendersStack struct {
 	KubernetesVersion *kubernetesversion.Extender
 	Bootstrapped      *bootstrapped.Extender
 	ModuleDependency  *moduledependency.Extender
+	Experimental      *experimental.Extender
 }
 
 func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersStack {
@@ -43,6 +45,7 @@ func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersSt
 		KubernetesVersion: kubernetesversion.Instance(),
 		Bootstrapped:      bootstrapped.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
+		Experimental:      experimental.Instance(),
 	}
 }
 
@@ -52,6 +55,7 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 		b.KubernetesVersion,
 		b.Bootstrapped,
 		b.ModuleDependency,
+		b.Experimental,
 	}
 }
 
@@ -85,6 +89,12 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 		}
 	}
 
+	if len(requirements.AllowExperimentalModules) > 0 {
+		if err := b.Experimental.AddConstraint(module, requirements.AllowExperimentalModules); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -93,6 +103,7 @@ func (b *ExtendersStack) DeleteConstraints(module string) {
 	b.KubernetesVersion.DeleteConstraint(module)
 	b.Bootstrapped.DeleteConstraint(module)
 	b.ModuleDependency.DeleteConstraint(module)
+	b.Experimental.DeleteConstraint(module)
 }
 
 func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
@@ -128,5 +139,6 @@ func (b *ExtendersStack) IsExtendersField(field string) bool {
 		v1alpha1.DeckhouseRequirementFieldName,
 		v1alpha1.BootstrappedRequirementFieldName,
 		v1alpha1.ModuleDependencyRequirementFieldName,
+		v1alpha1.AllowExperimentalModulesRequirementFieldName,
 	}, field)
 }
