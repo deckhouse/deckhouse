@@ -296,7 +296,8 @@ shell:
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - addgroup --gid {{ $controllerUID }} {{ $controllerUser }}
+  - adduser  --uid {{ $controllerUID }} --gid {{ $controllerUID }} -r -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
@@ -320,6 +321,7 @@ shell:
   - chown {{ $controllerUser }}:{{ $controllerUser }} /chroot/var/log/nginx/access.log
   - echo "" > /chroot/etc/resolv.conf
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /var/log /chroot/var/log /chroot/etc/resolv.conf
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /var/log /chroot/var/log /chroot/etc/ingress-controller
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
