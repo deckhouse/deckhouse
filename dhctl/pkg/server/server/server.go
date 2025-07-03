@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -63,6 +64,7 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 		"starting grpc server",
 		slog.String("network", network),
 		slog.String("address", address),
+		slog.String("go version", app.GoVersion),
 	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
