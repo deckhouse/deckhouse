@@ -126,7 +126,7 @@ LogLevel quiet
 EOF
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config"
-  scp_command="scp -S /usr/bin/ssh -F /tmp/cloud-test-ssh-config"
+  scp_command="scp -F /tmp/cloud-test-ssh-config"
 }
 
 function abort_bootstrap_from_cache() {
@@ -706,7 +706,6 @@ function bootstrap_static() {
     sleep 5
   done
 
-
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
@@ -715,7 +714,7 @@ function bootstrap_static() {
       apt-get update
       apt-get install -y docker.io docker-compose wget curl
 
-      cd deckhouse/testing/cloud_layouts/Static/registry-mirror
+      cd /tmp/registry-mirror
       ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
       ./gen-ssl.sh
       env BASTION_INTERNAL_IP=${BASTION_INTERNAL_IP} envsubst '\$BASTION_INTERNAL_IP' < registry-config.tpl.yaml > registry-config.yaml
