@@ -89,9 +89,15 @@ COPY --from=build /out/caps-deckhouse-controller /usr/bin/caps-deckhouse-control
 COPY --from=src /out/run /run
 
 USER root
+RUN ["/bin/bash", "-c", "cp /bin/bash /bin/sh"]
 
 # Replace module helm chart
-RUN ["/usr/bin/rm", "-rf", "/deckhouse/modules/038-system-registry/templates", "/deckhouse/modules/038-system-registry/openapi", "/deckhouse/modules/038-system-registry/monitoring", "/deckhouse/modules/002-deckhouse/templates", "/deckhouse/modules/002-deckhouse/openapi"]
+RUN rm -r \
+  /deckhouse/modules/038-system-registry/templates \
+  /deckhouse/modules/038-system-registry/openapi \
+  /deckhouse/modules/038-system-registry/monitoring \
+  /deckhouse/modules/002-deckhouse/templates \
+  /deckhouse/modules/002-deckhouse/openapi
 
 USER deckhouse
 
