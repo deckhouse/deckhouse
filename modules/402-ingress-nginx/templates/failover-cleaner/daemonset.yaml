@@ -28,31 +28,31 @@ spec:
       serviceAccountName: failover-cleaner
       hostNetwork: true
       volumes:
-        - name: xtables-lock
-          hostPath:
-            path: /run/xtables.lock
-            type: FileOrCreate
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
       containers:
-        - image: {{ include "helm_lib_module_image" (list $context "failoverCleaner") }}
-          name: failover-cleaner
-            # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+      - image: {{ include "helm_lib_module_image" (list $context "failoverCleaner") }}
+        name: failover-cleaner
+        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
-            readOnlyRootFilesystem: false # Need for symlink iptables-wrap
-            capabilities:
-              add:
-                - NET_RAW
-                - NET_ADMIN
-          volumeMounts:
-            - mountPath: /run/xtables.lock
-              name: xtables-lock
-              readOnly: false
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-          resources:
-            requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+          readOnlyRootFilesystem: false # Need for symlink iptables-wrap
+          capabilities:
+            add:
+            - NET_RAW
+            - NET_ADMIN
+        volumeMounts:
+          - mountPath: /run/xtables.lock
+            name: xtables-lock
+            readOnly: false
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}        
       imagePullSecrets:
-        - name: deckhouse-registry
+      - name: deckhouse-registry
