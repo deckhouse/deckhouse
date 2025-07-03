@@ -39,6 +39,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -99,7 +102,7 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
-	nodes := input.Snapshots["nodes"]
+	nodes := input.NewSnapshots.Get("nodes")
 	if len(nodes) == 0 {
 		input.Logger.Error("no nodes found")
 		return nil
@@ -128,9 +131,10 @@ func handleNodes(input *go_hook.HookInput) error {
 		// Values is re-set to update the minimum required Linux kernel version depending on the included modules
 		// The minimum version will later be passed to the cilium agent's cilium initContainer
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
-
-		for _, n := range nodes {
-			node := n.(nodeKernelVersion)
+		for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+			}
 
 			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
 			nodeSemverVersion, err := semver.NewVersion(kernelVerStr)
@@ -169,14 +173,12 @@ func handleNodes(input *go_hook.HookInput) error {
 }
 
 // Identify the cluster node (as nodeKernelVersion) with the lowest version of the kernel.
-func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKernelVersion, error) {
+func defineMinimalLinuxKernelVersionNode(nodes []pkg.Snapshot) (*nodeKernelVersion, error) {
 	var minimalNode *nodeKernelVersion
 	var minimalVersion *semver.Version
-
-	for _, n := range nodes {
-		node, ok := n.(nodeKernelVersion)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type: %T", n)
+	for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over storage classes: %v", err)
 		}
 
 		kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
