@@ -1,4 +1,4 @@
-module github.com/deckhouse/deckhouse/go_lib/system-registry-manager
+module github.com/deckhouse/deckhouse/go_lib/registry
 
 go 1.23.1
 

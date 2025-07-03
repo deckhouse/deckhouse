@@ -22,7 +22,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type User struct {
