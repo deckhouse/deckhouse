@@ -43,7 +43,7 @@ type Storage interface {
 	RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec
 	RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
 
-	SendBatch(ops []operation.MetricOperation, labels map[string]string) error
+	ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error
 }
 
 type GroupedStorage interface {

@@ -30,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/vault"
 )
 
+var _ Storage = (*MetricStorage)(nil)
+
 const (
 	PrefixTemplate = "{PREFIX}"
 )
