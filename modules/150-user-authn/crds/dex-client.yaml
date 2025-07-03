@@ -64,6 +64,24 @@ spec:
                     [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
                   items:
                     type: string
+                secretMetadata:
+                  type: object
+                  description: 'A list of labels and an annotations that will be transferred to the metadata secrets of the DexClient resource.'
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                        maxLength: 63
+                        pattern: '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$'
+                      maxProperties: 100
+                      x-kubernetes-validations:
+                        - rule: "self.all(key, key.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'))"
+                          message: "Label key must match the pattern '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'"
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
     - name: v1
       served: true
       storage: true

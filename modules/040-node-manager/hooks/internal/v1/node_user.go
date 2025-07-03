@@ -39,7 +39,7 @@ type NodeUserSpec struct {
 	UID           int      `json:"uid"`
 	SSHPublicKey  string   `json:"sshPublicKey,omitempty"`
 	SSHPublicKeys []string `json:"sshPublicKeys,omitempty"`
-	PasswordHash  string   `json:"passwordHash"`
+	PasswordHash  string   `json:"passwordHash,omitempty"`
 	IsSudoer      bool     `json:"isSudoer"`
 	NodeGroups    []string `json:"nodeGroups"`
 	ExtraGroups   []string `json:"extraGroups,omitempty"`

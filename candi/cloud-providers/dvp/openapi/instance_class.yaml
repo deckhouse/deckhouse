@@ -26,7 +26,7 @@ spec:
                   type: object
                   description: |
                     Virtual machine settings for the created master node.
-                  required: [cpu, memory]
+                  required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
                       description: |
@@ -61,6 +61,12 @@ spec:
                           description: |
                             Amount of memory resources allowed for the virtual machine.
                           x-doc-example: "4Gi"
+                    virtualMachineClassName:
+                      type: string
+                      description: |
+                        The name of the VirtualMachineClass.
+
+                        Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                     bootloader:
                       type: string
                       enum:
@@ -68,7 +74,7 @@ spec:
                         - EFI
                         - EFIWithSecureBoot
                       default: EFI
-                      description: >
+                      description: |
                         Defines a bootloader for the virtual machine.
 
                         * `BIOS`: Use BIOS.

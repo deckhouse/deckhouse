@@ -11,8 +11,8 @@
 
 ## 002-Allow-delete-logs.patch
 
-TODO
+Enable/disable `/loki/api/v1/delete` endpoints by setting `ALLOW_DELETE_LOGS` env value to true/false.
 
 ## 003-Force-expiration.patch
 
-TODO
+Automatically delete old logs by setting `force_expiration_threshold` higher than 0.

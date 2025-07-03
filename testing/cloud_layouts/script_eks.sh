@@ -93,12 +93,10 @@ function prepare_environment() {
 
   # shellcheck disable=SC2016
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+      envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${PREFIX}' \
-      <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
+      envsubst <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
 
 }
 

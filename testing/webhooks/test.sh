@@ -15,9 +15,9 @@
 # limitations under the License.
 set -Eeo pipefail
 
-apt-get update && apt-get install -y python3 python3-module-pip-run
+apk update && apk add --no-cache python3 py3-pip findutils grep
 
-pip3 install -r /requirements.txt
+pip3 install --break-system-packages -r /requirements.txt
 
 mkdir /tests
 

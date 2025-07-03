@@ -41,6 +41,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type nodeConstraint struct {
@@ -49,8 +50,9 @@ type nodeConstraint struct {
 }
 
 const (
-	nodeKernelCheckMetricsGroup = "node_kernel_check"
-	nodeKernelCheckMetricName   = "d8_node_kernel_does_not_satisfy_requirements"
+	nodeKernelCheckMetricsGroup          = "node_kernel_check"
+	nodeKernelCheckMetricName            = "d8_node_kernel_does_not_satisfy_requirements"
+	minKernelVersionForExtraLBAlgorithms = "5.15"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -95,6 +97,22 @@ func handleNodes(input *go_hook.HookInput) error {
 			modulesListInUse:        []string{"cni-cilium"},
 		},
 	}
+	extraLoadBalancerAlgorithmsEnabled := input.Values.Get("cniCilium.extraLoadBalancerAlgorithmsEnabled").Bool()
+	if extraLoadBalancerAlgorithmsEnabled {
+		currentConstraint := constraints[0].kernelVersionConstraint
+		currentVersionStr := strings.TrimSpace(strings.TrimPrefix(currentConstraint, ">="))
+		currentVersion, err := semver.NewVersion(currentVersionStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse current version from constraint %q: %v", currentConstraint, err)
+		}
+		extraLBMinVersion, err := semver.NewVersion(minKernelVersionForExtraLBAlgorithms)
+		if err != nil {
+			return fmt.Errorf("invalid minKernelVersionForExtraLBAlgorithms %q: %v", minKernelVersionForExtraLBAlgorithms, err)
+		}
+		if extraLBMinVersion.GreaterThan(currentVersion) {
+			constraints[0].kernelVersionConstraint = fmt.Sprintf(">= %s", extraLBMinVersion.String())
+		}
+	}
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
@@ -106,7 +124,7 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	node, err := defineMinimalLinuxKernelVersionNode(nodes)
 	if err != nil {
-		input.Logger.Errorf("failed to define minimal kernel version node: %v", err)
+		input.Logger.Error("failed to define minimal kernel version node", log.Err(err))
 		return nil
 	}
 
@@ -134,7 +152,7 @@ func handleNodes(input *go_hook.HookInput) error {
 			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
 			nodeSemverVersion, err := semver.NewVersion(kernelVerStr)
 			if err != nil {
-				input.Logger.Errorf("failed to parse kernel version %q: %v", node.KernelVersion, err)
+				input.Logger.Error("failed to parse kernel version", slog.String("version", node.KernelVersion), log.Err(err))
 				continue
 			}
 

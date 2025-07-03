@@ -69,7 +69,7 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
     Example output:
 
-    ```txt
+    ```text
     {"size":"58G","storageClass":"linstor-thick-data-r1"}
     ```
 
@@ -82,7 +82,7 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
    Example output:
 
-    ```txt
+    ```text
    moduleconfig.deckhouse.io/virtualization patched
     ```
 
@@ -94,7 +94,7 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
    Example output:
 
-    ```txt
+    ```text
     {"size":"59G","storageClass":"linstor-thick-data-r1"}
    ```
 
@@ -264,7 +264,7 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 Example output:
 
-```txt
+```text
 {
   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
   "inCluster":"http://10.222.165.239/upload"

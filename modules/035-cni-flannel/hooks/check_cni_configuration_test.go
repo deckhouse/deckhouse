@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -217,7 +216,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -242,7 +241,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -267,7 +266,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -308,7 +307,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "HostGW",
 				}),
 				foreignDesiredCM,
@@ -350,7 +349,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "HostGW"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -376,7 +375,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}

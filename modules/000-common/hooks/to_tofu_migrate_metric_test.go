@@ -155,8 +155,8 @@ common: {}
 			f.RunHook()
 		})
 
-		It("Hook should fail with not found cluster state error", func() {
-			Expect(f).ToNot(ExecuteSuccessfully())
+		It("Hook should execute successfully (hybrid cluster case)", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 

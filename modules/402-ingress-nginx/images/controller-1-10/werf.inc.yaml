@@ -3,6 +3,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-06-11.2"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -51,7 +52,7 @@ shell:
   - patch -p1 < /patches/010-nginx-build.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
-  - patch -p1 < /patches/015-fix-validating-webhook-cve.patch
+  - patch -p1 < /patches/015-protect-validation-port.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
@@ -61,11 +62,11 @@ shell:
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  - rm -rf /src/dumb-init/.git   
-  - rm -rf /src/lua-protobuf/.git   
-  - rm -rf /src/lua-iconv/.git   
-  - rm -rf /src/ingress-nginx/.git   
-  
+  - rm -rf /src/dumb-init/.git
+  - rm -rf /src/lua-protobuf/.git
+  - rm -rf /src/lua-iconv/.git
+  - rm -rf /src/ingress-nginx/.git
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact

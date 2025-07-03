@@ -48,8 +48,8 @@ resource "azurerm_network_interface" "node" {
   location            = data.azurerm_resource_group.kube.location
   resource_group_name = data.azurerm_resource_group.kube.name
 
-  enable_ip_forwarding          = true
-  enable_accelerated_networking = local.accelerated_networking
+  ip_forwarding_enabled          = true
+  accelerated_networking_enabled = local.accelerated_networking
 
   ip_configuration {
     name                          = local.prefix

@@ -338,7 +338,7 @@ func isNodeActive(node *v1.Node) bool {
 	return true
 }
 
-func extractIngressGatewaysFromCM(cm v1.ConfigMap) ([]IngressGateway, error) {
+func extractIngressGatewaysFromCM(cm *v1.ConfigMap) ([]IngressGateway, error) {
 
 	data, exists := cm.Data["ingressgateways-array.json"]
 	if !exists {
@@ -369,6 +369,21 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		}
 		serviceList.Items = append(serviceList.Items, *service)
 	}
+
+	// Try get ConfigMap
+	// Prioritizes ConfigMap if it is present in the inlet Gateways is ignored
+	ingressGwFromCm := exp.configMapInformer.GetStore().List()
+	if len(ingressGwFromCm) > 0 {
+		cm := ingressGwFromCm[0].(*v1.ConfigMap)
+		ingressGatewaysConfigmap, err := extractIngressGatewaysFromCM(cm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract gateways from cm: %w", err)
+		}
+		logger.Printf("Found ingresGateways advertisements overriding config in ConfigMap: %s, %v", cm.Name, ingressGatewaysConfigmap)
+		ingressGateways = append(ingressGateways, ingressGatewaysConfigmap...)
+		return ingressGateways, nil
+	}
+
 
 	switch inlet {
 
@@ -411,17 +426,7 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		fmt.Printf("ingressGatewaysNodePort=%+v\n", ingressGatewaysNodePort)
 		ingressGateways = append(ingressGateways, ingressGatewaysNodePort...)
 	default:
-		ingressGwFromCm := exp.configMapInformer.GetStore().List()
-		if len(ingressGwFromCm) == 0 {
-			return nil, fmt.Errorf("no ingressGateways found in ingressgateways")
-		}
-		cm := ingressGwFromCm[0].(v1.ConfigMap)
-		ingressGatewaysConfigmap, err := extractIngressGatewaysFromCM(cm)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract gateways from cm: %w", err)
-		}
-		fmt.Printf("ingressGatewaysConfigmap=%+v\n", ingressGatewaysConfigmap)
-		ingressGateways = append(ingressGateways, ingressGatewaysConfigmap...)
+		return nil, fmt.Errorf("unknown inlet type: %s", inlet)
 	}
 
 	//debug

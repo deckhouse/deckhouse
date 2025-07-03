@@ -182,24 +182,65 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       })
 
-      const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
+      function themeFormValidation(data) {
+        const spamPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CASE|WHEN|SLEEP|--|\|\||OR|AND|CHR\()\b)/i;
 
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=utf-8',
-          Accept: "application/json",
-        },
-        body: JSON.stringify(bitrixFields)
-      })
-      .then(res => {
-        if(res.ok) {
-          this.downloadFile();
-          this.successSubmit();
-        } else {
-          this.errorSubmit();
+        function checkingValue(value) {
+          if(!value) return false;
+
+          if(typeof value === 'string') {
+            return spamPattern.test(value);
+          }
+
+          if(typeof value === 'number') {
+            return spamPattern.test(value.toString());
+          }
+
+          if(Array.isArray(value)) {
+            return value.some(checkingValue);
+          }
+
+          if(typeof value === 'object' && value !== null) {
+            return Object.values(value).some(checkingValue);
+          }
+
+          return false;
         }
-      })
+
+        return checkingValue(data);
+      }
+
+      let isSpam = false;
+
+      for(const fieldsValue in bitrixFields.fields) {
+        if(themeFormValidation(bitrixFields.fields[fieldsValue])) {
+          isSpam = true;
+          break;
+        }
+      }
+
+      if(!isSpam) {
+        const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
+
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8',
+            Accept: "application/json",
+          },
+          body: JSON.stringify(bitrixFields)
+        })
+        .then(res => {
+          if(res.ok) {
+            this.downloadFile();
+            this.successSubmit();
+          } else {
+            this.errorSubmit();
+          }
+        })
+      } else {
+        this.errorSubmit();
+      }
     }
 
     serializeData() {

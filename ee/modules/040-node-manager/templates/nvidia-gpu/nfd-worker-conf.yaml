@@ -1,0 +1,24 @@
+{{- if include "nvidia_gpu_enabled" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-feature-discovery-worker-conf
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+data:
+  nfd-worker.conf: |-
+    core:
+      labelSources:
+      - "local"
+      - "pci"
+    sources:
+      pci:
+        deviceClassWhitelist:
+        - "02"
+        - "0200"
+        - "0207"
+        - "0300"
+        - "0302"
+        deviceLabelFields:
+        - vendor
+{{- end }}

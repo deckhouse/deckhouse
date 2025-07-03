@@ -110,7 +110,6 @@ const istioValues = `
         inlet: LoadBalancer
         nodePort: {}
     tracing: {}
-    proxyConfig: {}
     controlPlane:
       replicasManagement:
         mode: Standard
@@ -126,6 +125,7 @@ const istioValues = `
             max: "2Gi"
     dataPlane:
       trafficRedirectionSetupMode: CNIPlugin
+      proxyConfig: {}
 `
 
 func getSubdirs(dir string) ([]string, error) {

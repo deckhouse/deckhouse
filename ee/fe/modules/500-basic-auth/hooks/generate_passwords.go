@@ -15,7 +15,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Set locations from config values or set a default one with generated password.
@@ -86,9 +89,9 @@ func generatePassword(input *go_hook.HookInput) error {
 	// No config values. Try to restore generated password from the Secret.
 	// Generate default location if no valid generated password available.
 
-	pass, err := restorePasswordFromSnapshot(input.Snapshots[secretBinding])
+	pass, err := restorePasswordFromSnapshot(input.NewSnapshots.Get(secretBinding))
 	if err != nil {
-		input.Logger.Infof("Generate default location for basic auth: %s", err)
+		input.Logger.Info("Generate default location for basic auth", log.Err(err))
 		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 
@@ -107,15 +110,17 @@ func generatePassword(input *go_hook.HookInput) error {
 // contains more fields or passwords.
 //
 // NOTE: This algorithm is coupled with the field name in secret.yaml and "users" template in _helpers.tpl.
-func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
+func restorePasswordFromSnapshot(snapshot []sdkpkg.Snapshot) (string, error) {
 	// Only one Secret is expected.
 	if len(snapshot) != 1 {
 		return "", fmt.Errorf("secret/%s not found", secretName)
 	}
 
-	secretData, ok := snapshot[0].(map[string][]byte)
-	if !ok {
-		return "", fmt.Errorf("secret/%s has empty data", secretName)
+	secretData := make(map[string][]byte, 0)
+
+	err := snapshot[0].UnmarshalTo(&secretData)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal to: %w", err)
 	}
 
 	// Expect only one user-password pair.

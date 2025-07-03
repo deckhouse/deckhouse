@@ -17,20 +17,20 @@ limitations under the License.
 package releaseupdater
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
 type Settings struct {
 	NotificationConfig     NotificationConfig
 	DisruptionApprovalMode string
-	Mode                   v1alpha1.UpdateMode
+	Mode                   v1alpha2.UpdateMode
 	Windows                update.Windows
 	Subject                string
 }
 
 func (s *Settings) InDisruptionApprovalMode() bool {
-	if s.DisruptionApprovalMode == "" || s.DisruptionApprovalMode == v1alpha1.UpdateModeAuto.String() {
+	if s.DisruptionApprovalMode == "" || s.DisruptionApprovalMode == v1alpha2.UpdateModeAuto.String() {
 		return false
 	}
 
@@ -38,5 +38,5 @@ func (s *Settings) InDisruptionApprovalMode() bool {
 }
 
 func (s *Settings) InManualMode() bool {
-	return s.Mode == v1alpha1.UpdateModeManual
+	return s.Mode == v1alpha2.UpdateModeManual
 }

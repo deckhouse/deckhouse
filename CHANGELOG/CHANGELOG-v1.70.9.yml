@@ -1,0 +1,11 @@
+control-plane-manager:
+  fixes:
+    - summary: Fix default behaviour for etcd backup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14146
+ingress-nginx:
+  fixes:
+    - summary: fixed geoip issues in validator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14164
+    - summary: Automatic geoip updating feature was reverted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14161
+

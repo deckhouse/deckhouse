@@ -16,10 +16,14 @@ package preflight
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -80,12 +84,19 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 		return nil, fmt.Errorf("parse ClusterConfiguration.deckhouse.registryDockerCfg: %w", err)
 	}
 
-	versionTagRef, err := name.ParseReference(pc.installConfig.GetImage(true))
+	var versionTagRef name.Reference
+	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" {
+		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true), name.Insecure)
+	} else {
+		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("parse image reference: %w", err)
 	}
 
-	config, err := pc.imageDescriptorProvider.ConfigFile(versionTagRef, remote.WithContext(ctx), remote.WithAuth(creds))
+	client, err := pc.prepareTLS()
+
+	config, err := pc.imageDescriptorProvider.ConfigFile(versionTagRef, remote.WithContext(ctx), remote.WithAuth(creds), remote.WithTransport(client.Transport))
 	if err != nil {
 		return nil, fmt.Errorf("pull deckhouse image ConfigFile from registry: %w", err)
 	}
@@ -132,4 +143,27 @@ func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
 	}
 
 	return authn.Anonymous, nil
+}
+
+func (pc *Checker) prepareTLS() (*http.Client, error) {
+	client := &http.Client{}
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" || len(pc.metaConfig.Registry.CA) == 0 {
+		client.Transport = httpTransport
+		return client, nil
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM([]byte(pc.metaConfig.Registry.CA)); !ok {
+		return nil, fmt.Errorf("invalid cert in CA PEM")
+	}
+
+	httpTransport.TLSClientConfig = &tls.Config{
+		RootCAs: certPool,
+	}
+
+	client.Transport = httpTransport
+
+	return client, nil
 }

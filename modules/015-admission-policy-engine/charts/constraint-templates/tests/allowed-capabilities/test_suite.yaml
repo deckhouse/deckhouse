@@ -41,6 +41,12 @@ tests:
         object: test_samples/pss_restricted/allowed_drop.yaml
         assertions:
           - violations: no
+      - name: example-skip-pss-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/allowed_with_skip_pss.yaml
+        assertions:
+          - violations: no
       - name: example-disallowed
         inventory:
           - ../common/test_samples/ns.yaml

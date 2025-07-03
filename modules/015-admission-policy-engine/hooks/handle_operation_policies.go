@@ -17,10 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
@@ -38,16 +42,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleOP)
 
 func handleOP(input *go_hook.HookInput) error {
-	result := make([]*operationPolicy, 0)
-
-	snap := input.Snapshots["operation-policies"]
-
-	for _, sn := range snap {
-		op := sn.(*operationPolicy)
-		result = append(result, op)
+	ops, err := sdkobjectpatch.UnmarshalToStruct[operationPolicy](input.NewSnapshots, "operation-policies")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal operation-policies snapshot: %w", err)
 	}
 
-	data, _ := json.Marshal(result)
+	data, err := json.Marshal(ops)
+	if err != nil {
+		return err
+	}
 
 	input.Values.Set("admissionPolicyEngine.internal.operationPolicies", json.RawMessage(data))
 

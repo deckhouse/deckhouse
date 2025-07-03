@@ -239,6 +239,9 @@ common:
   virtualization-platform: Virtualization Platform
   stronghold: Stronghold
   code: Code
+  breadcrumbs_link_guides:
+    en: All Guides
+    ru: Все руководства
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

@@ -3,3 +3,4 @@ weight: 40
 subsystems:
   - kubernetes
 namespace: kube-system
+stage: General Availability

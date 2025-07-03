@@ -1,0 +1,6 @@
+loki:
+  fixes:
+    - summary: Fix incorrect indices sort function used in disk-based retention.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13861
+      impact: Prevent important data loss when using wide retention intervals.
+

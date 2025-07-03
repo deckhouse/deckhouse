@@ -79,7 +79,7 @@ func handleSetProviderID(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(staticPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(staticPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil

@@ -125,6 +125,10 @@ block-until-image-is-not-ready:
             prNum = context.payload.inputs.issue_number;
           }
 
+          if (!branchName) {
+            branchName = githubAction.GetBranchNameFromContext(context);
+          }
+
           if (branchName) {
             let infoText = `Check build workflow is completed for branch: ${branchName}`;
             if (prNum) {

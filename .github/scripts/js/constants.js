@@ -60,6 +60,9 @@ const labels = {
   'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
   'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
 
+  // E2E: autoscaler
+  'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
+
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 
@@ -78,7 +81,8 @@ const labels = {
   'e2e/use/cis': { type: 'e2e-use', cis: true },
 
   // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' }
+  'security/rootless': { type: 'security', security: 'rootless' },
+  'security/cve': { type: 'security', security: 'cve' }
 };
 module.exports.knownLabels = labels;
 

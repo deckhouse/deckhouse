@@ -83,7 +83,7 @@ metadata:
     source: test
     status: deployed
   name: commander-1.0.3
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: commander
   version: 1.0.3
@@ -135,7 +135,7 @@ metadata:
     source: test
     status: deployed
   name: parca-1.2.2
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.2.2
@@ -147,3 +147,31 @@ status:
   pullDuration: 9m15s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: commander
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed

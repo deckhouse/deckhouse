@@ -7,8 +7,8 @@ documentation: documentation
 modules_documentation: Modules documentation
 core: core
 conversions_title: Conversions
-conversion_action_message: Perform the following actions if you need to convert data from one version of the module parameter schema to another
-conversion_from_version: From version
+conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+conversion_from_version: Updates from version
 conversion_to: to
 conversion_expressions: Actions performed by the conversion (jq syntax)
 conversion_missing_description: Conversion description is missing
@@ -66,4 +66,4 @@ version_of_module: "### module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
 parameters: parameters
-
+no_custom_configuration: The module has no configuration parameters.

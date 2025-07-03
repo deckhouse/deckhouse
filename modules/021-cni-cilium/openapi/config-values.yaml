@@ -91,6 +91,14 @@ properties:
     default: true
     description: |
       Enables the Cilium `L2 neighbor discovery` mechanism, which helps ensure that ARP table entries are kept up-to-date on all cluster nodes.
+  extraLoadBalancerAlgorithmsEnabled:
+    type: boolean
+    default: false
+    x-experimental: true
+    description: |
+      Allows selectively overriding the load balancing algorithm using eBPF between backends for individual services. The annotation `cilium.io/bpf-lb-algorithm` is used for overriding with one of the following values: `random`, `maglev`, or `least-conn`.
+
+      > Note! This option requires the Linux kernel version on the nodes to be at least 5.15.
   resourcesManagement:
     description: |
       Settings for CPU and memory requests and limits by cilium agent pods.
@@ -250,3 +258,30 @@ properties:
                 - type: number
                 description: |
                   Configuring memory limits.
+  encryption:
+    type: object
+    description: |
+      CNI Cilium encryption settings.
+    default: {}
+    properties:
+      mode:
+        type: string
+        enum: ["Disabled", "WireGuard"]
+        default: "Disabled"
+        description: |
+          Encryption mode:
+          - `Disabled` — encryption is disabled.
+          - `WireGuard` — enables traffic encryption between pods using WireGuard.
+
+            > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either via the CONFIG_WIREGUARD=m kernel config option on Linux 5.6 and newer, or using an external WireGuard module for older kernels).
+
+            > Note! Using WireGuard may cause significant CPU consumption by Cilium agent pods.
+      nodeToNodeModeEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enabling traffic encryption between nodes and pods in HostNetwork.
+
+            > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
+
+          > Note! When this mode is active, `NodePort` and `HostPort` are not available from the `PodNetwork`.

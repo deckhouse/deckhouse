@@ -1,4 +1,5 @@
 name: service-with-healthchecks
+stage: "General Availability"
 weight: 610
 namespace: d8-service-with-healthchecks
 description: |

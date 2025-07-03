@@ -15,12 +15,16 @@
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/google/uuid"
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
@@ -71,13 +75,16 @@ func createConfigMapWithUUID(patch go_hook.PatchCollector, clusterUUID string) {
 // There is CM kube-system/d8-cluster-uuid with cluster uuid. Hook must store it to `global.discovery.clusterUUID`.
 // Or generate uuid and create CM
 func discoveryClusterUUID(input *go_hook.HookInput) error {
-	uuidSnap := input.Snapshots["cluster_uuid"]
-
 	const valPath = "global.discovery.clusterUUID"
+
+	uuidSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cluster_uuid")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cluster_uuid snapshot: %w", err)
+	}
 
 	var clusterUUID string
 	if len(uuidSnap) > 0 {
-		clusterUUID = uuidSnap[0].(string)
+		clusterUUID = uuidSnap[0]
 	} else {
 		if uuidFromVals, ok := input.Values.GetOk(valPath); ok {
 			clusterUUID = uuidFromVals.String()

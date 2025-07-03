@@ -15,11 +15,14 @@
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -61,11 +64,13 @@ func applyDefaultStorageClassFilter(obj *unstructured.Unstructured) (go_hook.Fil
 }
 
 func discoveryDefaultStorageClass(input *go_hook.HookInput) error {
-	storageClassesSnap := input.Snapshots["default_sc"]
+	storageClassesSnap, err := sdkobjectpatch.UnmarshalToStruct[storageClass](input.NewSnapshots, "default_sc")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
+	}
 
 	defaultStorageClass := ""
-	for _, scRaw := range storageClassesSnap {
-		sc := scRaw.(storageClass)
+	for _, sc := range storageClassesSnap {
 		if sc.IsDefault {
 			defaultStorageClass = sc.Name
 			break

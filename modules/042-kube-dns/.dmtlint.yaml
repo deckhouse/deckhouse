@@ -10,14 +10,6 @@ linters-settings:
       security-context:
         - kind: Deployment
           name: d8-kube-dns-sts-pods-hosts-appender-webhook
-      liveness-probe:
-        - kind: Deployment
-          name: d8-kube-dns
-          container: kube-rbac-proxy
-      readiness-probe:
-        - kind: Deployment
-          name: d8-kube-dns
-          container: kube-rbac-proxy
   templates:
     exclude-rules:
       service-port:

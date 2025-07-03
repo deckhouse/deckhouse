@@ -47,12 +47,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -75,8 +77,10 @@ type MetricsUpdater interface {
 }
 
 type deckhouseReleaseReconciler struct {
-	client        client.Client
-	dc            dependency.Container
+	client client.Client
+	dc     dependency.Container
+	exts   *extenders.ExtendersStack
+
 	logger        *log.Logger
 	moduleManager moduleManager
 
@@ -93,7 +97,7 @@ type deckhouseReleaseReconciler struct {
 	deckhouseVersion string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
@@ -105,6 +109,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
+		exts:               exts,
 		logger:             logger,
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
@@ -257,7 +262,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 // patchManualRelease modify deckhouse release with approved status
 func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	if r.updateSettings.Get().Update.Mode != v1alpha1.UpdateModeManual.String() {
+	if r.updateSettings.Get().Update.Mode != v1alpha2.UpdateModeManual.String() {
 		return nil
 	}
 
@@ -388,7 +393,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if !r.isDeckhousePodReady(ctx) && !task.IsPatch {
-		r.logger.Info("Deckhouse is not ready. Skipping upgrade")
+		r.logger.Info("Deckhouse is not ready, waiting")
 
 		drs := &v1alpha1.DeckhouseReleaseStatus{
 			Phase: v1alpha1.DeckhouseReleasePhasePending,
@@ -409,7 +414,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.exts, r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
@@ -540,7 +545,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		// if we have wrong mode - autopatch
-		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
+		Mode:    v1alpha2.ParseUpdateMode(us.Update.Mode),
 		Windows: us.Update.Windows,
 		Subject: releaseUpdater.SubjectDeckhouse,
 	}
@@ -1010,6 +1015,16 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		}
 
 		return res, nil
+	}
+
+	if dr.Status.Message != "" {
+		err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+			dr.Status.Message = ""
+			return nil
+		})
+		if err != nil {
+			return res, err
+		}
 	}
 
 	if dr.GetIsUpdating() {

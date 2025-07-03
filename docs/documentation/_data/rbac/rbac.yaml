@@ -2198,39 +2198,6 @@ modules:
     namespace: ""
     subsystems:
     - security
-  snapshot-controller:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:snapshot-controller:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - snapshot-controller
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:snapshot-controller:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - snapshot-controller
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-snapshot-controller
-    subsystems:
-    - storage
-    - infrastructure
   static-routing-manager:
     capabilities:
       manage:
@@ -2555,7 +2522,6 @@ subsystems:
     - local-path-provisioner
     - node-manager
     - terraform-manager
-    - snapshot-controller
     - istio
     - vertical-pod-autoscaler
     - descheduler
@@ -2581,7 +2547,6 @@ subsystems:
     - d8-local-path-provisioner
     - d8-monitoring
     - d8-pod-reloader
-    - d8-snapshot-controller
     - d8-system
     - kube-system
   kubernetes:
@@ -2663,8 +2628,3 @@ subsystems:
     - d8-operator-trivy
     - d8-runtime-audit-engine
     - d8-user-authn
-  storage:
-    modules:
-    - snapshot-controller
-    namespaces:
-    - d8-snapshot-controller

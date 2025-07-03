@@ -1,0 +1,23 @@
+{{- if and ($.Values.istio.internal.enableAmbientMode) (eq (first $.Values.istio.internal.operatorVersionsToInstall) "1.25") }}
+    {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+        {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+        {{ $imageSuffix := get $versionInfo "imageSuffix" }}
+        {{- $revision := get $versionInfo "revision" }}
+        {{- $fullVersion := get $versionInfo "fullVersion" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ztunnel
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict 
+      "app" "ztunnel"
+      "app.kubernetes.io/name" "ztunnel"
+      "app.kubernetes.io/instance" (print $revision "-ztunnel")
+      "app.kubernetes.io/version" $fullVersion
+      "app.kubernetes.io/part-of" "istio"
+  )) | nindent 2 }}
+---
+  {{- end }}
+{{- end }}

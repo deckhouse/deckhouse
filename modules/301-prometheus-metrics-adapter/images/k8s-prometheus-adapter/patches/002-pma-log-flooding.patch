@@ -1,0 +1,38 @@
+diff --git a/pkg/resourceprovider/provider.go b/pkg/resourceprovider/provider.go
+index de59e70..c16e528 100644
+--- a/pkg/resourceprovider/provider.go
++++ b/pkg/resourceprovider/provider.go
+@@ -180,6 +180,7 @@ func (p *resourceProvider) GetPodMetrics(pods ...*metav1.PartialObjectMetadata)
+ // also recording the earliest time in resTime.  It will return without operating if
+ // any data is missing.
+ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resultsByNs map[string]nsQueryResults) *metrics.PodMetrics {
++	now := time.Now()
+ 	// check to make sure everything is present
+ 	nsRes, nsResPresent := resultsByNs[pod.Namespace]
+ 	if !nsResPresent {
+@@ -188,11 +189,25 @@ func (p *resourceProvider) assignForPod(pod *metav1.PartialObjectMetadata, resul
+ 	}
+ 	cpuRes, hasResult := nsRes.cpu[pod.Name]
+ 	if !hasResult {
++		// Check if the pod was created before the start of the metrics collection window.
++		// If the pod is newer than this window, CPU metrics might not be available yet.
++		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++			klog.Infof("pod %s/%s has age within the metrics collection window (%v), skipping",
++				pod.Name, pod.Namespace, p.window)
++			return nil
++		}
+ 		klog.Errorf("unable to fetch CPU metrics for pod %s, skipping", pod.String())
+ 		return nil
+ 	}
+ 	memRes, hasResult := nsRes.mem[pod.Name]
+ 	if !hasResult {
++		// Check if the pod was created before the start of the metrics collection window.
++		// If the pod is newer than this window, CPU metrics might not be available yet.
++		if pod.CreationTimestamp.Time.After(now.Add(-p.window)) {
++			klog.Infof("pod %s/%s has age within the metrics collection window (%v), skipping",
++				pod.Name, pod.Namespace, p.window)
++			return nil
++		}
+ 		klog.Errorf("unable to fetch memory metrics for pod %s, skipping", pod.String())
+ 		return nil
+ 	}

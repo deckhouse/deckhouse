@@ -233,7 +233,7 @@ fi
 
 ## Platform Installation
 
-> When installing a platform edition other than the [Community Edition](../../editions.html) from the official container registry `registry.deckhouse.io`, you need to authenticate with a license key beforehand:
+> When installing a platform edition other than the [Community Edition](../../../about/editions.html) from the official container registry `registry.deckhouse.io`, you need to authenticate with a license key beforehand:
 >
 > ```shell
 > docker login -u license-token registry.deckhouse.io
@@ -247,7 +247,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 
 where:
 
-- `<DECKHOUSE_REVISION>` — [edition](../../editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
+- `<DECKHOUSE_REVISION>` — [edition](../../../about/editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
 - `<MOUNT_OPTIONS>` — options for mounting files into the installer container, such as:
   - SSH access keys;
   - configuration file;

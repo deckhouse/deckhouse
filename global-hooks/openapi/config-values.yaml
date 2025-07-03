@@ -57,19 +57,18 @@ properties:
         type: string
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
-          The template with the `%s` key as the dynamic string parameter.
+          A DNS name template with the `%s` key used as a dynamic part of the string.
 
-          Deckhouse modules use this template for creating Ingress resources.
+          Deckhouse modules use this template when creating Ingress resources.
 
-          E.g., if the template is `%s.kube.company.my`, the prometheus module will create an Ingress resource for the `grafana.kube.company.my` hosts to  access Grafana.
-
-          **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
+          For example, given the template `%s.kube.company.my`, the `prometheus` module will create an Ingress resource at the address `grafana.kube.company.my` to provide access to Grafana.
 
           **Pay attention to the following:**
-          - Domain must be different from [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
-          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
-          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
-          - If this parameter is omitted, no Ingress resources will be created.
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](./installing/configuration.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
+          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.  
+          For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:

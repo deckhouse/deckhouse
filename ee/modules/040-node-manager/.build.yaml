@@ -1,2 +1,4 @@
 cloud-providers/*
 capi/*
+images/*
+templates/nvidia-gpu

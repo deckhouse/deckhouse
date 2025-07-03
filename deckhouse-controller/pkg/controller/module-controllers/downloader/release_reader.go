@@ -26,6 +26,7 @@ import (
 type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
+	moduleReader    *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
@@ -51,6 +52,11 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 			}
 		case "changelog.yaml", "changelog.yml":
 			_, err = io.Copy(rr.changelogReader, tr)
+			if err != nil {
+				return err
+			}
+		case "module.yaml":
+			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
 				return err
 			}
