@@ -71,6 +71,15 @@ func WithNewRegistry() Option {
 	}
 }
 
+// WithRegistry is an option to set a custom prometheus registry
+func WithRegistry(registry *prometheus.Registry) Option {
+	return func(m *MetricStorage) {
+		m.registry = registry
+		m.gatherer = registry
+		m.registerer = registry
+	}
+}
+
 // WithLogger is an option to set a custom logger
 func WithLogger(logger *log.Logger) Option {
 	return func(m *MetricStorage) {
@@ -168,6 +177,7 @@ func (m *MetricStorage) Gauge(metric string, labels map[string]string) *promethe
 }
 
 // RegisterGauge registers a gauge.
+// Deprecated: use Gauge instead
 func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec {
 	if m == nil {
 		return nil
@@ -242,6 +252,7 @@ func (m *MetricStorage) Counter(metric string, labels map[string]string) *promet
 }
 
 // RegisterCounter registers a counter.
+// Deprecated: use Counter instead
 func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec {
 	if m == nil {
 		return nil
@@ -314,6 +325,7 @@ func (m *MetricStorage) Histogram(metric string, labels map[string]string, bucke
 	return m.RegisterHistogram(metric, labels, buckets)
 }
 
+// Deprecated: use Histogram instead
 func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
 	if m == nil {
 		return nil
@@ -365,6 +377,21 @@ func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]strin
 
 // Batch operations for metrics from hooks
 
+// ApplyBatchOperations processes a batch of metric operations with optional labels.
+//
+// This method handles metric operations in two categories:
+//  1. Grouped operations - Operations with the same Group value are processed together.
+//     All existing metrics in a group are expired before new operations are applied.
+//  2. Non-grouped operations - Operations without a Group value are processed individually.
+//
+// The method first validates all operations, then organizes them by group,
+// and finally applies them with the provided labels.
+//
+// Parameters:
+//   - ops: A slice of MetricOperation objects to be applied
+//   - labels: A map of string key-value pairs to be attached to all metrics
+//
+// If the MetricStorage receiver is nil, the method safely returns nil without performing any operations.
 func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error {
 	if m == nil {
 		return nil
@@ -405,6 +432,20 @@ func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, la
 	return nil
 }
 
+// ApplyOperation applies the specified metric operation to the metric storage.
+//
+// It processes different types of metric operations:
+// - For ActionAdd: Increases a counter metric by the specified value
+// - For ActionSet: Sets a gauge metric to the specified value
+// - For ActionObserve: Records an observation in a histogram with the specified buckets
+//
+// The function merges operation-specific labels with common labels before applying the operation.
+//
+// Parameters:
+// - op: The MetricOperation to apply (containing action type, metric name, value, labels, etc.)
+// - commonLabels: Additional labels to apply to the metric
+//
+// If the MetricStorage instance is nil, the function returns without performing any operation.
 func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) {
 	if m == nil {
 		return
@@ -427,7 +468,9 @@ func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabel
 	}
 }
 
-// applyGroupedOperations set metrics for group to a new state defined by ops.
+// applyGroupedOperations processes a batch of MetricOperations that belong to the same group.
+// It first expires all existing metrics for the group, then applies each operation,
+// adding the provided common labels to each metric.
 func (m *MetricStorage) applyGroupedOperations(group string, ops []operation.MetricOperation, commonLabels map[string]string) {
 	if m == nil {
 		return
@@ -455,6 +498,8 @@ func (m *MetricStorage) applyGroupedOperations(group string, ops []operation.Met
 	}
 }
 
+// applyNonGroupedBatchOperations processes a batch of MetricOperations that are not grouped.
+// It applies each operation in the batch to the metric storage, adding the provided labels to each metric.
 func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOperation, labels map[string]string) error {
 	if m == nil {
 		return nil
@@ -485,6 +530,14 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 	return nil
 }
 
+// GetCollector returns collector of MetricStorage
+// it can be useful to collect metrics in external registerer
+func (m *MetricStorage) GetCollector() prometheus.Collector {
+	return m.registry
+}
+
+// Handler returns handler of MetricStorage
+// returns default prometheus handler if MerticStorage created without Registry options
 func (m *MetricStorage) Handler() http.Handler {
 	if m.registry == nil {
 		return promhttp.Handler()
