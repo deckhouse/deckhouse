@@ -517,11 +517,10 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 
 ## Log transformations
 
-### Transform mixed log formats (JSON and plain strings) to structured JSON and reduce nesting
+### Transform mixed log format plain strings to structured object
 
 You can use the `ParseMessage` transformation
-to wrap or parse a log entry in mixed formats (JSON and plain strings) into a structured JSON object.
-Also, you can control the nesting depth using the `depth` parameter.
+to wrap or parse a log entry format plain strings into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -547,14 +546,16 @@ Example original log entry:
 Transformed result:
 
 ```json
-{... "message": { "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
+{... "message": {
+  "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
 ```
 
-### Transform mixed log formats (JSON and Klog) to structured JSON and reduce nesting
+### Transform mixed log format Klog to structured object
 
 You can use the `ParseMessage` transformation
-to wrap or parse a log entry in mixed formats (JSON and Klog) into a structured JSON object.
-Also, you can control the nesting depth using the `depth` parameter.
+to wrap or parse a log entry in format klog into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -578,13 +579,21 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 Transformed result:
 
 ```json
-{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
 ```
 
-### Parse Syslog logs to structured JSON
+### Parse Syslog logs to structured object
 
 You can use the `ParseMessage` transformation
-to parse Syslog logs into a structured JSON object.
+to parse Syslog logs into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -623,13 +632,14 @@ Transformed result:
   "severity": "notice",
   "timestamp": "2020-03-13T20:45:38.119Z",
   "version": 1
-}}
+  }
+}
 ```
 
-### Parse CLF logs to structured JSON
+### Parse CLF logs to structured object
 
 You can use the `ParseMessage` transformation
-to parse CLF logs into a structured JSON object.
+to parse CLF logs into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -664,13 +674,14 @@ Transformed result:
   "status": 200,
   "timestamp": "2000-10-10T20:55:36Z",
   "user": "frank"
-}}
+  }
+}
 ```
 
-### Parse Logfmt logs to structured JSON
+### Parse Logfmt logs to structured object
 
 You can use the `ParseMessage` transformation
-to parse Logfmt logs into a structured JSON object.
+to parse Logfmt logs into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -701,12 +712,13 @@ Transformed result:
   "module": "kafka.consumer.ConsumerFetcherManager",
   "msg": "Stopping all fetchers",
   "tag#production": "stopping_fetchers"
-}}
+  }
+}
 ```
 
 ### Parse JSON and reduce nesting
 
-You can use the `ParseMessage` transformation to parse a log entry in JSON.
+You can use the `ParseMessage` transformation to parse a log entry in structured object.
 Also, you can control the nesting depth using the `depth` parameter.
 
 ```yaml
@@ -733,10 +745,14 @@ Example original log entry:
 Transformed result:
 
 ```json
-{... "message": {"level" : "{ \"severity\": \"info\" }","msg" : "fetching.module.release"}}
+{... "message": {
+  "level" : "{ \"severity\": \"info\" }",
+  "msg" : "fetching.module.release"
+  }
+}
 ```
 
-### Example of parsing mixed logs into a JSON object
+### Example of parsing mixed logs into a structured object
 
 The string transformation must be the last one.
 
@@ -772,17 +788,32 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 Transformed result:
 
 ```json
-{... "message": { "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"}}
-{... "message": {"level" : "{ "severity": "info" }","msg" : "fetching.module.release"}}
-{... "message": {"file":"klog.go","id":28133,"level":"info","line":70,"message":"hello from klog","timestamp":"2025-05-05T17:59:40.692994Z"}}
+{... "message": {
+  "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+{... "message": {
+  "level" : "{ "severity": "info" }",
+  "msg" : "fetching.module.release"
+  }
+}
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
 ```
 
-### Replace dots with underscores in label keys
+### Replace `source` with `target` in label keys
 
-You can use the `ReplaceKeys` transformation to replace dots in specified label keys with underscores.
+You can use the `ReplaceKeys` transformation to replace `source` in specified label keys with `target`.
 
 > To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured JSON using the `ParseMessage` transformation.
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -809,7 +840,13 @@ Example original log entry:
 Transformed result:
 
 ```json
-{... "message": {"msg" : "fetching.module.release"}, pod_labels: {"pod_app": "test"}}
+{... "message": {
+  "msg" : "fetching.module.release"
+  },
+  "pod_labels": {
+    "pod_app": "test"
+  }
+}
 ```
 
 ### Remove labels
@@ -817,7 +854,7 @@ Transformed result:
 You can use the `DropLabels` transformation to remove specific labels from log messages.
 
 > To apply the `DropLabels` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured JSON using the `ParseMessage` transformation.
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -835,7 +872,7 @@ spec:
 
 #### Example of removing a specific label from a structured message
 
-The following example shows how you can remove a nested label from a structured JSON message.
+The following example shows how you can remove a nested label from a structured object message.
 The `ParseMessage` transformation is applied first to parse the message,
 followed by `DropLabels` to remove the specified label.
 
@@ -865,7 +902,10 @@ Example original log entry:
 Transformed result:
 
 ```json
-{... "message": {"msg" : "fetching.module.release"}}
+{... "message": {
+  "msg" : "fetching.module.release"
+  }
+}
 ```
 
 ## Collect logs from production namespaces using the namespace label selector option

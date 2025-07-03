@@ -47,7 +47,11 @@ var testCases = []struct {
 				JSON:         v1alpha1.SourceFormatJSONSpec{Depth: 1},
 			},
 		},
-		"if is_string(.message) {\n  .message = parse_json(.message, max_depth: 1) ?? .message\n}",
+		`if is_string(.message) {
+  .message = parse_json(
+    .message, max_depth: 1
+  ) ?? .message
+}`,
 	},
 	{"ParseMessage Klog Format",
 		v1alpha1.TransformationSpec{
@@ -104,10 +108,20 @@ var testCases = []struct {
 				Labels: []string{".pod_labels", ".examples"},
 			},
 		},
-		"if exists(.pod_labels) {\n" +
-			"  .pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}\n" +
-			"if exists(.examples) {\n" +
-			"  .examples = map_keys(object!(.examples), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
+		`if exists(.pod_labels) {
+  .pod_labels = map_keys(
+    object!(.pod_labels), recursive: true
+  ) -> |key| {
+    replace(key, ".", "_")
+  }
+}
+if exists(.examples) {
+  .examples = map_keys(
+    object!(.examples), recursive: true
+  ) -> |key| {
+    replace(key, ".", "_")
+  }
+}`,
 	},
 }
 
