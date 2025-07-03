@@ -392,7 +392,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if !r.isDeckhousePodReady(ctx) && !task.IsPatch {
-		r.logger.Info("Deckhouse is not ready. Skipping upgrade")
+		r.logger.Info("Deckhouse is not ready, waiting")
 
 		drs := &v1alpha1.DeckhouseReleaseStatus{
 			Phase: v1alpha1.DeckhouseReleasePhasePending,
@@ -1014,6 +1014,16 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		}
 
 		return res, nil
+	}
+
+	if dr.Status.Message != "" {
+		err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+			dr.Status.Message = ""
+			return nil
+		})
+		if err != nil {
+			return res, err
+		}
 	}
 
 	if dr.GetIsUpdating() {

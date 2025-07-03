@@ -86,6 +86,7 @@ type Params struct {
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.DefaultOnPhaseFunc
+	OnProgressFunc             phases.OnProgressFunc
 	CommanderMode              bool
 	CommanderUUID              uuid.UUID
 	InfrastructureContext      *infrastructure.Context
@@ -109,10 +110,16 @@ type ClusterBootstrapper struct {
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
 	return &ClusterBootstrapper{
-		Params:                 params,
-		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
-		lastState:              params.InitialState,
+		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
+		),
+		lastState: params.InitialState,
 	}
 }
 
@@ -440,6 +447,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
+
 	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, func() error {
 		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
 	})
@@ -447,10 +456,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseInstall)
+
 	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
+
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseWait)
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {

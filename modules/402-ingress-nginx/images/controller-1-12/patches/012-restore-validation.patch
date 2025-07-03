@@ -1,0 +1,98 @@
+From 415e46a014fa323c0414a88e8e776e5621ce28ff Mon Sep 17 00:00:00 2001
+From: Roman Orudzhov <raorudzhov@gmail.com>
+Date: Mon, 9 Jun 2025 01:50:02 +0300
+Subject: [PATCH] restore validation
+
+---
+ internal/ingress/annotations/annotations.go    | 3 ---
+ internal/ingress/controller/controller.go      | 3 ---
+ internal/ingress/controller/controller_test.go | 3 ---
+ test/e2e/admission/admission.go                | 4 +---
+ 5 files changed, 2 insertions(+), 13 deletions(-)
+
+diff --git a/internal/ingress/annotations/annotations.go b/internal/ingress/annotations/annotations.go
+index e10cc9be1..bfd466ab1 100644
+--- a/internal/ingress/annotations/annotations.go
++++ b/internal/ingress/annotations/annotations.go
+@@ -183,9 +183,6 @@ func (e Extractor) Extract(ing *networking.Ingress) (*Ingress, error) {
+
+ 	data := make(map[string]interface{})
+ 	for name, annotationParser := range e.annotations {
+-		if err := annotationParser.Validate(ing.GetAnnotations()); err != nil {
+-			return nil, errors.NewRiskyAnnotations(name)
+-		}
+ 		val, err := annotationParser.Parse(ing)
+ 		klog.V(5).InfoS("Parsing Ingress annotation", "name", name, "ingress", klog.KObj(ing), "value", val)
+ 		if err != nil {
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index ae8c79bd9..aa0707224 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -420,14 +420,11 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
+ 		return err
+ 	}
+
+-	/* Deactivated to mitigate CVE-2025-1974
+-	// TODO: Implement sandboxing so this test can be done safely
+ 	err = n.testTemplate(content)
+ 	if err != nil {
+ 		n.metricCollector.IncCheckErrorCount(ing.ObjectMeta.Namespace, ing.Name)
+ 		return err
+ 	}
+-	*/
+
+ 	n.metricCollector.IncCheckCount(ing.ObjectMeta.Namespace, ing.Name)
+ 	endCheck := time.Now().UnixNano() / 1000000
+diff --git a/internal/ingress/controller/controller_test.go b/internal/ingress/controller/controller_test.go
+index 3b7a3c4eb..9d3fea470 100644
+--- a/internal/ingress/controller/controller_test.go
++++ b/internal/ingress/controller/controller_test.go
+@@ -250,8 +250,6 @@ func TestCheckIngress(t *testing.T) {
+ 			}
+ 		})
+
+-		/* Deactivated to mitigate CVE-2025-1974
+-		// TODO: Implement sandboxing so this test can be done safely
+ 		t.Run("When nginx test returns an error", func(t *testing.T) {
+ 			nginx.command = testNginxTestCommand{
+ 				t:        t,
+@@ -263,7 +261,6 @@ func TestCheckIngress(t *testing.T) {
+ 				t.Errorf("with a new ingress with an error, an error should be returned")
+ 			}
+ 		})
+-		*/
+
+ 		t.Run("When the default annotation prefix is used despite an override", func(t *testing.T) {
+ 			defer func() {
+diff --git a/test/e2e/admission/admission.go b/test/e2e/admission/admission.go
+index 2c94a5893..a86541213 100644
+--- a/test/e2e/admission/admission.go
++++ b/test/e2e/admission/admission.go
+@@ -20,6 +20,7 @@ import (
+ 	"bytes"
+ 	"context"
+ 	"fmt"
++	"github.com/onsi/ginkgo"
+ 	"net/http"
+ 	"os/exec"
+ 	"strings"
+@@ -209,8 +210,6 @@ var _ = framework.IngressNginxDescribeSerial("[Admission] admission controller",
+ 			Status(http.StatusOK)
+ 	})
+
+-	/* Deactivated to mitigate CVE-2025-1974
+-	// TODO: Implement sandboxing so this test can be done safely
+ 	ginkgo.It("should return an error if the Ingress V1 definition contains invalid annotations", func() {
+ 		disableSnippet := f.AllowSnippetConfiguration()
+ 		defer disableSnippet()
+@@ -224,7 +223,6 @@ var _ = framework.IngressNginxDescribeSerial("[Admission] admission controller",
+ 			assert.NotNil(ginkgo.GinkgoT(), err, "creating an ingress with invalid configuration should return an error")
+ 		}
+ 	})
+-	*/
+
+ 	ginkgo.It("should not return an error for an invalid Ingress when it has unknown class", func() {
+ 		disableSnippet := f.AllowSnippetConfiguration()
+--
+2.39.5 (Apple Git-154)
+

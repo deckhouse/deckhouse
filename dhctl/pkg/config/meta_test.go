@@ -250,6 +250,11 @@ func TestPrepareRegistry(t *testing.T) {
 		})
 	})
 
+	t.Run("Validate HTTP imagesRepo with CA", func(t *testing.T) {
+		err := validateHTTPRegistryScheme("http", "==exampleCA==")
+		require.EqualError(t, err, "registry CA is not allowed for HTTP scheme")
+	})
+
 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 

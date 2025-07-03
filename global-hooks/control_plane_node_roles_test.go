@@ -81,7 +81,6 @@ var _ = Describe("Global hooks :: control_plane_node_roles", func() {
 
 		It("Sets master role", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
 			for _, name := range names {
 				assertBothNodeRoles(name)
 			}

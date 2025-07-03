@@ -33,6 +33,7 @@ apiVersions:
         masterNodeGroup:
           replicas: 1
           instanceClass:
+            flavorName: m1.large
             rootDiskSize: 50
             imageName: "debian-11-genericcloud-amd64-20220911-1135"
         nodeGroups:
@@ -42,13 +43,6 @@ apiVersions:
               flavorName: m1.large
               imageName: "debian-11-genericcloud-amd64-20220911-1135"
               rootDiskSize: 50
-              configDrive: false
-              floatingIPPools:
-                - public
-                - shared
-              additionalSecurityGroups:
-                - sec_group_1
-                - sec_group_2
             zones:
               - eu-1a
               - eu-1b
@@ -114,6 +108,8 @@ apiVersions:
                   The size of a root disk in gigabytes.
 
                   This parameter also affects the type of a root disk.
+                example: 50
+                default: 50
                 type: integer
               etcdDiskSizeGb:
                 description: |
@@ -337,3 +333,7 @@ apiVersions:
             type: string
             description: |
               The project ID.
+          enterpriseProjectID:
+            type: string
+            description: |
+              The enterprise project ID.

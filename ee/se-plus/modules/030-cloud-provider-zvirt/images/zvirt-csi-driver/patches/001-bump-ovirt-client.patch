@@ -1,109 +1,61 @@
-Subject: [PATCH] bump go-ovirt-client
----
-Index: cmd/ovirt-csi-driver/ovirt-csi-driver.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/cmd/ovirt-csi-driver/ovirt-csi-driver.go b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
---- a/cmd/ovirt-csi-driver/ovirt-csi-driver.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/cmd/ovirt-csi-driver/ovirt-csi-driver.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -9,7 +9,7 @@
-
- 	"github.com/ovirt/csi-driver/internal/ovirt"
- 	"github.com/ovirt/csi-driver/pkg/service"
+index ac4b09a..d348c76 100644
+--- a/cmd/ovirt-csi-driver/ovirt-csi-driver.go
++++ b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
+@@ -7,15 +7,16 @@ import (
+ 	"os"
+ 	"time"
+ 
+-	"github.com/ovirt/csi-driver/internal/ovirt"
+-	"github.com/ovirt/csi-driver/pkg/service"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  	"k8s.io/client-go/kubernetes"
  	"k8s.io/klog"
-Index: go.mod
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.mod b/go.mod
---- a/go.mod	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/go.mod	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -8,7 +8,7 @@
- 	github.com/kubernetes-csi/csi-lib-utils v0.7.0
- 	github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0
- 	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0
--	github.com/ovirt/go-ovirt-client/v2 v2.0.1
-+	github.com/ovirt/go-ovirt-client/v3 v3.2.0
- 	github.com/pkg/errors v0.9.1
- 	golang.org/x/net v0.17.0
- 	golang.org/x/sys v0.13.0
-@@ -32,7 +32,7 @@
- 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
- 	github.com/google/go-cmp v0.5.5 // indirect
- 	github.com/google/gofuzz v1.1.0 // indirect
--	github.com/google/uuid v1.3.0 // indirect
-+	github.com/google/uuid v1.6.0 // indirect
- 	github.com/googleapis/gnostic v0.5.5 // indirect
- 	github.com/hashicorp/golang-lru v0.5.4 // indirect
- 	github.com/imdario/mergo v0.3.12 // indirect
-@@ -63,3 +63,5 @@
- 	sigs.k8s.io/structured-merge-diff/v4 v4.1.0 // indirect
- 	sigs.k8s.io/yaml v1.2.0 // indirect
- )
+ 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+ 	"sigs.k8s.io/controller-runtime/pkg/manager"
+ 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 +
-+replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
-Index: go.sum
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.sum b/go.sum
---- a/go.sum	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/go.sum	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -114,6 +114,8 @@
- github.com/evanphx/json-patch v4.11.0+incompatible h1:glyUF9yIYtMHzn8xaKw5rMhdWcwsYV8dZHIq5567/xs=
- github.com/evanphx/json-patch v4.11.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
- github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
-+github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1 h1:H4fak/42BjtvGaMTwJ/qZVqrjF3RGxBP17CJ9ZDsGWY=
-+github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1/go.mod h1:EhTzJm+T2zvQTwtK3IT5v77d70/I6A9zAG1OOlQqTUI=
- github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
- github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
- github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
-@@ -207,8 +209,9 @@
- github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
- github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
- github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
--github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
- github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
-+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
- github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+vpHVxEJEs9eg=
- github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
- github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTVRp3pOg5EKY=
-@@ -348,8 +351,6 @@
- github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0/go.mod h1:Bo83WSGfqYsatXlrOnG0jp8fvrmf5xGzJnpJqVsS+1s=
- github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 h1:uvACVHYhYPMkNJrrgWiABcfELB6qoFfsDDUTbpb4Jv4=
- github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
--github.com/ovirt/go-ovirt-client/v2 v2.0.1 h1:Avznl0vB5kCeOf1Wxg/kWjZ7cr2sIc4sGKwD4T+/C9o=
--github.com/ovirt/go-ovirt-client/v2 v2.0.1/go.mod h1:Zi2RF2khEr+hcr3fCAf6WL7OEoUwUHeWWiob/WcEaDc=
- github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
- github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
- github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
-Index: internal/ovirt/ovirt.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
++	"github.com/ovirt/csi-driver/internal/ovirt"
++	"github.com/ovirt/csi-driver/pkg/service"
+ )
+ 
+ var (
+@@ -26,8 +27,8 @@ var (
+ )
+ 
+ func init() {
+-	flag.Set("logtostderr", "true")
+ 	klog.InitFlags(flag.CommandLine)
++	flag.Set("logtostderr", "true")
+ }
+ 
+ func main() {
 diff --git a/internal/ovirt/ovirt.go b/internal/ovirt/ovirt.go
---- a/internal/ovirt/ovirt.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/internal/ovirt/ovirt.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -6,7 +6,7 @@
+index df687ae..8a11545 100644
+--- a/internal/ovirt/ovirt.go
++++ b/internal/ovirt/ovirt.go
+@@ -6,7 +6,7 @@ import (
  	"path/filepath"
-
+ 
  	kloglogger "github.com/ovirt/go-ovirt-client-log-klog/v2"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"gopkg.in/yaml.v2"
  )
-
-@@ -31,7 +31,7 @@
+ 
+@@ -23,6 +23,9 @@ type Config struct {
+ 
+ func NewClient() (ovirtclient.Client, error) {
+ 	ovirtConfig, err := GetOvirtConfig()
++	if err != nil {
++		return nil, err
++	}
+ 	tls := ovirtclient.TLS()
+ 	if ovirtConfig.Insecure {
+ 		tls.Insecure()
+@@ -31,7 +34,7 @@ func NewClient() (ovirtclient.Client, error) {
  		tls.CACertsFromFile(ovirtConfig.CAFile)
  	}
  	logger := kloglogger.New()
@@ -112,24 +64,20 @@ diff --git a/internal/ovirt/ovirt.go b/internal/ovirt/ovirt.go
  	client, err := ovirtclient.New(
  		ovirtConfig.URL,
  		ovirtConfig.Username,
-Index: pkg/service/controller.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/controller.go b/pkg/service/controller.go
---- a/pkg/service/controller.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/controller.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -5,7 +5,7 @@
+index d522cef..3760c51 100644
+--- a/pkg/service/controller.go
++++ b/pkg/service/controller.go
+@@ -5,7 +5,7 @@ import (
  	"strconv"
-
+ 
  	"github.com/container-storage-interface/spec/lib/go/csi"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"golang.org/x/net/context"
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
-@@ -60,7 +60,7 @@
+@@ -60,7 +60,7 @@ func (c *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
  	}
  	requiredSize := req.CapacityRange.GetRequiredBytes()
  	// Check if a disk with the same name already exist
@@ -138,8 +86,8 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	if err != nil {
  		msg := fmt.Errorf("error while finding disk %s by name, error: %w", diskName, err)
  		klog.Errorf(msg.Error())
-@@ -94,7 +94,8 @@
-
+@@ -94,7 +94,8 @@ func (c *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
+ 
  func (c *ControllerService) createDisk(
  	ctx context.Context, diskName string, storageDomainName string,
 -	size int64, thinProvisioning bool) (ovirtclient.Disk, error) {
@@ -148,10 +96,10 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	var err error
  	params := ovirtclient.CreateDiskParams()
  	params, err = params.WithSparse(thinProvisioning)
-@@ -117,23 +118,23 @@
+@@ -117,23 +118,23 @@ func (c *ControllerService) createDisk(
  	}
  	imageFormat := handleCreateVolumeImageFormat(sd.StorageType(), thinProvisioning)
-
+ 
 -	disk, err := c.ovirtClient.CreateDisk(
 +	disk, err := c.ovirtClient.WithContext(ctx).CreateDisk(
  		sd.ID(),
@@ -167,7 +115,7 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	return disk, nil
 -
  }
-
+ 
  func handleCreateVolumeImageFormat(
  	storageType ovirtclient.StorageDomainType,
 -	thinProvisioning bool) ovirtclient.ImageFormat {
@@ -176,8 +124,8 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	// Use COW diskformat only when thin provisioning is requested and storage domain
  	// is a non file storage type (for example ISCSI)
  	if !isFileDomain(storageType) && thinProvisioning {
-@@ -153,7 +154,7 @@
-
+@@ -153,7 +154,7 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
+ 
  	// idempotence first - see if disk already exists, ovirt creates disk by name(alias in ovirt as well)
  	// Check if a disk with the same name already exist
 -	_, err := c.ovirtClient.GetDisk(vId, ovirtclient.ContextStrategy(ctx))
@@ -185,17 +133,17 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	if err != nil {
  		if isNotFound(err) {
  			// if disk doesn't exist we're done
-@@ -164,7 +165,7 @@
+@@ -164,7 +165,7 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
  		return nil, msg
  	}
-
+ 
 -	err = c.ovirtClient.RemoveDisk(vId, ovirtclient.ContextStrategy(ctx))
 +	err = c.ovirtClient.WithContext(ctx).RemoveDisk(vId)
  	if err != nil {
  		msg := fmt.Errorf("failed removing disk %s by id, error: %w", vId, err)
  		klog.Errorf(msg.Error())
-@@ -176,7 +177,8 @@
-
+@@ -176,7 +177,8 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
+ 
  // ControllerPublishVolume takes a volume, which is an oVirt disk, and attaches it to a node, which is an oVirt VM.
  func (c *ControllerService) ControllerPublishVolume(
 -	ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -204,7 +152,7 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	vId := ovirtclient.DiskID(req.VolumeId)
  	if len(vId) == 0 {
  		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
-@@ -205,12 +207,12 @@
+@@ -205,12 +207,12 @@ func (c *ControllerService) ControllerPublishVolume(
  	if err != nil {
  		return nil, err
  	}
@@ -219,7 +167,7 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	if err != nil {
  		msg := fmt.Errorf("failed creating disk attachment, error: %w", err)
  		klog.Errorf(msg.Error())
-@@ -241,7 +243,7 @@
+@@ -241,7 +243,7 @@ func (c *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
  		klog.Infof("Disk attachment %s for VM %s already detached, returning OK", vId, nId)
  		return &csi.ControllerUnpublishVolumeResponse{}, nil
  	}
@@ -228,16 +176,16 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	if err != nil {
  		msg := fmt.Errorf("failed removing disk attachment %s, error: %w", attachment.ID(), err)
  		klog.Errorf(msg.Error())
-@@ -293,7 +295,7 @@
+@@ -293,7 +295,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  	newSize := capRange.GetRequiredBytes()
-
+ 
  	klog.Infof("Expanding volume %v to %v bytes.", volumeID, newSize)
 -	disk, err := c.ovirtClient.GetDisk(volumeID, ovirtclient.ContextStrategy(ctx))
 +	disk, err := c.ovirtClient.WithContext(ctx).GetDisk(volumeID)
  	if err != nil {
  		if isNotFound(err) {
  			msg := fmt.Errorf("disk %s wasn't found", volumeID)
-@@ -312,7 +314,8 @@
+@@ -312,7 +314,8 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  			volumeID, diskSize, newSize)
  		return &csi.ControllerExpandVolumeResponse{
  			CapacityBytes:         diskSize,
@@ -245,9 +193,9 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
 +			NodeExpansionRequired: false,
 +		}, nil
  	}
-
+ 
  	params := ovirtclient.UpdateDiskParams()
-@@ -320,7 +323,7 @@
+@@ -320,7 +323,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  	if err != nil {
  		return nil, err
  	}
@@ -256,7 +204,7 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
  	if err != nil {
  		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %s: %v", volumeID, err)
  	}
-@@ -331,7 +334,8 @@
+@@ -331,7 +334,8 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  	}
  	return &csi.ControllerExpandVolumeResponse{
  		CapacityBytes:         newSize,
@@ -264,60 +212,48 @@ diff --git a/pkg/service/controller.go b/pkg/service/controller.go
 +		NodeExpansionRequired: nodeExpansionRequired,
 +	}, nil
  }
-
+ 
  func (c *ControllerService) isNodeExpansionRequired(
-Index: pkg/service/controller_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/controller_test.go b/pkg/service/controller_test.go
---- a/pkg/service/controller_test.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/controller_test.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -6,7 +6,7 @@
-
+index fb55c28..976a48e 100644
+--- a/pkg/service/controller_test.go
++++ b/pkg/service/controller_test.go
+@@ -6,7 +6,7 @@ import (
+ 
  	"github.com/container-storage-interface/spec/lib/go/csi"
  	"github.com/ovirt/csi-driver/pkg/service"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  )
-
+ 
  func TestVolumeCreation(t *testing.T) {
-Index: pkg/service/driver.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/driver.go b/pkg/service/driver.go
---- a/pkg/service/driver.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/driver.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
+index 16a3a53..a5791f4 100644
+--- a/pkg/service/driver.go
++++ b/pkg/service/driver.go
 @@ -1,7 +1,7 @@
  package service
-
+ 
  import (
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"k8s.io/klog"
  	"sigs.k8s.io/controller-runtime/pkg/client"
  )
-Index: pkg/service/helper.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/helper.go b/pkg/service/helper.go
---- a/pkg/service/helper.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/helper.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -3,7 +3,7 @@
+index ed6de01..d773551 100644
+--- a/pkg/service/helper.go
++++ b/pkg/service/helper.go
+@@ -3,7 +3,7 @@ package service
  import (
  	"fmt"
-
+ 
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"github.com/pkg/errors"
  	"golang.org/x/net/context"
  )
-@@ -23,7 +23,7 @@
+@@ -23,7 +23,7 @@ func diskAttachmentByVmAndDisk(
  	ctx context.Context, ovirtClient ovirtclient.Client,
  	vmId ovirtclient.VMID, diskId ovirtclient.DiskID,
  ) (ovirtclient.DiskAttachment, error) {
@@ -326,7 +262,7 @@ diff --git a/pkg/service/helper.go b/pkg/service/helper.go
  	if err != nil {
  		return nil, fmt.Errorf("failed to get disk attachment by disk %s for VM %s, error: %w", diskId, vmId, err)
  	}
-@@ -63,7 +63,7 @@
+@@ -63,7 +63,7 @@ func findDiskAttachmentByDiskInCluster(
  	ovirtClient ovirtclient.Client,
  	diskId ovirtclient.DiskID,
  ) (ovirtclient.DiskAttachment, error) {
@@ -335,7 +271,7 @@ diff --git a/pkg/service/helper.go b/pkg/service/helper.go
  	if err != nil {
  		return nil, fmt.Errorf("error while listing VMs %w", err)
  	}
-@@ -76,8 +76,9 @@
+@@ -76,8 +76,9 @@ func findDiskAttachmentByDiskInCluster(
  func getStorageDomainByName(
  	ctx context.Context,
  	ovirtClient ovirtclient.Client,
@@ -347,32 +283,24 @@ diff --git a/pkg/service/helper.go b/pkg/service/helper.go
  	if err != nil {
  		return nil, err
  	}
-Index: pkg/service/helper_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/helper_test.go b/pkg/service/helper_test.go
---- a/pkg/service/helper_test.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/helper_test.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -4,7 +4,7 @@
+index 3bb32ad..7327bf0 100644
+--- a/pkg/service/helper_test.go
++++ b/pkg/service/helper_test.go
+@@ -4,7 +4,7 @@ import (
  	"testing"
-
+ 
  	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  )
-
+ 
  func getMockHelper(t *testing.T) ovirtclient.TestHelper {
-Index: pkg/service/identity.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/identity.go b/pkg/service/identity.go
---- a/pkg/service/identity.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/identity.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -3,7 +3,7 @@
+index 42c5f56..054c067 100644
+--- a/pkg/service/identity.go
++++ b/pkg/service/identity.go
+@@ -3,7 +3,7 @@ package service
  import (
  	"github.com/container-storage-interface/spec/lib/go/csi"
  	"github.com/golang/protobuf/ptypes/wrappers"
@@ -381,9 +309,9 @@ diff --git a/pkg/service/identity.go b/pkg/service/identity.go
  	"golang.org/x/net/context"
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
-@@ -46,8 +46,8 @@
+@@ -46,8 +46,8 @@ func (i *IdentityService) GetPluginCapabilities(context.Context, *csi.GetPluginC
  }
-
+ 
  // Probe checks the state of the connection to ovirt-engine
 -func (i *IdentityService) Probe(_ context.Context, _ *csi.ProbeRequest) (*csi.ProbeResponse, error) {
 -	err := i.ovirtClient.Test()
@@ -392,16 +320,12 @@ diff --git a/pkg/service/identity.go b/pkg/service/identity.go
  	if err != nil {
  		klog.Errorf("Could not get connection %v", err)
  		return nil, status.Error(codes.FailedPrecondition, "Could not get connection to ovirt-engine")
-Index: pkg/service/node.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/service/node.go b/pkg/service/node.go
---- a/pkg/service/node.go	(revision 1db726a940d5ec150fd185a215f1368990653082)
-+++ b/pkg/service/node.go	(revision 43d2324a7c6b97f85e46b8073349ee4c2fba9f1c)
-@@ -12,7 +12,7 @@
-
+index 115b5c7..8d6a1c6 100644
+--- a/pkg/service/node.go
++++ b/pkg/service/node.go
+@@ -12,7 +12,7 @@ import (
+ 
  	"github.com/container-storage-interface/spec/lib/go/csi"
  	volumemanager "github.com/ovirt/csi-driver/pkg/utils"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
@@ -409,15 +333,15 @@ diff --git a/pkg/service/node.go b/pkg/service/node.go
  	"golang.org/x/net/context"
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
-@@ -174,7 +174,6 @@
+@@ -174,7 +174,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
  	}
-
+ 
  	isBlock, err := volumemanager.IsBlockDevice(req.VolumePath)
 -
  	if err != nil {
  		return nil, status.Errorf(codes.Internal, "Failed to determine whether %s is block device: %v", req.VolumePath, err)
  	}
-@@ -197,7 +196,6 @@
+@@ -197,7 +196,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
  
  	// We assume filesystem presence on volume as raw block device is ruled out and try to get fs stats
  	available, capacity, used, inodesFree, inodes, inodesUsed, err := volumemanager.StatFS(req.VolumePath)

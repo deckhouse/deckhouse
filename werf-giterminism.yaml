@@ -12,6 +12,9 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - SVACE_ENABLED
+      - SVACE_ANALYZE_HOST
+      - SVACE_ANALYZE_SSH_USER
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowValueIds:

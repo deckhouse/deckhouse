@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -81,13 +82,16 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
-	registryConfSnap := input.Snapshots[imageModulesD8RegistryConfSnap]
+	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.NewSnapshots, imageModulesD8RegistryConfSnap)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal %s snapshot: %w", imageModulesD8RegistryConfSnap, err)
+	}
 
 	if len(registryConfSnap) == 0 {
 		return fmt.Errorf("not found 'deckhouse-registry' secret")
 	}
 
-	registrySecretRaw := registryConfSnap[0].(*registrySecret)
+	registrySecretRaw := registryConfSnap[0]
 
 	if string(registrySecretRaw.RegistryDockercfg) == "" {
 		return fmt.Errorf("docker config not found in 'deckhouse-registry' secret")
@@ -96,7 +100,6 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	if registrySecretRaw.Address == "" {
 		return fmt.Errorf("address field not found in 'deckhouse-registry' secret")
 	}
-
 	// yes, we store base64 encoded string but in secret object store decoded data
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)

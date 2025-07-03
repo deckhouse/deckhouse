@@ -115,6 +115,12 @@ func NewRegistryCfg(registryClusterCfg RegistryClusterConfig) (registryCfg Regis
 			return
 		}
 		address, path := getRegistryAddressAndPathFromImagesRepo(properties.ImagesRepo)
+		if err = validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
+			return
+		}
+		if err = validateHTTPRegistryScheme(properties.Scheme, properties.CA); err != nil {
+			return
+		}
 
 		// for iniConfig deckhouse.io/v1
 		dockerCfg := properties.DockerCfg
@@ -143,6 +149,12 @@ func NewRegistryCfg(registryClusterCfg RegistryClusterConfig) (registryCfg Regis
 			return
 		}
 		address, path := getRegistryAddressAndPathFromImagesRepo(properties.ImagesRepo)
+		if err = validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
+			return
+		}
+		if err = validateHTTPRegistryScheme(properties.Scheme, properties.CA); err != nil {
+			return
+		}
 
 		registryCfg = Registry{
 			Data: RegistryData{

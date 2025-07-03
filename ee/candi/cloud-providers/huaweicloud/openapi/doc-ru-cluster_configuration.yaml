@@ -196,3 +196,6 @@ apiVersions:
           projectID:
             description: |
               Идентификатор проекта.
+          enterpriseProjectID:
+            description: |
+              Идентификатор подпроекта.

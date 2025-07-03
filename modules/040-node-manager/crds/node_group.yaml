@@ -1501,6 +1501,57 @@ spec:
                   type: integer
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy.
+                      enum:
+                        - TimeSlicing
+                        - MIG
+                        - Exclusive
+                    mig:
+                      type: object
+                      properties:
+                        partedConfig:
+                          type: string
+                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          description: |
+                            Selected parted-config for MIG.
+                          x-doc-default: all-1g.5gb
+                    timeSlicing:
+                      description: |
+                        Time-slicing parameters.
+                      type: object
+                      properties:
+                        partitionCount:
+                          type: number
+                          description: |
+                            Count of partition per GPU with TimeSlicing.
+                          x-doc-default: 4
+                          minimum: 1
+                          maximum: 100
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
+                  oneOf:
+                    - properties:
+                        sharing:
+                          enum: [TimeSlicing]
+                        timeSlicing: {}
+                    - properties:
+                        sharing:
+                          enum: [MIG]
+                        mig: {}
+                    - properties:
+                        sharing:
+                          enum: [Exclusive]
+                        exclusive: {}
                 cri:
                   type: object
                   description: |

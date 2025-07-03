@@ -1750,6 +1750,184 @@ ccc: ddd
 			Expect(capiDeploy.Exists()).To(BeTrue())
 		}
 
+		Context("Scale from zero annotations", func() {
+			const nodeManager = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: vcd
+    machineClassKind: ""
+    capiClusterKind: "VCDCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "app"
+    capiMachineTemplateKind: "VCDMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    vcd:
+      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
+      organization: org
+      virtualDataCenter: dc
+      virtualApplicationName: app
+      server: https://localhost:5000
+      username: user
+      password: pass
+      insecure: true
+  nodeGroups:
+  - name: without-labels-and-taints
+    serializedLabels: ""
+    serializedTaints: ""
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+      - zoneb
+  - name: with-labels-only
+    serializedLabels: "app=warp-drive-ai,environment=production"
+    serializedTaints: ""
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  - name: with-taints-only
+    serializedLabels: ""
+    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  - name: with-labels-and-taints
+    serializedLabels: "app=warp-drive-ai,environment=production"
+    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManager)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertAutoscalingAnnotations := func(md object_store.KubeObject, labels, taints string) {
+					Expect(md.Exists()).To(BeTrue())
+
+					annotations := md.Field("metadata.annotations").Map()
+
+					if labels != "" {
+						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/labels"].String()).To(Equal(labels))
+					} else {
+						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/labels"))
+					}
+
+					if taints != "" {
+						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/taints"].String()).To(Equal(taints))
+					} else {
+						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
+					}
+				}
+
+				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
+				assertAutoscalingAnnotations(md1, "", "")
+
+				md2 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-only-02320933")
+				assertAutoscalingAnnotations(md2, "app=warp-drive-ai,environment=production", "")
+
+				md3 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-taints-only-02320933")
+				assertAutoscalingAnnotations(md3, "", "b=v:NoExecute,a,d:NoExecute,c=v1:")
+
+				md4 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-and-taints-02320933")
+				assertAutoscalingAnnotations(md4, "app=warp-drive-ai,environment=production", "b=v:NoExecute,a,d:NoExecute,c=v1:")
+			})
+		})
+
 		Context("VCD", func() {
 			const nodeManagerVCD = `
 internal:
@@ -2027,8 +2205,8 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
 					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
 
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2038,7 +2216,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-71610da1",
+					templateName: "worker-75eea1e8",
 				})
 			})
 		})

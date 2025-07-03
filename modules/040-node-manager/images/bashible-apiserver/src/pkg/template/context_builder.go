@@ -303,6 +303,7 @@ func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, clo
 		tplContextCommon:          contextCommon,
 		KubernetesVersion:         ng.KubernetesVersion(),
 		CRI:                       ng.CRIType(),
+		GPU:                       ng.GPUSharingType(),
 		NodeGroup:                 ng,
 		CloudProvider:             cloudProvider,
 		NodeStatusUpdateFrequency: freq,
@@ -358,6 +359,16 @@ func (ng nodeGroup) CRIType() string {
 	if cri, ok := ng["cri"]; ok {
 		if typ, ok := cri.(map[string]interface{})["type"]; ok {
 			return typ.(string)
+		}
+	}
+
+	return ""
+}
+
+func (ng nodeGroup) GPUSharingType() string {
+	if gpu, ok := ng["gpu"]; ok {
+		if gputype, ok := gpu.(map[string]interface{})["sharing"]; ok {
+			return gputype.(string)
 		}
 	}
 
@@ -429,6 +440,7 @@ type bundleNGContext struct {
 
 	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 	CRI               string      `json:"cri" yaml:"cri"`
+	GPU               string      `json:"gpu,omitempty" yaml:"gpu,omitempty"`
 	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
 	CloudProvider     interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 

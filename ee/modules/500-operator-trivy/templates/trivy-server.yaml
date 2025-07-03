@@ -112,6 +112,15 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 3
+          startupProbe:
+            httpGet:
+              scheme: HTTP
+              path: /healthz
+              port: trivy-http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
           volumeMounts:
             - mountPath: /tmp
               name: tmp-data
