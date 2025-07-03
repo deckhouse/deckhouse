@@ -487,16 +487,18 @@ spec:
                         description: Замена `source` на `target` в заданных ключах рекурсивно.
                         properties:
                           source:
-                            description: Заменить все совпадения этого шаблона. Может быть статической строкой или регулярным выражением.
+                            description: |
+                              Заменить все совпадения этого шаблона.
+                              Может быть статической строкой или регулярным выражением.
                           target:
                             description: Строка, на которую заменяются совпадения.
                           labels:
                             description: Список лейблов для рекурсивной замены.
                       parseMessage:
-                        description: Преобразует поле `message` в JSON-обект.
+                        description: Преобразует поле `message` в объект.
                         properties:
                           sourceFormat:
-                            description: Формат сообщения для преобразования в JSON.
+                            description: Формат сообщения для преобразования в объект.
                           string:
                             properties:
                               targetField:

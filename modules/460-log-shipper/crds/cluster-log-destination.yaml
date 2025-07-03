@@ -855,8 +855,7 @@ spec:
                               - pod_labels
                         ```
 
-                      - `ParseMessage`: If it can, converts the `message` field from the format specified in `sourceFormat` to an object
-                         otherwise, leaves `message` unchanged.
+                      - `ParseMessage`: If it can, converts the `message` field from the format specified in `sourceFormat` to an object otherwise, leaves `message` unchanged.
                             
                         Examples:
 
@@ -940,7 +939,9 @@ spec:
                         properties:
                           source:
                             type: string
-                            description: "Replace all matches of this pattern. Can be a static string or a regular expression"
+                            description: |
+                              Replace all matches of this pattern.
+                              Can be a static string or a regular expression
                           target:
                             type: string
                             default: ""
@@ -953,7 +954,7 @@ spec:
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
                       parseMessage:
                         type: object
-                        description: "Parse that the message field contains a JSON object."
+                        description: "Parse that the message field contains a object."
                         required:
                           - sourceFormat
                         oneOf:
@@ -1000,7 +1001,7 @@ spec:
                           sourceFormat:
                             type: string
                             enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
-                            description: "Message format for parsing in JSON."
+                            description: "Message format for parsing in object."
                           string:
                             type: object
                             required:
