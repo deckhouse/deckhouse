@@ -329,7 +329,7 @@ shell:
   - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
-  - chown {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - chmod 1777 /tmp
   - setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
