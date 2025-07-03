@@ -361,6 +361,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
+		"kubectl":         "imageHash-openvpn-kubectl",
 		"openvpn":         "imageHash-openvpn-openvpn",
 		"ovpnAdmin":       "imageHash-openvpn-ovpnAdmin",
 		"pmacct":          "imageHash-openvpn-pmacct",

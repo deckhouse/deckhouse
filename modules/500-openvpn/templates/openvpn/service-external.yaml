@@ -1,13 +1,71 @@
+{{- $context := . }}
+{{- $namespace := printf "d8-%s" .Chart.Name }}
 {{- if hasKey .Values.openvpn "inlet" }}
-
+{{- $tcpServiceName :=  printf "%s-external" .Chart.Name }}
+{{- $udpServiceName :=  printf "%s-external-udp" .Chart.Name }}
   {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+    {{ $loadBalancerClass := "" }}
+    {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+      {{ $loadBalancerClass = .Values.openvpn.loadBalancer.loadBalancerClass }}
+    {{- end }}
+    {{- $previousLoadBalancerClass := "" }}
+    {{- $serviceName := "" }}
+    {{- if .Values.openvpn.tcpEnabled }}
+      {{- $serviceName = $tcpServiceName }}
+      {{- $existingService := lookup "v1" "Service" $namespace $serviceName }}
+      {{- if $existingService }}
+        {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+      {{- $serviceName = $udpServiceName }}
+      {{- $existingService := lookup "v1" "Service" $namespace $serviceName }}
+      {{- if $existingService }}
+        {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+      {{- end }}
+    {{- end }}
+  {{- if or (and (not $previousLoadBalancerClass) $loadBalancerClass) (and $previousLoadBalancerClass (ne $previousLoadBalancerClass $loadBalancerClass)) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cleanup-service-{{ $serviceName }}-{{ $loadBalancerClass | default "no-class" | sha1sum | trunc 8 }}-{{ randAlphaNum 5 | lower }}
+  namespace: {{ $namespace }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: openvpn
+      restartPolicy: OnFailure
+      containers:
+        - name: cleanup
+          image: {{ include "helm_lib_module_image" (list $context "kubectl") }}
+          command:
+            - /kubectl
+            - delete
+            - service
+            {{- if .Values.openvpn.tcpEnabled }}
+            - {{ $tcpServiceName }}
+            {{- end }}
+            {{- if .Values.openvpn.udpEnabled }}
+            - {{ $udpServiceName }}
+            {{- end }}
+            - -n
+            - {{ $namespace }}
+            - --ignore-not-found=true
+            - --wait=false
+    {{- end }}
+
     {{- if .Values.openvpn.tcpEnabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ $tcpServiceName }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
   annotations:
@@ -21,6 +79,9 @@ spec:
     {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
   {{- end }}
   type: LoadBalancer
+  {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.openvpn.loadBalancer.loadBalancerClass }}
+  {{- end }}
   ports:
     - name: ovpn-tcp
       protocol: TCP
@@ -34,8 +95,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external-udp
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ $udpServiceName }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
   annotations:
@@ -49,6 +110,9 @@ spec:
     {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
   {{- end }}
   type: LoadBalancer
+  {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.openvpn.loadBalancer.loadBalancerClass }}
+  {{- end }}
   ports:
     - name: ovpn-udp
       protocol: UDP
@@ -63,8 +127,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ $tcpServiceName }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   type: ClusterIP
@@ -83,8 +147,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external-udp
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ $udpServiceName }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   type: ClusterIP
