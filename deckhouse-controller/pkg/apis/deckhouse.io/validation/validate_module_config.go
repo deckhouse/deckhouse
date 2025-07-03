@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
@@ -168,7 +169,7 @@ func moduleConfigValidationHandler(
 
 		// empty policy means module uses deckhouse embedded policy
 		if cfg.Spec.UpdatePolicy != "" {
-			tmp := new(v1alpha1.ModuleUpdatePolicy)
+			tmp := new(v1alpha2.ModuleUpdatePolicy)
 			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)

@@ -67,7 +67,7 @@ var (
 
 	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode:    v1alpha1.UpdateModeAuto.String(),
+			Mode:    v1alpha2.UpdateModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
@@ -324,7 +324,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed patch release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -339,7 +339,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -354,7 +354,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Approved minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
