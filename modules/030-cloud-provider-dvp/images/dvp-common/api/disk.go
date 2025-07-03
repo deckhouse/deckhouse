@@ -138,10 +138,11 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
-	err = d.WaitDiskCreation(ctx, diskName)
-	if err != nil {
-		return nil, err
-	}
+	// FIXME: remove after testing
+	// err = d.WaitDiskCreation(ctx, diskName)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	newDisk, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
