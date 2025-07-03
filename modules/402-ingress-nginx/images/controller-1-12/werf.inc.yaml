@@ -297,7 +297,7 @@ shell:
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
-  - adduser -r -U -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
