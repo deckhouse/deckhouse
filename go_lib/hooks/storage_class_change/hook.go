@@ -272,6 +272,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		return Pod{}, fmt.Errorf("pod with volume name [%s] not found", pvcName)
 	}
 
+	var filteredPvcs []PVC
 	for _, pvc := range pvcs {
 		if !pvc.IsDeleted {
 			continue
@@ -288,11 +289,13 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("name", pod.Name), log.Err(err))
 			}
 		}
+
+		filteredPvcs = append(filteredPvcs, pvc)
 	}
 
 	var currentStorageClass string
-	if len(pvcs) > 0 {
-		currentStorageClass = pvcs[0].StorageClassName
+	if len(filteredPvcs) > 0 {
+		currentStorageClass = filteredPvcs[0].StorageClassName
 	}
 
 	effectiveStorageClass, err := calculateEffectiveStorageClass(input, args, currentStorageClass)
@@ -302,7 +305,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
 		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
 		if wasPvc {
-			for _, pvc := range pvcs {
+			for _, pvc := range filteredPvcs {
 				input.Logger.Info("PVC StorageClass changed. Deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
