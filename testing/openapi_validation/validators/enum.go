@@ -226,8 +226,7 @@ var (
 		"candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
 			// ignore enum values "NSX-T" and "NSX-V"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
-			"apiVersions[0].openAPISpec.allOf[0].oneOf[1].properties.edgeGateway.oneOf[0].properties.type.enum",
-			"apiVersions[0].openAPISpec.allOf[0].oneOf[1].properties.edgeGateway.oneOf[1].properties.type.enum",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type.enum",
 			// ignore enum values "org" and "ext"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
 		},
