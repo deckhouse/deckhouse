@@ -45,6 +45,9 @@ RUN mkdir -p /artifacts/registry && \
       --exclude='.dmtlint.yaml' \
       /deckhouse/modules/002-deckhouse/ /artifacts/deckhouse/
 
+RUN mkdir -p /out/run && \
+    cd /out && \
+    chmod 755 /run
 
 FROM --platform=linux/amd64 golang:1.24 AS build
 
@@ -73,25 +76,22 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
         cd ./deckhouse-controller/ && \
         chmod +x *.sh && \
         ./go-build.sh
-
+RUN mkdir -p /out/ && \
+    cp /deckhouse/deckhouse-controller/deckhouse-controller /out/deckhouse-controller && \
+    cp /deckhouse/deckhouse-controller/deckhouse-controller /out/caps-deckhouse-controller && \
+    setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /out/caps-deckhouse-controller
 
 # Replace controller
 FROM --platform=linux/amd64 dev-registry.deckhouse.io/sys/deckhouse-oss:pr8229-ee
 
-COPY --from=build /deckhouse/deckhouse-controller/deckhouse-controller /usr/bin/deckhouse-controller
+COPY --from=build /out/deckhouse-controller /usr/bin/deckhouse-controller
+COPY --from=build /out/caps-deckhouse-controller /usr/bin/caps-deckhouse-controller
+COPY --from=src /out/run /run
 
 USER root
 
-RUN cp /usr/bin/deckhouse-controller /usr/bin/caps-deckhouse-controller && \
-    setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /usr/bin/caps-deckhouse-controller
-
 # Replace module helm chart
-RUN rm -r \
-  /deckhouse/modules/038-system-registry/templates \
-  /deckhouse/modules/038-system-registry/openapi \
-  /deckhouse/modules/038-system-registry/monitoring \
-  /deckhouse/modules/002-deckhouse/templates \
-  /deckhouse/modules/002-deckhouse/openapi 
+RUN ["/usr/bin/rm", "-rf", "/deckhouse/modules/038-system-registry/templates", "/deckhouse/modules/038-system-registry/openapi", "/deckhouse/modules/038-system-registry/monitoring", "/deckhouse/modules/002-deckhouse/templates", "/deckhouse/modules/002-deckhouse/openapi"]
 
 USER deckhouse
 
