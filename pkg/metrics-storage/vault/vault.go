@@ -28,8 +28,10 @@ import (
 type GroupedVault struct {
 	collectors map[string]collectors.ConstCollector
 
-	mtx                   sync.Mutex
-	registerer            prometheus.Registerer
+	mtx        sync.Mutex
+	registry   *prometheus.Registry
+	registerer prometheus.Registerer
+
 	resolveMetricNameFunc func(name string) string
 
 	logger *log.Logger
@@ -44,11 +46,47 @@ func WithLogger(logger *log.Logger) Option {
 	}
 }
 
+// WithRegistry sets an existing registry for the GroupedVault.
+func WithRegistry(registry *prometheus.Registry) Option {
+	return func(v *GroupedVault) {
+		v.registry = registry
+		v.registerer = registry
+	}
+}
+
+// WithNewRegistry creates a new registry for the GroupedVault.
+func WithNewRegistry() Option {
+	return func(v *GroupedVault) {
+		v.registry = prometheus.NewRegistry()
+		v.registerer = v.registry
+	}
+}
+
+// NewGroupedVault creates and initializes a new GroupedVault instance.
+// It initializes the vault with an empty collectors map and the default Prometheus registerer.
+// If you need to use a custom registerer, you can provide it through the WithRegisterer or WithNewRegisterer option.
+//
+// The GroupedVault is a specialized collector that manages multiple Prometheus metrics
+// under a single registration point, grouped by name. It handles the registration and
+// deregistration of metrics with the Prometheus collector registry.
+//
+// Parameters:
+//   - resolveMetricNameFunc: A function that transforms a metric name string. This can be used
+//     for adding prefixes, standardizing format, or other name transformations.
+//   - options: Optional configuration options that modify the behavior of the vault.
+//     These are applied in order after the default configuration is set.//
+//
+// Options include:
+//   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
+//   - WithRegistry: Uses a provided Prometheus registry
+//   - WithLogger: Sets a custom logger for the metrics storage
 func NewGroupedVault(resolveMetricNameFunc func(name string) string, options ...Option) *GroupedVault {
 	vault := &GroupedVault{
 		collectors:            make(map[string]collectors.ConstCollector),
+		registerer:            prometheus.DefaultRegisterer,
 		resolveMetricNameFunc: resolveMetricNameFunc,
-		logger:                log.NewLogger(log.Options{}).Named("grouped-vault"),
+
+		logger: log.NewLogger(log.Options{}).Named("grouped-vault"),
 	}
 
 	for _, option := range options {
@@ -62,8 +100,10 @@ func (v *GroupedVault) Registerer() prometheus.Registerer {
 	return v.registerer
 }
 
-func (v *GroupedVault) SetRegisterer(r prometheus.Registerer) {
-	v.registerer = r
+// Collector returns collector of MetricStorage
+// it can be useful to collect metrics in external registerer
+func (v *GroupedVault) Collector() prometheus.Collector {
+	return v.registry
 }
 
 // ExpireGroupMetrics takes each collector in collectors and clear all metrics by group.

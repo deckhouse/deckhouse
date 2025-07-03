@@ -22,9 +22,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type Storage interface {
-	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string)
+type Registerer interface {
+	RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec
+	RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec
+	RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
+}
 
+type Collector interface {
 	Counter(metric string, labels map[string]string) *prometheus.CounterVec
 	CounterAdd(metric string, value float64, labels map[string]string)
 
@@ -32,26 +36,32 @@ type Storage interface {
 	GaugeAdd(metric string, value float64, labels map[string]string)
 	GaugeSet(metric string, value float64, labels map[string]string)
 
-	Grouped() GroupedStorage
-
-	Handler() http.Handler
-
 	Histogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
 	HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64)
+}
 
-	RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec
-	RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec
-	RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
+type Storage interface {
+	Registerer
+	Collector
 
+	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string)
 	ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error
+
+	Grouped() GroupedStorage
+	Collector() prometheus.Collector
+	Handler() http.Handler
 }
 
 type GroupedStorage interface {
+	Collector() prometheus.Collector
 	Registerer() prometheus.Registerer
+
 	ExpireGroupMetrics(group string)
 	ExpireGroupMetricByName(group, name string)
-	GetOrCreateCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error)
-	GetOrCreateGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error)
+
 	CounterAdd(group string, name string, value float64, labels map[string]string)
 	GaugeSet(group string, name string, value float64, labels map[string]string)
+
+	GetOrCreateCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error)
+	GetOrCreateGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error)
 }

@@ -36,6 +36,12 @@ const (
 	PrefixTemplate = "{PREFIX}"
 )
 
+// TODO:
+//  1. Add context support to retrieve Storage from context
+//  2. Implement partial label support to avoid specifying all values for all labels
+//     (retrieve default labels from context or use predefined defaults)
+//  3. Improve prefix handling by using explicit options or builder functions instead of string substitution
+
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
 	Prefix string
@@ -87,7 +93,22 @@ func WithLogger(logger *log.Logger) Option {
 	}
 }
 
-// NewMetricStorage creates a new metric storage with provided options
+// NewMetricStorage creates and initializes a new MetricStorage instance with the specified prefix.
+// It sets up the storage with empty maps for gauges, counters, and histograms, and the default Prometheus registerer.
+// If you need to use a custom registerer, you can provide it through the WithRegisterer or WithNewRegisterer option.
+//
+// The MetricStorage provides a centralized way to manage Prometheus metrics with consistent naming
+// and label handling. It supports counters, gauges, histograms, and grouped metrics operations.
+//
+// Parameters:
+//   - prefix: A string prefix to apply to metric names. Can be referenced in metric names using {PREFIX}.
+//   - opts: Optional configuration options that customize the behavior of the storage.
+//     These are applied in order after the default configuration is established.
+//
+// Options include:
+//   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
+//   - WithRegistry: Uses a provided Prometheus registry
+//   - WithLogger: Sets a custom logger for the metrics storage
 func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
 		Prefix: prefix,
@@ -108,8 +129,11 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 		opt(m)
 	}
 
-	m.groupedVault = vault.NewGroupedVault(m.resolveMetricName)
-	m.groupedVault.SetRegisterer(m.registerer)
+	m.groupedVault = vault.NewGroupedVault(
+		m.resolveMetricName,
+		vault.WithRegistry(m.registry),
+		vault.WithLogger(m.logger.Named("grouped")),
+	)
 
 	return m
 }
@@ -326,6 +350,7 @@ func (m *MetricStorage) Histogram(metric string, labels map[string]string, bucke
 }
 
 // Deprecated: use Histogram instead
+// TODO: add help
 func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
 	if m == nil {
 		return nil
@@ -530,9 +555,9 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 	return nil
 }
 
-// GetCollector returns collector of MetricStorage
+// Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
-func (m *MetricStorage) GetCollector() prometheus.Collector {
+func (m *MetricStorage) Collector() prometheus.Collector {
 	return m.registry
 }
 
