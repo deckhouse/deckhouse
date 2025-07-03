@@ -227,6 +227,7 @@ var (
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
 		},
 	}
 
