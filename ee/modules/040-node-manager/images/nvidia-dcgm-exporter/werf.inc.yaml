@@ -43,6 +43,7 @@ shell:
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/ binary
+  - cp cmd/dcgm-exporter/dcgm-exporter /
   - cp docker/dcgm-exporter-entrypoint.sh /dcgm-exporter-entrypoint.sh
   - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
 ---
