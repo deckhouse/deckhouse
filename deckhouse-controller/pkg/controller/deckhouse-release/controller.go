@@ -66,6 +66,8 @@ const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
 	controllerName = "d8-deckhouse-release-controller"
+
+	fieldOwner = "deckhouse-release-controller"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -770,15 +772,34 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
-		if len(depl.Spec.Template.Spec.Containers) == 0 {
-			return ErrDeploymentContainerIsNotFound
-		}
+	patch := client.MergeFrom(dr.DeepCopy())
 
-		depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-		return nil
-	})
+	err = r.client.Patch(ctx, depl, patch, client.FieldOwner(fieldOwner), client.ForceOwnership)
+	if err != nil {
+		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+	}
+
+	return nil
+
+	// // patch example
+	// err = r.client.Patch(ctx, depl, client.MergeFrom(dr), client.FieldOwner(""))
+	// if err != nil {
+	// 	return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+	// }
+	// return nil
+
+	// // as been
+	// return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
+	// 	if len(depl.Spec.Template.Spec.Containers) == 0 {
+	// 		return ErrDeploymentContainerIsNotFound
+	// 	}
+
+	// 	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+
+	// 	return nil
+	// })
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
