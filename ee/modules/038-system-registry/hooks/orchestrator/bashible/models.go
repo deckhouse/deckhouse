@@ -265,13 +265,13 @@ func (b *ConfigBuilder) proxyEndpoints() []string {
 	return []string{}
 }
 
-func (b *ConfigBuilder) hosts() map[string]bashible.Hosts {
-	ret := make(map[string]bashible.Hosts)
+func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
+	ret := make(map[string]bashible.ConfigHosts)
 
 	for _, params := range append(b.ActualParams, b.ModeParams) {
 		var (
 			host    string
-			mirrors []bashible.MirrorHost
+			mirrors []bashible.ConfigMirrorHost
 		)
 
 		switch {
@@ -407,42 +407,42 @@ func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
 	return false
 }
 
-func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.MirrorHost) {
+func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
 	host, _ := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
-	return host, []bashible.MirrorHost{{
+	return host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
 		Scheme: strings.ToLower(p.Scheme),
-		Auth: bashible.Auth{
+		Auth: bashible.ConfigAuth{
 			Username: p.Username,
 			Password: p.Password,
 		},
 	}}
 }
 
-func (p *DirectModeParams) hostMirrors() (string, []bashible.MirrorHost) {
+func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
 	host, path := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
-	return registry_const.Host, []bashible.MirrorHost{{
+	return registry_const.Host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
 		Scheme: strings.ToLower(p.Scheme),
-		Auth: bashible.Auth{
+		Auth: bashible.ConfigAuth{
 			Username: p.Username,
 			Password: p.Password,
 		},
-		Rewrites: []bashible.Rewrite{{
+		Rewrites: []bashible.ConfigRewrite{{
 			From: registry_const.PathRegexp,
 			To:   strings.TrimLeft(path, "/"),
 		}},
 	}}
 }
 
-func (p *ProxyLocalModeParams) hostMirrors() (string, []bashible.MirrorHost) {
-	return registry_const.Host, []bashible.MirrorHost{{
+func (p *ProxyLocalModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
+	return registry_const.Host, []bashible.ConfigMirrorHost{{
 		Host:   registry_const.ProxyHost,
 		CA:     p.CA,
 		Scheme: registry_const.Scheme,
-		Auth: bashible.Auth{
+		Auth: bashible.ConfigAuth{
 			Username: p.Username,
 			Password: p.Password,
 		},

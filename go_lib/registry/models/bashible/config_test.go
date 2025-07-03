@@ -28,26 +28,26 @@ func validConfig() *Config {
 		Mode:       "managed",
 		ImagesBase: "example.com/base",
 		Version:    "1.0",
-		Hosts: map[string]Hosts{
-			"host1": validRegistryHost(),
+		Hosts: map[string]ConfigHosts{
+			"host1": validConfigHosts(),
 		},
 	}
 }
 
-func validRegistryHost() Hosts {
-	return Hosts{
-		Mirrors: []MirrorHost{
-			validMirrorHost(),
+func validConfigHosts() ConfigHosts {
+	return ConfigHosts{
+		Mirrors: []ConfigMirrorHost{
+			validConfigMirrorHost(),
 		},
 	}
 }
 
-func validMirrorHost() MirrorHost {
-	return MirrorHost{
+func validConfigMirrorHost() ConfigMirrorHost {
+	return ConfigMirrorHost{
 		Host:     "mirror1.example.com",
 		Scheme:   "https",
-		Auth:     Auth{},
-		Rewrites: []Rewrite{},
+		Auth:     ConfigAuth{},
+		Rewrites: []ConfigRewrite{},
 	}
 }
 
@@ -66,7 +66,7 @@ func TestConfigValidate(t *testing.T) {
 			name: "Missing required hosts",
 			input: func() *Config {
 				cfg := validConfig()
-				cfg.Hosts = map[string]Hosts{}
+				cfg.Hosts = map[string]ConfigHosts{}
 				return cfg
 			}(),
 			wantErr: true,
@@ -75,7 +75,7 @@ func TestConfigValidate(t *testing.T) {
 			name: "Missing required mirror hosts",
 			input: func() *Config {
 				cfg := validConfig()
-				cfg.Hosts = map[string]Hosts{"host1": {}}
+				cfg.Hosts = map[string]ConfigHosts{"host1": {}}
 				return cfg
 			}(),
 			wantErr: true,
@@ -120,10 +120,10 @@ func TestConfigValidate(t *testing.T) {
 			name: "Mirror with empty Host is invalid",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
 				mirror.Host = ""
-				host.Mirrors = []MirrorHost{mirror}
+				host.Mirrors = []ConfigMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
@@ -133,10 +133,10 @@ func TestConfigValidate(t *testing.T) {
 			name: "Mirror with empty Scheme is invalid",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
 				mirror.Scheme = ""
-				host.Mirrors = []MirrorHost{mirror}
+				host.Mirrors = []ConfigMirrorHost{mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
@@ -146,9 +146,9 @@ func TestConfigValidate(t *testing.T) {
 			name: "Duplicate Mirrors",
 			input: func() *Config {
 				cfg := validConfig()
-				host := validRegistryHost()
-				mirror := validMirrorHost()
-				host.Mirrors = []MirrorHost{mirror, mirror}
+				host := validConfigHosts()
+				mirror := validConfigMirrorHost()
+				host.Mirrors = []ConfigMirrorHost{mirror, mirror}
 				cfg.Hosts["host1"] = host
 				return cfg
 			}(),
@@ -166,9 +166,9 @@ func TestConfigValidate(t *testing.T) {
 			}
 
 			if tt.wantErr {
-				assert.Error(t, err, "Expected validation errors but got none")
+				assert.Error(t, err, "Expected errors but got none")
 			} else {
-				assert.NoError(t, err, "Expected no validation errors but got some")
+				assert.NoError(t, err, "Expected no errors but got some")
 			}
 		})
 	}
