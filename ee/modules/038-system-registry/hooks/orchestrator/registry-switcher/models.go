@@ -87,7 +87,7 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 	if !secretReady {
 		return Result{
 			Ready:   false,
-			Message: "Waiting secret update",
+			Message: "Updating registry for deckhouse components",
 		}
 	}
 
@@ -95,7 +95,7 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 	if inputs.DeckhousePod.RegistryVersion != s.Hash {
 		return Result{
 			Ready:   false,
-			Message: "New registry is not applied",
+			Message: "Applying new registry to deckhouse-controller",
 		}
 	}
 
@@ -103,7 +103,7 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 	if !inputs.DeckhousePod.IsExist {
 		return Result{
 			Ready:   false,
-			Message: "Deckhouse pod does not exist",
+			Message: "Waiting for deckhouse-controller pod",
 		}
 	}
 
@@ -111,12 +111,11 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 	if !inputs.DeckhousePod.IsReady {
 		return Result{
 			Ready:   false,
-			Message: inputs.DeckhousePod.ReadyMsg,
+			Message: "Waiting for deckhouse-controller to be ready",
 		}
 	}
 	return Result{
-		Ready:   true,
-		Message: "Switch is ready",
+		Ready: true,
 	}
 }
 
