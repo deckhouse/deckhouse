@@ -45,7 +45,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Waiting secret update",
+			expectedMsg:   "Updating registry for deckhouse components",
 		},
 		{
 			name: "Registry version mismatch - not switched",
@@ -64,7 +64,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "New registry is not applied",
+			expectedMsg:   "Applying new registry to deckhouse-controller",
 		},
 		{
 			name: "Pod not ready - not switched",
@@ -85,7 +85,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Pod is updating",
+			expectedMsg:   "Waiting for deckhouse-controller to be ready",
 		},
 		{
 			name: "Pod doesn't exist - not switched",
@@ -105,7 +105,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Deckhouse pod does not exist",
+			expectedMsg:   "Waiting for deckhouse-controller pod",
 		},
 		{
 			name: "All conditions met - switch complete",
@@ -125,7 +125,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: true,
-			expectedMsg:   "Switch is ready",
+			expectedMsg:   "",
 		},
 	}
 
