@@ -1,5 +1,5 @@
 ---
-title: "Выдача прав пользователям и серверам"
+title: "Выдача прав пользователям и сервисным аккаунтам"
 permalink: ru/admin/configuration/access/authorization/granting.html
 lang: ru
 ---
@@ -37,11 +37,11 @@ subjects:
 
 ## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (текущая ролевая модель)
 
-При использовании текущей ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](../../reference/cr/authorizationrule/) и [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/).
+При использовании текущей ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
 
 ### Предоставление прав пользователю в рамках одного пространства имен
 
-Если нужно предоставить права пользователю в рамках одного пространства имен, используйте ресурс [AuthorizationRule](../../reference/cr/authorizationrule/). Он действует в рамках одного пространства имен.
+Если нужно предоставить права пользователю в рамках одного пространства имен, используйте ресурс [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Он действует в рамках одного пространства имен.
 Пример:
 
 ```yaml
@@ -57,9 +57,9 @@ spec:
 
 ### Предоставление прав пользователю во всех пространствах имен
 
-Если нужно предоставить права пользователю во всех пространствах имен, включая системные (например, для предоставления прав администратора), используйте ресурс [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/). Он действует во всем кластере.
+Если нужно предоставить права пользователю во всех пространствах имен, включая системные (например, для предоставления прав администратора), используйте ресурс [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule). Он действует во всем кластере.
 
-При необходимости можно ограничить область действия прав, предоставляемых с помощью [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/), одним или несколькими пространствами имен. Для этого в его манифесте укажите соответствующие ограничения (но, если позволяет возможность, рекомендуемый вариант для этого — использование [AuthorizationRule](../../reference/cr/authorizationrule/)). Пример:
+При необходимости можно ограничить область действия прав, предоставляемых с помощью [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), одним или несколькими пространствами имен. Для этого в его манифесте укажите соответствующие ограничения (но, если позволяет возможность, рекомендуемый вариант для этого — использование [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule)). Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -82,11 +82,11 @@ spec:
 
 ## Предоставление прав с помощью ClusterRoleBinding и RoleBinding (экспериментальная ролевая модель)
 
-При использовании экспериментальной ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы `ClusterRoleBinding` и`RoleBinding`.
+При использовании экспериментальной ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
 
 ### Назначение прав администратору кластера (экспериментальная ролевая модель)
 
-Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в `ClusterRoleBinding`.
+Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Пример назначения прав администратору кластера (User `joe`):
 
@@ -111,7 +111,7 @@ roleRef:
 Пользователю будут доступны следующие права:
 
 - Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DKP.
-- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов `moduleConfig`).
+- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов ModuleConfig).
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
   - `kubectl exec`;
@@ -121,7 +121,7 @@ roleRef:
 
 ### Назначение прав сетевому администратору (экспериментальная ролевая модель)
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в `ClusterRoleBinding`.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
 Пример назначения прав сетевому администратору (User `joe`):
 
@@ -160,51 +160,51 @@ roleRef:
 - Просмотр, изменение, удаление и создание *стандартных* ресурсов Kubernetes в пространстве имён модулей из подсистемы `networking`.
 
   Пример ресурсов, которыми сможет управлять пользователь (список не полный):
-  - `Certificate`;
-  - `CertificateRequest`;
-  - `ConfigMap`;
-  - `ControllerRevision`;
-  - `CronJob`;
-  - `DaemonSet`;
-  - `Deployment`;
-  - `Event`;
-  - `HorizontalPodAutoscaler`;
-  - `Ingress`;
-  - `Issuer`;
-  - `Job`;
-  - `Lease`;
-  - `LimitRange`;
-  - `NetworkPolicy`;
-  - `PersistentVolumeClaim`;
-  - `Pod`;
-  - `PodDisruptionBudget`;
-  - `ReplicaSet`;
-  - `ReplicationController`;
-  - `ResourceQuota`;
-  - `Role`;
-  - `RoleBinding`;
-  - `Secret`;
-  - `Service`;
-  - `ServiceAccount`;
-  - `StatefulSet`;
-  - `VerticalPodAutoscaler`;
-  - `VolumeSnapshot`.
+  - Certificate;
+  - CertificateRequest;
+  - ConfigMap;
+  - ControllerRevision;
+  - CronJob;
+  - DaemonSet;
+  - Deployment;
+  - Event;
+  - HorizontalPodAutoscaler;
+  - Ingress;
+  - Issuer;
+  - Job;
+  - Lease;
+  - LimitRange;
+  - NetworkPolicy;
+  - PersistentVolumeClaim;
+  - Pod;
+  - PodDisruptionBudget;
+  - ReplicaSet;
+  - ReplicationController;
+  - ResourceQuota;
+  - Role;
+  - RoleBinding;
+  - Secret;
+  - Service;
+  - ServiceAccount;
+  - StatefulSet;
+  - VerticalPodAutoscaler;
+  - VolumeSnapshot.
 
 - Просмотр, изменение, удаление и создание ресурсов в пространстве имён модулей из подсистемы `networking`.
 
   Список ресурсов, которыми сможет управлять пользователь:
-  - `EgressGateway`;
-  - `EgressGatewayPolicy`;
-  - `FlowSchema`;
-  - `IngressClass`;
-  - `IngressIstioController`;
-  - `IngressNginxController`;
-  - `IPRuleSet`;
-  - `IstioFederation`;
-  - `IstioMulticluster`;
-  - `RoutingTable`.
+  - EgressGateway;
+  - EgressGatewayPolicy;
+  - FlowSchema;
+  - IngressClass;
+  - IngressIstioController;
+  - IngressNginxController;
+  - IPRuleSet;
+  - IstioFederation;
+  - IstioMulticluster;
+  - RoutingTable.
 
-- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов moduleConfig) из подсистемы `networking`.
+- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов ModuleConfig) из подсистемы `networking`.
 
   Список модулей, которыми сможет управлять пользователь:
   - `cilium-hubble`;
@@ -232,9 +232,9 @@ roleRef:
 
 ### Назначение административных прав пользователю в рамках пространства имён (экспериментальная ролевая модель)
 
-Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в `RoleBinding` [use-роль](../authorization/rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
+Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) [use-роль](../authorization/rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
 
-Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в `RoleBinding` в соответствующем пространстве имён.
+Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) в соответствующем пространстве имён.
 
 Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
 
@@ -258,39 +258,39 @@ roleRef:
 В рамках пространства имён `myapp` пользователю будут доступны следующие права:
 
 - Просмотр, изменение, удаление и создание ресурсов Kubernetes. Например, следующих ресурсов:
-  - `Certificate`;
-  - `CertificateRequest`;
-  - `ConfigMap`;
-  - `ControllerRevision`;
-  - `CronJob`;
-  - `DaemonSet`;
-  - `Deployment`;
-  - `Event`;
-  - `HorizontalPodAutoscaler`;
-  - `Ingress`;
-  - `Issuer`;
-  - `Job`;
-  - `Lease`;
-  - `LimitRange`;
-  - `NetworkPolicy`;
-  - `PersistentVolumeClaim`;
-  - `Pod`;
-  - `PodDisruptionBudget`;
-  - `ReplicaSet`;
-  - `ReplicationController`;
-  - `ResourceQuota`;
-  - `Role`;
-  - `RoleBinding`;
-  - `Secret`;
-  - `Service`;
-  - `ServiceAccount`;
-  - `StatefulSet`;
-  - `VerticalPodAutoscaler`;
-  - `VolumeSnapshot`.
+  - Certificate;
+  - CertificateRequest;
+  - ConfigMap;
+  - ControllerRevision;
+  - CronJob;
+  - DaemonSet;
+  - Deployment;
+  - Event;
+  - HorizontalPodAutoscaler;
+  - Ingress;
+  - Issuer;
+  - Job;
+  - Lease;
+  - LimitRange;
+  - NetworkPolicy;
+  - PersistentVolumeClaim;
+  - Pod;
+  - PodDisruptionBudget;
+  - ReplicaSet;
+  - ReplicationController;
+  - ResourceQuota;
+  - Role;
+  - RoleBinding;
+  - Secret;
+  - Service;
+  - ServiceAccount;
+  - StatefulSet;
+  - VerticalPodAutoscaler;
+  - VolumeSnapshot.
 - Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
-  - `DexAuthenticator`;
-  - `DexClient`;
-  - `PodLogginConfig`.
+  - DexAuthenticator;
+  - DexClient;
+  - PodLogginConfig.
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
   - `kubectl exec`;

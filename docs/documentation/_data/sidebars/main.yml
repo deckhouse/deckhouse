@@ -99,11 +99,11 @@ entries:
                         ru: Экспериментальная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-experimental.html
                     - title:
-                        en: Granting rights to users and servers
-                        ru: Выдача прав пользователям и серверам
+                        en: Granting permissions to users and service accounts
+                        ru: Выдача прав пользователям и сервисным аккаунтам
                       url: /admin/configuration/access/authorization/granting.html
                     - title:
-                        en: Checking whether the user has rights
+                        en: Checking user permissions
                         ru: Проверка наличия прав у пользователя
                       url: /admin/configuration/access/authorization/check.html
                     - title:

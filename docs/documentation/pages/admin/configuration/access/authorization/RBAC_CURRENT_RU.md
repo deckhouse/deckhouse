@@ -4,8 +4,8 @@ permalink: ru/admin/configuration/access/authorization/rbac-current.html
 lang: ru
 ---
 
-Для реализации текущей ролевой модели в кластере должен быть включён модуль [user-authz](../../reference/mc/user-authz/).
-Модуль создаёт набор кластерных ролей (`ClusterRole`), подходящий для большинства задач по управлению доступом пользователей и групп.
+Для реализации текущей ролевой модели в кластере должен быть включён модуль [`user-authz`](/modules/user-authz/).
+Модуль создаёт набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
 {% alert level="warning" %} С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа. Текущая модель ролевого доступа продолжит работать, но в будущем будет объявлена устаревшей (deprecated).
 
@@ -17,30 +17,30 @@ lang: ru
 Особенности текущей ролевой модели:
 
 - Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
-- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-allowscale) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-portforwarding) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) и [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 ## Высокоуровневые роли, используемые для реализации модели
 
-Для реализации текущей ролевой модели с помощью модуля [user-authz](../../reference/mc/user-authz/), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
+Для реализации текущей ролевой модели с помощью модуля [`user-authz`](/modules/user-authz/), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
 | Роль             | Примеры доступных действий                                                                                                              | Ограничения                                  |
 |------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| **User**         | Просмотр подов, логов, Deployment (                                                                                                   | Нет доступа к секретам, портам, контейнерам |
+| **User**         | Просмотр подов, логов, Deployment                                                                                                   | Нет доступа к секретам, портам, контейнерам |
 | **PrivilegedUser** | Вход в контейнеры (`kubectl exec`), чтение секретов, удаление подов                                                                     | Не может изменять Deployment/Service        |
-| **Editor**       | Создание/удаление Deployment, Service, ConfigMap                                                                                        | Нет доступа к `ReplicaSet`, `ClusterRoles`  |
-| **Admin**        | Удаление `ReplicaSet`, управление RBAC в namespace                                                                                      | Нет доступа к cluster-wide ресурсам         |
-| **ClusterEditor** | Создание `DaemonSet`, `ClusterRole`, `ClusterXXXMetric`, `KeepalivedInstance` (только тех, что могут понадобиться для прикладных задач) | Не может удалять `MachineSets`              |
-| **ClusterAdmin** | Полный доступ к `ClusterRoleBindings`, `Machines`, `OpenstackInstanceClasses`                                                           | Может повысить свои права                   |
+| **Editor**       | Создание/удаление Deployment, Service, ConfigMap                                                                                        | Нет доступа к ReplicaSet, ClusterRoles  |
+| **Admin**        | Удаление ReplicaSet, управление RBAC в пространстве имён                                                                                      | Нет доступа к ресурсам на уровне кластера         |
+| **ClusterEditor** | Создание DaemonSet, ClusterRole, ClusterXXXMetric, KeepalivedInstance (только тех, что могут понадобиться для прикладных задач) | Не может удалять MachineSets              |
+| **ClusterAdmin** | Полный доступ к ClusterRoleBindings, Machines, OpenstackInstanceClasses                                                           | Может повысить свои права                   |
 | **SuperAdmin**   | Любые действия (включая `*` в RBAC), но с учетом `limitNamespaces`                                                                      | Ограничения только через политики кластера  |
 
 {% alert level="warning" %}
 Режим multitenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность**.
 {% endalert %}
 
-В случае, если в ресурсе [`ClusterAuthorizationRule`](../../reference/cr/clusterauthorizationrule/) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
+В случае, если в ресурсе [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
 
 Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в кастомных ресурсах перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
 
@@ -48,9 +48,9 @@ lang: ru
 
 Сокращения для `verbs`:
 <!-- start user-authz roles placeholder -->
-* read - `get`, `list`, `watch`
-* read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
-* write - `create`, `delete`, `deletecollection`, `patch`, `update`
+* read — `get`, `list`, `watch`;
+* read-write — `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`;
+* write — `create`, `delete`, `deletecollection`, `patch`, `update`.
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
 
@@ -174,16 +174,16 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](../authorization/granting.html#настройка-прав-высокоуровневых-ролей-текущая-модель) и нестандартные правила из других модулей Deckhouse) с помощью команды:
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](granting.html#предоставление-прав-с-помощью-authorizationrule-и-clusterauthorizationrule-текущая-ролевая-модель) и нестандартные правила из других модулей Deckhouse) с помощью команды:
 
 ```bash
 D8_ROLE_NAME=Editor
 kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
 ```
 
-## Пример `AuthorizationRule`
+## Пример AuthorizationRule
 
-Используйте AuthorizationRule для установки правил доступа для пользователей внутри определённого пространства имен.
+Используйте [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) для установки правил доступа для пользователей внутри определённого пространства имен.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -197,9 +197,9 @@ spec:
     name: admin@example.com
 ```
 
-## Пример `ClusterAuthorizationRule`
+## Пример ClusterAuthorizationRule
 
-ClusterAuthorizationRule можно использовать для установки правил доступа для пользователей как на уровне всего кластера, так и на уровне определенных пространств имен.
+[ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) можно использовать для установки правил доступа для пользователей как на уровне всего кластера, так и на уровне определенных пространств имен.
 
 ```yaml
 apiVersion: deckhouse.io/v1
