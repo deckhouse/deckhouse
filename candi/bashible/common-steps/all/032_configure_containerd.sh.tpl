@@ -30,6 +30,7 @@ migrate() {
   bb-flag-set need-local-images-import
   bb-flag-set reboot
   bb-flag-unset cntrd-major-version-changed
+  bb-flag-unset disruption
   bb-log-info "finish containerd migration"
 }
 
@@ -163,13 +164,21 @@ oom_score = 0
     cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
     drain_exec_sync_io_timeout = '0s'
     ignore_deprecation_warnings = []
-
     [plugins.'io.containerd.cri.v1.runtime'.containerd]
-      default_runtime_name = "runc"
+      default_runtime_name = {{ $default_runtime | quote }}
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
-
+  {{- if .gpu }}
       [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes]
+        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia]
+          privileged_without_host_devices = false
+          runtime_engine = ""
+          runtime_root = ""
+          runtime_type = "io.containerd.runc.v2"
+          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia.options]
+            BinaryName = "/usr/bin/nvidia-container-runtime"
+            SystemdCgroup = ${systemd_cgroup}
+  {{ end }}
         [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
           runtime_type = 'io.containerd.runc.v2'
           runtime_path = ''
@@ -193,7 +202,6 @@ oom_score = 0
             Root = ''
             ShimCgroup = ''
             SystemdCgroup = ${systemd_cgroup}
-
     [plugins.'io.containerd.cri.v1.runtime'.cni]
       bin_dirs = ['/opt/cni/bin']
       conf_dir = '/etc/cni/net.d'
@@ -379,7 +387,7 @@ oom_score = 0
           runtime_type = "io.containerd.runc.v2"
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
             BinaryName = "/usr/bin/nvidia-container-runtime"
-            SystemdCgroup = false
+            SystemdCgroup = ${systemd_cgroup}
   {{- end }}
     [plugins."io.containerd.grpc.v1.cri".cni]
       bin_dir = "/opt/cni/bin"
