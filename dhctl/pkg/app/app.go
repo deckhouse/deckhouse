@@ -36,9 +36,9 @@ const (
 )
 
 var (
-	deckhouseDir             = "/deckhouse"
-	VersionFile              = deckhouseDir + "/version"
-	EditionFile              = deckhouseDir + "/edition"
+	deckhouseDir = "/deckhouse"
+	VersionFile  = deckhouseDir + "/version"
+	EditionFile  = deckhouseDir + "/edition"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -48,6 +48,8 @@ var (
 	// "local" is kept for manual builds only
 	AppVersion = "local"
 	AppEdition = "local"
+
+	GoVersion = ""
 
 	ConfigPaths = make([]string, 0)
 	SanityCheck = false
