@@ -126,5 +126,7 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 	// wait for all dhctl instances to complete
 	dhctlProxy.Wait()
 
+	log.Info("wait done")
+
 	return nil
 }
