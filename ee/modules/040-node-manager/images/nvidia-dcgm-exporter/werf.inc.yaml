@@ -43,3 +43,27 @@ shell:
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/ binary
+  - cp docker/dcgm-exporter-entrypoint.sh /dcgm-exporter-entrypoint.sh
+  - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  to: /usr/bin/
+  includePaths:
+  - dcgm-exporter
+  - dcgm-exporter-entrypoint.sh
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /usr/lib64
+  includePaths:
+    - libc.so.6
+    - libresolv.so.2
+    - ld-linux-x86-64.so.2
+    - libpthread.so.0
+    - librt.so.1
+    - libdl.so.2
+    - libm.so.6
+  before: setup
