@@ -13,6 +13,7 @@ description: ""
 kubectl get module registry
 ```
 
+<!-- markdownlint-disable MD029 -->
 2. Добавьте следующие настройки в `ModuleConfig` модуля `deckhouse`:
 
 ```yaml
@@ -35,8 +36,8 @@ spec:
 Если у вас используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/) для корректной настройки.
 {% endalert %}
 
+<!-- markdownlint-disable MD029 -->
 3. Проверьте статус переключения registry в секрете `registry-state` используя [инструкцию](./faq.html#how-to-check-the-registry-mode-switch-status).
-
 
 <!--
 Ниже приведены примеры запуска и отключения модуля `embedded-registry`

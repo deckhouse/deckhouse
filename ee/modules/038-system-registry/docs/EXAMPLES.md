@@ -13,6 +13,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
 kubectl get module registry
 ```
 
+<!-- markdownlint-disable MD029 -->
 2. Add the following settings to the `ModuleConfig` of the `deckhouse` module:
 
 ```yaml
@@ -37,4 +38,5 @@ spec:
 If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/) module configuration for proper setup.
 {% endalert %}
 
+<!-- markdownlint-disable MD029 -->
 3. Check the status of the `registry-state` secret by reading the [guide](./faq.html#how-to-check-the-registry-mode-switch-status).

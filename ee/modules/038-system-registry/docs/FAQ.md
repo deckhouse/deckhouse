@@ -12,11 +12,9 @@ kubectl -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .
 ```
 <!-- TODO(nabokihms): replace with a d8 subcommand when implemented -->
 
-
 ### What do the conditions in `registry-state` mean?
 
 Each condition can be either `True` or `False` and also has a `message` field containing a description of the state. Below are all the types of conditions that can be present in `registry-state` and their descriptions:
-
 
 | Condition                         | Description                                                                                                                                                                              |
 |-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -29,4 +27,3 @@ Each condition can be either `True` or `False` and also has a `message` field co
 | `NodeServicesReady`               | The readiness state of node services. Checks that all required services on the nodes have been successfully started and are running.                                                     |
 | `CleanupNodeServices`             | The state of cleaning up node services if they are not needed for the desired mode. Checks that all resources related to node services have been successfully removed.                   |
 | `Ready`                           | The overall readiness state of the registry for operation in the specified mode. Checks that all previous conditions are met and the module is ready for operation.                      |
-
