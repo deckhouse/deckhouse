@@ -707,16 +707,14 @@ function bootstrap_static() {
   done
 
 
-  tar -cvf $cwd/registry-mirror.tar $cwd/registry-mirror
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
-    $scp_command -i "$ssh_private_key_path" $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
+    $scp_command -r -i "$ssh_private_key_path" $cwd/registry-mirror "$ssh_user@$bastion_ip:/tmp"
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
       apt-get update
       apt-get install -y docker.io docker-compose wget curl
 
-      tar -xvf /tmp/registry-mirror.tar
       cd deckhouse/testing/cloud_layouts/Static/registry-mirror
       ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
       ./gen-ssl.sh
