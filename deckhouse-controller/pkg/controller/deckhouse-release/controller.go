@@ -655,6 +655,11 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
+		r.logger.With(
+			slog.String("module_name", dr.GetModuleName()),
+			slog.String("release_name", dr.GetName()),
+		).Debug("result of bump deckhouse deployment", log.Err(err))
+
 		return fmt.Errorf("deploy release: %w", err)
 	}
 
@@ -772,11 +777,19 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	patch := client.MergeFrom(dr.DeepCopy())
+	patch := client.MergeFrom(depl.DeepCopy())
+	r.logger.Warn("patching deckhouse release: ", slog.String("version", dr.Spec.Version))
 
+	if len(depl.Spec.Template.Spec.Containers) == 0 {
+		return ErrDeploymentContainerIsNotFound
+	}
 	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	if len(depl.Annotations) == 0 {
+		depl.Annotations = make(map[string]string, 1)
+	}
+	depl.Annotations["test"] = "test"
 
-	err = r.client.Patch(ctx, depl, patch, client.FieldOwner(fieldOwner), client.ForceOwnership)
+	err = r.client.Patch(ctx, depl, patch, client.FieldOwner(fieldOwner), client.ForceOwnership, &client.PatchOptions{FieldManager: fieldOwner})
 	if err != nil {
 		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
 	}
