@@ -863,7 +863,7 @@ spec:
                     - properties:
                         type:
                           enum: [ContainerdV2]
-                        containerdv2: {}
+                        containerdV2: {}
                     - properties:
                         type:
                           enum: [NotManaged]
@@ -1587,7 +1587,7 @@ spec:
                           description: |
                             Set the max concurrent downloads for each pull.
                           x-doc-default: 3
-                    containerdv2:
+                    containerdV2:
                       type: object
                       description: |
                         ContainerdV2 runtime parameters.
@@ -1636,7 +1636,7 @@ spec:
                     - properties:
                         type:
                           enum: [ContainerdV2]
-                        containerdv2: {}
+                        containerdV2: {}
                     - properties:
                         type:
                           enum: [NotManaged]
