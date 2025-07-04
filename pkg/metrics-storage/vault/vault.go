@@ -126,7 +126,7 @@ func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
 	v.mtx.Unlock()
 }
 
-func (v *GroupedVault) GetOrCreateCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
+func (v *GroupedVault) RegisterCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
@@ -155,7 +155,7 @@ func (v *GroupedVault) GetOrCreateCounterCollector(name string, labelNames []str
 	return counter, nil
 }
 
-func (v *GroupedVault) GetOrCreateGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
+func (v *GroupedVault) RegisterGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
@@ -187,7 +187,7 @@ func (v *GroupedVault) GetOrCreateGaugeCollector(name string, labelNames []strin
 func (v *GroupedVault) CounterAdd(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
 
-	c, err := v.GetOrCreateCounterCollector(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterCounterCollector(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error("CounterAdd", log.Err(err))
 
@@ -200,7 +200,7 @@ func (v *GroupedVault) CounterAdd(group string, name string, value float64, labe
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
 
-	c, err := v.GetOrCreateGaugeCollector(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGaugeCollector(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error("GaugeSet", log.Err(err))
 

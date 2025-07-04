@@ -62,6 +62,6 @@ type GroupedStorage interface {
 	CounterAdd(group string, name string, value float64, labels map[string]string)
 	GaugeSet(group string, name string, value float64, labels map[string]string)
 
-	GetOrCreateCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error)
-	GetOrCreateGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error)
+	RegisterCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error)
+	RegisterGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error)
 }
