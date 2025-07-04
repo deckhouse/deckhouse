@@ -84,7 +84,7 @@ func main() {
     customLogger := log.NewLogger(
         log.WithOutput(os.Stdout),
         log.WithLevel(slog.LevelDebug),
-        log.WithFormat(log.JSONHandlerType),
+        log.WithHandlerType(log.JSONHandlerType),
     )
     
     // Use the custom logger
