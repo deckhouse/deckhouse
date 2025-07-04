@@ -24,11 +24,11 @@ go get github.com/deckhouse/deckhouse/pkg/metrics-storage
 package main
 
 import (
-	"context"
-	"log/slog"
+    "context"
+    "log/slog"
 	
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage"
+    "github.com/deckhouse/deckhouse/pkg/log"
+    "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func main() {
@@ -149,7 +149,7 @@ The package supports batch operations for efficient updates:
 
 ```go
 import (
-	"k8s.io/utils/ptr"
+    "k8s.io/utils/ptr"
     "github.com/deckhouse/deckhouse/pkg/metrics-storage"
     "github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 )
@@ -213,7 +213,7 @@ You can also use the operations API directly:
 
 ```go
 import (
-	"k8s.io/utils/ptr"
+    "k8s.io/utils/ptr"
     "github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 )
 
@@ -257,7 +257,7 @@ You can expose the metrics via HTTP for Prometheus to scrape:
 ```go
 import (
     "net/http"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage"
+    "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func main() {
