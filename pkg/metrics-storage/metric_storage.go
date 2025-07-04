@@ -122,7 +122,7 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 		gatherer:   prometheus.DefaultGatherer,
 		registerer: prometheus.DefaultRegisterer,
 
-		logger: log.NewLogger(log.Options{}).Named("metrics-storage"),
+		logger: log.NewLogger().Named("metrics-storage"),
 	}
 
 	// Apply provided options

@@ -37,18 +37,19 @@ func Test_JSON_Logger(t *testing.T) {
 
 	buf := bytes.NewBuffer([]byte{})
 
-	logger := log.NewLogger(log.Options{
-		Level:  slog.LevelDebug,
-		Output: buf,
-		TimeFunc: func(_ time.Time) time.Time {
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelDebug),
+		log.WithOutput(buf),
+		log.WithHandlerType(log.JSONHandlerType),
+		log.WithTimeFunc(func(_ time.Time) time.Time {
 			parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 			if err != nil {
 				assert.NoError(t, err)
 			}
 
 			return parsedTime
-		},
-	})
+		}),
+	)
 
 	t.Run("log output without error", func(t *testing.T) {
 		logger.Debug(message, slog.String(argKey, argValue))
@@ -331,18 +332,19 @@ stubArg:
 
 			buf := bytes.NewBuffer([]byte{})
 
-			logger := log.NewLogger(log.Options{
-				Level:  tt.args.level.Level(),
-				Output: buf,
-				TimeFunc: func(_ time.Time) time.Time {
+			logger := log.NewLogger(
+				log.WithLevel(tt.args.level.Level()),
+				log.WithOutput(buf),
+				log.WithHandlerType(log.JSONHandlerType),
+				log.WithTimeFunc(func(_ time.Time) time.Time {
 					parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 					if err != nil {
 						assert.NoError(t, err)
 					}
 
 					return parsedTime
-				},
-			})
+				}),
+			)
 
 			logger = tt.fields.mutateLoggerfn(logger)
 
@@ -631,19 +633,19 @@ stubArg:
 
 			buf := bytes.NewBuffer([]byte{})
 
-			logger := log.NewLogger(log.Options{
-				Level:  tt.args.level.Level(),
-				Output: buf,
-				TimeFunc: func(_ time.Time) time.Time {
+			logger := log.NewLogger(
+				log.WithLevel(tt.args.level.Level()),
+				log.WithOutput(buf),
+				log.WithHandlerType(log.TextHandlerType),
+				log.WithTimeFunc(func(_ time.Time) time.Time {
 					parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 					if err != nil {
 						assert.NoError(t, err)
 					}
 
 					return parsedTime
-				},
-				HandlerType: log.TextHandlerType,
-			})
+				}),
+			)
 
 			logger = tt.fields.mutateLoggerfn(logger)
 

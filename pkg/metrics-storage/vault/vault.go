@@ -86,7 +86,7 @@ func NewGroupedVault(resolveMetricNameFunc func(name string) string, options ...
 		registerer:            prometheus.DefaultRegisterer,
 		resolveMetricNameFunc: resolveMetricNameFunc,
 
-		logger: log.NewLogger(log.Options{}).Named("grouped-vault"),
+		logger: log.NewLogger().Named("grouped-vault"),
 	}
 
 	for _, option := range options {
