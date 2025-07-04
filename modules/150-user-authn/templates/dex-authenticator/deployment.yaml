@@ -1,21 +1,21 @@
 {{- define "dex_authenticator_resources" }}
-cpu: {{ .Values.userAuthn.resources.dexAuthenticator.requests.cpu | default "10m" }}
-memory: {{ .Values.userAuthn.resources.dexAuthenticator.requests.memory | default "25Mi" }}
+cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "requests" | default (dict)) "cpu" | default "10m" }}
+memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "requests" | default (dict)) "memory" | default "25Mi" }}
 {{- end }}
 
 {{- define "dex_authenticator_limits" }}
-cpu: {{ .Values.userAuthn.resources.dexAuthenticator.limits.cpu | default "20m" }}
-memory: {{ .Values.userAuthn.resources.dexAuthenticator.limits.memory | default "50Mi" }}
+cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "limits" | default (dict)) "cpu" | default "20m" }}
+memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "limits" | default (dict)) "memory" | default "50Mi" }}
 {{- end }}
 
 {{- define "redis_resources" }}
-cpu: {{ .Values.userAuthn.resources.redis.requests.cpu | default "10m" }}
-memory: {{ .Values.userAuthn.resources.redis.requests.memory | default "25Mi" }}
+cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "requests" | default (dict)) "cpu" | default "10m" }}
+memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "requests" | default (dict)) "memory" | default "25Mi" }}
 {{- end }}
 
 {{- define "redis_limits" }}
-cpu: {{ .Values.userAuthn.resources.redis.limits.cpu | default "20m" }}
-memory: {{ .Values.userAuthn.resources.redis.limits.memory | default "50Mi" }}
+cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "limits" | default (dict)) "cpu" | default "20m" }}
+memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "limits" | default (dict)) "memory" | default "50Mi" }}
 {{- end }}
 
 {{- $context := . }}
@@ -39,14 +39,14 @@ spec:
     containerPolicies:
     - containerName: "dex-authenticator"
       minAllowed:
-        {{- include "dex_authenticator_resources" $context | nindent 8 }}
+        {{- include "dex_authenticator_resources" . | nindent 8 }}
       maxAllowed:
-        {{- include "dex_authenticator_limits" $context | nindent 8 }}
+        {{- include "dex_authenticator_limits" . | nindent 8 }}
     - containerName: "redis"
       minAllowed:
-        {{- include "redis_resources" $context | nindent 8 }}
+        {{- include "redis_resources" . | nindent 8 }}
       maxAllowed:
-        {{- include "redis_limits" $context | nindent 8 }}
+        {{- include "redis_limits" . | nindent 8 }}
   {{- end }}
 ---
 apiVersion: policy/v1
@@ -212,13 +212,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "dex_authenticator_resources" . | nindent 12 }}
-  {{- end }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "dex_authenticator_resources" $context | nindent 12 }}
           limits:
-            {{- include "dex_authenticator_limits" . | nindent 12 }}
-  {{- end }}
+            {{- include "dex_authenticator_limits" $context | nindent 12 }}
         ports:
         - name: dex-https
           containerPort: 8443
@@ -237,10 +233,10 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "redis_resources" . | nindent 12 }}
+            {{- include "redis_resources" $context | nindent 12 }}
   {{- end }}
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
-            {{- include "redis_limits" . | nindent 12 }}
+            {{- include "redis_limits" $context | nindent 12 }}
   {{- end }}
 {{- end }}

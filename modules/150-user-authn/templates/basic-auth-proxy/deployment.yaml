@@ -168,13 +168,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "proxy_resources" . | nindent 12 }}
-  {{- end }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "proxy_limits" . | nindent 12 }}
-  {{- end }}
       volumes:
       - name: client-certs
         secret:

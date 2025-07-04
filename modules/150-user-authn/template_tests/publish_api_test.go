@@ -63,6 +63,43 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 	Context("With discovered dex cluster ip", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.internal.discoveredDexClusterIP", "10.10.10.10")
+			hec.ValuesSetFromYaml("userAuthn.resources", `
+dex:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+kubeconfigGenerator:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+basicAuthProxy:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+dexAuthenticator:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+redis:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+`)
 			hec.HelmRender()
 		})
 
