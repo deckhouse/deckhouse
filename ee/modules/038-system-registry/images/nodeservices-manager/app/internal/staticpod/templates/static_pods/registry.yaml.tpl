@@ -12,7 +12,7 @@ metadata:
   annotations:
     registry.deckhouse.io/config-hash: {{ quote .Hash }}
     registry.deckhouse.io/config-version: {{ quote .Version }}
-  name: system-registry
+  name: registry
   namespace: d8-system
 spec:
   securityContext:
@@ -78,7 +78,7 @@ spec:
         name: data
       - mountPath: /config
         name: distribution-config
-      - mountPath: /system_registry_pki
+      - mountPath: /pki
         name: pki
   - name: auth
     image: {{ .Images.Auth }}
@@ -112,7 +112,7 @@ spec:
     volumeMounts:
       - mountPath: /config
         name: auth-config
-      - mountPath: /system_registry_pki
+      - mountPath: /pki
         name: pki
   {{- if .HasMirrorer }}
   - name: mirrorer
@@ -123,7 +123,7 @@ spec:
     volumeMounts:
       - mountPath: /config
         name: mirrorer-config
-      - mountPath: /system_registry_pki
+      - mountPath: /pki
         name: pki
   {{- end }}
   priorityClassName: system-node-critical
@@ -131,25 +131,25 @@ spec:
   # PKI
   - name: pki
     hostPath:
-      path: /etc/kubernetes/system-registry/pki
+      path: /etc/kubernetes/registry/pki
       type: Directory
   # Configuration
   - name: auth-config
     hostPath:
-      path: /etc/kubernetes/system-registry/auth_config
+      path: /etc/kubernetes/registry/auth
       type: DirectoryOrCreate
   - name: distribution-config
     hostPath:
-      path: /etc/kubernetes/system-registry/distribution_config
+      path: /etc/kubernetes/registry/distribution
       type: DirectoryOrCreate
   {{- if .HasMirrorer }}
   - name: mirrorer-config
     hostPath:
-      path: /etc/kubernetes/system-registry/mirrorer
+      path: /etc/kubernetes/registry/mirrorer
       type: DirectoryOrCreate
   {{- end }}
   # Data
   - name: data
     hostPath:
-      path: /opt/deckhouse/system-registry/local_data
+      path: /opt/deckhouse/registry/local_data
       type: DirectoryOrCreate

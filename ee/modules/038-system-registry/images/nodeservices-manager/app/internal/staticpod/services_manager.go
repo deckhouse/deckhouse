@@ -25,12 +25,12 @@ import (
 )
 
 const (
-	authConfigPath         = "/etc/kubernetes/system-registry/auth_config/config.yaml"
-	distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
-	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
-	mirrorerConfigPath     = "/etc/kubernetes/system-registry/mirrorer/config.yaml"
+	authConfigPath         = "/etc/kubernetes/registry/auth/config.yaml"
+	distributionConfigPath = "/etc/kubernetes/registry/distribution/config.yaml"
+	pkiConfigDirectoryPath = "/etc/kubernetes/registry/pki"
+	mirrorerConfigPath     = "/etc/kubernetes/registry/mirrorer/config.yaml"
 
-	registryStaticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
+	registryStaticPodConfigPath = "/etc/kubernetes/manifests/registry.yaml"
 )
 
 type servicesManager struct {

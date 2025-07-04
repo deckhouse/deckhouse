@@ -1,4 +1,4 @@
-ca: /system_registry_pki/ca.crt
+ca: /pki/ca.crt
 users:
   puller:
     name: {{ quote .UserPuller.Name }}

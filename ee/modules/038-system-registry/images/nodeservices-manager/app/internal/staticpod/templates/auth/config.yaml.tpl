@@ -1,13 +1,13 @@
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
-  certificate: "/system_registry_pki/auth.crt"
-  key: "/system_registry_pki/auth.key"
+  certificate: "/pki/auth.crt"
+  key: "/pki/auth.key"
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "/system_registry_pki/token.crt"
-  key: "/system_registry_pki/token.key"
+  certificate: "/pki/token.crt"
+  key: "/pki/token.key"
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
