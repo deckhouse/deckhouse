@@ -151,6 +151,7 @@ shell:
     cd /out
     tar xzf datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
     rm -f datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
+    mkdir -p /out/usr/lib64/
     for i in {{ $libs }}
       do
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
