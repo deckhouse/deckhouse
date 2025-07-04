@@ -592,7 +592,7 @@ func (m *MetricStorage) Collector() prometheus.Collector {
 }
 
 // Handler returns handler of MetricStorage
-// returns default prometheus handler if MerticStorage created without Registry options
+// returns default prometheus handler if MetricStorage created without Registry options
 func (m *MetricStorage) Handler() http.Handler {
 	if m.registry == nil {
 		return promhttp.Handler()
