@@ -28,7 +28,7 @@ RUN mkdir -p /artifacts/registry && \
       --exclude='settings-conversion/**/*.go' \
       --exclude='hack/**/*.go' \
       --exclude='.dmtlint.yaml' \
-      /deckhouse/ee/modules/038-system-registry/ /artifacts/registry/ && \
+      /deckhouse/modules/038-system-registry/ /artifacts/registry/ && \
     rsync -a --prune-empty-dirs \
       --exclude='docs' \
       --exclude='charts/helm_lib' \

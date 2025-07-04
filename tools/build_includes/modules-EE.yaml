@@ -154,11 +154,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/038-system-registry
-  to: /deckhouse/modules/038-system-registry
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
