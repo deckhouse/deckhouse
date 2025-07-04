@@ -96,7 +96,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
       summary: API servers can't be reached.
       description: No API servers are reachable, or they have all disappeared from service discovery.
   - alert: K8SApiserverHighLatency
-    expr: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~"CONNECT|WATCH", job="kube-apiserver", instance=~".*:6443", verb=~".*"}[20m])) by (instance, le)) > 1
+    expr: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~"CONNECT|WATCH", job="kube-apiserver", instance=~".*:6443", verb=~".*"}[5m])) by (instance, le)) > 1
     for: 1h
     labels:
       severity_level: "5"
