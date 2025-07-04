@@ -25,6 +25,7 @@ if [ -z ${defaultKubernetesVer} ]; then
   echo "DEFAULT_KUBERNETES_VERSION is not set"
   exit 1
 fi
+
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build \
      -ldflags="-s -w -extldflags '-static' -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer' -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=$defaultKubernetesVer'" \
