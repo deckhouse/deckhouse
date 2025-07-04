@@ -19,7 +19,6 @@ package validators
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"unicode"
 
 	"github.com/hashicorp/go-multierror"
@@ -176,8 +175,11 @@ var (
 		},
 		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
@@ -230,6 +232,13 @@ var (
 			// ignore enum values "org" and "ext"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
 		},
+		"ee/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
+			// ignore enum values "NSX-T" and "NSX-V"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
+			// ignore enum values "org" and "ext"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
+		},
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)
@@ -262,14 +271,11 @@ func (en EnumValidator) Run(fileName, absoluteKey string, value interface{}) err
 		return nil
 	}
 
-	// check for slice path with wildcard
-	index := arrayPathRegex.FindString(absoluteKey)
-	if index != "" {
-		wildcardKey := strings.ReplaceAll(absoluteKey, index, "[*]")
-		if _, ok := en.excludes[wildcardKey]; ok {
-			// excluding key with wildcard
-			return nil
-		}
+	// check for slice path with wildcard (улучшено: заменяем все индексы на [*])
+	wildcardKey := arrayPathRegex.ReplaceAllString(absoluteKey, "[*]")
+	if _, ok := en.excludes[wildcardKey]; ok {
+		// excluding key with wildcard
+		return nil
 	}
 
 	values := value.([]interface{})
