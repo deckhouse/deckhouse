@@ -111,7 +111,9 @@ func Serve(network, address string) error {
 	go func() {
 		<-ctx.Done()
 
+		log.Info("wait for grpc server graceful stop")
 		s.GracefulStop()
+		log.Info("grpc server gracefully stopped")
 	}()
 
 	if err = s.Serve(listener); err != nil {
