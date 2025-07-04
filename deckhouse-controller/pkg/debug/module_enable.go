@@ -92,7 +92,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 
 	sources, ok, _ := unstructured.NestedSlice(unstructuredObjModule.Object, "properties", "availableSources")
 	if ok && len(sources) > 1 {
-		fmt.Printf("module '%s' is enabled but didn’t run because multiple sources were found (%v), please specify a source in ModuleConfig resource\n", name, sources)
+		fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%v), please specify a source in ModuleConfig resource\n", name, sources)
 	}
 
 	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
