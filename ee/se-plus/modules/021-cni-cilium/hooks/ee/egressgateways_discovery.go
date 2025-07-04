@@ -133,6 +133,10 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 		return nil, err
 	}
 
+	for i := range egi.Status.Conditions {
+		egi.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+	}
+
 	return EgressGatewayInstanceInfo{
 		Name:            egi.GetName(),
 		NodeName:        egi.Spec.NodeName,
