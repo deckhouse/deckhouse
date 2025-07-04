@@ -16,11 +16,11 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 The module allows you to configure resource limits and requests for all components. By default, the following values are used:
 
-- **Dex OIDC Provider**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
-- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
-- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
-- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
-- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Dex OIDC Provider**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
 
 ### Example Configuration
 
