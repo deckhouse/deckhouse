@@ -369,6 +369,32 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/040-node-manager/images/nvidia-dcgm
+  to: /deckhouse/modules/040-node-manager/images/nvidia-dcgm
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/images/nvidia-dcgm-exporter
+  to: /deckhouse/modules/040-node-manager/images/nvidia-dcgm-exporter
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/040-node-manager/images/nvidia-device-plugin
   to: /deckhouse/modules/040-node-manager/images/nvidia-device-plugin
   excludePaths:

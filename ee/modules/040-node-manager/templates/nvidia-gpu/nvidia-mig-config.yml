@@ -464,6 +464,7 @@ data:
       kubectl uncordon "${NODE_NAME}"
       kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
       kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
+      kubectl annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-approved-
 
       exit ${exit_code}
     }
