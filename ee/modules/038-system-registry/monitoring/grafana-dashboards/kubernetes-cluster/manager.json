@@ -2114,7 +2114,7 @@
         "hide": 2,
         "label": "job",
         "name": "job",
-        "query": "system-registry-manager",
+        "query": "registry-nodeservices-manager",
         "skipUrlSync": false,
         "type": "constant"
       },

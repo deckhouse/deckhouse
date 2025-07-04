@@ -124,7 +124,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/038-system-registry/images/system-registry-manager/app"
+  directory: "/ee/modules/038-system-registry/images/nodeservices-manager/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

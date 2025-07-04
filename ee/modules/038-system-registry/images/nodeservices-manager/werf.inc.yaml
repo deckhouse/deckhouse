@@ -9,8 +9,8 @@ import:
     to: /tmp
     before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "/staticpod"
-    to: /staticpod
+    add: "/manager"
+    to: /manager
     before: setup
   - image: common/pause
     add: /pause
@@ -35,9 +35,9 @@ shell:
   setup:
     - cd {{ $appAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /staticpod ./cmd/staticpod
-    - chown 64535:64535 /staticpod
-    - chmod 0755 /staticpod
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/staticpod
+    - chown 64535:64535 /manager
+    - chmod 0755 /manager
 git:
   - add: /{{ $appRelPath }}
     to:  {{ $appAbsPath }}

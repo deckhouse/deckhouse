@@ -3,7 +3,7 @@ linters-settings:
     exclude-rules:
       readiness-probe:
         - kind: DaemonSet
-          name: system-registry-manager
+          name: registry-nodeservices-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
           name: system-registry-staticpod-manager
@@ -19,7 +19,7 @@ linters-settings:
           container: image-holder-mirrorer
       liveness-probe:
         - kind: DaemonSet
-          name: system-registry-manager
+          name: registry-nodeservices-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
           name: system-registry-staticpod-manager

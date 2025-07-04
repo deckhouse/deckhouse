@@ -11,11 +11,11 @@ metadata:
 rules:
 - apiGroups: ["apps"]
   resources: ["daemonset/prometheus-metrics"]
-  resourceNames: ["system-registry-staticpod-manager"]
+  resourceNames: ["registry-nodeservices-manager"]
   verbs: ["get"]
 - apiGroups: ["apps"]
   resources: ["daemonset/prometheus-metrics"]
-  resourceNames: ["system-registry-manager"]
+  resourceNames: ["registry-nodeservices-manager"]
   verbs: ["get"]
 
 ---

@@ -1,4 +1,4 @@
-{{- define "system_registry_staticpod_manager_resources" }}
+{{- define "registry_nodeservices_manager_resources" }}
 cpu: 25m
 memory: 40Mi
 {{- end }}
@@ -39,21 +39,21 @@ memory: 10Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: system-registry-staticpod-manager
+  name: registry-nodeservices-manager
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-staticpod-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-nodeservices-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: system-registry-staticpod-manager
+    name: registry-nodeservices-manager
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: system-registry-staticpod-manager
+    - containerName: registry-nodeservices-manager
       minAllowed:
-        {{- include "system_registry_staticpod_manager_resources" . | nindent 8 }}
+        {{- include "registry_nodeservices_manager_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 80Mi
@@ -72,15 +72,15 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: system-registry-staticpod-manager
+  name: registry-nodeservices-manager
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-staticpod-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-nodeservices-manager")) | nindent 2 }}
   annotations:
     registry.deckhouse.io/config-hash: {{ $hash | quote }}
 spec:
   selector:
     matchLabels:
-      app: system-registry-staticpod-manager
+      app: registry-nodeservices-manager
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -89,7 +89,7 @@ spec:
   template:
     metadata:
       labels:
-        app: system-registry-staticpod-manager
+        app: registry-nodeservices-manager
       annotations:
         checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
     spec:
@@ -119,15 +119,15 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: {{ .Chart.Name }}
       containers:
-      - name: system-registry-staticpod-manager
+      - name: registry-nodeservices-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
         {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "registryManager") (ne $.Values.systemRegistry.imagesOverride.registryManager "") }}
         image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
         imagePullPolicy: IfNotPresent
         {{- else }}
-        image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
+        image: {{ include "helm_lib_module_image" (list . "nodeservicesManager") }}
         {{- end }}
-        command: ["/staticpod"]
+        command: ["/manager"]
         volumeMounts:
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
@@ -178,7 +178,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "system_registry_staticpod_manager_resources" . | nindent 12 }}
+            {{- include "registry_nodeservices_manager_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -205,7 +205,7 @@ spec:
                   apiVersion: v1
                   resource: daemonset
                   subresource: prometheus-metrics
-                  name: system-registry-staticpod-manager
+                  name: registry-nodeservices-manager
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

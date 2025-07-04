@@ -12,7 +12,7 @@ apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdm
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-nodeservices-manager")) | nindent 2 }}
 spec:
   failurePolicy: Fail
   matchConstraints:
