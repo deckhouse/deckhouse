@@ -487,13 +487,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const wrapIcon = document.createElement('img');
     wrapIcon.src = '/images/wrap-button.svg';
-    wrapIcon.alt = 'Wrap';
     wrapIcon.classList.add('wrap__icon');
     wrapIcon.style.display = 'none';
 
     const unwrapIcon = document.createElement('img');
     unwrapIcon.src = '/images/unwrap-button.svg';
-    unwrapIcon.alt = 'Unwrap';
     unwrapIcon.classList.add('wrap__icon');
 
     button.appendChild(wrapIcon);
