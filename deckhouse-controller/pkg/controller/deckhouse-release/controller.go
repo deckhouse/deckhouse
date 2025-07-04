@@ -655,7 +655,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
-		r.logger.Warn("result of bump deckhouse deployment",
+		r.logger.Debug("result of bump deckhouse deployment",
 			slog.String("module_name", dr.GetModuleName()),
 			slog.String("release_name", dr.GetName()),
 			slog.String("release_version", dr.Spec.Version),
@@ -778,62 +778,17 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	// patch := client.MergeFrom(depl.DeepCopy())
-	r.logger.Warn("patching deckhouse deployment: ", slog.String("version", dr.Spec.Version))
-
 	if len(depl.Spec.Template.Spec.Containers) == 0 {
 		return ErrDeploymentContainerIsNotFound
 	}
 	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
-	// depl.ManagedFields = []metav1.ManagedFieldsEntry{}
 
-	if len(depl.Annotations) == 0 {
-		depl.Annotations = make(map[string]string, 1)
-	}
-	depl.Annotations["test"] = "test"
-
-	// err = r.client.Update(ctx, depl, client.FieldOwner(fieldOwner), client.ForceOwnership)
-	// r.client.Update(ctx, depl, &client.UpdateOptions{FieldManager: fieldOwner})
-	// err = r.client.Patch(ctx, depl, patch, &client.PatchOptions{})
 	err = r.client.Patch(ctx, depl, client.Apply, client.FieldOwner(fieldOwner), client.ForceOwnership)
 	if err != nil {
 		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
 	}
 
-	// debug patch deckhouse release
-	drPatch := client.MergeFrom(dr.DeepCopy())
-	r.logger.Warn("patching deckhouse release: ", slog.String("version", dr.Spec.Version))
-
-	if len(dr.Annotations) == 0 {
-		dr.Annotations = make(map[string]string, 1)
-	}
-	dr.Annotations["test"] = "test"
-	dr.Annotations["test/controller"] = fieldOwner
-
-	err = r.client.Patch(ctx, dr, drPatch)
-	if err != nil {
-		return fmt.Errorf("patch deckhouse release: %w", err)
-	}
-
 	return nil
-
-	// // patch example
-	// err = r.client.Patch(ctx, depl, client.MergeFrom(dr), client.FieldOwner(""))
-	// if err != nil {
-	// 	return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
-	// }
-	// return nil
-
-	// // as been
-	// return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
-	// 	if len(depl.Spec.Template.Spec.Containers) == 0 {
-	// 		return ErrDeploymentContainerIsNotFound
-	// 	}
-
-	// 	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
-
-	// 	return nil
-	// })
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
