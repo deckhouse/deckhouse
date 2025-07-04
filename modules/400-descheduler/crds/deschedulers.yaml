@@ -286,7 +286,7 @@ spec:
           type: object
       served: true
       storage: false
-      x-doc-deprecated: true
+      deprecated: true
     - name: v1alpha2
       schema:
         openAPIV3Schema:
