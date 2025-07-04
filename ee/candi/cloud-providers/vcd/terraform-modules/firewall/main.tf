@@ -25,7 +25,7 @@ resource "vcd_nsxt_app_port_profile" "node_ports" {
   description = "Node ports for Kubernetes"
 
   name  = "NODE PORTS"
-  scope = "SYSTEM"
+  scope = "TENANT"
 
   app_port {
     protocol = "TCP"
