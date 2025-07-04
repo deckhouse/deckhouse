@@ -145,7 +145,7 @@ var _ = sdk.RegisterFunc(
 	func(input *go_hook.HookInput) error {
 		var err error
 
-		stateAccessor := helpers.NewValuesAccessor[stateModel](input, "systemRegistry.internal.checker.state")
+		stateAccessor := helpers.NewValuesAccessor[stateModel](input, valuesStatePath)
 		state := stateAccessor.Get()
 
 		inputs := inputsModel{
