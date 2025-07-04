@@ -7,7 +7,7 @@ require (
 	github.com/bep/lazycache v0.8.0
 	github.com/bep/logg v0.4.0
 	github.com/bep/overlayfs v0.10.0
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250602225314-cf9422af13fa
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/gohugoio/hugo v0.147.7
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/afero v1.14.0
@@ -125,3 +125,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/deckhouse/deckhouse/pkg/log => ./../../../../pkg/log
