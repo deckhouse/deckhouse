@@ -41,6 +41,7 @@ const (
 //  2. Implement partial label support to avoid specifying all values for all labels
 //     (retrieve default labels from context or use predefined defaults)
 //  3. Improve prefix handling by using explicit options or builder functions instead of string substitution
+//  4. Add help to metric
 
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
@@ -200,8 +201,19 @@ func (m *MetricStorage) Gauge(metric string, labels map[string]string) *promethe
 	return m.RegisterGauge(metric, labels)
 }
 
-// RegisterGauge registers a gauge.
-// Deprecated: use Gauge instead
+// RegisterGauge creates and registers a prometheus GaugeVec metric with the specified metric name and labels.
+// If a Gauge with the same metric name already exists,
+// the existing GaugeVec is returned to avoid duplicate registration.
+//
+// This function is designed to be used for pre-registering metrics to document them
+// consistently in one place in the code, allowing for centralized metric management.
+//
+// Parameters:
+//   - metric: The base metric name to be registered.
+//   - labels: A map of label names to their initial values.
+//
+// Returns:
+//   - *prometheus.GaugeVec: The registered gauge vector metric or nil if the MetricStorage is nil.
 func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec {
 	if m == nil {
 		return nil
@@ -275,13 +287,21 @@ func (m *MetricStorage) Counter(metric string, labels map[string]string) *promet
 	return m.RegisterCounter(metric, labels)
 }
 
-// RegisterCounter registers a counter.
-// Deprecated: use Counter instead
+// RegisterCounter creates a new Counter metric with the given name and labels
+// and registers it in the metrics registry.
+// If a Counter with the same metric name already exists,
+// the existing CounterVec is returned to avoid duplicate registration.
+//
+// This function is designed to be used for pre-registering metrics to document them
+// consistently in one place in the code, allowing for centralized metric management.
+//
+// Parameters:
+//   - metric: The name of the metric (without the storage prefix)
+//   - labels: A map of label names and their values to attach to the metric
+//
+// Returns:
+//   - *prometheus.CounterVec: The registered Counter vector that can be used to report metrics
 func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec {
-	if m == nil {
-		return nil
-	}
-
 	metricName := m.resolveMetricName(metric)
 
 	defer func() {
@@ -349,13 +369,23 @@ func (m *MetricStorage) Histogram(metric string, labels map[string]string, bucke
 	return m.RegisterHistogram(metric, labels, buckets)
 }
 
-// Deprecated: use Histogram instead
-// TODO: add help
+// RegisterHistogram creates and registers a HistogramVec with the provided metric name, labels, and buckets.
+// If a Histogram with the same metric name already exists,
+// the existing HistogramVec is returned to avoid duplicate registration.
+// If buckets for this metric name are already registered with the storage,
+// those pre-registered buckets will be used instead of the ones provided to this function.
+//
+// This function is designed to be used for pre-registering metrics to document them
+// consistently in one place in the code, allowing for centralized metric management.
+//
+// Parameters:
+//   - metric: The base name for the metric (will be prefixed based on MetricStorage configuration)
+//   - labels: A map of label names to their default values
+//   - buckets: The histogram bucket boundaries (if nil or empty, default Prometheus buckets will be used)
+//
+// Returns:
+//   - *prometheus.HistogramVec: The registered histogram vector or nil if MetricStorage is nil
 func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
-	if m == nil {
-		return nil
-	}
-
 	metricName := m.resolveMetricName(metric)
 
 	defer func() {
