@@ -172,7 +172,7 @@ func moduleConfigValidationHandler(
 			// Please specify a source in ModuleConfig.
 
 			if cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
-				warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%v), please specify a source in ModuleConfig resource ", cfg.GetName(), module.Properties.AvailableSources))
+				warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(module.Properties.AvailableSources, ", ")))
 			}
 		}
 
