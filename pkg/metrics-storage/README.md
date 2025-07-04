@@ -215,6 +215,7 @@ You can also use the operations API directly:
 import (
     "k8s.io/utils/ptr"
     "github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
+    "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func updateWithOperations(storage *metricsstorage.MetricStorage) {
