@@ -19,35 +19,6 @@ limitations under the License.
 
 #include <stdbool.h>
 
-static const char USAGE[] =
-  "Wrapper for legacy power commands to invoke shutdown via logind\n"
-  "to send shutdown signal to all processes that hold inhibitor locks.\n"
-  "It translates legacy commands into:\n"
-  "systemctl halt|poweroff|reboot -i.\n"
-  "\n"
-  "Create symlink with alias to invoke systemctl:\n"
-  "\n"
-  "reboot                   Shut down and reboot the system\n"
-  "poweroff                 Shut down and power-off the system\n"
-  "shutdown                 Shut down and power-off the system\n"
-  "halt                     Shut down and halt the system\n"
-  "\n"
-  "Options:\n"
-  "          --dry-run      Print systemctl command line, not run it.\n"
-  "   -r     --reboot       shutdown command compatibility: reboot.\n"
-  "   -P, -p --poweroff     halt command compatibility: poweroff.\n"
-  "   -H, -h --halt         poweroff command compatibility: halt.\n"
-  "\n"
-  "Other legacy options are silently ignored\n";
-
-static const char SYSTEMCTL[] = "systemctl";
-
-static const char CMD_HALT[] = "halt";
-static const char CMD_REBOOT[] = "reboot";
-static const char CMD_POWEROFF[] = "poweroff";
-
-static const char IGNORE_INHIBITORS_FLAG[] = "-i";
-
 enum action {
   ACTION_HALT,
   ACTION_POWEROFF,

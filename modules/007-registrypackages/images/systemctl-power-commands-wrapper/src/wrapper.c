@@ -22,6 +22,37 @@ limitations under the License.
 
 #include "wrapper.h"
 
+static const char USAGE[] =
+  "Wrapper for legacy power commands to invoke shutdown via logind\n"
+  "to send shutdown signal to all processes that hold inhibitor locks.\n"
+  "It translates legacy commands into:\n"
+  "systemctl halt|poweroff|reboot -i.\n"
+  "\n"
+  "Create symlink with alias to invoke systemctl:\n"
+  "\n"
+  "reboot                   Shut down and reboot the system\n"
+  "poweroff                 Shut down and power-off the system\n"
+  "shutdown                 Shut down and power-off the system\n"
+  "halt                     Shut down and halt the system\n"
+  "\n"
+  "Options:\n"
+  "          --dry-run      Print systemctl command line, not run it.\n"
+  "   -r     --reboot       shutdown command compatibility: reboot.\n"
+  "   -P, -p --poweroff     halt command compatibility: poweroff.\n"
+  "   -H, -h --halt         poweroff command compatibility: halt.\n"
+  "\n"
+  "Other legacy options are silently ignored\n";
+
+// Strings to build systemctl command.
+static const char SYSTEMCTL[] = "systemctl";
+
+static const char CMD_HALT[] = "halt";
+static const char CMD_REBOOT[] = "reboot";
+static const char CMD_POWEROFF[] = "poweroff";
+
+static const char IGNORE_INHIBITORS_FLAG[] = "-i";
+
+
 int main(int argc, char* argv[]) {
   int r = detect_action(argc, argv);
   if (r < 0 || arg_help == 1) {
@@ -46,7 +77,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Prepare args for exec. First item "echo" is needed for dry run invocation.
-  char * systemctl_args[] = {
+  char *const systemctl_args[] = {
     (char*)SYSTEMCTL,
     (char*)systemctl_action,
     (char*)IGNORE_INHIBITORS_FLAG,
@@ -191,22 +222,16 @@ bool run_with_alias(char *argv[], const char *alias) {
     return false;
   }
 
-  int cmdlen = strlen(argv[0]);
-  int aliaslen = strlen(alias);
-
-  if (cmdlen < 1 || aliaslen < 1 || cmdlen < aliaslen) {
-    return false;
+  // Find / from the end and increase pointer to get string after /
+  // Use full argv[0] if there is no /.
+  char *last_path = strrchr(argv[0], '/');
+  if (last_path) {
+    last_path++;
+  } else {
+    last_path = argv[0];
   }
 
-  // Compare argv[0] and alias from the end.
-  int j = aliaslen - 1;
-  for (int i = cmdlen - 1; i >= 0 ; i--, j--) {
-    if (argv[0][i] != alias[j]) {
-      return false;
-    }
-    if (j == 0) {
-      return true;
-    }
-  }
-  return false;
+  int cmp = strcmp(last_path, alias);
+
+  return cmp == 0 ? true : false;
 }
