@@ -152,30 +152,44 @@ shell:
   - mkdir run
   - echo "export PS1='\u@\h:\w\\$ '" >> profile
 ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}
+# fromImage: base/distroless
+# import:
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+#   add: /relocate
+#   to: /usr
+#   before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+#   add: /base-items
+#   to: /
+#   includePaths:
+#   - bin
+#   - sbin
+#   - lib
+#   - lib64
+#   - run
+#   before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+#   add: /base-items/profile
+#   to: /etc/profile
+#   before: install
+# imageSpec:
+#   config:
+#     env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LD_LIBRARY_PATH": "/usr/lib64:/usr/lib", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+#     workingDir: "/"
+#     user: "root:root"
+#     cmd: ["/usr/bin/bash"]
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+fromImage: builder/alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
-  to: /usr
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /base-items
-  to: /
-  includePaths:
-  - bin
-  - sbin
-  - lib
-  - lib64
-  - run
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /base-items/profile
-  to: /etc/profile
+  to: /usr1
   before: install
 imageSpec:
   config:
-    env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LD_LIBRARY_PATH": "/usr/lib64:/usr/lib", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    # env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LD_LIBRARY_PATH": "/usr/lib64:/usr/lib", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/"
     user: "root:root"
     cmd: ["/usr/bin/bash"]
