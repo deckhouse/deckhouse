@@ -111,7 +111,7 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 	if !inputs.DeckhousePod.IsReady {
 		return Result{
 			Ready:   false,
-			Message: "Waiting for deckhouse-controller to be ready",
+			Message: "Waiting for deckhouse-controller to become ready",
 		}
 	}
 	return Result{

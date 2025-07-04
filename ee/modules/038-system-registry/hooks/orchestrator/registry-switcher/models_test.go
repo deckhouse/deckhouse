@@ -85,7 +85,7 @@ func TestState_processResult(t *testing.T) {
 				},
 			},
 			expectedReady: false,
-			expectedMsg:   "Waiting for deckhouse-controller to be ready",
+			expectedMsg:   "Waiting for deckhouse-controller to become ready",
 		},
 		{
 			name: "Pod doesn't exist - not switched",
