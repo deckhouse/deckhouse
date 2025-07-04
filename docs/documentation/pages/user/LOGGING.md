@@ -1,5 +1,5 @@
 ---
 title: Collecting application logs
-permalink: en/user/monitoring/logging.html
+permalink: en/user/logging.html
 ---
 

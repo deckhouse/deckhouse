@@ -784,8 +784,8 @@ entries:
                     ru: Вопросы и ответы
                   url: /admin/configuration/monitoring/faq.html
             - title:
-                en: Platform journaling
-                ru: Журналирование платформы
+                en: Logging
+                ru: Логирование
               folders:
                 - title:
                     en: Overview
@@ -974,10 +974,10 @@ entries:
                 en: Monitoring settings
                 ru: Настройки мониторинга
               url: /user/monitoring/app.html
-            - title:
-                en: Collecting application logs
-                ru: Сбор логов из приложения
-              url: /user/monitoring/logging.html
+        - title:
+            en: Collecting application logs
+            ru: Сбор логов из приложения
+          url: /user/logging.html
         - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения

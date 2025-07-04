@@ -7,11 +7,11 @@ lang: ru
 Deckhouse предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
 
 Хранилище разворачивается в кластере и интегрируется с системой сбора логов.
-После настройки ресурсов ClusterLoggingConfig, PodLoggingConfig и ClusterLogDestination (#TODO ссылка на CR)
+После настройки ресурсов [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination)
 логи автоматически поступают из всех указанных источников.
 Настроенное хранилище добавляется в Grafana в качестве источника данных для визуализации и анализа.
 
-Параметры кратковременного хранилища задаются в настройках модуля `loki`(#TODO ссылка на параметры модуля).
+Параметры кратковременного хранилища задаются в настройках модуля [`loki`](/modules/loki/configuration.html).
 Вы можете в том числе настроить размер диска и срок хранения, задать используемый StorageClass и ресурсы.
 
 {% alert level="warning" %}
@@ -27,7 +27,7 @@ Deckhouse предоставляет встроенное решение для 
 
 Для настройки выполните следующие шаги:
 
-1. Включите модуль `loki`.
+1. Включите модуль [`loki`](/modules/loki/configuration.html).
    Для этого используйте следующий манифест с настройками по умолчанию:
 
    ```yaml
@@ -45,10 +45,10 @@ Deckhouse предоставляет встроенное решение для 
    ```
 
    Модуль можно также активировать и настроить из веб-интерфейса Deckhouse.
-   Для этого убедитесь, что у вас установлен модуль `console`(#TODO ссылка на доку про интерфейс),
+   Для этого убедитесь, что у вас установлен [модуль `console`](/modules/console/),
    откройте веб-интерфейс Deckhouse и, выбрав `loki` в разделе **Модули**, включите его с помощью переключателя.
 
-1. Создайте ресурс ClusterLoggingConfig(#TODO ссылка на CR), который задаёт правила сбора логов.
+1. Создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
    Данный ресурс позволяет вам настроить сбор логов с подов в определенном пространстве имён и с определенным лейблом,
    гибко настраивать парсинг многострочных логов и задавать другие правила.
 
@@ -70,7 +70,8 @@ Deckhouse предоставляет встроенное решение для 
        - loki-storage
    ```
 
-1. Создайте ресурс ClusterLogDestination(#TODO ссылка на CR), который описывает параметры отправки логов в хранилище.
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination),
+   который описывает параметры отправки логов в хранилище.
    Данный ресурс позволяет вам указать одно или несколько хранилищ и описать параметры подключения, буферизации и дополнительные лейблы, которые будут применяться к логам перед отправкой.
 
    В этом примере в качестве принимающего хранилища указано кратковременное хранилище на базе Loki:
@@ -88,7 +89,7 @@ Deckhouse предоставляет встроенное решение для 
 
 ## Интеграция с Grafana
 
-Чтобы работать c Grafana, встроенной в Deckhouse, добавьте ресурс [GrafanaAdditionalDatasource](#TODO ссылка на CR).
+Чтобы работать c Grafana, встроенной в Deckhouse, добавьте ресурс [GrafanaAdditionalDatasource](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 Пример конфигурации:
 
@@ -111,16 +112,16 @@ spec:
 
 Чтобы настроить работу Deckhouse с платформой Grafana Cloud, выполните следующие шаги:
 
-1. создайте [ключ доступа к API Grafana Cloud](https://grafana.com/docs/grafana-cloud/reference/create-api-key/);
-1. закодируйте токен доступа к Grafana Cloud в формате Base64:
+1. Создайте [ключ доступа к API Grafana Cloud](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+1. Закодируйте токен доступа к Grafana Cloud в формате Base64:
 
-   ![API-ключ Grafana Cloud](../../images/log-shipper/grafana_cloud.png)
+   ![API-ключ Grafana Cloud](../../../images/log-shipper/grafana_cloud.png)
 
    ```bash
    echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
    ```
 
-1. создайте ресурс ClusterLogDestination (#TODO ссылка на CR), следуя примеру:
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination), следуя примеру:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

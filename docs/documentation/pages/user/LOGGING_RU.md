@@ -1,10 +1,11 @@
 ---
 title: Сбор логов из приложения
-permalink: ru/user/monitoring/logging.html
+permalink: ru/user/logging.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера во внутреннюю или внешние системы хранения.
+В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера
+во внутреннюю или внешние системы хранения.
 
 DKP позволяет:
 
@@ -15,23 +16,26 @@ DKP позволяет:
 - использовать буферизацию логов для повышения производительности;
 - хранить логи во внутреннем кратковременном хранилище на базе Grafana Loki.
 
-Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](#TODO ссылка на Архитектура -> Логирование).
+Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../architecture/logging.html).
 
-Для настройки сбора и доставки логов используются кастомные ресурсы ClusterLoggingConfig,
-PodLoggingConfig и ClusterLogDestination.
-Администраторам DKP доступны для настройки все параметры отправки и приема логов(#TODO ссылка на Администрирование -> Логирование -> Сбор и доставка логов).
-Пользователи кластера могут указать, какие логи следует собирать в пределах пространства имён с помощью правил фильтрации и парсинга логов, используя ресурс PodLoggingConfig.
+Для настройки сбора и доставки логов в кластере Deckhouse используются три кастомных ресурса:
 
-Все доступные параметры ресурса PodLoggingConfig описаны [в разделе «Справка»](#TODO ссылка на Reference -> CR).
+- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
+  включая правила сбора, фильтрации и парсинга;
+- [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
+  в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
+- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
+
+Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса PodLoggingConfig.
 
 ## Настройка сбора логов из приложения
 
 1. Уточните у администратора DKP, настроен ли сбор логов и хранилище в вашем кластере.
-   Также попросите сообщить вам название хранилища, которое вы укажете в параметре `clusterDestinationRefs`(#TODO ссылка на CR).
-1. Создайте ресурс PodLoggingConfig в своём пространстве имён.
+   Также попросите сообщить вам название хранилища, которое вы укажете в параметре [`clusterDestinationRefs`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs).
+1. Создайте ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в своём пространстве имён.
 
    В данном примере логи собираются со всех подов указанного пространства имён
-   и отправляются в кратковременное хранилище на базе Grafana Loki(#TODO ссылка на Администрирование -> Логирование -> Кратковременное хранение логов):
+   и отправляются в кратковременное хранилище [на базе Grafana Loki](../admin/configuration/logging/storage.html):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -47,7 +51,7 @@ PodLoggingConfig и ClusterLogDestination.
 1. (**Опционально**) Ограничьте сбор логов по лейблу.
 
    Если вам нужно собирать логи только с определённых подов,
-   например, только от приложений с лейблом `app=backend`, добавьте параметр `labelSelector` (#TODO ссылка на CR):
+   например, только от приложений с лейблом `app=backend`, добавьте [параметр `labelSelector`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelselector):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -65,7 +69,7 @@ PodLoggingConfig и ClusterLogDestination.
 
 1. (**Опционально**) Настройте фильтрацию логов.
 
-   Используя фильтры `labelFilter` и `logFilter` (#TODO ссылка на CR), вы можете установить фильтрацию по метаданным или полям сообщений.
+   Используя фильтры [`labelFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelfilter) и [`logFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-logfilter), вы можете установить фильтрацию по метаданным или полям сообщений.
    Например, в данном случае в хранилище отправятся лишь те логи, в которых нет полей со строкой `.*GET /status" 200$`:
 
    ```yaml

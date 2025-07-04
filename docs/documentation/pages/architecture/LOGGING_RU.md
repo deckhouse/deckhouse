@@ -8,7 +8,7 @@ lang: ru
 
 ## Механизм сбора и доставки логов
 
-Для сбора и доставки логов в DKP используется модуль `log-shipper`.
+Для сбора и доставки логов в DKP используется [модуль `log-shipper`](/modules/log-shipper/).
 На каждом узле кластера запускается отдельный экземпляр `log-shipper`, который настраивается на основе ресурсов Deckhouse.
 Модуль `log-shipper` использует [Vector](https://vector.dev/) в качестве агента логирования.
 Комбинация настроек для сбора и доставки логов образует *pipeline*.
@@ -17,7 +17,14 @@ lang: ru
 
 <!-- Исходник схемы: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse отслеживает ресурсы ClusterLoggingConfig, ClusterLogDestination и PodLoggingConfig (#TODO ссылка на CR).
+1. Deckhouse отслеживает ресурсы ClusterLoggingConfig, ClusterLogDestination и PodLoggingConfig:
+
+   - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
+     включая правила сбора, фильтрации и парсинга;
+   - [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
+     в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
+   - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
+
 1. На основе заданных параметров Deckhouse автоматически создаёт конфигурационный файл и сохраняет его в Secret в Kubernetes.
 1. Secret монтируется на все поды агентов `log-shipper`.
    При изменении конфигурации обновление происходит автоматически с помощью сайдкар-контейнера `reloader`.
@@ -97,13 +104,13 @@ lang: ru
 
 Фильтры запускаются сразу после объединения строк с помощью multiline-парсинга.
 
-- `labelFilter`:
+- [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter):
   - правила применяются к метаданным сообщений;
   - поля для метаданных (или лейблов) наполняются на основании источника логов,
     поэтому для разных источников будет разный набор полей;
   - правила используются, например, чтобы исключить сообщения из определенного контейнера или пода,
     соответствующих заданной метке.
-- `logFilter`:
+- [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter):
   - правила применяются к исходному сообщению;
   - позволяет исключить сообщение на основании значения JSON-поля;
   - если сообщение не в формате JSON, можно использовать регулярное выражение для поиска по строке.
