@@ -1,6 +1,17 @@
 /*
-Copyright 2024 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	 http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package mirrorer
@@ -41,7 +52,7 @@ func New(logger *slog.Logger, cfg config.Config) (Mirrorer, error) {
 		ret.sleepInterval = 10 * time.Second
 	}
 
-	roundTripper, err := transport.NewHttpRoundTripper(false, caFiles...)
+	roundTripper, err := transport.NewHTTPRoundTripper(false, caFiles...)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create http transport: %w", err)
 	}
