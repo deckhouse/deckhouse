@@ -46,9 +46,9 @@ resource "vcd_nsxt_firewall" "firewall" {
     name                 = format("%s-inbound-ssh", var.providerClusterConfiguration.mainNetwork)
     direction            = "IN"
     ip_protocol          = "IPV4"
-    source_ids           = ""
-    destination_ids      = vcd_nsxt_ip_set.internal_network.id
-    app_port_profile_ids = [data.vcd_nsxt_app_port_profile.ssh.id]
+    source_ids           = []
+    destination_ids      = vcd_nsxt_ip_set.internal_network[0].id
+    app_port_profile_ids = [data.vcd_nsxt_app_port_profile.ssh[0].id]
   }
 
   rule {
@@ -57,8 +57,8 @@ resource "vcd_nsxt_firewall" "firewall" {
     name            = format("%s-inbound-icmp", var.providerClusterConfiguration.mainNetwork)
     direction       = "IN"
     ip_protocol     = "ICMP"
-    source_ids      = ""
-    destination_ids = vcd_nsxt_ip_set.internal_network.id
+    source_ids      = []
+    destination_ids = vcd_nsxt_ip_set.internal_network[0].id
   }
 
   rule {
@@ -67,9 +67,9 @@ resource "vcd_nsxt_firewall" "firewall" {
     name                 = format("%s-inbound-node-ports", var.providerClusterConfiguration.mainNetwork)
     direction            = "IN"
     ip_protocol          = "IPV4"
-    source_ids           = ""
-    destination_ids      = vcd_nsxt_ip_set.internal_network.id
-    app_port_profile_ids = [vcd_nsxt_app_port_profile.node_ports.id]
+    source_ids           = []
+    destination_ids      = vcd_nsxt_ip_set.internal_network[0].id
+    app_port_profile_ids = [vcd_nsxt_app_port_profile.node_ports[0].id]
   }
 
   rule {
@@ -78,8 +78,8 @@ resource "vcd_nsxt_firewall" "firewall" {
     name            = format("%s-outbound-any", var.providerClusterConfiguration.mainNetwork)
     direction       = "OUT"
     ip_protocol     = "IPV4"
-    source_ids      = vcd_nsxt_ip_set.internal_network.id
-    destination_ids = ""
+    source_ids      = vcd_nsxt_ip_set.internal_network[0].id
+    destination_ids = []
   }
 }
 
