@@ -463,10 +463,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"systemRegistry": map[string]interface{}{
-		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
-		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
-		"mirrorer":              "imageHash-systemRegistry-mirrorer",
-		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
+		"dockerAuth":          "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution":  "imageHash-systemRegistry-dockerDistribution",
+		"mirrorer":            "imageHash-systemRegistry-mirrorer",
+		"nodeservicesManager": "imageHash-systemRegistry-nodeservicesManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
