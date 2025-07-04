@@ -1,13 +1,66 @@
 diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
-index 3bd895b5d..d6a8aea75 100644
+index 3bd895b5d..effdd5652 100644
 --- a/internal/nginx/maxmind.go
 +++ b/internal/nginx/maxmind.go
-@@ -126,7 +126,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+@@ -88,6 +88,9 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ 		attempts = minimumRetriesCount
+ 	}
+ 
++	klog.Infof("Starting GeoLite2 DB download (editions: %s, attempts: %d, interval: %s)",
++		MaxmindEditionIDs, attempts, period)
++
+ 	defaultRetry := wait.Backoff{
+ 		Steps:    attempts,
+ 		Duration: period,
+@@ -103,7 +106,14 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ 
+ 	lastErr = wait.ExponentialBackoff(defaultRetry, func() (bool, error) {
+ 		var dlError error
++
+ 		for _, dbName := range strings.Split(MaxmindEditionIDs, ",") {
++			dbName = strings.TrimSpace(dbName)
++			if dbName == "" {
++				continue
++			}
++
++			klog.V(2).Infof("Attempting to download GeoIP DB: %s", dbName)
+ 			dlError = downloadDatabase(dbName)
+ 			if dlError != nil {
+ 				break
+@@ -112,22 +122,30 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ 
+ 		lastErr = dlError
+ 		if dlError == nil {
++			klog.Infof("GeoLite2 DBs downloaded successfully")
+ 			return true, nil
+ 		}
+ 
+-		if e, ok := dlError.(*url.Error); ok {
+-			if e, ok := e.Err.(*net.OpError); ok {
+-				if e, ok := e.Err.(*os.SyscallError); ok {
+-					if e.Err == syscall.ECONNREFUSED {
++		if ue, ok := dlError.(*url.Error); ok {
++			if ne, ok := ue.Err.(*net.OpError); ok {
++				if se, ok := ne.Err.(*os.SyscallError); ok {
++					if se.Err == syscall.ECONNREFUSED {
+ 						retries++
+-						klog.InfoS("download failed on attempt " + fmt.Sprint(retries))
++						klog.V(1).Infof("Download attempt %d failed: connection refused", retries)
+ 						return false, nil
+ 					}
  				}
  			}
  		}
 -		return true, nil
++
++		klog.Errorf("GeoLite2 DB download failed: %v", dlError)
 +		return true, dlError
  	})
++
++	if lastErr != nil {
++		klog.Errorf("All attempts to download GeoLite2 DBs failed: %v", lastErr)
++	}
++
  	return lastErr
  }
+ 
