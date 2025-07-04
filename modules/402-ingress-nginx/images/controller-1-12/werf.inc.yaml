@@ -185,7 +185,8 @@ shell:
   setup:
   - cp -R /usr/lib64 /chroot/usr/lib64
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - |
     bash -eu -c '
     writeDirs=(
