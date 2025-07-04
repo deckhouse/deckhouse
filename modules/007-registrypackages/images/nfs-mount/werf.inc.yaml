@@ -41,7 +41,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $context | nindent 2 }}
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache patchelf file findutils
   install:
   - mkdir -p /opt/deckhouse/bin
