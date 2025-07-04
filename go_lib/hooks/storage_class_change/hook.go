@@ -291,7 +291,6 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("name", pod.Name), log.Err(err))
 			}
 		}
-
 	}
 
 	var currentStorageClass string
