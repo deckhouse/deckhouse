@@ -58,10 +58,10 @@ func Test_JSON_Logger(t *testing.T) {
 		//test fatal
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 
-		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:54","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:58","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
+		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:57","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:59","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
 	})
 
 	t.Run("log output with error", func(t *testing.T) {
