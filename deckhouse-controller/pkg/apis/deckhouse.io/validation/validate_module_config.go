@@ -168,9 +168,6 @@ func moduleConfigValidationHandler(
 				return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
 			}
 
-			// Module prometheus is enabled but didn’t run because multiple sources were found (<source-one>, <source-two>, …).
-			// Please specify a source in ModuleConfig.
-
 			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
 				warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(module.Properties.AvailableSources, ", ")))
 			}
