@@ -4,7 +4,7 @@ memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "25Mi" }}
 {{- end }}
 
 {{- define "dex_limits" }}
-cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "200m" }}
+cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "100m" }}
 memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "100Mi" }}
 {{- end }}
 

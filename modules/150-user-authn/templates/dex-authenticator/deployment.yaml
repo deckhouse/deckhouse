@@ -12,7 +12,7 @@ memory: {{ $requests.memory | default "25Mi" }}
 {{- $resources := $userAuthn.resources | default (dict) }}
 {{- $dexAuthenticator := $resources.dexAuthenticator | default (dict) }}
 {{- $limits := $dexAuthenticator.limits | default (dict) }}
-cpu: {{ $limits.cpu | default "200m" }}
+cpu: {{ $limits.cpu | default "100m" }}
 memory: {{ $limits.memory | default "100Mi" }}
 {{- end }}
 
@@ -30,8 +30,8 @@ memory: {{ $requests.memory | default "25Mi" }}
 {{- $resources := $userAuthn.resources | default (dict) }}
 {{- $redis := $resources.redis | default (dict) }}
 {{- $limits := $redis.limits | default (dict) }}
-cpu: {{ $limits.cpu | default "20m" }}
-memory: {{ $limits.memory | default "50Mi" }}
+cpu: {{ $limits.cpu | default "100m" }}
+memory: {{ $limits.memory | default "100Mi" }}
 {{- end }}
 
 {{- $context := . }}
