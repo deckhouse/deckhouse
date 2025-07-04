@@ -74,7 +74,7 @@ package main
 
 import (
     "os"
-	"log/slog"
+    "log/slog"
     
     "github.com/deckhouse/deckhouse/pkg/log"
 )
