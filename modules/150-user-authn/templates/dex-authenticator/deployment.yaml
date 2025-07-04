@@ -1,21 +1,37 @@
 {{- define "dex_authenticator_resources" }}
-cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "requests" | default (dict)) "cpu" | default "10m" }}
-memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "requests" | default (dict)) "memory" | default "25Mi" }}
+{{- $userAuthn := .userAuthn | default (dict) }}
+{{- $resources := $userAuthn.resources | default (dict) }}
+{{- $dexAuthenticator := $resources.dexAuthenticator | default (dict) }}
+{{- $requests := $dexAuthenticator.requests | default (dict) }}
+cpu: {{ $requests.cpu | default "10m" }}
+memory: {{ $requests.memory | default "25Mi" }}
 {{- end }}
 
 {{- define "dex_authenticator_limits" }}
-cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "limits" | default (dict)) "cpu" | default "20m" }}
-memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "dexAuthenticator" | default (dict)) "limits" | default (dict)) "memory" | default "50Mi" }}
+{{- $userAuthn := .userAuthn | default (dict) }}
+{{- $resources := $userAuthn.resources | default (dict) }}
+{{- $dexAuthenticator := $resources.dexAuthenticator | default (dict) }}
+{{- $limits := $dexAuthenticator.limits | default (dict) }}
+cpu: {{ $limits.cpu | default "20m" }}
+memory: {{ $limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- define "redis_resources" }}
-cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "requests" | default (dict)) "cpu" | default "10m" }}
-memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "requests" | default (dict)) "memory" | default "25Mi" }}
+{{- $userAuthn := .userAuthn | default (dict) }}
+{{- $resources := $userAuthn.resources | default (dict) }}
+{{- $redis := $resources.redis | default (dict) }}
+{{- $requests := $redis.requests | default (dict) }}
+cpu: {{ $requests.cpu | default "10m" }}
+memory: {{ $requests.memory | default "25Mi" }}
 {{- end }}
 
 {{- define "redis_limits" }}
-cpu: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "limits" | default (dict)) "cpu" | default "20m" }}
-memory: {{ get (get (get (get (get . "userAuthn" | default (dict)) "resources" | default (dict)) "redis" | default (dict)) "limits" | default (dict)) "memory" | default "50Mi" }}
+{{- $userAuthn := .userAuthn | default (dict) }}
+{{- $resources := $userAuthn.resources | default (dict) }}
+{{- $redis := $resources.redis | default (dict) }}
+{{- $limits := $redis.limits | default (dict) }}
+cpu: {{ $limits.cpu | default "20m" }}
+memory: {{ $limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- $context := . }}
