@@ -1,95 +1,13 @@
 diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
-index 3bd895b5d..6afe37cc7 100644
+index 3bd895b5d..d6a8aea75 100644
 --- a/internal/nginx/maxmind.go
 +++ b/internal/nginx/maxmind.go
-@@ -88,47 +88,67 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
- 		attempts = minimumRetriesCount
- 	}
- 
--	defaultRetry := wait.Backoff{
-+	klog.Infof("Starting download of MaxMind databases: %s", MaxmindEditionIDs)
-+	klog.Infof("Retry config - Attempts: %d, Timeout per attempt: %s", attempts, period)
-+
-+	backoff := wait.Backoff{
- 		Steps:    attempts,
- 		Duration: period,
- 		Factor:   1.5,
- 		Jitter:   0.1,
- 	}
--	if period == time.Duration(0) {
--		defaultRetry.Steps = minimumRetriesCount
-+	if period == 0 {
-+		backoff.Steps = minimumRetriesCount
- 	}
- 
--	var lastErr error
-+	var finalErr error
- 	retries := 0
- 
--	lastErr = wait.ExponentialBackoff(defaultRetry, func() (bool, error) {
--		var dlError error
-+	err := wait.ExponentialBackoff(backoff, func() (done bool, err error) {
- 		for _, dbName := range strings.Split(MaxmindEditionIDs, ",") {
--			dlError = downloadDatabase(dbName)
--			if dlError != nil {
--				break
-+			dbName = strings.TrimSpace(dbName)
-+			if dbName == "" {
-+				continue
- 			}
--		}
- 
--		lastErr = dlError
--		if dlError == nil {
--			return true, nil
--		}
--
--		if e, ok := dlError.(*url.Error); ok {
--			if e, ok := e.Err.(*net.OpError); ok {
--				if e, ok := e.Err.(*os.SyscallError); ok {
--					if e.Err == syscall.ECONNREFUSED {
--						retries++
--						klog.InfoS("download failed on attempt " + fmt.Sprint(retries))
--						return false, nil
-+			klog.Infof("Attempting to download: %s", dbName)
-+			if dlErr := downloadDatabase(dbName); dlErr != nil {
-+				finalErr = dlErr // save last real error
-+
-+				klog.Errorf("Download failed for %s: %v", dbName, dlErr)
-+
-+				// retry only on connection refused
-+				if ue, ok := dlErr.(*url.Error); ok {
-+					if ne, ok := ue.Err.(*net.OpError); ok {
-+						if se, ok := ne.Err.(*os.SyscallError); ok {
-+							if se.Err == syscall.ECONNREFUSED {
-+								retries++
-+								klog.Warningf("Connection refused (attempt %d), will retry...", retries)
-+								return false, nil
-+							}
-+						}
- 					}
+@@ -126,7 +126,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
  				}
-+
-+				// all other errors — do not retry
-+				klog.Warningf("Non-retriable error for %s: %v", dbName, dlErr)
-+				return true, dlErr
  			}
-+
-+			klog.Infof("Successfully downloaded: %s", dbName)
  		}
-+
-+		// all DBs successfully downloaded
- 		return true, nil
+-		return true, nil
++		return true, dlError
  	})
--	return lastErr
-+
-+	if err != nil {
-+		klog.Errorf("Failed to download GeoLite2 DBs after retries: %v", finalErr)
-+		return finalErr
-+	}
-+
-+	klog.Infof("All GeoLite2 databases downloaded successfully.")
-+	return nil
+ 	return lastErr
  }
- 
- func createURL(mirror, licenseKey, dbName string) string {
