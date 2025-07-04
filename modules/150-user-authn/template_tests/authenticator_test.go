@@ -39,22 +39,14 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
-		hec.ValuesSetFromYaml("userAuthn.resources.dexAuthenticator", `
-requests:
-  cpu: "10m"
-  memory: "25Mi"
-limits:
-  cpu: "20m"
-  memory: "50Mi"
-`)
-		hec.ValuesSetFromYaml("userAuthn.resources.redis", `
-requests:
-  cpu: "10m"
-  memory: "25Mi"
-limits:
-  cpu: "20m"
-  memory: "50Mi"
-`)
+		hec.ValuesSet("userAuthn.internal.selfSignedCA", map[string]interface{}{})
+		hec.ValuesSet("userAuthn.internal.dexClientCRDs", []interface{}{})
+		hec.ValuesSet("userAuthn.internal.dexUsersCRDs", []interface{}{})
+		hec.ValuesSet("userAuthn.internal.providers", []interface{}{})
+		hec.ValuesSet("userAuthn.publishAPI.enabled", false)
+		hec.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
+		hec.ValuesSet("userAuthn.controlPlaneConfigurator.enabled", true)
+		hec.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "DoNotNeed")
 	})
 	Context("With DexAuthenticator object", func() {
 		BeforeEach(func() {
@@ -125,6 +117,43 @@ limits:
     keepUsersLoggedInFor: "2h20m4s"
 `)
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
+			hec.ValuesSetFromYaml("userAuthn.resources", `
+dex:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+kubeconfigGenerator:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+basicAuthProxy:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+dexAuthenticator:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+redis:
+  requests:
+    cpu: "10m"
+    memory: "25Mi"
+  limits:
+    cpu: "20m"
+    memory: "50Mi"
+`)
 			hec.HelmRender()
 		})
 		It("Should create desired objects", func() {
