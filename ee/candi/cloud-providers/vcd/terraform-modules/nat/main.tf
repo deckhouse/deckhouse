@@ -5,6 +5,8 @@ locals {
   main_ip_addresses = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "mainNetworkIPAddresses", [])
 }
 
+# NSX-T resources
+
 resource "vcd_nsxt_nat_rule" "snat" {
   count = var.useNSXV ? 0 : 1
   org   = var.providerClusterConfiguration.organization
@@ -43,6 +45,8 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
   logging             = false
   app_port_profile_id = data.vcd_nsxt_app_port_profile.ssh[0].id
 }
+
+# NSX-V resources
 
 resource "vcd_nsxv_snat" "snat" {
   count = var.useNSXV ? 1 : 0
