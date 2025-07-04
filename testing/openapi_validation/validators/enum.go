@@ -271,7 +271,7 @@ func (en EnumValidator) Run(fileName, absoluteKey string, value interface{}) err
 		return nil
 	}
 
-	// check for slice path with wildcard (улучшено: заменяем все индексы на [*])
+	// check for slice path with wildcard (imporoved: replace all indexes with [*])
 	wildcardKey := arrayPathRegex.ReplaceAllString(absoluteKey, "[*]")
 	if _, ok := en.excludes[wildcardKey]; ok {
 		// excluding key with wildcard
