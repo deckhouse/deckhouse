@@ -45,3 +45,12 @@ module "nat" {
   useNSXV                      = local.useNSXV
   depends_on                   = [vcd_vapp_org_network.vapp_network]
 }
+
+module "firewall" {
+  count = var.providerClusterConfiguration.enableFirewall ? 1 : 0
+
+  source                       = "../../../terraform-modules/firewall"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  edgeGatewayId                = local.edgeGatewayId
+  useNSXV                      = local.useNSXV
+}

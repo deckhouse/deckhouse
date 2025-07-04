@@ -289,6 +289,12 @@ properties:
                   External network type for build DNAT rule for master node (one of "org" or "ext").
                   Required only if `type` is `NSX-V`.
                 enum: [org, ext]
+          enableFirewall:
+            description:
+              Configure firewall rules for the cluster.
+            type: boolean
+            default: false
+            x-doc-default: false
           mainNetwork:
             description: |
               Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
