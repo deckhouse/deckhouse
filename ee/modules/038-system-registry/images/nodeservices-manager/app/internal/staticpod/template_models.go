@@ -174,7 +174,7 @@ type staticPodImagesModel struct {
 }
 
 func (model staticPodConfigModel) Render() ([]byte, error) {
-	return renderTemplate("templates/static_pods/registry.yaml.tpl", model)
+	return renderTemplate("templates/static_pods/registry-nodeservices.yaml.tpl", model)
 }
 
 func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, hash string, hasMirrorer bool) staticPodConfigModel {

@@ -30,7 +30,7 @@ const (
 	pkiConfigDirectoryPath = "/etc/kubernetes/registry/pki"
 	mirrorerConfigPath     = "/etc/kubernetes/registry/mirrorer/config.yaml"
 
-	registryStaticPodConfigPath = "/etc/kubernetes/manifests/registry.yaml"
+	registryStaticPodConfigPath = "/etc/kubernetes/manifests/registry-nodeservices.yaml"
 )
 
 type servicesManager struct {

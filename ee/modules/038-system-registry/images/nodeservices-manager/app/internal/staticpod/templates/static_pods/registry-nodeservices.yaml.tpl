@@ -12,7 +12,7 @@ metadata:
   annotations:
     registry.deckhouse.io/config-hash: {{ quote .Hash }}
     registry.deckhouse.io/config-version: {{ quote .Version }}
-  name: registry
+  name: registry-nodeservices
   namespace: d8-system
 spec:
   securityContext:
