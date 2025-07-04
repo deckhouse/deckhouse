@@ -68,7 +68,8 @@ type ClusterLogDestinationSpec struct {
 	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 
-	Buffer *Buffer `json:"buffer,omitempty"`
+	Buffer          *Buffer              `json:"buffer,omitempty"`
+	Transformations []TransformationSpec `json:"transformations,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {

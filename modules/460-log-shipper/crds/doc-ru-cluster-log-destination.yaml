@@ -415,6 +415,103 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                transformations:
+                  description: |
+                    Список трансформаций, которые могут применяться к логам перед отправкой.
+                    
+                    Возможные варианты:
+
+                      - `ReplaceKeys`: заменяет `source` на `target` в заданных ключах лейблов.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage`: Если может преобразует поле `message` из заданого в `sourceFormat` формата в обект.
+                         иначе оставит `message` неизменным.
+
+                        Примеры:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels`: удаляет указанные лейблы.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    properties:
+                      action:
+                        description: Тип трансформации.
+                      replaceKeys:
+                        description: Замена `source` на `target` в заданных ключах рекурсивно.
+                        properties:
+                          source:
+                            description: |
+                              Заменить все совпадения этого шаблона.
+                              Может быть статической строкой или регулярным выражением.
+                          target:
+                            description: Строка, на которую заменяются совпадения.
+                          labels:
+                            description: Список лейблов для рекурсивной замены.
+                      parseMessage:
+                        description: Преобразует поле `message` в объект.
+                        properties:
+                          sourceFormat:
+                            description: Формат сообщения для преобразования в объект.
+                          string:
+                            properties:
+                              targetField:
+                                description: Имя поля, в которое помещается структурированное сообщение.
+                          json:
+                            properties:
+                              depth:
+                                description: Глубина парсинга JSON.
+                      dropLabels:
+                        description: Удаление заданных лейблов.
+                        properties:
+                          labels:
+                            description: Список лейблов, которые необходимо удалить.
                 buffer:
                   description: Параметры буфера.
                   properties:
