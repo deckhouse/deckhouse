@@ -31,7 +31,6 @@ end
 def read_folders(folders, title_en, title_ru, result)
     if folders.is_a?(Array)
          folders.each do |entry|
-            # Проверяем, что в entry есть ключ 'folders' и это массив
             if entry.is_a?(Hash) && entry['folders'].is_a?(Array)
               read_folders(entry['folders'], entry['title']['en'], entry['title']['ru'], result)
             end
@@ -79,9 +78,7 @@ Find.find(PATH_TO_SIDEBARS) do |file|
 
     if data.is_a?(Hash) && data['entries'].is_a?(Array)
       data['entries'].each do |entry|
-        # Проверяем, что в entry есть ключ 'folders' и это массив
         if entry.is_a?(Hash) && entry['folders'].is_a?(Array)
-          # По желанию выведем содержимое folders
           read_folders(entry['folders'], entry['title']['en'], entry['title']['ru'], result)
         end
       end
