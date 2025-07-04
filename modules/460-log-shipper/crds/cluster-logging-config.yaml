@@ -18,7 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      deprecated: true
+      x-doc-deprecated: true
       schema:
         openAPIV3Schema:
           type: object

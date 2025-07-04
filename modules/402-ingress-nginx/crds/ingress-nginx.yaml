@@ -18,7 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
-      deprecated: true
+      x-doc-deprecated: true
       deprecationWarning: 'v1alpha1 is deprecated, please use deckhouse.io/v1 instead'
       schema:
         openAPIV3Schema:

@@ -19,7 +19,7 @@ spec:
     - name: v1alpha1
       served: false
       storage: false
-      deprecated: true
+      x-doc-deprecated: true
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -66,7 +66,7 @@ spec:
     - name: v1alpha2
       served: true
       storage: true
-      deprecated: false
+      x-doc-deprecated: false
       subresources:
         status: {}
       additionalPrinterColumns:
