@@ -6,7 +6,7 @@ lang: ru
 
 Аудит событий безопасности Deckhouse Kubernetes Platform (DKP) основан на системе обнаружения угроз [Falco](https://falco.org/).
 Deckhouse запускает объединённые в DaemonSet агенты Falco на каждом узле,
-после чего те приступают к сбору событий ядра и данных, полученных в ходе аудита API Kubernetes.
+после чего те приступают к сбору системных вызовов ОС и данных, полученных в ходе аудита событий Kubernetes.
 
 {% alert level="info" %}
 Разработчики Falco рекомендуют запускать его как systemd-сервис,
@@ -21,7 +21,7 @@ Deckhouse запускает объединённые в DaemonSet агенты 
 На каждом узле кластера запускается под Falco со следующими компонентами:
 
 - `falco` — собирает события, обогащает их метаданными и отправляет в stdout;
-- `rules-loader` — собирает данные с правилами из кастомных ресурсов FalcoAuditRules(#TODO)
+- `rules-loader` — собирает данные с правилами из [кастомных ресурсов FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules)
   и сохраняет их в общую директорию;
 - [`falcosidekick`](https://github.com/falcosecurity/falcosidekick) — принимает события от `falco`
   и экспортирует их в виде метрик во внешние системы;
@@ -44,15 +44,15 @@ Deckhouse запускает объединённые в DaemonSet агенты 
   Эти правила расположены в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`;
 - **нормативные правила**, удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022 г.
   «Требования по безопасности информации к средствам контейнеризации».
-  Эти правила `fstec` описаны в формате кастомного ресурса FalcoAuditRules(#TODO).
+  Эти правила `fstec` описаны в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
 ### Пользовательские правила
 
-Для добавления пользовательских правил используется кастомный ресурс FalcoAuditRules(#TODO).
+Для добавления пользовательских правил используется [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
 У каждого агента Falco есть сайдкар-контейнер с экземпляром сервиса [`shell-operator`](https://github.com/flant/shell-operator).
 Этот экземпляр считывает правила из ресурсов Kubernetes, конвертирует их в правила Falco
-и сохраняет правила в директорию `/etc/falco/rules.d/` на поде.
+и сохраняет правила в директорию `/etc/falco/rules.d/` в поде.
 При добавлении нового правила Falco автоматически обновляет конфигурацию.
 
 ![Работа shell-operator с правилами Falco](../../images/runtime-audit-engine/falco_shop.svg)
