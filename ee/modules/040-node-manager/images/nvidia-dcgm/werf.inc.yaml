@@ -165,11 +165,14 @@ import:
   includePaths:
     - libc.so.6
     - libresolv.so.2
-    - ld-linux-x86-64.so.2
     - libpthread.so.0
     - librt.so.1
     - libdl.so.2
     - libm.so.6
-    - linux-vdso.so.1
     - libgcc_s.so.1
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /usr/lib/x86_64-linux-gnu/
+  includePaths:
+    - ld-linux-x86-64.so.2
   before: setup
