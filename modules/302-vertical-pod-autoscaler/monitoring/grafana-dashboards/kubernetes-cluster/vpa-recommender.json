@@ -799,14 +799,14 @@
         "type": "query"
       },
       {
-        "allValue": "$targetName.*",
+        "allValue": "",
         "current": {
           "selected": true,
           "text": [
-            "prometheus-main-0"
+            "All"
           ],
           "value": [
-            "prometheus-main-0"
+            "$__all"
           ]
         },
         "datasource": {
@@ -832,14 +832,14 @@
         "type": "query"
       },
       {
-        "allValue": ".*",
+        "allValue": "",
         "current": {
           "selected": true,
           "text": [
-            "prometheus"
+            "All"
           ],
           "value": [
-            "prometheus"
+            "$__all"
           ]
         },
         "datasource": {
