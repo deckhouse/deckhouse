@@ -303,11 +303,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '20m'
+                default: '100m'
                 description: 'CPU limit for Dex container.'
               memory:
                 type: string
-                default: '50Mi'
+                default: '100Mi'
                 description: 'Memory limit for Dex container.'
       kubeconfigGenerator:
         type: object
@@ -334,11 +334,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '20m'
+                default: '100m'
                 description: 'CPU limit for kubeconfig generator container.'
               memory:
                 type: string
-                default: '50Mi'
+                default: '100Mi'
                 description: 'Memory limit for kubeconfig generator container.'
       basicAuthProxy:
         type: object
@@ -365,11 +365,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '20m'
+                default: '100m'
                 description: 'CPU limit for basic auth proxy container.'
               memory:
                 type: string
-                default: '50Mi'
+                default: '100Mi'
                 description: 'Memory limit for basic auth proxy container.'
       dexAuthenticator:
         type: object
@@ -396,11 +396,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '20m'
+                default: '100m'
                 description: 'CPU limit for Dex authenticator container.'
               memory:
                 type: string
-                default: '50Mi'
+                default: '100Mi'
                 description: 'Memory limit for Dex authenticator container.'
       redis:
         type: object
@@ -427,9 +427,9 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '20m'
+                default: '100m'
                 description: 'CPU limit for Redis container.'
               memory:
                 type: string
-                default: '50Mi'
+                default: '100Mi'
                 description: 'Memory limit for Redis container.'
