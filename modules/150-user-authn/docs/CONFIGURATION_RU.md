@@ -17,7 +17,7 @@ title: "Модуль user-authn: настройки"
 
 Модуль позволяет настраивать лимиты и запросы ресурсов для всех компонентов. По умолчанию используются следующие значения:
 
-- **Dex OIDC провайдер**: 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты)
+- **Dex OIDC провайдер**: 100m CPU / 128Mi памяти (запросы), 250m CPU / 256Mi памяти (лимиты)
 - **Генератор kubeconfig**: 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты)
 - **Basic Auth прокси**: 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты)
 - **Dex authenticator**: 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты)
@@ -36,11 +36,11 @@ spec:
     resources:
       dex:
         requests:
-          cpu: "20m"
-          memory: "50Mi"
+          cpu: "100m"
+          memory: "128Mi"
         limits:
-          cpu: "50m"
-          memory: "100Mi"
+          cpu: "250m"
+          memory: "256Mi"
       kubeconfigGenerator:
         requests:
           cpu: "15m"
