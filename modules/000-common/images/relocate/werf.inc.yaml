@@ -11,4 +11,5 @@ git:
     - '**/*'
 shell:
   install:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y glibc-utils
