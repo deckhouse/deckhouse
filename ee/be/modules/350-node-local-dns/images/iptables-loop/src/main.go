@@ -24,7 +24,7 @@ const (
 	iptablesLoopBinary = "/iptables-loop"
 
 	readinessFilePath = "/tmp/coredns-readiness"
-	readyState         = "ready"
+	readyState        = "ready"
 	notReadyState     = "not-ready"
 
 	iptableName      = "raw"
@@ -208,7 +208,7 @@ loop:
 }
 
 func main() {
-	logger := log.NewLogger(log.Options{})
+	logger := log.NewLogger()
 	log.SetDefault(logger)
 
 	kubeDnsSvc := os.Getenv("KUBE_DNS_SVC_IP")
