@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/security/certificates.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет доступ к [`cert-manager` версии v1.17.1](https://github.com/jetstack/cert-manager),
+Deckhouse Kubernetes Platform (DKP) предоставляет доступ к [`cert-manager`](https://github.com/jetstack/cert-manager),
 инструменту автоматизации при работе с TLS-сертификатами в кластере.
 
 При установке `cert-manager` в кластер учитываются особенности инфраструктуры:
@@ -44,16 +44,27 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 В DKP по умолчанию поддерживаются следующие издатели сертификатов (ClusterIssuer):
 
-- `letsencrypt`;
-- `letsencrypt-staging`;
-- `selfsigned`;
-- `selfsigned-no-trust`.
+- `letsencrypt` — выпускает TLS-сертификаты, используя публичный удостоверяющий центр Let’s Encrypt
+  и HTTP-валидацию по протоколу ACME.
+  Используется для автоматического получения доверенных сертификатов, подходящих для большинства публичных сервисов.
+  Подробное описание настроек доступно [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/).
+
+- `letsencrypt-staging` — аналогичен `letsencrypt`, но использует тестовый сервер Let’s Encrypt.
+  Подходит для отладки конфигурации и проверки процесса выпуска сертификатов.
+  Подробнее про тестовую среду Let’s Encrypt можно прочитать [в официальной документации](https://letsencrypt.org/docs/staging-environment/).
+
+- `selfsigned` — выпускает самоподписанные сертификаты.
+  Используется в ситуациях, когда не требуется внешнее доверие к сертификату (например, для внутренних сервисов).
+
+- `selfsigned-no-trust` — также выпускает самоподписанные сертификаты,
+  но без автоматического добавления корневого сертификата в доверенные.
+  Используется для ручного управления доверием.
 
 В некоторых случаях вам могут понадобиться дополнительные виды ClusterIssuer:
 
 - если вы хотите использовать сертификат от Let’s Encrypt, но с DNS-валидацией через стороннего DNS-провайдера;
 - когда необходимо использовать удостоверяющий центр (CA), отличный от Let's Encrypt.
-  Все виды поддерживаемых удостоверяющих центров перечислены [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
+  Все виды поддерживаемых удостоверяющих центров перечислены [в документации `cert-manager`](https://cert-manager.io/docs/configuration/issuers/).
 
 ### Добавление ClusterIssuer с валидацией `DNS-01` через вебхук
 
@@ -168,7 +179,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 Для настройки заказа сертификатов с помощью Vault используйте [документацию HashiСorp](https://developer.hashicorp.com/vault/tutorials/archive/kubernetes-cert-manager?in=vault%2Fkubernetes).
 
-После настройки PKI и включения авторизации в Kubernetes(#TODO), выполните следующее:
+После настройки PKI и [включения авторизации в Kubernetes](../access/authorization/), выполните следующее:
 
 1. Создайте ServiceAccount и скопируйте ссылку на его Secret:
 
@@ -283,7 +294,7 @@ DKP экспортирует метрики в Prometheus, что позволя
    - ваша почта указана наверху под **Email Address**;
    - для просмотра API-ключа нажмите **View** напротив **Global API Key** внизу страницы.
 
-1. Отредактируйте настройки `cert-manager`(#TODO), добавив следующую секцию:
+1. Отредактируйте [настройки `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
@@ -377,7 +388,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
    - зайдите на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) и добавьте пользователя с созданной ранее политикой.
 
-1. Отредактируйте настройки `cert-manager`(#TODO), добавив следующую секцию:
+1. Отредактируйте [настройки `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
@@ -420,7 +431,7 @@ DKP экспортирует метрики в Prometheus, что позволя
      base64 project-209317-556c656b81c4.json
      ```
 
-1. Сохраните полученную Base64-строку в параметре `cloudDNSServiceAccount`(#TODO).
+1. Сохраните полученную Base64-строку в параметре `cloudDNSServiceAccount`(/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount).
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для CloudDNS в пространстве имён `d8-cert-manager`.
 

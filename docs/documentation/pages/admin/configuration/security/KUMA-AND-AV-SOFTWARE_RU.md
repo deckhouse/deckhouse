@@ -6,15 +6,15 @@ lang: ru
 
 Deckhouse Kubernetes Platform (DKP) поддерживает интеграцию с [Kaspersky Unified Monitoring and Analysis Platform (KUMA)](https://lp.kaspersky.com/ru/kuma/),
 единой системой мониторинга и анализа от «Лаборатории Касперского».
-Это позволяет отправлять события безопасности и журналы аудита в централизованную SIEM-систему для дальнейшего анализа.
+В рамках интеграции события безопасности и журналы аудита из кластера передаются в KUMA для дальнейшего анализа.
 
 ## Отправка логов в KUMA
 
-Для отправки логов в систему KUMA настройте [сбор и доставку логов на стороне DKP](#TODO),
+Для отправки логов в систему KUMA настройте [сбор и доставку логов на стороне DKP](../logging/delivery.html),
 используя следующие ресурсы:
 
-- ClusterLogDestination(#TODO) — задаёт параметры хранилища логов;
-- ClusterLoggingConfig(#TODO) — задаёт параметры сбора логов из кластера.
+- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов;
+- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — задаёт параметры сбора логов из кластера.
 
 {% alert level="info" %}
 На стороне KUMA настройте соответствующие ресурсы для приёма событий.
