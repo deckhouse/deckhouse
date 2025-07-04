@@ -127,9 +127,9 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	state.Ready = false
 
 	defer func() {
-		if readyVal != state.Ready || processedItems > 0 {
+		if state.Ready != readyVal || processedItems > 0 {
 			log.Info("Checker loop done",
-				"processed_items", processedItems,
+				"items.processed", processedItems,
 				"state.ready", state.Ready,
 				"state.message", state.Message,
 				"execution.duration", time.Since(startTime),
@@ -137,13 +137,14 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 		}
 	}()
 
+	var isNewConfig bool
 	if state.Version != inputs.Params.Version {
 		log.Info("Initializing checker with new config",
 			"params.version", inputs.Params.Version,
 		)
 
 		state.handleNewConfig(inputs)
-		return nil
+		isNewConfig = true
 	}
 
 	log.Debug("Initializing queues")
@@ -155,6 +156,11 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	if len(state.Queues) == 0 {
 		state.Message = "Stopped"
 		state.Ready = true
+		return nil
+	}
+
+	if isNewConfig {
+		state.Message = state.buildMessage()
 		return nil
 	}
 
@@ -237,6 +243,13 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (int64, error) {
 	t := time.Now().UTC()
 
+	// fast path
+	if !state.hasItems() {
+		state.Message = state.buildMessage()
+		state.Ready = true
+		return 0, nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), processTimeout)
 	defer cancel()
 
@@ -317,10 +330,16 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		return 0, errors.Join(errs...)
 	}
 
+	state.Message = state.buildMessage()
+	state.Ready = !state.hasItems()
+
+	return processedCount, nil
+}
+
+func (state *stateModel) buildMessage() string {
 	var (
-		msg      = new(strings.Builder)
-		hasItems bool
-		qNames   = make([]string, 0, len(state.Queues))
+		msg    = new(strings.Builder)
+		qNames = make([]string, 0, len(state.Queues))
 	)
 
 	for name := range state.Queues {
@@ -336,7 +355,6 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 			fmt.Fprintf(msg, "%v: all %v items are checked\n", name, q.Processed)
 			continue
 		}
-		hasItems = true
 
 		errItems := make([]queueItem, 0, len(q.Retry)+len(q.Items))
 		errItems = append(errItems, q.Retry...)
@@ -375,10 +393,15 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		)
 	}
 
-	state.Message = strings.TrimSpace(msg.String())
-	if !hasItems {
-		state.Ready = true
+	return strings.TrimSpace(msg.String())
+}
+
+func (state *stateModel) hasItems() bool {
+	for _, q := range state.Queues {
+		if q.any() {
+			return true
+		}
 	}
 
-	return processedCount, nil
+	return false
 }
