@@ -168,6 +168,12 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.9.2-0.20250701103652-1135aa51bf06 h1:9L23hGGriHorH8bYWjc2SpLVasKkXPrzpoLBeQyVnk4=
 github.com/flant/addon-operator v1.9.2-0.20250701103652-1135aa51bf06/go.mod h1:D/N95UpXfhafcHFYrwEcn+dcthoV+dq0l5uoBQ1vSQ8=
+github.com/flant/addon-operator v1.9.2-0.20250704152807-6f0441856248 h1:lFFcRtcNXqhc9PCExsFshRj0iu9p00yzY+rcX6WuTGE=
+github.com/flant/addon-operator v1.9.2-0.20250704152807-6f0441856248/go.mod h1:D/N95UpXfhafcHFYrwEcn+dcthoV+dq0l5uoBQ1vSQ8=
+github.com/flant/addon-operator v1.9.2-0.20250704155738-8d74240d6f4d h1:hLEToZGiqowXomhfUskPst694+pr0CqK0rDX0hwum/Y=
+github.com/flant/addon-operator v1.9.2-0.20250704155738-8d74240d6f4d/go.mod h1:D/N95UpXfhafcHFYrwEcn+dcthoV+dq0l5uoBQ1vSQ8=
+github.com/flant/addon-operator v1.9.2-0.20250704220906-7d2894647890 h1:+CUDJHx000XU2JXALz2tkpbkKR+FWG9DgbMbhsq+K0o=
+github.com/flant/addon-operator v1.9.2-0.20250704220906-7d2894647890/go.mod h1:D/N95UpXfhafcHFYrwEcn+dcthoV+dq0l5uoBQ1vSQ8=
 github.com/flant/addon-operator v1.9.2 h1:P0dZE+Aze6PsdyBj4yNtiS8JiGW6c9STj4LgEbou8H8=
 github.com/flant/addon-operator v1.9.2/go.mod h1:D/N95UpXfhafcHFYrwEcn+dcthoV+dq0l5uoBQ1vSQ8=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
