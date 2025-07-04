@@ -5,7 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-06-11.2"
+fromCacheVersion: "2025-07-04"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -110,6 +110,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: "2025-07-04"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -214,7 +215,8 @@ shell:
   setup:
   - cp -R /usr/lib64 /chroot/usr/lib64
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - |
     bash -eu -c '
     writeDirs=(
@@ -284,7 +286,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-01.1"
+fromCacheVersion: "2025-07-04"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
@@ -326,7 +328,8 @@ shell:
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc

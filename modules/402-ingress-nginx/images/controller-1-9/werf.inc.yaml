@@ -278,7 +278,8 @@ shell:
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel
   setup:
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - |
     bash -eu -c '
     writeDirs=(
@@ -410,7 +411,8 @@ shell:
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/modules_mount/etc/nginx/modules/otel"
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
