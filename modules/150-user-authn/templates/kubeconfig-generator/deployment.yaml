@@ -4,8 +4,8 @@ memory: {{ .Values.userAuthn.resources.kubeconfigGenerator.requests.memory | def
 {{- end }}
 
 {{- define "kubeconfig_generator_limits" }}
-cpu: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.cpu | default "20m" }}
-memory: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.memory | default "50Mi" }}
+cpu: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.cpu | default "100m" }}
+memory: {{ .Values.userAuthn.resources.kubeconfigGenerator.limits.memory | default "100Mi" }}
 {{- end }}
 
 {{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
