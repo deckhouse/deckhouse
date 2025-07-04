@@ -181,8 +181,15 @@ metallb:
      loadBalancer:
        loadBalancerClass: ingress
        annotations:
-         # Количество адресов, которые будут выделены из пула, описанного в _MetalLoadBalancerClass_.
+         # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+     # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же нодах, что и поды MetalLB speaker.
+     nodeSelector:
+        node-role.kubernetes.io/loadbalancer: ""
+     tolerations:
+     - effect: NoSchedule
+       key: node-role/loadbalancer
+       operator: Exists
    ```
 
 1. Платформа создаст сервис с типом `LoadBalancer`, которому будет присвоено заданное количество адресов:
