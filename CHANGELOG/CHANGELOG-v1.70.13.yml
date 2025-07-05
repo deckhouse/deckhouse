@@ -1,0 +1,10 @@
+control-plane-manager:
+  fixes:
+    - summary: >-
+        Fixed issues with etcd backup restoration process, ensuring reliable master node scaling
+        from 1 to 3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14083
+      impact: >-
+        Users can now restore etcd backups and scale their master nodes efficiently without
+        encountering previous errors.
+
