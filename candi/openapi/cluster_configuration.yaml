@@ -118,6 +118,7 @@ apiVersions:
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
         enum:
         - "Containerd"
+        - "ContainerdV2"
         - "NotManaged"
         default: "Containerd"
       kubernetesVersion:
