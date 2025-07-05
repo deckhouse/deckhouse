@@ -6358,6 +6358,7 @@ modules-having-alerts:
     - prometheus
     - runtime-audit-engine
     - secret-copier
+    - system-registry
     - terraform-manager
     - upmeter
     - user-authn

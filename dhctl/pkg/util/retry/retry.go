@@ -56,6 +56,7 @@ type Loop struct {
 	interruptable    bool
 	showError        bool
 	prefix           string
+	ctx              context.Context
 }
 
 // NewLoop create Loop with features:
@@ -95,6 +96,11 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
+	return l
+}
+
+func (l *Loop) WithContext(ctx context.Context) *Loop {
+	l.ctx = ctx
 	return l
 }
 
