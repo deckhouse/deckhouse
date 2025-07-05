@@ -52,10 +52,10 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
-	logger := log.NewLogger(log.Options{
-		Level:       log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level(),
-		HandlerType: log.TextHandlerType,
-	})
+	logger := log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
+		log.WithHandlerType(log.TextHandlerType),
+	)
 
 	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
