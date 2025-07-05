@@ -6,7 +6,7 @@ toolchain go1.23.2
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250204065946-25630dc9d659
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
 	github.com/google/go-containerregistry v0.20.2
@@ -75,3 +75,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/deckhouse/deckhouse/pkg/log => ./../../../../pkg/log
