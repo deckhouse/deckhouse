@@ -44,9 +44,11 @@ func New(endpoints []string, options ...Option) (Client, error) {
 	}
 
 	cfg := clientv3.Config{
-		Endpoints:            endpoints,
-		DialTimeout:          10 * time.Second,
-		AutoSyncInterval:     30 * time.Second,
+		Endpoints:        endpoints,
+		DialTimeout:      10 * time.Second,
+		AutoSyncInterval: 30 * time.Second,
+		//TODO: https://github.com/etcd-io/etcd/issues/19772
+		// nolint:staticcheck
 		DialOptions:          []grpc.DialOption{grpc.WithBlock()},
 		DialKeepAliveTime:    60 * time.Second,
 		DialKeepAliveTimeout: 5 * time.Second,
