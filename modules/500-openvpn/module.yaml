@@ -1,8 +1,5 @@
 name: openvpn
 stage: "General Availability"
-weight: 500
 subsystems:
   - networking
 namespace: d8-openvpn
-requirements:
-  bootstrapped: true

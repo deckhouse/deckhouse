@@ -1,6 +1,5 @@
 name: ingress-nginx
 stage: "General Availability"
-weight: 402
 subsystems:
   - networking
 namespace: d8-ingress-nginx
@@ -10,5 +9,3 @@ descriptions:
   en: |
     Ingress controller for nginx
     https://kubernetes.github.io/ingress-nginx
-requirements:
-  bootstrapped: true
