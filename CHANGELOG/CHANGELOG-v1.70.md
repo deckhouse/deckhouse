@@ -105,6 +105,8 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** Fixed issues with etcd backup restoration process, ensuring reliable master node scaling from 1 to 3. [#14083](https://github.com/deckhouse/deckhouse/pull/14083)
+    Users can now restore etcd backups and scale their master nodes efficiently without encountering previous errors.
  - **[control-plane-manager]** Fix default behaviour for etcd backup. [#14146](https://github.com/deckhouse/deckhouse/pull/14146)
  - **[control-plane-manager]** fix kubeadm v1beta4 config [#14058](https://github.com/deckhouse/deckhouse/pull/14058)
  - **[control-plane-manager]** audit-log-maxage value to 30 days [#14044](https://github.com/deckhouse/deckhouse/pull/14044)
