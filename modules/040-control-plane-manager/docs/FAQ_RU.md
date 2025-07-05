@@ -662,7 +662,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
 
-1. Перезапустите control-plane узел кластера.
+1. Перезапустите master-узел.
 
 <div id='восстановление-кластерa-multi-master'></div>
 
