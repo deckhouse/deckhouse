@@ -3,7 +3,7 @@ title: "Custom node configuration"
 permalink: en/admin/configuration/platform-scaling/node/node-customization.html
 ---
 
-To automate actions on node groups, Deckhouse provides the `NodeGroupConfiguration` resource. This resource allows you to execute Bash scripts on nodes using the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as the [Go Template](https://pkg.go.dev/text/template) templating engine. This is convenient for automating operations such as:
+To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
 
 - Installing and configuring additional OS packages.  
 
@@ -131,6 +131,8 @@ post-install() {
 
 {% endraw %}
 
+## Monitoring script execution
+
 You can view the script execution log on a node in the `bashible` service log using the following command:
 
 ```bash
@@ -138,6 +140,8 @@ journalctl -u bashible.service
 ```
 
 The scripts themselves are located on the node in the `/var/lib/bashible/bundle_steps/` directory.
+
+## Script re-execution mechanism
 
 The service decides whether to re-run the scripts by comparing a unified checksum of all files, located at `/var/lib/bashible/configuration_checksum`, with the checksum stored in the `configuration-checksums` secret in the `d8-cloud-instance-manager` namespace in the Kubernetes cluster.
 
@@ -161,8 +165,8 @@ rm /var/lib/bashible/configuration_checksum
 
 When writing scripts, it's important to consider the following features of their usage in Deckhouse:
 
-1. Scripts in Deckhouse are executed every 4 hours or based on external triggers. Therefore, scripts should check whether their actions are necessary before making changes to the system, instead of applying changes on every run.
-1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when choosing the priority of custom scripts. For example, if a script is intended to restart a service, it must run after the installation script of that service. Otherwise, it may fail during the provisioning of a new node.
+1. Scripts in DKP are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
+1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when assigning priority to custom scripts. For example, if a custom script restarts a service, it must run **after** the script that installs that service. Otherwise, the custom script won't be able to run during the initial provisioning of the node (since the service won’t be installed yet).
 
 Useful specifics of certain scripts:
 
@@ -190,7 +194,7 @@ Note that it is not possible to use this method to apply labels that are reserve
 
 ## How to use containerd with Nvidia GPU support
 
-You need to create a separate NodeGroup for GPU nodes:
+You need to create a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) for GPU nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -205,7 +209,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Next, create a `NodeGroupConfiguration` for the `gpu` NodeGroup to configure `containerd`:
+Next, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) for the `gpu` NodeGroup to configure `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -304,7 +308,7 @@ spec:
 
 After the configurations are applied, you need to perform a bootstrap and reboot the nodes to apply the settings and install the drivers.
 
-### How to verify everything is working correctly
+### Verifying successful installation
 
 Create the following Job in your cluster:
 
@@ -394,10 +398,10 @@ Done
 Adding custom settings will trigger a restart of the `containerd` service.
 {% endalert %}
 
-Bashible on the nodes merges the Deckhouse containerd configuration with configurations from `/etc/containerd/conf.d/*.toml`.
+Bashible on the nodes merges the DKP containerd configuration with configurations from `/etc/containerd/conf.d/*.toml`.
 
 {% alert level="warning" %}
-You can override parameters defined in `/etc/containerd/deckhouse.toml`, but their functionality must be ensured manually. Also, it is recommended to avoid modifying the configuration on master nodes (`master` NodeGroup).
+You can override the parameter values defined in the `/etc/containerd/deckhouse.toml` file. However, you are responsible for ensuring the correct operation of such changes. It is recommended **not to modify the configuration** on control plane (master) nodes (NodeGroup `master`).
 {% endalert %}
 
 ```yaml
@@ -480,6 +484,76 @@ spec:
     EOF
   nodeGroups:
     - "*"
+  weight: 31
+```
+
+## Configuring a certificate for an additional registry
+
+{% alert level="info" %} 
+In addition to `containerd`, the certificate can also be added to the operating system.
+{% endalert %}
+
+Example of a NodeGroupConfiguration for configuring a certificate for an additional registry:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: configure-cert-containerd.sh
+spec:
+  bundles:
+  - '*'
+  content: |-
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY_URL=private.registry.example
+    CERT_FILE_NAME=${REGISTRY_URL}
+    CERTS_FOLDER="/var/lib/containerd/certs/"
+    CERT_CONTENT=$(cat <<"EOF"
+    -----BEGIN CERTIFICATE-----
+    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
+    ...
+    -----END CERTIFICATE-----
+    EOF
+    )
+
+    CONFIG_CONTENT=$(cat <<EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+    )
+
+    mkdir -p ${CERTS_FOLDER}
+    mkdir -p /etc/containerd/conf.d
+
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+
+    CONFIG_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} 
+
+    bb-sync-file \
+      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
+      ${CONFIG_TMP_FILE} 
+  nodeGroups:
+  - '*'  
   weight: 31
 ```
 

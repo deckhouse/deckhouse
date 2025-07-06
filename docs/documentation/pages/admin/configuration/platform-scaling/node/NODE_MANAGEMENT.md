@@ -10,9 +10,11 @@ Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node manageme
 - Centralized configuration management for node groups using the NodeGroup CRD;
 - Support for various types of nodes: permanent, ephemeral, cloud-based, or bare-metal.
 
-> DKP can operate on both bare-metal and cloud-based clusters, providing flexibility and scalability.
+{% alert level="info" %}
+DKP can operate on both bare-metal and cloud-based clusters, providing flexibility and scalability.
+{% endalert %}
 
-Node groups allow logical segmentation of the cluster infrastructure. In Deckhouse, the following NodeGroup roles are commonly used:
+Node groups allow logical segmentation of the cluster infrastructure. In DKP, the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) roles are commonly used:
 
 - `master` — control plane nodes;
 - `front` — nodes for routing HTTP(S) traffic;
@@ -24,7 +26,7 @@ Each group can have centralized configuration settings, including the Kubernetes
 
 ## Enabling the node management mechanism
 
-Node management is implemented via the `node-manager` module, which can be enabled or disabled in several ways:
+Node management is implemented via the [`node-manager`](/modules/node-manager/) module, which can be enabled or disabled in several ways:
 
 1. Using the ModuleConfig/node-manager resource:
 
@@ -57,7 +59,7 @@ Node management is implemented via the `node-manager` module, which can be enabl
 
 ## Automatic deployment and updates
 
-Deckhouse Kubernetes Platform (DKP) provides an automated mechanism for managing the lifecycle of nodes based on NodeGroup resources. DKP supports both initial node provisioning and updates when configuration changes, for both cloud and bare-metal clusters (if the `node-manager` module is enabled).
+Deckhouse Kubernetes Platform (DKP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. DKP supports both initial node provisioning and updates when configuration changes, for both cloud and bare-metal clusters (if the `node-manager` module is enabled).
 
 How it works:
 
@@ -65,7 +67,7 @@ How it works:
 1. When a NodeGroup is created or modified, the `node-manager` module automatically reconciles the node state with the specified configuration.
 1. Updates occur without user intervention — outdated nodes are removed, and new ones are created automatically.
 
-Example: automatic kubelet version update**
+Let's take a look at automatic updates using the example of a kubelet version upgrade.
 
 1. The user updates the `kubelet` section in the NodeGroup specification.
 1. DKP detects that current nodes do not match the new configuration.
@@ -87,7 +89,7 @@ Example: automatic kubelet version update**
 
 ## Basic node and OS configuration
 
-When nodes are created and joined to the cluster, Deckhouse automatically performs a series of actions required for proper cluster operation:
+When nodes are created and joined to the cluster, DKP automatically performs a series of actions required for proper cluster operation:
 
 - Installing and configuring a supported operating system;
 - Disabling automatic package updates;
@@ -97,7 +99,7 @@ When nodes are created and joined to the cluster, Deckhouse automatically perfor
 - Installing and configuring the container runtime (`containerd`) and `kubelet`;
 - Registering the node with the Kubernetes cluster.
 
-These actions are performed automatically when using `bootstrap.sh` or when connecting nodes via `StaticInstance` and `SSHCredentials` resources.
+These actions are performed automatically when using `bootstrap.sh` or when connecting nodes via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resources.
 
 ### Updates that require node downtime
 
@@ -177,11 +179,13 @@ spec:
     mv kubectl-cert_manager /usr/local/bin
 ```
 
-## How do I make werf ignore the Ready conditions in a node group
+## werf configuration for ignoring the Ready status of a node group
 
 [werf](https://werf.io) checks the `Ready` status of resources and, if available, waits for the value to become ```True```.
 
-Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
+Creating (or updating) a NodeGroup resource in the cluster may take a significant amount of time (until all nodes become Ready). When using werf (e.g., in CI/CD), this can lead to a build timeout.
+
+To make werf ignore the NodeGroup status, add the following annotations to the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource:
 
 ```yaml
 metadata:
@@ -192,7 +196,7 @@ metadata:
 
 ## Settings for Static and CloudStatic NodeGroups
 
-Node groups with types `Static` and `CloudStatic` are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DKP automation). These nodes are connected manually or via `StaticInstance` and do not support automatic updates or scaling.
+Node groups with types `Static` and `CloudStatic` are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DKP automation). These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
 
 Configuration specifics:
 
@@ -208,7 +212,7 @@ Configuration specifics:
 
 - Node registration to the cluster can be performed either manually or automatically, depending on the configuration:
   - **Manual** — the user downloads the bootstrap script, configures the server, and runs the script manually.
-  - **Automatic (CAPS)** — when using `StaticInstance` and `SSHCredentials`, DKP automatically connects and configures the nodes.
+  - **Automatic (CAPS)** — when using StaticInstance and SSHCredentials, DKP automatically connects and configures the nodes.
   - **Hybrid approach** — a manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
-If the Cluster API Provider Static (CAPS) is enabled, the `NodeGroup` resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on `StaticInstance` and `SSHCredentials` resources.
+If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on [StaticInstance](/modules/node-manager/cr.html#staticinstance and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resources.

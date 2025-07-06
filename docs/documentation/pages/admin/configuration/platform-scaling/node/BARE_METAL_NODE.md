@@ -7,9 +7,9 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 
 ### Manual method
 
-1. Enable the `node-manager` module.
+1. Enable the [`node-manager`](/modules/node-manager/cr.html) module.
 
-1. Create a `NodeGroup` object with the type `Static`:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the type `Static`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -42,32 +42,32 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - Create a system user (e.g., `ubuntu`) for SSH access;
    - Ensure the user can execute commands using `sudo`.
 
-1. Create an `SSHCredentials` object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
+1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
    - A private SSH key;
    - The OS user;
    - The SSH port;
    - (Optional) a `sudo` password, if required.
 
-   Example:
+     Example:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: SSHCredentials
-   metadata:
-     name: static-nodes
-   spec:
-     privateSSHKey: |
-       -----BEGIN OPENSSH PRIVATE KEY-----
-       LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
-       -----END OPENSSH PRIVATE KEY-----
-     sshPort: 22
-     sudoPassword: password
-     user: ubuntu
-   ```
+     ```yaml
+     apiVersion: deckhouse.io/v1alpha1
+     kind: SSHCredentials
+     metadata:
+       name: static-nodes
+     spec:
+       privateSSHKey: |
+         -----BEGIN OPENSSH PRIVATE KEY-----
+         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
+         -----END OPENSSH PRIVATE KEY-----
+       sshPort: 22
+       sudoPassword: password
+       user: ubuntu
+     ```
 
-   > **Important**. The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
+     > **Important**. The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
 
-1. Create a `StaticInstance` object for each server:
+1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -84,9 +84,9 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
        name: static-nodes
    ```
 
-   A separate `StaticInstance` resource must be created for each server, but the same `SSHCredentials` can be reused to access multiple servers.
+   A separate StaticInstance resource must be created for each server, but the same SSHCredentials can be reused to access multiple servers.
 
-   Possible `StaticInstance` states:
+   Possible StaticInstance states:
 
    - `Pending` — the server has not yet been configured; the corresponding node is not present in the cluster.
    - `Bootstrapping` — the server is being configured and the node is being added to the cluster.
@@ -95,7 +95,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
 
      These states reflect the current stage of node management. CAPS automatically transitions a `StaticInstance` between these states depending on whether a node needs to be added or removed from a group.
 
-1. Create a `NodeGroup` resource describing how DKP should use these servers:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DKP should use these servers:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -118,26 +118,22 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - `count` specifies how many nodes will be added to the group;  
    - `labelSelector` defines the rules for selecting nodes.
 
-   When using the Cluster API Provider Static (CAPS), it is important to correctly set the `nodeType` to `Static` and provide the `staticInstances` section in the `NodeGroup` resource:
+   When using the Cluster API Provider Static (CAPS), it is important to correctly set the `nodeType` to `Static` and provide the `staticInstances` section in the NodeGroup resource:
 
-   - If the `labelSelector` is not specified, CAPS will use any available `StaticInstance` resources in the cluster.
+   - If the `labelSelector` is not specified, CAPS will use any available StaticInstance resources in the cluster.
    - The same `StaticInstance` can be used in multiple NodeGroups if it matches the filters.
    - CAPS automatically maintains the number of nodes in the group according to the `count` parameter.
-   - When a node is removed, CAPS performs cleanup and disconnection, and the corresponding `StaticInstance` transitions to the `Pending` status, allowing it to be reused.
+   - When a node is removed, CAPS performs cleanup and disconnection, and the corresponding StaticInstance transitions to the `Pending` status, allowing it to be reused.
 
-After the NodeGroup is created, a bootstrap script will become available for adding servers to this group.  
-DKP will wait until the required number of `StaticInstance` objects matching the label selector appear in the cluster.  
-Once such an object appears, DKP will retrieve the server’s IP address and SSH connection parameters from the previously created manifests, connect to the server via SSH, and execute the `bootstrap.sh` script on it.  
-After that, the server will be added to the specified group as a node.
+After the node group is created, a script for adding servers to the group will become available. DKP will wait for the required number of StaticInstance objects that match the specified labels. As soon as such an object appears, DKP will use the provided IP address and SSH connection parameters to run the `bootstrap.sh` script and add the server to the group.
 
-## Moving a node between NodeGroups
+## Moving a static node between NodeGroups
 
 {% alert level="warning" %}
-When moving a node between NodeGroups, the node will be cleaned up and bootstrapped again.  
-The corresponding `Node` object will be recreated.
+During the migration of static nodes between [NodeGroup](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
 {% endalert %}
 
-1. Create a new `NodeGroup` resource, for example named `front`, which will manage the static node labeled `role: front`:
+1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
 
    ```yaml
    kubectl create -f - <<EOF
@@ -154,8 +150,8 @@ The corresponding `Node` object will be recreated.
            role: front
    ```
 
-1. Change the `role` label of the existing `StaticInstance` from `worker` to `front`.  
-   This will allow the new `NodeGroup` named `front` to manage this node:
+1. Change the `role` label of the existing [StaticInstance](/modules/node-manager/cr.html#staticinstance) from `worker` to `front`.  
+   This will allow the new NodeGroup named `front` to manage this node:
 
    ```console
    kubectl label staticinstance static-worker-1 role=front --overwrite
@@ -183,9 +179,9 @@ This instruction applies both to nodes manually configured using the bootstrap s
 
 ## NodeGroup example
 
-### Static nodes
+### Example NodeGroup definition for static nodes
 
-For virtual machines on hypervisors or physical servers, use static nodes by setting `nodeType: Static` in the NodeGroup.
+For virtual machines on hypervisors or physical servers, use static nodes by setting `nodeType: Static` in the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Example:
 
@@ -198,13 +194,15 @@ spec:
   nodeType: Static
 ```
 
-## How to change CRI for a NodeGroup
+## Changing the CRI for a NodeGroup
 
-{% alert level="warning" %} 
+CRI (Container Runtime Interface) is a standard interface between the kubelet and the container runtime.
+
+{% alert level="warning" %}
 CRI can only be switched between `Containerd` and `NotManaged` via the `cri.type` parameter.
 {% endalert %}
 
-To change the CRI for a NodeGroup, set the `cri.type` parameter to either `Containerd` or `NotManaged`.
+To change the CRI for a [NodeGroup](/modules/node-manager/cr.html#nodegroup), set the `cri.type` parameter to either `Containerd` or `NotManaged`.
 
 Example YAML manifest:
 
@@ -240,7 +238,7 @@ When changing the `cri.type` for a NodeGroup created using `dhctl`, you must als
 After changing the CRI for a NodeGroup, the `node-manager` module will sequentially reboot the nodes, applying the new CRI.  
 Node updates involve disruption. Depending on the `disruption` settings for the NodeGroup, the `node-manager` module will either automatically update the nodes or require manual approval.
 
-## How to change the NodeGroup for a static node
+## Changing the NodeGroup of a static node
 
 If a node is managed by CAPS, it is not possible to change its associated NodeGroup.  
 The only option is to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
@@ -252,18 +250,18 @@ kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_gro
 kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
-## How to change the IP address of a StaticInstance
+## Changing the IP address in a StaticInstance
 
-You cannot change the IP address of a `StaticInstance` resource.  
-If an incorrect address is specified in a `StaticInstance`, you need to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
+You cannot change the IP address of a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource.  
+If an incorrect address is specified in a StaticInstance, you need to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
 
 ## Can a StaticInstance be deleted
 
-A `StaticInstance` in the `Pending` state can be safely deleted without any issues.
+A [StaticInstance](/modules/node-manager/cr.html#staticinstance) in the `Pending` state can be safely deleted without any issues.
 
-To delete a `StaticInstance` that is in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), follow these steps:
+To delete a StaticInstance that is in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), follow these steps:
 
-1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
-1. Wait until the `StaticInstance` transitions to the `Pending` state.
-1. Delete the `StaticInstance`.
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the StaticInstance.
+1. Wait until the StaticInstance transitions to the `Pending` state.
+1. Delete the StaticInstance.
 1. Decrease the `NodeGroup.spec.staticInstances.count` parameter by 1.

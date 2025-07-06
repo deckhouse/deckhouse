@@ -3,24 +3,23 @@ title: "Adding and managing cloud nodes"
 permalink: en/admin/configuration/platform-scaling/node/cloud-node.html
 ---
 
-In Deckhouse Kubernetes Platform, cloud nodes can be of the following types:
+In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following types:
 
 - **CloudEphemeral** — temporary nodes that are automatically created and deleted;
 - **CloudPermanent** — permanent nodes managed manually via `replicas`;
-- **CloudStatic** — nodes created outside of Deckhouse but integrated into the cluster;
-- **CloudHybrid** — nodes managed in coordination with external systems.
+- **CloudStatic** — nodes created outside of DKP but integrated into the cluster;
 
 Below are instructions for adding and configuring each type.
 
 ## Adding CloudEphemeral nodes in a cloud cluster
 
-CloudEphemeral nodes are automatically created and managed within the cluster using the Machine Controller Manager (MCM) or Cluster API (depending on configuration) — both components are part of the `node-manager` module in DKP.
+CloudEphemeral nodes are automatically created and managed within the cluster using the Machine Controller Manager (MCM) or Cluster API (depending on configuration) — both components are part of the [`node-manager`](/modules/node-manager/) module in DKP.
 
 To add nodes:
 
-1. Ensure that the cloud provider module is enabled. For example: `cloud-provider-yandex`, `cloud-provider-openstack`, `cloud-provider-aws`.
+1. Ensure that the cloud provider module is enabled. For example: [cloud-provider-yandex](/modules/cloud-provider-yandex/), [cloud-provider-openstack](/modules/cloud-provider-openstack/), [cloud-provider-aws](/modules/cloud-provider-aws/).
 
-1. Create an `InstanceClass` object with the machine configuration. This object describes the parameters of the virtual machines to be created in the cloud.
+1. Create an [InstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) object with the machine configuration. This object describes the parameters of the virtual machines to be created in the cloud.
 
    Example (for OpenStack):
 
@@ -43,7 +42,7 @@ To add nodes:
    - `rootDiskSize` — size of the root disk;
    - `mainNetwork` — cloud network for the instance.
 
-1. Create a NodeGroup with the `CloudEphemeral` type. Example manifest:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudEphemeral` type. Example manifest:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -90,7 +89,7 @@ spec:
 
 ## NodeGroup autoscaling
 
-In Deckhouse Kubernetes Platform (DKP), node group autoscaling is implemented for NodeGroups of type `CloudEphemeral`. Scaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the `node-manager` module.
+In Deckhouse Kubernetes Platform (DKP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
 
 Autoscaling is triggered only when there are Pending pods that cannot be scheduled on existing nodes due to insufficient resources (e.g., CPU or memory). In this case, `Cluster Autoscaler` attempts to add nodes based on the NodeGroup configuration.
 
@@ -119,7 +118,7 @@ spec:
 
 ### Example autoscaling scenario
 
-Assume the following NodeGroup configuration:
+Assume the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) configuration:
 
 ```yaml
 spec:
@@ -152,9 +151,11 @@ spec:
             memory: 5Gi
 ```
 
-Each VM can host only one such Pod. Therefore, 3 replicas require 3 nodes — one in each zone.
+In this case, launching all replicas will require 3 nodes — one in each zone.
 
-Now let’s increase the number of replicas to 5. Two Pods will end up in `Pending` state. The Cluster Autoscaler will:
+Now let's increase the number of replicas to 5. As a result, two Pods will enter the `Pending` state.
+
+Cluster Autoscaler:
 
 - Detect the situation;
 - Calculate how much resource is missing;
@@ -191,25 +192,28 @@ spec:
 ## How to allocate nodes to specific loads
 
 {% alert level="warning" %}
-You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for Deckhouse components. Please, use the `dedicated` or `dedicated.client.com` keys.
+You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DKP components. Please, use the `dedicated` or `dedicated.client.com` keys.
 {% endalert %}
 
 There are two ways to solve this problem:
 
-1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
+1. You can set labels to [NodeGroup](/modules/node-manager/cr.html#nodegroup) `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
 1. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
-Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+DKP tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 
 To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
 ## How to speed up node provisioning on the cloud when scaling applications horizontally
 
-The most efficient way is to have some extra nodes "ready". In this case, you can run new application replicas on them almost instantaneously. The obvious disadvantage of this approach is the additional maintenance costs related to these nodes.
+To speed up the launch of new application replicas during automatic horizontal scaling, it is recommended to maintain a certain number of pre-provisioned (standby) nodes in the cluster.  
+This allows new application Pods to be scheduled quickly without waiting for node creation and initialization.
 
-Here is how you should configure the target `NodeGroup`:
+Keep in mind that having standby nodes increases infrastructure costs.
+
+Here is how you should configure the target [NodeGroup](/modules/node-manager/cr.html#nodegroup):
 
 1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
 1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
@@ -228,20 +232,18 @@ cloudInstances:
 
 ## Configuring CloudEphemeral nodes using NodeGroupConfiguration
 
-Additional settings for cloud nodes can be defined using `NodeGroupConfiguration` objects. These allow you to:
+Additional settings for cloud nodes can be defined using [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) objects. These allow you to:
 
 - Modify OS parameters (e.g., `sysctl`);
 - Add root certificates;
 - Configure trust for private image registries, etc.
 
-`NodeGroupConfiguration` is applied to new nodes at creation time, including `CloudEphemeral` nodes.
+NodeGroupConfiguration is applied to new nodes at creation time, including `CloudEphemeral` nodes.
   
-> `NodeGroupConfiguration` can only be applied to nodes with specific OS images by specifying the appropriate `bundle`. For example:
->
-> - `ubuntu-lts`
-> - `centos-7`
-> - `rocky-linux`
-> - `*` — applies to all.
+{% alert level="info" %}  
+NodeGroupConfiguration applies only to nodes with a specified operating system image (`bundle`).  
+You can set the `bundle` value to a specific name (e.g., `ubuntu-lts`, `centos-7`, `rocky-linux`) or use `*` to apply the configuration to all OS images.  
+{% endalert %}
 
 ### Example NodeGroupConfiguration definitions
 
@@ -317,7 +319,7 @@ spec:
 
 #### Adding a certificate to the OS and containerd
 
-{% alert level="warning" %} 
+{% alert level="warning" %}
 This example is for Ubuntu OS.  
 The method for adding certificates to the trust store may differ depending on the OS.  
 When adapting the script to another OS, update the `bundles` and `content` parameters accordingly.
@@ -380,7 +382,7 @@ spec:
 
 #### Debian-based distros
 
-Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -428,7 +430,7 @@ spec:
 
 #### CentOS-based distros
 
-Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -474,11 +476,11 @@ spec:
     bb-dnf-install "kernel-${desired_version}"
 ```
 
-## Adding CloudPermanent тodes to a сloud сluster
+## Adding CloudPermanent nodes to a сloud сluster
 
 To add `CloudPermanent` nodes to a DKP cloud cluster:
 
-1. Make sure the cloud provider module is enabled. For example: `cloud-provider-aws`, `cloud-provider-openstack`, `cloud-provider-yandex`, etc.
+1. Make sure the cloud provider module is enabled. For example: [cloud-provider-yandex](/modules/cloud-provider-yandex/), [cloud-provider-openstack](/modules/cloud-provider-openstack/), [cloud-provider-aws](/modules/cloud-provider-aws/), etc.
 
    You can check this by running the following command:
 
@@ -488,7 +490,7 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
 
    Or view it in the Deckhouse web interface.
 
-1. Create a `NodeGroup` object with the type `CloudPermanent`. Nodes of this type are managed via Terraform, which is integrated into DKP. The configuration for such nodes is located in the `(Provider)ClusterConfiguration` object. You must edit this configuration using the `dhctl` utility from the installation container. Example:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the type `CloudPermanent`. Nodes of this type are managed via Terraform, which is integrated into DKP. The configuration for such nodes is located in the `(Provider)ClusterConfiguration` object. You must edit this configuration using the `dhctl` utility from the installation container. Example:
 
    ```yaml
    nodeGroups:
@@ -538,14 +540,14 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
    Or in the Deckhouse web interface.
 
 Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services (e.g., GKE and EKS).  
-In such cases, the `node-manager` module provides node configuration management and automation,  
+In such cases, the [`node-manager`](/modules/node-manager/) module provides node configuration management and automation,  
 but its capabilities may be limited by the respective cloud provider's API.
 
 ## Adding master nodes in a cloud cluster
 
 To add master nodes in a cloud cluster:
 
-1. Make sure the `control-plane-manager` module is enabled.
+1. Make sure the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
 
 1. Open the `ClusterConfiguration` file (e.g., `OpenStackClusterConfiguration`).
 
@@ -572,9 +574,9 @@ To add master nodes in a cloud cluster:
 
 ## How to interpret Node Group states
 
-**Ready** — the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
+**Ready** — the [NodeGroup](/modules/node-manager/cr.html#nodegroup) contains the minimum required number of scheduled nodes with the status `Ready` for all zones.
 
-Example 1. A group of nodes in the ``Ready`` state:
+Example 1. A group of nodes in the `Ready` state:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -603,7 +605,7 @@ status:
     type: Ready
 ```
 
-Example 2. A group of nodes in the ``Not Ready`` state:
+Example 2. A group of nodes in the `Not Ready` state:
 
 ```yaml
 apiVersion: deckhouse.io/v1
