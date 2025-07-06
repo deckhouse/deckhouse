@@ -76,11 +76,6 @@ shell:
         export OPENAPI_PATH=virtualization-platform/openapi
         bash _tools/prepare_resources.sh
 
-        # "Generating breadcrumbs..."
-        #cd /srv/jekyll-data/site/
-        #ruby _tools/prepare_breadcrumbs.rb
-        #exit 1
-
         # "Building static files"
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
