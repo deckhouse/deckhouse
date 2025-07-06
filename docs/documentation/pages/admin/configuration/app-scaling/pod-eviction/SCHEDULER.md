@@ -83,7 +83,7 @@ Each such plugin is implemented as a webhook and must meet the following require
   - `prioritizeVerb = prioritize` – participates in node scoring during the Scoring phase.
 - Node cache capability – It is expected that all extender plugins support caching node data (`nodeCacheCapable: true`) to improve performance.
 
-To connect an extender plugin, use the [KubeSchedulerWebhookConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration) resource. This resource defines the configuration for an external webhook used by the kube-scheduler and enables more advanced scheduling conditions in the cluster, such as:
+To connect an extender plugin, use the [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration) resource. This resource defines the configuration for an external webhook used by the kube-scheduler and enables more advanced scheduling conditions in the cluster, such as:
 
 - Placing application pods closer to data storage nodes,
 - Prioritizing nodes based on their current state (e.g., network load or storage subsystem health),
@@ -211,7 +211,7 @@ If the cluster lacks resources, lower-priority pods may be evicted in favor of h
 
 Deckhouse Kubernetes Platform uses the pod priority mechanism to determine which pods should be evicted when resources are insufficient. The higher the pod’s priority, the lower the chance it will be evicted during redistribution.
 
-This mechanism is controlled by the `descheduler` module, where you can define a priority threshold using the `spec.priorityClassThreshold` parameter. This threshold limits eviction to only those pods with a priority below the specified value.
+This mechanism is controlled by the [`descheduler`](/modules/descheduler/) module, where you can define a priority threshold using the `spec.priorityClassThreshold` parameter. This threshold limits eviction to only those pods with a priority below the specified value.
 
 You can set the threshold in two ways:
 
@@ -257,7 +257,7 @@ Each of these fields supports standard `matchExpressions` and `matchLabels` synt
 
 ### How to enable or disable pod eviction
 
-To enable the pod redistribution feature, you need to enable the `descheduler` module.
+To enable the pod redistribution feature, you need to enable the [`descheduler`](/modules/descheduler/) module.
 
 You can do this in one of the following ways:
 

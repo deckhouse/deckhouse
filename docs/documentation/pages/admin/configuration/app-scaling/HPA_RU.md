@@ -20,7 +20,7 @@ Horizontal Pod Autoscaler (HPA) — это механизм автоматиче
    - Позволяют масштабироваться на основе метрик, привязанных к объектам DKP (например, Ingress, Service), или рассчитанных на под (сумма или среднее по всем подам контроллера). Используются ресурсы ServiceMetric для сервисов и IngressMetric для Ingress.
 
 1. [По любым другим метрикам, включая внешние данные](hpa.html#масштабирование-на-основе-внешних-данных) (метрики Amazon SQS, облачных балансировщиков, SaaS-сервисов и т. п.).
-   - Используются, когда источник метрик вне кластера (Amazon SQS, облачный Load Balancer, SaaS-сервисы). Настраивается с помощью ресурса `CustomPrometheusRules`.
+   - Используются, когда источник метрик вне кластера (Amazon SQS, облачный Load Balancer, SaaS-сервисы). Настраивается с помощью ресурса [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules).
 
 ## Рекомендации HPA
 
@@ -43,7 +43,7 @@ Horizontal Pod Autoscaler (HPA) — это механизм автоматиче
 
 ## Как включить или отключить HPA
 
-HPA не требует отдельного включения в DKP. Но, если необходимо маштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо включить модуль `prometheus-metrics-adapter`. Как включить модуль [см. в документации](scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
+HPA не требует отдельного включения в DKP. Но, если необходимо маштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо включить модуль [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/). Как включить модуль [см. в документации](scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
 
 ## Настройка HPA
 

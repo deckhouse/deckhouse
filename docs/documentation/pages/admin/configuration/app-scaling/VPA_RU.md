@@ -45,15 +45,15 @@ VPA может работать в двух режимах:
    d8 platform module enable vertical-pod-autoscaler
    ```
 
-1. Через [веб-интерфейс Deckhouse](../../../../../modules/console/stable/):
+1. Через веб-интерфейс Deckhouse:
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `vertical-pod-autoscaler` и нажмите на него;
    - Включите тумблер «Модуль включен».
 
-У модуля нет обязательных настроек, то есть можно включить его и не настраивать дополнительно. При этом он будет работать со значениями по умолчанию.
+У модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) нет обязательных настроек, то есть можно включить его и не настраивать дополнительно. При этом он будет работать со значениями по умолчанию.
 
-После создания ресурса [VerticalPodAutoscaler](../../../modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) посмотреть рекомендации VPA можно с помощью команды:
+После создания ресурса [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) посмотреть рекомендации VPA можно с помощью команды:
 
 ```console
 kubectl describe vpa my-app-vpa
