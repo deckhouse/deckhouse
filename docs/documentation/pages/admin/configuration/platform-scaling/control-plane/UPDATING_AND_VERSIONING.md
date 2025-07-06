@@ -1,0 +1,41 @@
+---
+title: "Updating Kubernetes and versioning"
+permalink: en/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+---
+
+## Updating and version management
+
+The control plane update process in DKP is fully automated.
+
+- DKP supports the latest five Kubernetes versions.
+- You can roll back the control plane one minor version and upgrade forward several minor versions — one at a time.
+- Patch versions (e.g., 1.27.3 → 1.27.5) are updated automatically with Deckhouse and cannot be managed manually.
+- Minor versions are set manually using the `kubernetesVersion` parameter in the ClusterConfiguration resource.
+
+### How to change the Kubernetes version
+
+1. Open the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) editor:
+
+   ```console
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
+     deckhouse-controller edit cluster-configuration
+   ```
+
+1. Set the desired Kubernetes version using the `kubernetesVersion` field:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: ClusterConfiguration
+   cloud:
+     prefix: demo-stand
+     provider: Yandex
+   clusterDomain: cloud.education
+   clusterType: Cloud
+   defaultCRI: Containerd
+   kubernetesVersion: "1.30"
+   podSubnetCIDR: 10.111.0.0/16
+   podSubnetNodeCIDRPrefix: "24"
+   serviceSubnetCIDR: 10.222.0.0/16
+   ```
+
+1. Save the changes.

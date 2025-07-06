@@ -442,11 +442,26 @@ entries:
                 - title:
                     en: Control plane management
                     ru: Управление control plane
-                  url: /admin/configuration/platform-scaling/control-plane.html
+                  folders:
+                    - title:
+                        en: General management and configuration of the control plane
+                        ru: Общее управление и конфигурация control plane
+                      url: /admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+                    - title:
+                        en: Control plane recovery and debugging
+                        ru: Восстановление и отладка control plane
+                      url: /admin/configuration/platform-scaling/control-plane/control-plane-recovery-and-debugging.html
+                    - title:
+                        en: Scaling and changing master nodes
+                        ru: Масштабирование и изменение master-узлов
+                      url: /admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html
+                    - title:
+                        en: Updating Kubernetes and versioning
+                        ru: Обновление Kubernetes и управление версиями
+                      url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
                 - title:
                     en: Node management
                     ru: Управление узлами
-                  url: /admin/configuration/platform-scaling/node.html
                   folders:
                     - title:
                         en: Node management basics in Deckhouse
