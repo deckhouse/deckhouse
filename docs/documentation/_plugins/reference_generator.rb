@@ -19,7 +19,7 @@ module ReferenceGenerator
     def initialize(site, lang, converter)
       @site = site
       @converter = converter
-      @baseUrl = '/reference/cli/d8'
+      @baseUrl = '/cli/d8/reference/'
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
       @lang = lang
