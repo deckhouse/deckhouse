@@ -19,11 +19,11 @@ module ReferenceGenerator
     def initialize(site, lang, converter)
       @site = site
       @converter = converter
-      @baseUrl = '/reference/cli-tools/d8'
+      @baseUrl = '/reference/cli/d8'
       @referenceData = site.data['reference']['d8']
       @base = site.source
       @lang = lang
-      @sidebar = 'kubernetes-platform'
+      @sidebar = 'main'
       @fileName = "index.html"
 
       @path = "#{@baseUrl}/#{@fileName}"

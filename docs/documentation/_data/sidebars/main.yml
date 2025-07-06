@@ -1662,7 +1662,7 @@ entries:
       - title:
           en: Deckhouse CLI (d8)
           ru: Deckhouse CLI (d8)
-        url: /reference/cli-tools/d8/
+        url: /reference/cli/d8/
     - title:
         en: Release notes
         ru: История изменений
