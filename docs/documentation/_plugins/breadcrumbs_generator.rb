@@ -8,15 +8,12 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
   site.data['breadcrumbs'] = {} if site.data['breadcrumbs'].nil?
 
-  site.data['sidebars'].each do |item|
-    sidebarData = item[1]
-    sidebarName = item[0]
+  site.data['sidebars'].each do |sidebarName, sidebarData|
+    next unless sidebarData['entries']
 
-    if sidebarData['entries']
-      sidebarData['entries'].each do |entry|
-        if entry.is_a?(Hash) && entry['folders'].is_a?(Array)
-          site.data['breadcrumbs'] = site.data['breadcrumbs'].merge(processSidebarItem([], entry))
-        end
+    sidebarData['entries'].each do |entry|
+      if entry.is_a?(Hash) && entry['folders'].is_a?(Array)
+        site.data['breadcrumbs'].merge!(processSidebarItem([], entry))
       end
     end
   end
@@ -28,15 +25,12 @@ def processSidebarItem(parents, sidebarItem)
 
     breadcrumbs = {}
 
-    if sidebarItem['folders'] && sidebarItem['folders'].is_a?(Array)
+    if sidebarItem['folders'].is_a?(Array)
       sidebarItem['folders'].each do |folder|
-          breadcrumbs = breadcrumbs.merge(processSidebarItem(parents + [{'title' => sidebarItem['title']}], folder))
+          breadcrumbs.merge!(processSidebarItem(parents + [{'title' => sidebarItem['title']}], folder))
       end
-    else
-      if sidebarItem['url']
-        section_url = sidebarItem['url']
-        breadcrumbs[section_url] = parents
-      end
+    elsif sidebarItem['url'].to_s.strip != ''
+      breadcrumbs[sidebarItem['url']] = parents
     end
     breadcrumbs
 end
