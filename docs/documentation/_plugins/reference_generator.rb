@@ -20,7 +20,7 @@ module ReferenceGenerator
       @site = site
       @converter = converter
       @baseUrl = '/reference/cli/d8'
-      @referenceData = site.data['reference']['d8']
+      @referenceData = site.data['reference']['d8-cli']
       @base = site.source
       @lang = lang
       @sidebar = 'main'
