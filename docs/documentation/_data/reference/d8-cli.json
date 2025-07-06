@@ -1,6 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
+  "version": "v0.13.2",
   "aliases": null,
   "flags": {
     "help": {
@@ -33,7 +34,7 @@
       },
       "subcommands": [
         {
-          "name": "cluster-config",
+          "name": "cluster-config \u003cbackup-tarball-path\u003e",
           "description": "Take a snapshot of cluster configuration",
           "aliases": null,
           "flags": {
@@ -56,7 +57,7 @@
           "subcommands": null
         },
         {
-          "name": "etcd",
+          "name": "etcd \u003csnapshot-path\u003e",
           "description": "Take a snapshot of ETCD state",
           "aliases": null,
           "flags": {
@@ -192,7 +193,7 @@
       "flags": {},
       "subcommands": [
         {
-          "name": "build",
+          "name": "build [IMAGE_NAME...]",
           "description": "Build images",
           "aliases": null,
           "flags": {
@@ -977,7 +978,7 @@
               "subcommands": null
             },
             {
-              "name": "publish",
+              "name": "publish [IMAGE_NAME...]",
               "description": "Publish bundle",
               "aliases": null,
               "flags": {
@@ -1670,7 +1671,7 @@
           ]
         },
         {
-          "name": "ci-env",
+          "name": "ci-env CI_SYSTEM",
           "description": "Generate werf environment variables for specified CI system",
           "aliases": null,
           "flags": {
@@ -2195,7 +2196,7 @@
           "flags": {},
           "subcommands": [
             {
-              "name": "config",
+              "name": "config [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"]",
               "description": "Run docker-compose config command with forwarded image names.",
               "aliases": null,
               "flags": {
@@ -2548,7 +2549,7 @@
               "subcommands": null
             },
             {
-              "name": "down",
+              "name": "down [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"]",
               "description": "Run docker-compose down command with forwarded image names.",
               "aliases": null,
               "flags": {
@@ -2901,7 +2902,7 @@
               "subcommands": null
             },
             {
-              "name": "run",
+              "name": "run [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"] -- SERVICE [COMMAND] [ARGS...]",
               "description": "Run docker-compose run command with forwarded image names.",
               "aliases": null,
               "flags": {
@@ -3254,7 +3255,7 @@
               "subcommands": null
             },
             {
-              "name": "up",
+              "name": "up [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"] [--] [SERVICE...]",
               "description": "Run docker-compose up command with forwarded image names.",
               "aliases": null,
               "flags": {
@@ -3620,7 +3621,7 @@
           "flags": {},
           "subcommands": [
             {
-              "name": "graph",
+              "name": "graph [IMAGE_NAME...]",
               "description": "Print dependency graph for images in werf.yaml.",
               "aliases": null,
               "flags": {
@@ -3876,7 +3877,7 @@
               "subcommands": null
             },
             {
-              "name": "render",
+              "name": "render [IMAGE_NAME...]",
               "description": "Render werf.yaml.",
               "aliases": null,
               "flags": {
@@ -4505,7 +4506,7 @@
           "flags": {},
           "subcommands": [
             {
-              "name": "login",
+              "name": "login registry",
               "description": "Login into remote registry.",
               "aliases": null,
               "flags": {
@@ -4593,7 +4594,7 @@
               "subcommands": null
             },
             {
-              "name": "logout",
+              "name": "logout registry",
               "description": "Logout from a remote registry.",
               "aliases": null,
               "flags": {
@@ -5016,7 +5017,7 @@
           "subcommands": null
         },
         {
-          "name": "export",
+          "name": "export [IMAGE_NAME...] [options]",
           "description": "Export images",
           "aliases": null,
           "flags": {
@@ -5466,7 +5467,7 @@
           },
           "subcommands": [
             {
-              "name": "create",
+              "name": "create NAME",
               "description": "create a new chart with the given name",
               "aliases": null,
               "flags": {
@@ -5564,7 +5565,7 @@
               "subcommands": null
             },
             {
-              "name": "dependency",
+              "name": "dependency update|build|list",
               "description": "manage a chart's dependencies",
               "aliases": [
                 "dep",
@@ -5659,7 +5660,7 @@
               },
               "subcommands": [
                 {
-                  "name": "build",
+                  "name": "build CHART",
                   "description": "rebuild the charts/ directory based on the Chart.lock file",
                   "aliases": null,
                   "flags": {
@@ -5767,7 +5768,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "list",
+                  "name": "list CHART",
                   "description": "list the dependencies for the given chart",
                   "aliases": [
                     "ls"
@@ -5867,7 +5868,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "update",
+                  "name": "update CHART",
                   "description": "update charts/ based on the contents of Chart.yaml",
                   "aliases": [
                     "up"
@@ -6164,7 +6165,7 @@
               },
               "subcommands": [
                 {
-                  "name": "all",
+                  "name": "all RELEASE_NAME",
                   "description": "download all information for a named release",
                   "aliases": null,
                   "flags": {
@@ -6267,7 +6268,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "hooks",
+                  "name": "hooks RELEASE_NAME",
                   "description": "download all hooks for a named release",
                   "aliases": null,
                   "flags": {
@@ -6365,7 +6366,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "manifest",
+                  "name": "manifest RELEASE_NAME",
                   "description": "download the manifest for a named release",
                   "aliases": null,
                   "flags": {
@@ -6463,7 +6464,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "metadata",
+                  "name": "metadata RELEASE_NAME",
                   "description": "This command fetches metadata for a given release",
                   "aliases": null,
                   "flags": {
@@ -6566,7 +6567,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "notes",
+                  "name": "notes RELEASE_NAME",
                   "description": "download the notes for a named release",
                   "aliases": null,
                   "flags": {
@@ -6664,7 +6665,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "values",
+                  "name": "values RELEASE_NAME",
                   "description": "download the values file for a named release",
                   "aliases": null,
                   "flags": {
@@ -6774,7 +6775,7 @@
               ]
             },
             {
-              "name": "get-autogenerated-values",
+              "name": "get-autogenerated-values [IMAGE_NAME...]",
               "description": "Get service values yaml generated by werf for helm chart during deploy",
               "aliases": null,
               "flags": {
@@ -7398,7 +7399,7 @@
               "subcommands": null
             },
             {
-              "name": "history",
+              "name": "history RELEASE_NAME",
               "description": "fetch release history",
               "aliases": [
                 "hist"
@@ -7503,7 +7504,7 @@
               "subcommands": null
             },
             {
-              "name": "install",
+              "name": "install [NAME] [CHART]",
               "description": "install a chart",
               "aliases": null,
               "flags": {
@@ -7826,7 +7827,7 @@
               "subcommands": null
             },
             {
-              "name": "lint",
+              "name": "lint PATH",
               "description": "examine a chart for possible issues",
               "aliases": null,
               "flags": {
@@ -8174,7 +8175,7 @@
               "subcommands": null
             },
             {
-              "name": "package",
+              "name": "package [CHART_PATH] [...]",
               "description": "package a chart directory into a chart archive",
               "aliases": null,
               "flags": {
@@ -8399,7 +8400,7 @@
               },
               "subcommands": [
                 {
-                  "name": "install",
+                  "name": "install [options] \u003cpath|url\u003e...",
                   "description": "install one or more Helm plugins",
                   "aliases": [
                     "add"
@@ -8594,7 +8595,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "uninstall",
+                  "name": "uninstall \u003cplugin\u003e...",
                   "description": "uninstall one or more Helm plugins",
                   "aliases": [
                     "rm",
@@ -8690,7 +8691,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "update",
+                  "name": "update \u003cplugin\u003e...",
                   "description": "update one or more Helm plugins",
                   "aliases": [
                     "up"
@@ -8787,7 +8788,7 @@
               ]
             },
             {
-              "name": "pull",
+              "name": "pull [chart URL | repo/chartname] [...]",
               "description": "download a chart from a repository and (optionally) unpack it in local directory",
               "aliases": [
                 "fetch"
@@ -9059,7 +9060,7 @@
               },
               "subcommands": [
                 {
-                  "name": "login",
+                  "name": "login [host]",
                   "description": "login to a registry",
                   "aliases": null,
                   "flags": {
@@ -9187,7 +9188,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "logout",
+                  "name": "logout [host]",
                   "description": "logout from a registry",
                   "aliases": null,
                   "flags": {
@@ -9282,7 +9283,7 @@
               ]
             },
             {
-              "name": "repo",
+              "name": "repo add|remove|list|index|update [ARGS]",
               "description": "add, list, remove, update, and index chart repositories",
               "aliases": null,
               "flags": {
@@ -9374,7 +9375,7 @@
               },
               "subcommands": [
                 {
-                  "name": "add",
+                  "name": "add [NAME] [URL]",
                   "description": "add a chart repository",
                   "aliases": null,
                   "flags": {
@@ -9522,7 +9523,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "index",
+                  "name": "index [DIR]",
                   "description": "generate an index file given a directory containing packaged charts",
                   "aliases": null,
                   "flags": {
@@ -9730,7 +9731,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "remove",
+                  "name": "remove [REPO1 [REPO2 ...]]",
                   "description": "remove one or more chart repositories",
                   "aliases": [
                     "rm"
@@ -9825,7 +9826,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "update",
+                  "name": "update [REPO1 [REPO2 ...]]",
                   "description": "update information of available charts locally from chart repositories",
                   "aliases": [
                     "up"
@@ -9927,7 +9928,7 @@
               ]
             },
             {
-              "name": "rollback",
+              "name": "rollback \u003cRELEASE\u003e [REVISION]",
               "description": "roll back a release to a previous revision",
               "aliases": null,
               "flags": {
@@ -10070,7 +10071,7 @@
               "subcommands": null
             },
             {
-              "name": "search",
+              "name": "search [keyword]",
               "description": "search for a keyword in charts",
               "aliases": null,
               "flags": {
@@ -10162,7 +10163,7 @@
               },
               "subcommands": [
                 {
-                  "name": "hub",
+                  "name": "hub [KEYWORD]",
                   "description": "search for charts in the Artifact Hub or your own hub instance",
                   "aliases": null,
                   "flags": {
@@ -10280,7 +10281,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "repo",
+                  "name": "repo [keyword]",
                   "description": "search repositories for a keyword in charts",
                   "aliases": null,
                   "flags": {
@@ -10860,7 +10861,7 @@
                   },
                   "subcommands": [
                     {
-                      "name": "decrypt",
+                      "name": "decrypt [FILE_PATH]",
                       "description": "Decrypt secret file data",
                       "aliases": null,
                       "flags": {
@@ -10993,7 +10994,7 @@
                       "subcommands": null
                     },
                     {
-                      "name": "edit",
+                      "name": "edit FILE_PATH",
                       "description": "Edit or create new secret file",
                       "aliases": null,
                       "flags": {
@@ -11121,7 +11122,7 @@
                       "subcommands": null
                     },
                     {
-                      "name": "encrypt",
+                      "name": "encrypt [FILE_PATH]",
                       "description": "Encrypt file data",
                       "aliases": null,
                       "flags": {
@@ -11349,7 +11350,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "rotate-secret-key",
+                  "name": "rotate-secret-key [EXTRA_SECRET_VALUES_FILE_PATH...]",
                   "description": "Regenerate secret files with new secret key",
                   "aliases": null,
                   "flags": {
@@ -11594,7 +11595,7 @@
                   },
                   "subcommands": [
                     {
-                      "name": "decrypt",
+                      "name": "decrypt [FILE_PATH]",
                       "description": "Decrypt secret values file data",
                       "aliases": null,
                       "flags": {
@@ -11727,7 +11728,7 @@
                       "subcommands": null
                     },
                     {
-                      "name": "edit",
+                      "name": "edit FILE_PATH",
                       "description": "Edit or create new secret values file",
                       "aliases": null,
                       "flags": {
@@ -11855,7 +11856,7 @@
                       "subcommands": null
                     },
                     {
-                      "name": "encrypt",
+                      "name": "encrypt [FILE_PATH]",
                       "description": "Encrypt values file data",
                       "aliases": null,
                       "flags": {
@@ -12086,7 +12087,7 @@
               },
               "subcommands": [
                 {
-                  "name": "all",
+                  "name": "all [CHART]",
                   "description": "show all information of the chart",
                   "aliases": null,
                   "flags": {
@@ -12244,7 +12245,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "chart",
+                  "name": "chart [CHART]",
                   "description": "show the chart's definition",
                   "aliases": null,
                   "flags": {
@@ -12402,7 +12403,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "crds",
+                  "name": "crds [CHART]",
                   "description": "show the chart's CRDs",
                   "aliases": null,
                   "flags": {
@@ -12560,7 +12561,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "readme",
+                  "name": "readme [CHART]",
                   "description": "show the chart's README",
                   "aliases": null,
                   "flags": {
@@ -12718,7 +12719,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "values",
+                  "name": "values [CHART]",
                   "description": "show the chart's values",
                   "aliases": null,
                   "flags": {
@@ -12883,7 +12884,7 @@
               ]
             },
             {
-              "name": "status",
+              "name": "status RELEASE_NAME",
               "description": "display the status of the named release",
               "aliases": null,
               "flags": {
@@ -12996,7 +12997,7 @@
               "subcommands": null
             },
             {
-              "name": "template",
+              "name": "template [NAME] [CHART]",
               "description": "locally render templates",
               "aliases": null,
               "flags": {
@@ -13359,7 +13360,7 @@
               "subcommands": null
             },
             {
-              "name": "test",
+              "name": "test [RELEASE]",
               "description": "run tests for a release",
               "aliases": null,
               "flags": {
@@ -13467,7 +13468,7 @@
               "subcommands": null
             },
             {
-              "name": "uninstall",
+              "name": "uninstall RELEASE_NAME [...]",
               "description": "uninstall a release",
               "aliases": [
                 "del",
@@ -13604,7 +13605,7 @@
               "subcommands": null
             },
             {
-              "name": "upgrade",
+              "name": "upgrade [RELEASE] [CHART]",
               "description": "upgrade a release",
               "aliases": null,
               "flags": {
@@ -13942,7 +13943,7 @@
               "subcommands": null
             },
             {
-              "name": "verify",
+              "name": "verify PATH",
               "description": "verify that a chart at the given path has been signed and is valid",
               "aliases": null,
               "flags": {
@@ -14459,7 +14460,7 @@
           ]
         },
         {
-          "name": "kube-run",
+          "name": "kube-run [options] [IMAGE_NAME] [-- COMMAND ARG...]",
           "description": "Run container for project image in Kubernetes",
           "aliases": null,
           "flags": {
@@ -16475,7 +16476,7 @@
           "subcommands": null
         },
         {
-          "name": "render",
+          "name": "render [IMAGE_NAME...]",
           "description": "Render Kubernetes templates",
           "aliases": null,
           "flags": {
@@ -16933,7 +16934,7 @@
           "subcommands": null
         },
         {
-          "name": "run",
+          "name": "run [options] [IMAGE_NAME] [-- COMMAND ARG...]",
           "description": "Run container for project image",
           "aliases": null,
           "flags": {
@@ -17251,7 +17252,7 @@
           "subcommands": null
         },
         {
-          "name": "slugify",
+          "name": "slugify STRING",
           "description": "Print slugged string by specified format.",
           "aliases": null,
           "flags": {
@@ -17476,7 +17477,7 @@
       ]
     },
     {
-      "name": "help",
+      "name": "help [command]",
       "description": "Help about any command",
       "aliases": null,
       "flags": {},
@@ -17770,7 +17771,7 @@
           "subcommands": null
         },
         {
-          "name": "annotate",
+          "name": "annotate [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]",
           "description": "Update the annotations on a resource",
           "aliases": null,
           "flags": {
@@ -18329,7 +18330,7 @@
           "subcommands": null
         },
         {
-          "name": "apply",
+          "name": "apply (-f FILENAME | -k DIRECTORY)",
           "description": "Apply a configuration to a resource by file name or stdin",
           "aliases": null,
           "flags": {
@@ -18596,7 +18597,7 @@
           },
           "subcommands": [
             {
-              "name": "edit-last-applied",
+              "name": "edit-last-applied (RESOURCE/NAME | -f FILENAME)",
               "description": "Edit latest last-applied-configuration annotations of a resource/object",
               "aliases": null,
               "flags": {
@@ -18794,7 +18795,7 @@
               "subcommands": null
             },
             {
-              "name": "set-last-applied",
+              "name": "set-last-applied -f FILENAME",
               "description": "Set the last-applied-configuration annotation on a live object to match the contents of a file",
               "aliases": null,
               "flags": {
@@ -18972,7 +18973,7 @@
               "subcommands": null
             },
             {
-              "name": "view-last-applied",
+              "name": "view-last-applied (TYPE [NAME | -l label] | TYPE/NAME | -f FILENAME)",
               "description": "View the latest last-applied-configuration annotations of a resource/object",
               "aliases": null,
               "flags": {
@@ -19147,7 +19148,7 @@
           ]
         },
         {
-          "name": "attach",
+          "name": "attach (POD | TYPE/NAME) -c CONTAINER",
           "description": "Attach to a running container",
           "aliases": null,
           "flags": {
@@ -19457,7 +19458,7 @@
           },
           "subcommands": [
             {
-              "name": "can-i",
+              "name": "can-i VERB [TYPE | TYPE/NAME | NONRESOURCEURL]",
               "description": "Check whether an action is allowed",
               "aliases": null,
               "flags": {
@@ -19625,7 +19626,7 @@
               "subcommands": null
             },
             {
-              "name": "reconcile",
+              "name": "reconcile -f FILENAME",
               "description": "Reconciles rules for RBAC role, role binding, cluster role, and cluster role binding objects",
               "aliases": null,
               "flags": {
@@ -19983,7 +19984,7 @@
           ]
         },
         {
-          "name": "autoscale",
+          "name": "autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPODS] --max=MAXPODS [--cpu-percent=CPU]",
           "description": "Auto-scale a deployment, replica set, stateful set, or replication controller",
           "aliases": null,
           "flags": {
@@ -20201,7 +20202,7 @@
           "subcommands": null
         },
         {
-          "name": "certificate",
+          "name": "certificate SUBCOMMAND",
           "description": "Modify certificate resources",
           "aliases": null,
           "flags": {
@@ -20343,7 +20344,7 @@
           },
           "subcommands": [
             {
-              "name": "approve",
+              "name": "approve (-f FILENAME | NAME)",
               "description": "Approve a certificate signing request",
               "aliases": null,
               "flags": {
@@ -20526,7 +20527,7 @@
               "subcommands": null
             },
             {
-              "name": "deny",
+              "name": "deny (-f FILENAME | NAME)",
               "description": "Deny a certificate signing request",
               "aliases": null,
               "flags": {
@@ -21038,7 +21039,7 @@
           ]
         },
         {
-          "name": "completion",
+          "name": "completion SHELL",
           "description": "Output shell completion code for the specified shell (bash, zsh, fish, or powershell)",
           "aliases": null,
           "flags": {
@@ -21181,7 +21182,7 @@
           "subcommands": null
         },
         {
-          "name": "config",
+          "name": "config SUBCOMMAND",
           "description": "Modify kubeconfig files",
           "aliases": null,
           "flags": {
@@ -21466,7 +21467,7 @@
               "subcommands": null
             },
             {
-              "name": "delete-cluster",
+              "name": "delete-cluster NAME",
               "description": "Delete the specified cluster from the kubeconfig",
               "aliases": null,
               "flags": {
@@ -21609,7 +21610,7 @@
               "subcommands": null
             },
             {
-              "name": "delete-context",
+              "name": "delete-context NAME",
               "description": "Delete the specified context from the kubeconfig",
               "aliases": null,
               "flags": {
@@ -21752,7 +21753,7 @@
               "subcommands": null
             },
             {
-              "name": "delete-user",
+              "name": "delete-user NAME",
               "description": "Delete the specified user from the kubeconfig",
               "aliases": null,
               "flags": {
@@ -22038,7 +22039,7 @@
               "subcommands": null
             },
             {
-              "name": "get-contexts",
+              "name": "get-contexts [(-o|--output=)name)]",
               "description": "Describe one or many contexts",
               "aliases": null,
               "flags": {
@@ -22334,7 +22335,7 @@
               "subcommands": null
             },
             {
-              "name": "rename-context",
+              "name": "rename-context CONTEXT_NAME NEW_NAME",
               "description": "Rename a context from the kubeconfig file",
               "aliases": null,
               "flags": {
@@ -22477,7 +22478,7 @@
               "subcommands": null
             },
             {
-              "name": "set",
+              "name": "set PROPERTY_NAME PROPERTY_VALUE",
               "description": "Set an individual value in a kubeconfig file",
               "aliases": null,
               "flags": {
@@ -22625,7 +22626,7 @@
               "subcommands": null
             },
             {
-              "name": "set-cluster",
+              "name": "set-cluster NAME [--server=server] [--certificate-authority=path/to/certificate/authority] [--insecure-skip-tls-verify=true] [--tls-server-name=example.com]",
               "description": "Set a cluster entry in kubeconfig",
               "aliases": null,
               "flags": {
@@ -22778,7 +22779,7 @@
               "subcommands": null
             },
             {
-              "name": "set-context",
+              "name": "set-context [NAME | --current] [--cluster=cluster_nickname] [--user=user_nickname] [--namespace=namespace]",
               "description": "Set a context entry in kubeconfig",
               "aliases": null,
               "flags": {
@@ -22926,7 +22927,7 @@
               "subcommands": null
             },
             {
-              "name": "set-credentials",
+              "name": "set-credentials NAME [--client-certificate=path/to/certfile] [--client-key=path/to/keyfile] [--token=bearer_token] [--username=basic_user] [--password=basic_password] [--auth-provider=provider_name] [--auth-provider-arg=key=value] [--exec-command=exec_command] [--exec-api-version=exec_api_version] [--exec-arg=arg] [--exec-env=key=value]",
               "description": "Set a user entry in kubeconfig",
               "aliases": null,
               "flags": {
@@ -23104,7 +23105,7 @@
               "subcommands": null
             },
             {
-              "name": "unset",
+              "name": "unset PROPERTY_NAME",
               "description": "Unset an individual value in a kubeconfig file",
               "aliases": null,
               "flags": {
@@ -23247,7 +23248,7 @@
               "subcommands": null
             },
             {
-              "name": "use-context",
+              "name": "use-context CONTEXT_NAME",
               "description": "Set the current-context in a kubeconfig file",
               "aliases": [
                 "use"
@@ -23577,7 +23578,7 @@
           ]
         },
         {
-          "name": "cordon",
+          "name": "cordon NODE",
           "description": "Mark node as unschedulable",
           "aliases": null,
           "flags": {
@@ -23730,7 +23731,7 @@
           "subcommands": null
         },
         {
-          "name": "cp",
+          "name": "cp \u003cfile-spec-src\u003e \u003cfile-spec-dest\u003e",
           "description": "Copy files and directories to and from containers",
           "aliases": null,
           "flags": {
@@ -23888,7 +23889,7 @@
           "subcommands": null
         },
         {
-          "name": "create",
+          "name": "create -f FILENAME",
           "description": "Create a resource from a file or from stdin",
           "aliases": null,
           "flags": {
@@ -24110,7 +24111,7 @@
           },
           "subcommands": [
             {
-              "name": "clusterrole",
+              "name": "clusterrole NAME --verb=verb --resource=resource.group [--resource-name=resourcename] [--dry-run=server|client|none]",
               "description": "Create a cluster role",
               "aliases": null,
               "flags": {
@@ -24318,7 +24319,7 @@
               "subcommands": null
             },
             {
-              "name": "clusterrolebinding",
+              "name": "clusterrolebinding NAME --clusterrole=NAME [--user=username] [--group=groupname] [--serviceaccount=namespace:serviceaccountname] [--dry-run=server|client|none]",
               "description": "Create a cluster role binding for a particular cluster role",
               "aliases": null,
               "flags": {
@@ -24516,7 +24517,7 @@
               "subcommands": null
             },
             {
-              "name": "configmap",
+              "name": "configmap NAME [--from-file=[key=]source] [--from-literal=key1=value1] [--dry-run=server|client|none]",
               "description": "Create a config map from a local file, directory or literal value",
               "aliases": [
                 "cm"
@@ -24721,7 +24722,7 @@
               "subcommands": null
             },
             {
-              "name": "cronjob",
+              "name": "cronjob NAME --image=image --schedule='0/5 * * * ?' -- [COMMAND] [args...]",
               "description": "Create a cron job with the specified name",
               "aliases": [
                 "cj"
@@ -24921,7 +24922,7 @@
               "subcommands": null
             },
             {
-              "name": "deployment",
+              "name": "deployment NAME --image=image -- [COMMAND] [args...]",
               "description": "Create a deployment with the specified name",
               "aliases": [
                 "deploy"
@@ -25121,7 +25122,7 @@
               "subcommands": null
             },
             {
-              "name": "ingress",
+              "name": "ingress NAME --rule=host/path=service:port[,tls[=secret]] ",
               "description": "Create an ingress with the specified name",
               "aliases": [
                 "ing"
@@ -25326,7 +25327,7 @@
               "subcommands": null
             },
             {
-              "name": "job",
+              "name": "job NAME --image=image [--from=cronjob/name] -- [COMMAND] [args...]",
               "description": "Create a job with the specified name",
               "aliases": null,
               "flags": {
@@ -25519,7 +25520,7 @@
               "subcommands": null
             },
             {
-              "name": "namespace",
+              "name": "namespace NAME [--dry-run=server|client|none]",
               "description": "Create a namespace with the specified name",
               "aliases": [
                 "ns"
@@ -25704,7 +25705,7 @@
               "subcommands": null
             },
             {
-              "name": "poddisruptionbudget",
+              "name": "poddisruptionbudget NAME --selector=SELECTOR --min-available=N [--dry-run=server|client|none]",
               "description": "Create a pod disruption budget with the specified name",
               "aliases": [
                 "pdb"
@@ -25904,7 +25905,7 @@
               "subcommands": null
             },
             {
-              "name": "priorityclass",
+              "name": "priorityclass NAME --value=VALUE --global-default=BOOL [--dry-run=server|client|none]",
               "description": "Create a priority class with the specified name",
               "aliases": [
                 "pc"
@@ -26109,7 +26110,7 @@
               "subcommands": null
             },
             {
-              "name": "quota",
+              "name": "quota NAME [--hard=key1=value1,key2=value2] [--scopes=Scope1,Scope2] [--dry-run=server|client|none]",
               "description": "Create a quota with the specified name",
               "aliases": [
                 "resourcequota"
@@ -26304,7 +26305,7 @@
               "subcommands": null
             },
             {
-              "name": "role",
+              "name": "role NAME --verb=verb --resource=resource.group/subresource [--resource-name=resourcename] [--dry-run=server|client|none]",
               "description": "Create a role with single rule",
               "aliases": null,
               "flags": {
@@ -26502,7 +26503,7 @@
               "subcommands": null
             },
             {
-              "name": "rolebinding",
+              "name": "rolebinding NAME --clusterrole=NAME|--role=NAME [--user=username] [--group=groupname] [--serviceaccount=namespace:serviceaccountname] [--dry-run=server|client|none]",
               "description": "Create a role binding for a particular role or cluster role",
               "aliases": null,
               "flags": {
@@ -26705,7 +26706,7 @@
               "subcommands": null
             },
             {
-              "name": "secret",
+              "name": "secret (docker-registry | generic | tls)",
               "description": "Create a secret using a specified subcommand",
               "aliases": null,
               "flags": {
@@ -26847,7 +26848,7 @@
               },
               "subcommands": [
                 {
-                  "name": "docker-registry",
+                  "name": "docker-registry NAME --docker-username=user --docker-password=password --docker-email=email [--docker-server=string] [--from-file=[key=]source] [--dry-run=server|client|none]",
                   "description": "Create a secret for use with a Docker registry",
                   "aliases": null,
                   "flags": {
@@ -27060,7 +27061,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "generic",
+                  "name": "generic NAME [--type=string] [--from-file=[key=]source] [--from-literal=key1=value1] [--dry-run=server|client|none]",
                   "description": "Create a secret from a local file, directory, or literal value",
                   "aliases": null,
                   "flags": {
@@ -27268,7 +27269,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "tls",
+                  "name": "tls NAME --cert=path/to/cert/file --key=path/to/key/file [--dry-run=server|client|none]",
                   "description": "Create a TLS secret",
                   "aliases": null,
                   "flags": {
@@ -27612,7 +27613,7 @@
               },
               "subcommands": [
                 {
-                  "name": "clusterip",
+                  "name": "clusterip NAME [--tcp=\u003cport\u003e:\u003ctargetPort\u003e] [--dry-run=server|client|none]",
                   "description": "Create a ClusterIP service",
                   "aliases": null,
                   "flags": {
@@ -27805,7 +27806,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "externalname",
+                  "name": "externalname NAME --external-name external.name [--dry-run=server|client|none]",
                   "description": "Create an ExternalName service",
                   "aliases": null,
                   "flags": {
@@ -27998,7 +27999,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "loadbalancer",
+                  "name": "loadbalancer NAME [--tcp=port:targetPort] [--dry-run=server|client|none]",
                   "description": "Create a LoadBalancer service",
                   "aliases": null,
                   "flags": {
@@ -28186,7 +28187,7 @@
                   "subcommands": null
                 },
                 {
-                  "name": "nodeport",
+                  "name": "nodeport NAME [--tcp=port:targetPort] [--dry-run=server|client|none]",
                   "description": "Create a NodePort service",
                   "aliases": null,
                   "flags": {
@@ -28381,7 +28382,7 @@
               ]
             },
             {
-              "name": "serviceaccount",
+              "name": "serviceaccount NAME [--dry-run=server|client|none]",
               "description": "Create a service account with the specified name",
               "aliases": [
                 "sa"
@@ -28566,7 +28567,7 @@
               "subcommands": null
             },
             {
-              "name": "token",
+              "name": "token SERVICE_ACCOUNT_NAME",
               "description": "Request a service account token",
               "aliases": null,
               "flags": {
@@ -28756,7 +28757,7 @@
           ]
         },
         {
-          "name": "debug",
+          "name": "debug (POD | TYPE[[.VERSION].GROUP]/NAME) [ -- COMMAND [args...] ]",
           "description": "Create debugging sessions for troubleshooting workloads and nodes",
           "aliases": null,
           "flags": {
@@ -28979,7 +28980,7 @@
           "subcommands": null
         },
         {
-          "name": "delete",
+          "name": "delete ([-f FILENAME] | [-k DIRECTORY] | TYPE [(NAME | -l label | --all)])",
           "description": "Delete resources by file names, stdin, resources and names, or by resources and label selector",
           "aliases": null,
           "flags": {
@@ -29212,7 +29213,7 @@
           "subcommands": null
         },
         {
-          "name": "describe",
+          "name": "describe (-f FILENAME | TYPE [NAME_PREFIX | -l label] | TYPE/NAME)",
           "description": "Show details of a specific resource or group of resources",
           "aliases": null,
           "flags": {
@@ -29390,7 +29391,7 @@
           "subcommands": null
         },
         {
-          "name": "diff",
+          "name": "diff -f FILENAME",
           "description": "Diff the live version against a would-be applied version",
           "aliases": null,
           "flags": {
@@ -29588,7 +29589,7 @@
           "subcommands": null
         },
         {
-          "name": "drain",
+          "name": "drain NODE",
           "description": "Drain node in preparation for maintenance",
           "aliases": null,
           "flags": {
@@ -29791,7 +29792,7 @@
           "subcommands": null
         },
         {
-          "name": "edit",
+          "name": "edit (RESOURCE/NAME | -f FILENAME)",
           "description": "Edit a resource on the server",
           "aliases": null,
           "flags": {
@@ -30004,7 +30005,7 @@
           "subcommands": null
         },
         {
-          "name": "events",
+          "name": "events [(-o|--output=)json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file] [--for TYPE/NAME] [--watch] [--types=Normal,Warning]",
           "description": "List events",
           "aliases": null,
           "flags": {
@@ -30197,7 +30198,7 @@
           "subcommands": null
         },
         {
-          "name": "exec",
+          "name": "exec (POD | TYPE/NAME) [-c CONTAINER] [flags] -- COMMAND [args...]",
           "description": "Execute a command in a container",
           "aliases": null,
           "flags": {
@@ -30370,7 +30371,7 @@
           "subcommands": null
         },
         {
-          "name": "explain",
+          "name": "explain TYPE [--recursive=FALSE|TRUE] [--api-version=api-version-group] [--output=plaintext|plaintext-openapiv2]",
           "description": "Get documentation for a resource",
           "aliases": null,
           "flags": {
@@ -30528,7 +30529,7 @@
           "subcommands": null
         },
         {
-          "name": "expose",
+          "name": "expose (-f FILENAME | TYPE NAME) [--port=port] [--protocol=TCP|UDP|SCTP] [--target-port=number-or-name] [--name=name] [--external-ip=external-ip-of-service] [--type=type]",
           "description": "Take a replication controller, service, deployment or pod and expose it as a new Kubernetes service",
           "aliases": null,
           "flags": {
@@ -30791,7 +30792,7 @@
           "subcommands": null
         },
         {
-          "name": "get",
+          "name": "get [(-o|--output=)json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file|custom-columns|custom-columns-file|wide] (TYPE[.VERSION][.GROUP] [NAME | -l label] | TYPE[.VERSION][.GROUP]/NAME ...) [flags]",
           "description": "Display one or many resources",
           "aliases": null,
           "flags": {
@@ -31049,7 +31050,7 @@
           "subcommands": null
         },
         {
-          "name": "kustomize",
+          "name": "kustomize DIR",
           "description": "Build a kustomization target from a directory or URL",
           "aliases": null,
           "flags": {
@@ -31262,7 +31263,7 @@
           "subcommands": null
         },
         {
-          "name": "label",
+          "name": "label [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]",
           "description": "Update the labels on a resource",
           "aliases": null,
           "flags": {
@@ -31495,7 +31496,7 @@
           "subcommands": null
         },
         {
-          "name": "logs",
+          "name": "logs [-f] [-p] (POD | TYPE/NAME) [-c CONTAINER]",
           "description": "Print the logs for a container in a pod",
           "aliases": null,
           "flags": {
@@ -31856,7 +31857,7 @@
           "subcommands": null
         },
         {
-          "name": "patch",
+          "name": "patch (-f FILENAME | TYPE NAME) [-p PATCH|--patch-file FILE]",
           "description": "Update fields of a resource",
           "aliases": null,
           "flags": {
@@ -32074,7 +32075,7 @@
           "subcommands": null
         },
         {
-          "name": "plugin",
+          "name": "plugin [flags]",
           "description": "Provides utilities for interacting with plugins",
           "aliases": null,
           "flags": {
@@ -32366,7 +32367,7 @@
           ]
         },
         {
-          "name": "port-forward",
+          "name": "port-forward TYPE/NAME [options] [LOCAL_PORT:]REMOTE_PORT [...[LOCAL_PORT_N:]REMOTE_PORT_N]",
           "description": "Forward one or more local ports to a pod",
           "aliases": null,
           "flags": {
@@ -32519,7 +32520,7 @@
           "subcommands": null
         },
         {
-          "name": "proxy",
+          "name": "proxy [--port=PORT] [--www=static-dir] [--www-prefix=prefix] [--api-prefix=prefix]",
           "description": "Run a proxy to the Kubernetes API server",
           "aliases": null,
           "flags": {
@@ -32727,7 +32728,7 @@
           "subcommands": null
         },
         {
-          "name": "replace",
+          "name": "replace -f FILENAME",
           "description": "Replace a resource by file name or stdin",
           "aliases": null,
           "flags": {
@@ -32960,7 +32961,7 @@
           "subcommands": null
         },
         {
-          "name": "rollout",
+          "name": "rollout SUBCOMMAND",
           "description": "Manage the rollout of a resource",
           "aliases": null,
           "flags": {
@@ -33102,7 +33103,7 @@
           },
           "subcommands": [
             {
-              "name": "history",
+              "name": "history (TYPE NAME | TYPE/NAME) [flags]",
               "description": "View rollout history",
               "aliases": null,
               "flags": {
@@ -33290,7 +33291,7 @@
               "subcommands": null
             },
             {
-              "name": "pause",
+              "name": "pause RESOURCE",
               "description": "Mark the provided resource as paused",
               "aliases": null,
               "flags": {
@@ -33478,7 +33479,7 @@
               "subcommands": null
             },
             {
-              "name": "restart",
+              "name": "restart RESOURCE",
               "description": "Restart a resource",
               "aliases": null,
               "flags": {
@@ -33666,7 +33667,7 @@
               "subcommands": null
             },
             {
-              "name": "resume",
+              "name": "resume RESOURCE",
               "description": "Resume a paused resource",
               "aliases": null,
               "flags": {
@@ -33854,7 +33855,7 @@
               "subcommands": null
             },
             {
-              "name": "status",
+              "name": "status (TYPE NAME | TYPE/NAME) [flags]",
               "description": "Show the status of the rollout",
               "aliases": null,
               "flags": {
@@ -34032,7 +34033,7 @@
               "subcommands": null
             },
             {
-              "name": "undo",
+              "name": "undo (TYPE NAME | TYPE/NAME) [flags]",
               "description": "Undo a previous rollout",
               "aliases": null,
               "flags": {
@@ -34227,7 +34228,7 @@
           ]
         },
         {
-          "name": "run",
+          "name": "run NAME --image=image [--env=\"key=value\"] [--port=port] [--dry-run=server|client] [--overrides=inline-json] [--command] -- [COMMAND] [args...]",
           "description": "Run a particular image on the cluster",
           "aliases": null,
           "flags": {
@@ -34545,7 +34546,7 @@
           "subcommands": null
         },
         {
-          "name": "scale",
+          "name": "scale [--resource-version=version] [--current-replicas=count] --replicas=COUNT (-f FILENAME | TYPE NAME)",
           "description": "Set a new size for a deployment, replica set, or replication controller",
           "aliases": null,
           "flags": {
@@ -34763,7 +34764,7 @@
           "subcommands": null
         },
         {
-          "name": "set",
+          "name": "set SUBCOMMAND",
           "description": "Set specific features on objects",
           "aliases": null,
           "flags": {
@@ -34905,7 +34906,7 @@
           },
           "subcommands": [
             {
-              "name": "env",
+              "name": "env RESOURCE/NAME KEY_1=VAL_1 ... KEY_N=VAL_N",
               "description": "Update environment variables on a pod template",
               "aliases": null,
               "flags": {
@@ -35148,7 +35149,7 @@
               "subcommands": null
             },
             {
-              "name": "image",
+              "name": "image (-f FILENAME | TYPE NAME) CONTAINER_NAME_1=CONTAINER_IMAGE_1 ... CONTAINER_NAME_N=CONTAINER_IMAGE_N",
               "description": "Update the image of a pod template",
               "aliases": null,
               "flags": {
@@ -35356,7 +35357,7 @@
               "subcommands": null
             },
             {
-              "name": "resources",
+              "name": "resources (-f FILENAME | TYPE NAME)  ([--limits=LIMITS \u0026 --requests=REQUESTS]",
               "description": "Update resource requests/limits on objects with pod templates",
               "aliases": null,
               "flags": {
@@ -35579,7 +35580,7 @@
               "subcommands": null
             },
             {
-              "name": "selector",
+              "name": "selector (-f FILENAME | TYPE NAME) EXPRESSIONS [--resource-version=version]",
               "description": "Set the selector on a resource",
               "aliases": null,
               "flags": {
@@ -35782,7 +35783,7 @@
               "subcommands": null
             },
             {
-              "name": "serviceaccount",
+              "name": "serviceaccount (-f FILENAME | TYPE NAME) SERVICE_ACCOUNT",
               "description": "Update the service account of a resource",
               "aliases": [
                 "sa"
@@ -35987,7 +35988,7 @@
               "subcommands": null
             },
             {
-              "name": "subject",
+              "name": "subject (-f FILENAME | TYPE NAME) [--user=username] [--group=groupname] [--serviceaccount=namespace:serviceaccountname] [--dry-run=server|client|none]",
               "description": "Update the user, group, or service account in a role binding or cluster role binding",
               "aliases": null,
               "flags": {
@@ -36202,7 +36203,7 @@
           ]
         },
         {
-          "name": "taint",
+          "name": "taint NODE NAME KEY_1=VAL_1:TAINT_EFFECT_1 ... KEY_N=VAL_N:TAINT_EFFECT_N",
           "description": "Update the taints on one or more nodes",
           "aliases": null,
           "flags": {
@@ -36537,7 +36538,7 @@
           },
           "subcommands": [
             {
-              "name": "node",
+              "name": "node [NAME | -l label]",
               "description": "Display resource (CPU/memory) usage of nodes",
               "aliases": [
                 "nodes",
@@ -36708,7 +36709,7 @@
               "subcommands": null
             },
             {
-              "name": "pod",
+              "name": "pod [NAME | -l label]",
               "description": "Display resource (CPU/memory) usage of pods",
               "aliases": [
                 "pods",
@@ -36896,7 +36897,7 @@
           ]
         },
         {
-          "name": "uncordon",
+          "name": "uncordon NODE",
           "description": "Mark node as schedulable",
           "aliases": null,
           "flags": {
@@ -37202,7 +37203,7 @@
           "subcommands": null
         },
         {
-          "name": "wait",
+          "name": "wait ([-f FILENAME] | resource.group/resource.name | resource.group [(-l label | --all)]) [--for=delete|--for condition=available|--for=jsonpath='{}'[=value]]",
           "description": "Experimental: Wait for a specific condition on one or many resources",
           "aliases": null,
           "flags": {
@@ -37484,7 +37485,7 @@
       },
       "subcommands": [
         {
-          "name": "get-token",
+          "name": "get-token [flags]",
           "description": "Run as a kubectl credential plugin",
           "aliases": null,
           "flags": {
@@ -37695,7 +37696,7 @@
       "flags": {},
       "subcommands": [
         {
-          "name": "pull",
+          "name": "pull \u003cimages-bundle-path\u003e",
           "description": "Copy Deckhouse Kubernetes Platform distribution to the local filesystem",
           "aliases": null,
           "flags": {
@@ -37798,7 +37799,7 @@
           "subcommands": null
         },
         {
-          "name": "push",
+          "name": "push \u003cimages-bundle-path\u003e \u003cregistry\u003e",
           "description": "Copy Deckhouse Kubernetes Platform distribution to the third-party registry",
           "aliases": null,
           "flags": {
@@ -37989,7 +37990,9 @@
       "name": "system",
       "description": "Operate system options.",
       "aliases": [
-        "s"
+        "s",
+        "p",
+        "platform"
       ],
       "flags": {
         "context": {
@@ -38114,6 +38117,44 @@
               "subcommands": null
             }
           ]
+        },
+        {
+          "name": "logs",
+          "description": "Inspect deckhouse-controller logs.",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "follow": {
+              "description": "Specify if the logs should be streamed.",
+              "shorthand": "f",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "since": {
+              "description": "Show logs newer than a relative duration like 5s, 2m, or 1h. Only one of since-time / since may be used.",
+              "shorthand": "",
+              "global": false
+            },
+            "since-time": {
+              "description": "Show logs after a specific timestamp, e.g. --since-time='2025-05-19 12:00:00'. Only one of since-time / since may be used.",
+              "shorthand": "",
+              "global": false
+            },
+            "tail": {
+              "description": "Limit the number of lines in the output to the last N lines. Defaults to -1 with no limit.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
         },
         {
           "name": "module",
@@ -38426,7 +38467,7 @@
       },
       "subcommands": [
         {
-          "name": "console",
+          "name": "console (VirtualMachine)",
           "description": "Connect to a console of a virtual machine.",
           "aliases": null,
           "flags": {
@@ -38554,7 +38595,7 @@
           "subcommands": null
         },
         {
-          "name": "evict",
+          "name": "evict (VirtualMachine)",
           "description": "Evict a virtual machine.",
           "aliases": null,
           "flags": {
@@ -38697,7 +38738,7 @@
           "subcommands": null
         },
         {
-          "name": "port-forward",
+          "name": "port-forward name[.namespace] [protocol/]localPort[:targetPort]...",
           "description": "Forward local ports to a virtual machine",
           "aliases": null,
           "flags": {
@@ -38830,7 +38871,7 @@
           "subcommands": null
         },
         {
-          "name": "restart",
+          "name": "restart (VirtualMachine)",
           "description": "Restart a virtual machine.",
           "aliases": null,
           "flags": {
@@ -38973,7 +39014,7 @@
           "subcommands": null
         },
         {
-          "name": "scp",
+          "name": "scp VirtualMachine)",
           "description": "SCP files from/to a virtual machine.",
           "aliases": null,
           "flags": {
@@ -39113,7 +39154,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=kar: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
@@ -39131,7 +39172,7 @@
           "subcommands": null
         },
         {
-          "name": "ssh",
+          "name": "ssh VirtualMachine",
           "description": "Open a SSH connection to a virtual machine.",
           "aliases": null,
           "flags": {
@@ -39266,7 +39307,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=kar: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
@@ -39284,7 +39325,7 @@
           "subcommands": null
         },
         {
-          "name": "start",
+          "name": "start (VirtualMachine)",
           "description": "Start a virtual machine.",
           "aliases": null,
           "flags": {
@@ -39427,7 +39468,7 @@
           "subcommands": null
         },
         {
-          "name": "stop",
+          "name": "stop (VirtualMachine)",
           "description": "Stop a virtual machine.",
           "aliases": null,
           "flags": {
@@ -39570,7 +39611,7 @@
           "subcommands": null
         },
         {
-          "name": "vnc",
+          "name": "vnc VirtualMachine",
           "description": "Open a vnc connection to a virtual machine.",
           "aliases": null,
           "flags": {
