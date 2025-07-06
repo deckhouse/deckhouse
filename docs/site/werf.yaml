@@ -77,8 +77,9 @@ shell:
         bash _tools/prepare_resources.sh
 
         # "Generating breadcrumbs..."
-        cd /srv/jekyll-data/site/
-        ruby _tools/prepare_breadcrumbs.rb
+        #cd /srv/jekyll-data/site/
+        #ruby _tools/prepare_breadcrumbs.rb
+        #exit 1
 
         # "Building static files"
         export JEKYLL_ENV=production
@@ -97,6 +98,7 @@ git:
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
+  - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb
