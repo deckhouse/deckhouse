@@ -81,6 +81,8 @@ spec:
       loadBalancer: {}
 ```
 
+### Checking DKP status and queues
+
 How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is running correctly and is not in a pending state, and how to check active DKP tasks (queues):
 
 1. Make sure the module is enabled:
@@ -154,10 +156,9 @@ DKP assumes control of this PKI after the initial cluster installation and once 
 
 Deckhouse simplifies the addition of new Subject Alternative Names (SANs) for the Kubernetes API endpoint: you only need to specify them in the configuration. After any SAN change, the module automatically regenerates the certificates and updates the kubeconfig.
 
-To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API:
+To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the `spec.settings.apiserver.certSANs` field of your `ModuleConfig/control-plane-manager`.
 
-1. Add the new SANs to `spec.settings.apiserver.certSANs` in your `ModuleConfig/control-plane-manager`.
-1. DKP will automatically generate new certificates and update all required configuration files (including the kubeconfig).
+DKP will automatically generate new certificates and update all required configuration files (including `kubeconfig`).
 
 ### Kubelet certificate rotation
 

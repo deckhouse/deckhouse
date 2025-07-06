@@ -8,6 +8,7 @@ lang: ru
 
 - **CloudEphemeral** — временные, автоматически создаваемые и удаляемые узлы;
 - **CloudPermanent** — постоянные узлы, управляемые вручную через `replicas`;
+- **CloudStatic** — статические облачные узлы. Машины создаются вручную или внешними средствами, а DKP подключает их к кластеру и управляет ими как обычными узлами.
 
 Ниже приведены инструкции по добавлению и настройке каждого типа.
 
@@ -584,6 +585,227 @@ spec:
    Также список новых узлов доступен в веб-интерфейсе Deckhouse.
 
 Deckhouse Kubernetes Platform может работать поверх сервисов Managed Kubernetes (например, GKE и EKS). При этом модуль [`node-manager`](/modules/node-manager/) обеспечивает управление конфигурацией и автоматизацию действий с узлами, но возможности могут быть ограничены API соответствующего облачного провайдера.
+
+## Добавление CloudStatic узла в кластер
+
+Добавление статического узла можно выполнить вручную или с помощью Cluster API Provider Static.
+
+### Вручную
+
+Чтобы добавить новый статический узел в кластер вручную, выполните следующие шаги:
+
+1. Для [CloudStatic-узлов](/modules/node-manager/cr.html#nodegroup) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
+   - [Для AWS](/modules/cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для GCP](/modules/cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для YC](/modules/cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
+1. Используйте существующий или создайте новый ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup). Параметр `nodeType` в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
+
+   Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
+
+   ```shell
+   NODE_GROUP=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   ```
+
+1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения. Например:
+   - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
+   - установите необходимые пакеты;
+   - настройте сетевую связность между новым узлом и остальными узлами кластера.
+1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 3 Base64-строку:
+
+   ```shell
+   echo <Base64-КОД-СКРИПТА> | base64 -d | bash
+   ```
+
+### С помощью Cluster API Provider Static
+
+Простой пример добавления статического узла в кластер с помощью Cluster API Provider Static (CAPS):
+
+1. Подготовьте необходимые ресурсы.
+
+   * Выделите сервер (или виртуальную машину), настройте сетевую связность и т. п., при необходимости установите специфические пакеты ОС и добавьте точки монтирования которые потребуются на узле.
+
+   * Создайте пользователя (в примере — `caps`) с возможностью выполнять `sudo`, выполнив **на сервере** следующую команду:
+
+     ```shell
+     useradd -m -s /bin/bash caps 
+     usermod -aG sudo caps
+     ```
+
+   * Разрешите пользователю выполнять команды через sudo без пароля. Для этого **на сервере** внесите следующую строку в конфигурацию `sudo `(отредактировав файл `/etc/sudoers`, выполнив команду `sudo visudo` или другим способом):
+
+     ```text
+     caps ALL=(ALL) NOPASSWD: ALL
+     ```
+
+   * Сгенерируйте на сервере пару SSH-ключей с пустой парольной фразой:
+
+     ```shell
+     ssh-keygen -t rsa -f caps-id -C "" -N ""
+     ```
+
+     Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей директории на сервере.
+
+   * Добавьте полученный публичный ключ в файл `/home/caps/.ssh/authorized_keys` пользователя `caps`, выполнив в директории с ключами на сервере следующие команды:
+
+     ```shell
+     mkdir -p /home/caps/.ssh 
+     cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
+     chmod 700 /home/caps/.ssh 
+     chmod 600 /home/caps/.ssh/authorized_keys
+     chown -R caps:caps /home/caps/
+     ```
+
+   В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+
+     ```shell
+     pdpl-user -i 63 caps
+     ```
+
+1. Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
+
+   В директории с ключами пользователя на сервере выполните следующую команду для получения закрытого ключа в формате Base64:
+
+   ```shell
+   base64 -w0 caps-id
+   ```
+
+   На любом компьютере с `kubectl`, настроенным на управление кластером, создайте переменную окружения со значением закрытого ключа созданного пользователя в Base64, полученным на предыдущем шаге:
+
+   ```shell
+    CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
+   ```
+
+   Выполните следующую команду, для создания в кластере ресурса SSHCredentials (здесь и далее также используйте `kubectl`, настроенный на управление кластером):
+
+   ```shell
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: SSHCredentials
+   metadata:
+     name: credentials
+   spec:
+     user: caps
+     privateSSHKey: "${CAPS_PRIVATE_KEY_BASE64}"
+   EOF
+   ```
+
+1. Создайте в кластере ресурс [StaticInstance](/modules/node-manager/cr.html#staticinstance), указав IP-адрес сервера статического узла:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-worker-1
+     labels:
+       role: worker
+   spec:
+     # Укажите IP-адрес сервера статического узла.
+     address: "<SERVER-IP>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   EOF
+   ```
+
+1. Создайте в кластере ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup). Параметр `count` обозначает количество `staticInstances`, подпадающих под `labelSelector`, которые будут добавлены в кластер, в данном случае `1`:
+
+   > Поле `labelSelector` в ресурсе NodeGroup является неизменным. Чтобы обновить `labelSelector`, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
+
+   ```shell
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
+   EOF
+   ```
+
+### С помощью Cluster API Provider Static для нескольких групп узлов
+
+Пример использования фильтров в `label selector` [StaticInstance](/modules/node-manager/cr.html#staticinstance), для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
+
+1. Подготовьте необходимые ресурсы (3 сервера или виртуальные машины) и создайте ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), аналогично п.1 и п.2 [примера](#с-помощью-cluster-api-provider-static).
+
+1. Создайте в кластере два ресурса [NodeGroup](cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
+
+   > Поле `labelSelector` в ресурсе NodeGroup является неизменным. Чтобы обновить `labelSelector`, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: front
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 2
+       labelSelector:
+         matchLabels:
+           role: front
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
+   EOF
+   ```
+
+1. Создайте в кластере ресурсы [StaticInstance](/modules/node-manager/cr.html#staticinstance), указав актуальные IP-адреса серверов:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-front-1
+     labels:
+       role: front
+   spec:
+     address: "<SERVER-FRONT-IP1>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-front-2
+     labels:
+       role: front
+   spec:
+     address: "<SERVER-FRONT-IP2>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-worker-1
+     labels:
+       role: worker
+   spec:
+     address: "<SERVER-WORKER-IP>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   EOF
+   ```
 
 ## Добавление master-узлов в облачном кластере
 

@@ -7,7 +7,7 @@ In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following type
 
 - **CloudEphemeral** — temporary nodes that are automatically created and deleted;
 - **CloudPermanent** — permanent nodes managed manually via `replicas`;
-- **CloudStatic** — nodes created outside of DKP but integrated into the cluster;
+- **CloudStatic** — nodes created outside of DKP but integrated into the cluster.
 
 Below are instructions for adding and configuring each type.
 
@@ -542,6 +542,220 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
 Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services (e.g., GKE and EKS).  
 In such cases, the [`node-manager`](/modules/node-manager/) module provides node configuration management and automation,  
 but its capabilities may be limited by the respective cloud provider's API.
+
+## Adding a static node to a cluster
+
+Adding a static node can be done manually or using the Cluster API Provider Static.
+
+### Manually
+
+Follow the steps below to add a new static node (e.g., VM or bare metal server) to the cluster:
+
+1. For [CloudStatic nodes](/modules/node-manager/cr.html#nodegroup) in the following cloud providers, refer to the steps outlined in the documentation:
+   - [For AWS](/modules/cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For GCP](/modules/cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For YC](/modules/cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+1. Use the existing one or create a new [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource for the NodeGroup. The `nodeType` parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
+1. Get the Base64-encoded script code to add and configure the node.
+
+   Here is how you can get Base64-encoded script code to add a node to the `worker` NodeGroup:
+
+   ```shell
+   NODE_GROUP=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   ```
+
+1. Pre-configure the new node according to the specifics of your environment. For example:
+   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.).
+   - Install the necessary packages.
+   - Configure network connectivity between the new node and the other nodes of the cluster.
+1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 3:
+
+   ```shell
+   echo <Base64-CODE> | base64 -d | bash
+   ```
+
+### Using the Cluster API Provider Static
+
+A brief example of adding a static node to a cluster using Cluster API Provider Static (CAPS):
+
+1. Prepare the necessary resources.
+
+   * Allocate a server (or a virtual machine), configure networking, etc. If required, install specific OS packages and add the mount points on the node.
+
+   * Create a user (`caps` in the example below) and add it to sudoers by running the following command **on the server**:
+
+     ```shell
+     useradd -m -s /bin/bash caps 
+     usermod -aG sudo caps
+     ```
+
+   * Allow the user to run sudo commands without having to enter a password. For this, add the following line to the sudo configuration **on the server** (you can either edit the `/etc/sudoers` file, or run the `sudo visudo` command, or use some other method):
+
+     ```text
+     caps ALL=(ALL) NOPASSWD: ALL
+     ```
+
+   * Generate a pair of SSH keys with an empty passphrase **on the server**:
+
+     ```shell
+     ssh-keygen -t rsa -f caps-id -C "" -N ""
+     ```
+
+     The public and private keys of the `caps` user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.
+
+   * Add the generated public key to the `/home/caps/.ssh/authorized_keys` file of the `caps` user by executing the following commands in the keys directory **on the server**:
+
+     ```shell
+     mkdir -p /home/caps/.ssh 
+     cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
+     chmod 700 /home/caps/.ssh 
+     chmod 600 /home/caps/.ssh/authorized_keys
+     chown -R caps:caps /home/caps/
+     ```
+
+1. Create a [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster:
+
+   Run the following command in the user key directory **on the server** to encode the private key to Base64:
+
+   ```shell
+   base64 -w0 caps-id
+   ```
+
+   On any computer with `kubectl` configured to manage the cluster, create an environment variable with the value of the Base64-encoded private key you generated in the previous step:
+
+   ```shell
+    CAPS_PRIVATE_KEY_BASE64=<BASE64-ENCODED PRIVATE KEY>
+   ```
+
+   Create a [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster):
+
+   ```shell
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: SSHCredentials
+   metadata:
+     name: credentials
+   spec:
+     user: caps
+     privateSSHKey: "${CAPS_PRIVATE_KEY_BASE64}"
+   EOF
+   ```
+
+1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster; specify the IP address of the static node server:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-worker-1
+     labels:
+       role: worker
+   spec:
+     # Specify the IP address of the static node server.
+     address: "<SERVER-IP>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   EOF
+   ```
+
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource in the cluster. Value of `count` defines number of `staticInstances`  which fall under the `labelSelector` that will be bootstrapped and joined into the `nodeGroup`, in this example this is `1`:
+
+   > The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
+   EOF
+   ```
+
+### Using Cluster API Provider Static for multiple node groups
+
+This example shows how you can use filters in the StaticInstance `label selector` to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
+
+1. Prepare the required resources (3 servers or virtual machines) and create the `SSHCredentials` resource in the same way as step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
+
+1. Create two [NodeGroup](cr.html#nodegroup) in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+
+   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: front
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 2
+       labelSelector:
+         matchLabels:
+           role: front
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
+   EOF
+   ```
+
+1. Create [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources in the cluster and specify the valid IP addresses of the servers:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-front-1
+     labels:
+       role: front
+   spec:
+     address: "<SERVER-FRONT-IP1>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-front-2
+     labels:
+       role: front
+   spec:
+     address: "<SERVER-FRONT-IP2>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: StaticInstance
+   metadata:
+     name: static-worker-1
+     labels:
+       role: worker
+   spec:
+     address: "<SERVER-WORKER-IP>"
+     credentialsRef:
+       kind: SSHCredentials
+       name: credentials
+   EOF
+   ```
 
 ## Adding master nodes in a cloud cluster
 

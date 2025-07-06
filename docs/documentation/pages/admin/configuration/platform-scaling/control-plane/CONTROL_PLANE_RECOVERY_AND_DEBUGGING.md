@@ -124,7 +124,7 @@ If any component of the control plane becomes unavailable, the cluster temporari
 - If `kube-controller-manager` fails, Deployment scaling will stop working.
 - If `kube-apiserver` is unavailable, no requests can be made to the Kubernetes API, although existing applications will continue to function.
 
-However, prolonged unavailability of components disrupts the processing of new objects, response to node failures, and other operations. Eventually, this may impact end users.
+However, prolonged unavailability of control plane components disrupts the processing of new objects, handling of node failures, and other operations. Over time, this can lead to cluster degradation and impact user applications.
 
 To mitigate these risks, the control plane should be scaled to a high-availability configuration — a minimum of three nodes. This is especially critical for `etcd`, which requires a quorum to elect a leader. The quorum works on a majority basis (N/2 + 1) of the total number of nodes.
 
@@ -148,12 +148,12 @@ After new control plane nodes are added:
 
 - The label `node-role.kubernetes.io/control-plane=""` is applied.
 - A DaemonSet launches control plane pods on the new nodes.
-- The Control Plane Manager (CPM) creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
+- DKP creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
 - All DKP modules that support high availability will enable it automatically, unless the global setting `highAvailability` is manually overridden.
 
 Control plane node removal happens in reverse:
 
 - Labels `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` are removed.
-- CPM removes its pods from these nodes.
+- DKP removes its pods from these nodes.
 - etcd members on the nodes are automatically deleted.
 - If the number of nodes drops from two to one, etcd may enter `readonly` mode. In this case, you must start etcd with the `--force-new-cluster` flag, which should be removed after a successful startup.
