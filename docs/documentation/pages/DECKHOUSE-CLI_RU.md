@@ -1,6 +1,6 @@
 ---
-title: Deckhouse CLI
-permalink: ru/cli/d8/
+title: "Описание и установка Deckhouse CLI"
+permalink: ru/deckhouse-cli/
 description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
 lang: ru
 ---
