@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
@@ -227,7 +228,12 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return bootstrapped, nil
 	}
 
-	exts := extenders.NewExtendersStack(bootstrappedHelper, version, logger.Named("extenders"))
+	edition, err := d8edition.Parse(version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	exts := extenders.NewExtendersStack(edition, bootstrappedHelper, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {
