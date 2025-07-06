@@ -42,8 +42,9 @@ type Definition struct {
 	Stage          string   `json:"stage,omitempty" yaml:"stage,omitempty"`
 	ExclusiveGroup string   `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
 
-	Descriptions *ModuleDescriptions          `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
-	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	Descriptions  *ModuleDescriptions           `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
+	Requirements  *v1alpha1.ModuleRequirements  `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	Accessibility *v1alpha1.ModuleAccessibility `json:"accessibility" yaml:"accessibility"`
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 	Path           string                         `json:"-" yaml:"-"`

@@ -40,6 +40,7 @@ const (
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
+	ModulePhaseUnavailable      = "Unavailable"
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"
 	ModulePhaseDownloadingError = "DownloadingError"
@@ -58,6 +59,8 @@ const (
 	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
 	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
 	ModuleReasonModuleDependencyExtender    = "ModuleDependencyExtender"
+	ModuleReasonEditionAvailableExtender    = "EditionAvailableExtender"
+	ModuleReasonEditionEnabledExtender      = "EditionEnabledExtender"
 	ModuleReasonNotInstalled                = "NotInstalled"
 	ModuleReasonDisabled                    = "Disabled"
 	ModuleReasonConflict                    = "Conflict"
@@ -74,6 +77,7 @@ const (
 	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
 	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
 	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
+	ModuleMessageEditionExtender             = "turned off by edition extender"
 	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
 	ModuleMessageModuleDependencyExtender    = "turned off because of unmet module dependencies"
 	ModuleMessageNotInstalled                = "not installed"
@@ -160,6 +164,57 @@ type ModuleProperties struct {
 	AvailableSources []string              `json:"availableSources,omitempty"`
 	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+	Accessibility    *ModuleAccessibility  `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
+}
+
+type ModuleAccessibility struct {
+	Default  *ModuleEdition           `json:"default,omitempty" yaml:"default,omitempty"`
+	Editions map[string]ModuleEdition `json:"editions" yaml:"editions"`
+}
+
+type ModuleEdition struct {
+	Available bool     `json:"available" yaml:"available"`
+	Enabled   []string `json:"enabled" yaml:"enabled"`
+}
+
+func (a *ModuleAccessibility) IsAvailable(editionName string) bool {
+	// fast‑path: if no editions - try to check default
+	if len(a.Editions) == 0 {
+		return a.Default != nil && a.Default.Available
+	}
+
+	// edition‑specific lookup, falling back to the default edition
+	if edition, ok := a.Editions[editionName]; ok {
+		return edition.Available
+	}
+
+	// fallback to the default
+	return a.Default != nil && a.Default.Available
+}
+
+func (a *ModuleAccessibility) IsEnabled(editionName, bundleName string) bool {
+	// fast‑path: if no editions - try to check the default
+	if len(a.Editions) == 0 {
+		return a.Default != nil && isBundleEnabled(a.Default.Enabled, bundleName)
+	}
+
+	// check edition‑specific bundles first
+	if edition, ok := a.Editions[editionName]; ok && isBundleEnabled(edition.Enabled, bundleName) {
+		return true
+	}
+
+	// fallback to the default
+	return a.Default != nil && isBundleEnabled(a.Default.Enabled, bundleName)
+}
+
+func isBundleEnabled(bundles []string, bundleName string) bool {
+	for _, bundle := range bundles {
+		if bundle == bundleName {
+			return true
+		}
+	}
+
+	return false
 }
 
 type ModuleDisableOptions struct {
