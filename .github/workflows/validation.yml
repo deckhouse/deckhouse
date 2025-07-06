@@ -319,6 +319,8 @@ jobs:
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
       run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
       label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_doc_reference: ${{ steps.check_labels.outputs.run_doc_reference }}
+      label_doc_reference: ${{ steps.check_labels.outputs.label_doc_reference }}
       run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
@@ -471,6 +473,35 @@ jobs:
         run: |
           make lint-doc-spellcheck-pr
        # </template: spellcheck_template>
+
+  doc_validation_reference:
+    name: Docs Validation (reference)
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_doc_reference == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_reference }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_doc_reference.sh
 
   copyright_validation:
     name: Copyright Validation
@@ -632,9 +663,9 @@ jobs:
             } catch(error) {
               core.info(`
               \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
-              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields. 
-              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly. 
-              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌 
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields.
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly.
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌
               \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
               `);
               throw(error);
