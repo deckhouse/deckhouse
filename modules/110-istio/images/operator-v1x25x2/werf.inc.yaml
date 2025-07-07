@@ -62,6 +62,6 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)/deckhouse/network/sail-operator.git /src/operator
+  - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/sail-operator.git /src/operator
   - rm -rf /src/operator/.git
 ---
