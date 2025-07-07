@@ -841,7 +841,7 @@ spec:
 
                     Available options:
 
-                      - `ReplaceKeys`: Replaces `source` with `target` in the given label keys.
+                      - `ReplaceKeys`: Replaces `source` with `target` in the specified label keys.
 
                         Example:
 
@@ -855,8 +855,8 @@ spec:
                               - .pod_labels
                         ```
 
-                      - `ParseMessage`: If it can, converts the `message` field from the format specified in `sourceFormat` to an object otherwise, leaves `message` unchanged.
-                            
+                      - `ParseMessage`: Converts the `message` field from the format specified in `sourceFormat` into an object. If conversion fails, the `message` field remains unchanged.
+
                         Examples:
 
                         ```yaml
@@ -932,7 +932,7 @@ spec:
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
-                        description: "Replaces dots with underscores in the specified labels."
+                        description: "Recursive replacement of all matches of the `source` pattern with the `target` value in the specified labels."
                         required:
                           - labels
                           - source
@@ -940,21 +940,21 @@ spec:
                           source:
                             type: string
                             description: |
-                              Replace all matches of this pattern.
-                              Can be a static string or a regular expression
+                              Pattern used to find matches.
+                              Can be a static string or a regular expression.
                           target:
                             type: string
                             default: ""
-                            description: "The string that the matches are replaced with"
+                            description: "Value that replaces all matches of the pattern."
                           labels:
                             type: array
-                            description: "List of labels where dots will be replaced with underscores."
+                            description: "List of labels in which the recursive replacement will be performed."
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
                       parseMessage:
                         type: object
-                        description: "Parse that the message field contains a object."
+                        description: "Converts the `message` field into an object."
                         required:
                           - sourceFormat
                         oneOf:
@@ -1001,7 +1001,7 @@ spec:
                           sourceFormat:
                             type: string
                             enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
-                            description: "Message format for parsing in object."
+                            description: "Message format for converting into an object."
                           string:
                             type: object
                             required:
@@ -1010,7 +1010,7 @@ spec:
                               targetField:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
-                                description: "Target field where the wrapped string is placed."
+                                description: "Target field where the structured message is placed."
                           json:
                             type: object
                             properties:
@@ -1018,7 +1018,7 @@ spec:
                                 type: integer
                                 minimum: 1
                                 maximum: 128
-                                description: "Depth for JSON parsing. A value of zero disables parsing."
+                                description: "Depth for JSON parsing."
                       dropLabels:
                         type: object
                         description: "Removes the specified labels."
