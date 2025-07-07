@@ -69,6 +69,6 @@ secrets:
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/sail-operator.git /src/operator
-  - git apply /patches/*.patch --verbose
+  - git apply --verbose /patches/*.patch
   - rm -rf /src/operator/.git
 ---
