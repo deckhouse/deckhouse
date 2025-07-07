@@ -69,7 +69,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
-{{- if (include "isSystemRegistryEnabled" $) }}
+{{- if (include "isRegistryEnabled" $) }}
   - scheme: https
     port: https-metrics
     path: /distribution/metrics
@@ -82,7 +82,7 @@ spec:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
     - targetLabel: job
-      replacement: system-registry-distribution
+      replacement: registry-distribution
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
@@ -100,7 +100,7 @@ spec:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
     - targetLabel: job
-      replacement: system-registry-auth
+      replacement: registry-auth
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]

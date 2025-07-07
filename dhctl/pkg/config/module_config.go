@@ -101,7 +101,7 @@ func buildModuleConfig(
 }
 
 func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
-	systemRegistryModuleName := "system-registry"
+	systemRegistryModuleName := "registry"
 
 	schemasStore := NewSchemaStore()
 	systemRegistryMC := &ModuleConfig{}

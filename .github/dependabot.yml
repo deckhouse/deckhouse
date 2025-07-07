@@ -448,7 +448,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/038-system-registry/images/mirrorer/app"
+  directory: "/modules/038-registry/images/mirrorer/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -457,7 +457,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/038-system-registry/images/nodeservices-manager/app"
+  directory: "/modules/038-registry/images/nodeservices-manager/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

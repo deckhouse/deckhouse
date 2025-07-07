@@ -397,6 +397,12 @@ var DefaultImagesDigests = map[string]interface{}{
 	"prometheusPushgateway": map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
+	"registry": map[string]interface{}{
+		"dockerAuth":          "imageHash-registry-dockerAuth",
+		"dockerDistribution":  "imageHash-registry-dockerDistribution",
+		"mirrorer":            "imageHash-registry-mirrorer",
+		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
 	},
@@ -461,12 +467,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"serviceWithHealthchecks": map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",
 		"controller": "imageHash-serviceWithHealthchecks-controller",
-	},
-	"systemRegistry": map[string]interface{}{
-		"dockerAuth":          "imageHash-systemRegistry-dockerAuth",
-		"dockerDistribution":  "imageHash-systemRegistry-dockerDistribution",
-		"mirrorer":            "imageHash-systemRegistry-mirrorer",
-		"nodeservicesManager": "imageHash-systemRegistry-nodeservicesManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",

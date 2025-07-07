@@ -46,7 +46,7 @@ const (
 	registryDataDeviceLabelValue = "true"
 
 	registryPodsNamespace = "d8-system"
-	registryModuleName    = "system-registry"
+	registryModuleName    = "registry"
 
 	NgcUmountTaskName = "umount-registry-data-device"
 
@@ -96,14 +96,14 @@ func waitForNoRegistryPodsOnNode(ctx context.Context, kubeClient *client.Kuberne
 		{
 			description: "registry static",
 			labels: map[string]string{
-				"component": "system-registry",
+				"component": "registry",
 				"tier":      "control-plane",
 			},
 		},
 		{
 			description: "registry static pod manager",
 			labels: map[string]string{
-				"app": "system-registry-staticpod-manager",
+				"app": "registry-nodeservices-manager",
 			},
 		},
 	}

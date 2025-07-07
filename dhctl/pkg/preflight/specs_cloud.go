@@ -15,8 +15,8 @@
 package preflight
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -136,7 +136,7 @@ func (pc *Checker) CheckSystemRegistryModuleSupport(_ context.Context) error {
 
 	if err := pc.metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
 		return fmt.Errorf(
-			"the module 'system-registry' is not supported with the cloud provider '%s': %v",
+			"the module 'registry' is not supported with the cloud provider '%s': %v",
 			cloud.Provider,
 			err,
 		)

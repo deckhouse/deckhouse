@@ -37,4 +37,4 @@ upmeterEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true
-systemRegistryEnabled: true
+registryEnabled: true

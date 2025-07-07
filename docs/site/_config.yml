@@ -196,7 +196,7 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
-      path: "*/038-system-registry"
+      path: "*/038-registry"
       type: "pages"
     values:
       d8Revision: ee

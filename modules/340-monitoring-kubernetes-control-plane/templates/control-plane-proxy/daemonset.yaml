@@ -86,7 +86,7 @@ spec:
               path: /scheduler/metrics
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics
-            {{- if (include "isSystemRegistryEnabled" $) }}
+            {{- if (include "isRegistryEnabled" $) }}
             - upstream: http://127.0.0.1:5002/metrics
               path: /distribution/metrics
             - upstream: https://127.0.0.1:5051/metrics

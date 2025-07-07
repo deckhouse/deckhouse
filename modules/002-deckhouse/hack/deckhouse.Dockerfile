@@ -28,7 +28,7 @@ RUN mkdir -p /artifacts/registry && \
       --exclude='settings-conversion/**/*.go' \
       --exclude='hack/**/*.go' \
       --exclude='.dmtlint.yaml' \
-      /deckhouse/modules/038-system-registry/ /artifacts/registry/ && \
+      /deckhouse/modules/038-registry/ /artifacts/registry/ && \
     rsync -a --prune-empty-dirs \
       --exclude='docs' \
       --exclude='charts/helm_lib' \
@@ -93,13 +93,13 @@ RUN ["/bin/bash", "-c", "cp /bin/bash /bin/sh"]
 
 # Replace module helm chart
 RUN rm -r \
-  /deckhouse/modules/038-system-registry/templates \
-  /deckhouse/modules/038-system-registry/openapi \
-  /deckhouse/modules/038-system-registry/monitoring \
+  /deckhouse/modules/038-registry/templates \
+  /deckhouse/modules/038-registry/openapi \
+  /deckhouse/modules/038-registry/monitoring \
   /deckhouse/modules/002-deckhouse/templates \
   /deckhouse/modules/002-deckhouse/openapi
 
 USER deckhouse
 
-COPY --from=src /artifacts/registry /deckhouse/modules/038-system-registry
+COPY --from=src /artifacts/registry /deckhouse/modules/038-registry
 COPY --from=src /artifacts/deckhouse /deckhouse/modules/002-deckhouse
