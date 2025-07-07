@@ -670,11 +670,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	if err = r.client.Update(ctx, settings); err != nil {
 		r.log.Warn("failed to update module settings", slog.String("module", release.GetModuleName()), log.Err(err))
-		r.log.With(
-			slog.String("module_name", release.GetModuleName()),
-			slog.String("release_name", release.GetName()),
-			slog.String("source", release.GetModuleSource()),
-		).Debug("result of handle deployed release", log.Err(err))
 
 		return res, fmt.Errorf("update: %w", err)
 	}
@@ -995,12 +990,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	err = r.applyRelease(ctx, release, task)
 	if err != nil {
-		r.log.With(
-			slog.String("module_name", release.GetModuleName()),
-			slog.String("release_name", release.GetName()),
-			slog.String("source", release.GetModuleSource()),
-		).Debug("result of handle pending release", log.Err(err))
-
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 

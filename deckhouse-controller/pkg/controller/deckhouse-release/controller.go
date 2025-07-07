@@ -273,6 +273,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		res, err := r.reconcileDeployedRelease(ctx, dr)
 		if err != nil {
 			r.logger.Debug("result of reconcile deployed release",
+				slog.String("module_name", dr.GetModuleName()),
 				slog.String("release_name", dr.GetName()),
 				slog.String("release_version", dr.Spec.Version),
 				log.Err(err))
@@ -294,6 +295,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	res, err = r.pendingReleaseReconcile(ctx, dr)
 	if err != nil {
 		r.logger.Debug("result of reconcile pending release",
+			slog.String("module_name", dr.GetModuleName()),
 			slog.String("release_name", dr.GetName()),
 			slog.String("release_version", dr.Spec.Version),
 			log.Err(err))
@@ -795,12 +797,6 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
-		r.logger.Debug("result of bump deckhouse deployment",
-			slog.String("module_name", dr.GetModuleName()),
-			slog.String("release_name", dr.GetName()),
-			slog.String("release_version", dr.Spec.Version),
-			log.Err(err))
-
 		return fmt.Errorf("deploy release: %w", err)
 	}
 
