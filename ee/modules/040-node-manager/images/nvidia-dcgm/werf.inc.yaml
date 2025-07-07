@@ -139,6 +139,8 @@ import:
 - image: libs/glibc
   add: /usr/bin/*
   to: /tmp/usr/bin/
+  includePaths:
+  - ldd
   before: setup
 shell:
   beforeInstall:
