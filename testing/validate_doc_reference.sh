@@ -24,5 +24,5 @@ if [ "$D8_CLI_VERSION" != "$D8_CLI_DOC_VERSION" ]; then
   echo -e "!\n! \td8 help-json > docs/documentation/_data/reference/d8-cli.json\n!"
   exit 1
 else
-  echo "Passed..."
+  echo "Validation passed..."
 fi
