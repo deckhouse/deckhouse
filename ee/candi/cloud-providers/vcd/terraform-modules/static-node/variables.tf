@@ -9,7 +9,7 @@ variable "providerClusterConfiguration" {
   type = any
 
   validation {
-    condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
+    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
     error_message = "Invalid internalNetworkCIDR in VCDClusterConfiguration."
   }
 

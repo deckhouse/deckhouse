@@ -390,7 +390,7 @@ apiVersions:
               not: {}
             edgeGateway:
               not: {}
-        - required: [layout, internalNetworkDNSServers, edgeGateway]
+        - required: [layout, internalNetworkDNSServers, internalNetworkCIDR, edgeGateway]
           properties:
             layout:
               enum: [StandardWithNetwork]
