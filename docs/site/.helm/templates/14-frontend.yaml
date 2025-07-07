@@ -87,6 +87,11 @@ spec:
           - containerPort: 8081
             name: http
             protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -114,6 +119,11 @@ spec:
             - name: VROUTER_DOMAIN_MAP
               value: {{ .Values.global.domain_map | quote }}
             {{- include "vrouter_envs" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /health
