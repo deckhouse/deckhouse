@@ -36,6 +36,11 @@ spec:
             preStop:
               exec:
                 command: ["/usr/sbin/nginx", "-s", "quit"]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
