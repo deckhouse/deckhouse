@@ -1,0 +1,329 @@
+diff --git c/resources/v1.25.2/charts/istiod/templates/deployment.yaml w/resources/v1.25.2/charts/istiod/templates/deployment.yaml
+index 051791f4..a246d8ad 100644
+--- c/resources/v1.25.2/charts/istiod/templates/deployment.yaml
++++ w/resources/v1.25.2/charts/istiod/templates/deployment.yaml
+@@ -99,42 +99,42 @@ spec:
+           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+ {{- end }}
+           args:
+-          - "discovery"
+-          - --monitoringAddr=:15014
++            - "discovery"
++            - --monitoringAddr=:15014
+ {{- if .Values.global.logging.level }}
+-          - --log_output_level={{ .Values.global.logging.level }}
++            - --log_output_level={{ .Values.global.logging.level }}
+ {{- end}}
+ {{- if .Values.global.logAsJson }}
+-          - --log_as_json
++            - --log_as_json
+ {{- end }}
+-          - --domain
+-          - {{ .Values.global.proxy.clusterDomain }}
++            - --domain
++            - {{ .Values.global.proxy.clusterDomain }}
+ {{- if .Values.taint.namespace }}
+-          - --cniNamespace={{ .Values.taint.namespace }}
++            - --cniNamespace={{ .Values.taint.namespace }}
+ {{- end }}
+-          - --keepaliveMaxServerConnectionAge
+-          - "{{ .Values.keepaliveMaxServerConnectionAge }}"
++            - --keepaliveMaxServerConnectionAge
++            - "{{ .Values.keepaliveMaxServerConnectionAge }}"
+ {{- if .Values.extraContainerArgs }}
+           {{- with .Values.extraContainerArgs }}
+             {{- toYaml . | nindent 10 }}
+           {{- end }}
+ {{- end }}
+           ports:
+-          - containerPort: 8080
+-            protocol: TCP
+-            name: http-debug
+-          - containerPort: 15010
+-            protocol: TCP
+-            name: grpc-xds
+-          - containerPort: 15012
+-            protocol: TCP
+-            name: tls-xds
+-          - containerPort: 15017
+-            protocol: TCP
+-            name: https-webhooks
+-          - containerPort: 15014
+-            protocol: TCP
+-            name: http-monitoring
++            - containerPort: 8080
++              protocol: TCP
++              name: http-debug
++            - containerPort: 15010
++              protocol: TCP
++              name: grpc-xds
++            - containerPort: 15012
++              protocol: TCP
++              name: tls-xds
++            - containerPort: 15017
++              protocol: TCP
++              name: https-webhooks
++            - containerPort: 15014
++              protocol: TCP
++              name: http-monitoring
+           readinessProbe:
+             httpGet:
+               path: /ready
+@@ -143,69 +143,69 @@ spec:
+             periodSeconds: 3
+             timeoutSeconds: 5
+           env:
+-          - name: REVISION
+-            value: "{{ .Values.revision | default `default` }}"
+-          - name: PILOT_CERT_PROVIDER
+-            value: {{ .Values.global.pilotCertProvider }}
+-          - name: POD_NAME
+-            valueFrom:
+-              fieldRef:
+-                apiVersion: v1
+-                fieldPath: metadata.name
+-          - name: POD_NAMESPACE
+-            valueFrom:
+-              fieldRef:
+-                apiVersion: v1
+-                fieldPath: metadata.namespace
+-          - name: SERVICE_ACCOUNT
+-            valueFrom:
+-              fieldRef:
+-                apiVersion: v1
+-                fieldPath: spec.serviceAccountName
+-          - name: KUBECONFIG
+-            value: /var/run/secrets/remote/config
+-          # If you explicitly told us where ztunnel lives, use that.
+-          # Otherwise, assume it lives in our namespace
+-          # Also, check for an explicit ENV override (legacy approach) and prefer that
+-          # if present
++            - name: REVISION
++              value: "{{ .Values.revision | default `default` }}"
++            - name: PILOT_CERT_PROVIDER
++              value: {{ .Values.global.pilotCertProvider }}
++            - name: POD_NAME
++              valueFrom:
++                fieldRef:
++                  apiVersion: v1
++                  fieldPath: metadata.name
++            - name: POD_NAMESPACE
++              valueFrom:
++                fieldRef:
++                  apiVersion: v1
++                  fieldPath: metadata.namespace
++            - name: SERVICE_ACCOUNT
++              valueFrom:
++                fieldRef:
++                  apiVersion: v1
++                  fieldPath: spec.serviceAccountName
++            - name: KUBECONFIG
++              value: /var/run/secrets/remote/config
++            # If you explicitly told us where ztunnel lives, use that.
++            # Otherwise, assume it lives in our namespace
++            # Also, check for an explicit ENV override (legacy approach) and prefer that
++            # if present
+           {{ $ztTrustedNS := or .Values.trustedZtunnelNamespace .Release.Namespace }}
+           {{ $ztTrustedName := or .Values.trustedZtunnelName "ztunnel" }}
+           {{- if not .Values.env.CA_TRUSTED_NODE_ACCOUNTS }}
+-          - name: CA_TRUSTED_NODE_ACCOUNTS
+-            value: "{{ $ztTrustedNS }}/{{ $ztTrustedName }}"
++            - name: CA_TRUSTED_NODE_ACCOUNTS
++              value: "{{ $ztTrustedNS }}/{{ $ztTrustedName }}"
+           {{- end }}
+           {{- if .Values.env }}
+           {{- range $key, $val := .Values.env }}
+-          - name: {{ $key }}
+-            value: "{{ $val }}"
++            - name: {{ $key }}
++              value: "{{ $val }}"
+           {{- end }}
+           {{- end }}
+ {{- if .Values.traceSampling }}
+-          - name: PILOT_TRACE_SAMPLING
+-            value: "{{ .Values.traceSampling }}"
++            - name: PILOT_TRACE_SAMPLING
++              value: "{{ .Values.traceSampling }}"
+ {{- end }}
+-# If externalIstiod is set via Values.Global, then enable the pilot env variable. However, if it's set via Values.pilot.env, then
+-# don't set it here to avoid duplication.
+-# TODO (nshankar13): Move from Helm chart to code: https://github.com/istio/istio/issues/52449
++            # If externalIstiod is set via Values.Global, then enable the pilot env variable. However, if it's set via Values.pilot.env, then
++            # don't set it here to avoid duplication.
++            # TODO (nshankar13): Move from Helm chart to code: https://github.com/istio/istio/issues/52449
+ {{- if and .Values.global.externalIstiod (not (and .Values.env .Values.env.EXTERNAL_ISTIOD)) }}
+-          - name: EXTERNAL_ISTIOD
+-            value: "{{ .Values.global.externalIstiod }}"
++            - name: EXTERNAL_ISTIOD
++              value: "{{ .Values.global.externalIstiod }}"
+ {{- end }}
+-          - name: PILOT_ENABLE_ANALYSIS
+-            value: "{{ .Values.global.istiod.enableAnalysis }}"
+-          - name: CLUSTER_ID
+-            value: "{{ $.Values.global.multiCluster.clusterName | default `Kubernetes` }}"
+-          - name: GOMEMLIMIT
+-            valueFrom:
+-              resourceFieldRef:
+-                resource: limits.memory
+-          - name: GOMAXPROCS
+-            valueFrom:
+-              resourceFieldRef:
+-                resource: limits.cpu
+-                divisor: "1"
+-          - name: PLATFORM
+-            value: "{{ coalesce .Values.global.platform .Values.platform }}"
++            - name: PILOT_ENABLE_ANALYSIS
++              value: "{{ .Values.global.istiod.enableAnalysis }}"
++            - name: CLUSTER_ID
++              value: "{{ $.Values.global.multiCluster.clusterName | default `Kubernetes` }}"
++            - name: GOMEMLIMIT
++              valueFrom:
++                resourceFieldRef:
++                  resource: limits.memory
++            - name: GOMAXPROCS
++              valueFrom:
++                resourceFieldRef:
++                  resource: limits.cpu
++                  divisor: "1"
++            - name: PLATFORM
++              value: "{{ coalesce .Values.global.platform .Values.platform }}"
+           resources:
+ {{- if .Values.resources }}
+ {{ toYaml .Values.resources | trim | indent 12 }}
+@@ -218,72 +218,72 @@ spec:
+             runAsNonRoot: true
+             capabilities:
+               drop:
+-              - ALL
++                - ALL
+ {{- if .Values.seccompProfile }}
+             seccompProfile:
+ {{ toYaml .Values.seccompProfile | trim | indent 14 }}
+ {{- end }}
+           volumeMounts:
+-          - name: istio-token
+-            mountPath: /var/run/secrets/tokens
+-            readOnly: true
+-          - name: local-certs
+-            mountPath: /var/run/secrets/istio-dns
+-          - name: cacerts
+-            mountPath: /etc/cacerts
+-            readOnly: true
+-          - name: istio-kubeconfig
+-            mountPath: /var/run/secrets/remote
+-            readOnly: true
++            - name: istio-token
++              mountPath: /var/run/secrets/tokens
++              readOnly: true
++            - name: local-certs
++              mountPath: /var/run/secrets/istio-dns
++            - name: cacerts
++              mountPath: /etc/cacerts
++              readOnly: true
++            - name: istio-kubeconfig
++              mountPath: /var/run/secrets/remote
++              readOnly: true
+           {{- if .Values.jwksResolverExtraRootCA }}
+-          - name: extracacerts
+-            mountPath: /cacerts
++            - name: extracacerts
++              mountPath: /cacerts
+           {{- end }}
+-          - name: istio-csr-dns-cert
+-            mountPath: /var/run/secrets/istiod/tls
+-            readOnly: true
+-          - name: istio-csr-ca-configmap
+-            mountPath: /var/run/secrets/istiod/ca
+-            readOnly: true
++            - name: istio-csr-dns-cert
++              mountPath: /var/run/secrets/istiod/tls
++              readOnly: true
++            - name: istio-csr-ca-configmap
++              mountPath: /var/run/secrets/istiod/ca
++              readOnly: true
+           {{- with .Values.volumeMounts }}
+             {{- toYaml . | nindent 10 }}
+           {{- end }}
+       volumes:
+-      # Technically not needed on this pod - but it helps debugging/testing SDS
+-      # Should be removed after everything works.
+-      - emptyDir:
+-          medium: Memory
+-        name: local-certs
+-      - name: istio-token
+-        projected:
+-          sources:
+-            - serviceAccountToken:
+-                audience: {{ .Values.global.sds.token.aud }}
+-                expirationSeconds: 43200
+-                path: istio-token
+-      # Optional: user-generated root
+-      - name: cacerts
+-        secret:
+-          secretName: cacerts
+-          optional: true
+-      - name: istio-kubeconfig
+-        secret:
+-          secretName: istio-kubeconfig
+-          optional: true
+-      # Optional: istio-csr dns pilot certs
+-      - name: istio-csr-dns-cert
+-        secret:
+-          secretName: istiod-tls
+-          optional: true
+-      - name: istio-csr-ca-configmap
+-        configMap:
+-          name: istio-ca-root-cert
+-          defaultMode: 420
+-          optional: true
++        # Technically not needed on this pod - but it helps debugging/testing SDS
++        # Should be removed after everything works.
++        - emptyDir:
++            medium: Memory
++          name: local-certs
++        - name: istio-token
++          projected:
++            sources:
++              - serviceAccountToken:
++                  audience: {{ .Values.global.sds.token.aud }}
++                  expirationSeconds: 43200
++                  path: istio-token
++        # Optional: user-generated root
++        - name: cacerts
++          secret:
++            secretName: cacerts
++            optional: true
++        - name: istio-kubeconfig
++          secret:
++            secretName: istio-kubeconfig
++            optional: true
++        # Optional: istio-csr dns pilot certs
++        - name: istio-csr-dns-cert
++          secret:
++            secretName: istiod-tls
++            optional: true
++        - name: istio-csr-ca-configmap
++          configMap:
++            name: istio-ca-root-cert
++            defaultMode: 420
++            optional: true
+   {{- if .Values.jwksResolverExtraRootCA }}
+-      - name: extracacerts
+-        configMap:
+-          name: pilot-jwks-extra-cacerts{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
++        - name: extracacerts
++          configMap:
++            name: pilot-jwks-extra-cacerts{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+   {{- end }}
+       {{- with .Values.volumes }}
+         {{- toYaml . | nindent 6}}
+diff --git c/resources/v1.25.2/charts/istiod/templates/zzy_descope_legacy.yaml w/resources/v1.25.2/charts/istiod/templates/zzy_descope_legacy.yaml
+index ae8fced2..73202418 100644
+--- c/resources/v1.25.2/charts/istiod/templates/zzy_descope_legacy.yaml
++++ w/resources/v1.25.2/charts/istiod/templates/zzy_descope_legacy.yaml
+@@ -1,3 +1,3 @@
+ {{/* Copy anything under `.pilot` to `.`, to avoid the need to specify a redundant prefix.
+ Due to the file naming, this always happens after zzz_profile.yaml */}}
+-{{- $_ := mustMergeOverwrite $.Values (index $.Values "pilot") }}
+\ No newline at end of file
++{{- $_ := mustMergeOverwrite $.Values (index $.Values "pilot") }}
