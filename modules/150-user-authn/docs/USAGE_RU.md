@@ -361,6 +361,14 @@ data:
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
+{% alert level="info" %}
+Если команда `htpasswd` недоступна, установите соответствующий пакет:
+
+* `apache2-utils` — для дистрибутивов, основанных на Debian;
+* `httpd-tools` — для дистрибутивов, основанных на CentOS;
+* `apache2-htpasswd` — для ALT Linux.
+{% endalert %}
+
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
 Обратите внимание, что в приведенном примере указан [`ttl`](cr.html#user-v1-spec-ttl).
