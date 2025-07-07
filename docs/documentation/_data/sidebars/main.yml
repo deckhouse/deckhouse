@@ -1675,6 +1675,26 @@ entries:
         ru: Проекты (ТЕСТ)
       folders:
         - title:
+            en: Concepts
+            ru: Концепции
+          folders:
+            - title:
+                en: Glossary
+                ru: Глоссарий
+              url: /test/concepts/glossary.html
+            - title:
+                en: Multitenancy
+                ru: Мультитенантность
+              folders:
+                - title:
+                    en: Projects
+                    ru: Проекты
+                  url: /test/concepts/multitenancy/projects.html
+                - title:
+                    en: Role Model
+                    ru: Ролевая модель
+                  url: /test/concepts/multitenancy/rbac.html
+        - title:
             en: Administration
             ru: Администрирование
           folders:
