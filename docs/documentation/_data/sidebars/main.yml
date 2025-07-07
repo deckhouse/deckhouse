@@ -878,7 +878,7 @@ entries:
             - title:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
-              url: /user/configuration/app-scaling/vpa.html      
+              url: /user/configuration/app-scaling/vpa.html
         - title:
             en: Network
             ru: Сеть
@@ -1155,7 +1155,7 @@ entries:
         - title:
             en: VPA
             ru: VPA
-          url: /architecture/vpa.html 
+          url: /architecture/vpa.html
         - title:
             en: Authentication
             ru: Аутентификация
@@ -1651,26 +1651,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/cloud-provider-dynamix/cr.html
-    - title:
-        en: (УНЕСТИ)
-        ru: (УНЕСТИ)
-      folders:
-        - title:
-            en: node-local-dns
-            ru: node-local-dns (унести в Сеть->Управление DNS в кластере Kubernetes)
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/node-local-dns/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/node-local-dns/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/node-local-dns/configuration.html
     - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
