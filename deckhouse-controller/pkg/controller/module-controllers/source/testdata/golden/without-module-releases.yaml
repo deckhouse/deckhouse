@@ -47,6 +47,8 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: enabledmodule
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.4.2
   weight: 900
 status:

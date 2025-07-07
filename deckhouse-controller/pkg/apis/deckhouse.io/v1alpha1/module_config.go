@@ -28,7 +28,9 @@ const (
 
 	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disabling"
 
-	ModuleConfigFinalizer = "modules.deckhouse.io/module-config"
+	// TODO: remove after 1.73+
+	ModuleConfigFinalizerOld = "modules.deckhouse.io/module-config"
+	ModuleConfigFinalizer    = "modules.deckhouse.io/module-registered"
 
 	ModuleConfigMessageUnknownModule = "Ignored: unknown module name"
 )

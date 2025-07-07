@@ -12,6 +12,7 @@ module "network_security" {
   prefix         = local.prefix
   ssh_allow_list = local.ssh_allow_list
   enabled        = local.network_security
+  enterprise_project_id = local.enterprise_project_id
 }
 
 module "keypair" {
@@ -25,6 +26,7 @@ data "huaweicloud_availability_zones" "zones" {}
 resource "huaweicloud_vpc" "vpc" {
   name = local.prefix
   cidr = local.internal_network_cidr
+  enterprise_project_id = local.enterprise_project_id
 }
 
 resource "huaweicloud_vpc_subnet" "subnet" {
@@ -48,6 +50,7 @@ resource "huaweicloud_nat_gateway" "nat_gateway" {
   spec      = "1"
   vpc_id    = huaweicloud_vpc.vpc.id
   subnet_id = huaweicloud_vpc_subnet.subnet.id
+  enterprise_project_id = local.enterprise_project_id
 }
 
 resource "huaweicloud_nat_snat_rule" "nat_gateway_snat_rule" {
@@ -66,4 +69,6 @@ resource "huaweicloud_vpc_eip" "nat_gateway_vpc_eip" {
     size       = 100
     share_type = "PER"
   }
+
+  enterprise_project_id = local.enterprise_project_id
 }

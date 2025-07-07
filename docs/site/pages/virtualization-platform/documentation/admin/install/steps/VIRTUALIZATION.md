@@ -83,6 +83,10 @@ The `.spec.settings.dvcr.storage` block configures a persistent volume for stori
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size`: Volume size (for example, `50G`). To expand the storage, increase the value of the parameter.
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `sds-replicated-thin-r1`).
 
+{% alert level="warning" %}
+The storage serving this storage class (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`) must be accessible on the nodes where DVCR is running (system nodes, or worker nodes if there are no system nodes).
+{% endalert %}
+
 #### Network settings
 
 The `.spec.settings.virtualMachineCIDRs` block specifies subnets in CIDR format (for example, `10.66.10.0/24`). IP addresses for virtual machines are allocated from these ranges automatically or on request.

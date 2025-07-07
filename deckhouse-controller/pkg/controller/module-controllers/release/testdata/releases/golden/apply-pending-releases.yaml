@@ -83,7 +83,7 @@ metadata:
     source: test
     status: deployed
   name: commander-1.0.3
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: commander
   version: 1.0.3
@@ -135,7 +135,7 @@ metadata:
     source: test
     status: deployed
   name: parca-1.2.2
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.2.2

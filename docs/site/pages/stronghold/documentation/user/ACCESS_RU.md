@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Stronghold"
+title: "Настройка доступа к проекту"
 permalink: ru/stronghold/documentation/user/access.html
 lang: ru
 ---

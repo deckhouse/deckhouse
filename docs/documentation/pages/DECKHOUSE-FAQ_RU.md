@@ -1365,3 +1365,35 @@ spec:
     nodeSelector:
       node-role.deckhouse.io/deckhouse: ""
 ```
+
+### Как принудительно отключить IPv6 на узлах кластера Deckhouse?
+
+> Внутреннее взаимодействие между компонентами кластера Deckhouse осуществляется по протоколу IPv4. Однако, на уровне операционной системы узлов кластера, как правило, по умолчанию активен IPv6. Это приводит к автоматическому присвоению IPv6-адресов всем сетевым интерфейсам, включая интерфейсы подов. В результате возникает нежелательный сетевой трафик — например, избыточные DNS-запросы типа `AAAA`, которые могут повлиять на производительность и усложнить отладку сетевых взаимодействий.
+
+Для корректного отключения IPv6 на уровне узлов в кластере, управляемом Deckhouse, достаточно задать необходимые параметры через ресурс [NodeGroupConfiguration](./modules/node-manager/cr.html#nodegroupconfiguration):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: disable-ipv6.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 50
+  content: |
+    GRUB_FILE_PATH="/etc/default/grub"
+    
+    if ! grep -q "ipv6.disable" "$GRUB_FILE_PATH"; then
+      sed -E -e 's/^(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)"/\1 ipv6.disable=1"/' -i "$GRUB_FILE_PATH"
+      update-grub
+      
+      bb-flag-set reboot
+    fi
+```
+
+{% alert level="warning" %}
+После применения ресурса настройки GRUB будут обновлены, и узлы кластера начнут последовательную перезагрузку для применения изменений.
+{% endalert %}

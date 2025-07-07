@@ -205,8 +205,7 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
     ;;
@@ -215,8 +214,7 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
     ;;
@@ -233,13 +231,11 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
         env VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
-        <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+        envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
     ssh_user="ubuntu"
     ;;
@@ -248,13 +244,11 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
-        envsubst '$PREFIX $OS_PASSWORD' \
-        <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
+        envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
