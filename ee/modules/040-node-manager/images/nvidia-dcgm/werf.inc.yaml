@@ -1,5 +1,5 @@
 {{- $dcgm_version := "4.2.3" }}
-{{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1" }}
+{{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -156,7 +156,6 @@ shell:
       do
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
     done
-    cp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /out/usr/lib/x86_64-linux-gnu/
     ln -s /usr/lib64 /out/lib64
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
