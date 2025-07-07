@@ -357,7 +357,11 @@ echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | ba
 ```
 
 {% alert level="info" %}
-If `htpasswd` command not found, you need to install `apache2-utils` package for Debian-based distribution, `httpd-tools` for CentOS-based distribution and `apache2-htpasswd` for ALT Linux.
+If the `htpasswd` command is not available, install the appropriate package:
+
+* `apache2-utils` — for Debian-based distributions.
+* `httpd-tools` — for CentOS-based distributions.
+* `apache2-htpasswd` — for ALT Linux.
 {% endalert %}
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
