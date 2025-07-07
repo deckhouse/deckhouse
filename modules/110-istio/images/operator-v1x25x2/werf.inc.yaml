@@ -68,7 +68,6 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/sail-operator.git /src/operator
-  - git apply --verbose /patches/*.patch
+  - git clone --depth 1 --branch {{ $istioVersion }}-fix $(cat /run/secrets/SOURCE_REPO)/istio/sail-operator.git /src/operator
   - rm -rf /src/operator/.git
 ---
