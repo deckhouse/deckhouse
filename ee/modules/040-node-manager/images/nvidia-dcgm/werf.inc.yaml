@@ -136,6 +136,10 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
   add: /tmp/x86_64-linux-gnu
   before: install
+- image: libs/glibc
+  add: /usr/bin/*
+  to: /tmp/usr/bin/
+  before: setup
 shell:
   beforeInstall:
   - wget https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox && chmod a+x /busybox
@@ -158,6 +162,7 @@ shell:
       do
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
     done
+    cp /tmp/usr/bin/ldd /out/usr/bin/
     ln -s /usr/lib64 /out/lib64
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -172,8 +177,4 @@ import:
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /busybox
-  before: setup
-- image: libs/glibc
-  add: /usr/bin/*
-  to: /usr/bin/
   before: setup
