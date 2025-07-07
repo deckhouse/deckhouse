@@ -137,11 +137,11 @@ import:
   add: /tmp/x86_64-linux-gnu
   before: install
 - image: libs/glibc
-  add: /*
+  add: /
   to: /tmp/glibc/
   includePaths:
-  - usr
-  - lib64
+  - usr/*
+  - lib64/*
   before: install
 shell:
   beforeInstall:
