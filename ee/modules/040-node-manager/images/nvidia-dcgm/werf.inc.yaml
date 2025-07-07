@@ -137,10 +137,11 @@ import:
   add: /tmp/x86_64-linux-gnu
   before: install
 - image: libs/glibc
-  add: /usr/bin/*
-  to: /tmp/usr/bin/
+  add: /*
+  to: /tmp/glibc/
   includePaths:
-  - ldd
+  - usr
+  - lib64
   before: install
 shell:
   beforeInstall:
@@ -164,7 +165,7 @@ shell:
       do
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
     done
-    cp /tmp/usr/bin/ldd /out/usr/bin/
+    cp -a /tmp/glibc/* /out/
     ln -s /usr/lib64 /out/lib64
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
