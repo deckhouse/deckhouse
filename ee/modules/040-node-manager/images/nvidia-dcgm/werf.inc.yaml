@@ -174,9 +174,6 @@ import:
   add: /busybox
   before: setup
 - image: libs/glibc
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/*
-  - usr/lib64/*
+  add: /usr/bin/*
+  to: /usr/bin/
   before: setup
