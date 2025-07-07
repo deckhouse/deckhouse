@@ -134,7 +134,7 @@
         background-position: calc(100% - 50px) center;
         background-repeat: no-repeat;
         cursor: pointer;
-        transition: opacity 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
+        transition: background-image 0.3s ease-in-out, opacity 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
 
         &__en {
             font-size: 18px;
@@ -144,7 +144,6 @@
         &:hover {
             border-color: #222a5e;
             background-color: #f5f5fb;
-            color: #8c8d8f;
         }
 
         &:active {
@@ -153,16 +152,15 @@
         }
 
         &.active {
-            opacity: 0.5;
-            border-color: #222a5e;
-            background-color: #f5f5fb;
-            color: #8c8d8f;
+            background-image: url(../images/icons/reset_icon-active.svg);
+            border-color:#0064FF;
+            color: #0064FF;
 
             &:hover {
-                opacity: 1;
                 border-color: #222a5e;
+                background-image: url(../images/icons/reset_icon.svg);
                 background-color: #f5f5fb;
-                color: #8c8d8f;
+                color: #C4CAD4;
             }
 
             &:active {
