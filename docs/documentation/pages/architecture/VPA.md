@@ -35,4 +35,4 @@ VPA consists of three components:
 
 When the Updater changes resources, it uses the Eviction API, so the Pod Disruption Budget is respected for the updated pods.
 
-![VPA Architecture](https://raw.githubusercontent.com/kubernetes/design-proposals-archive/acc25e14ca83dfda4f66d8cb1f1b491f26e78ffe/autoscaling/images/vpa-architecture.png)
+![VPA Architecture](../images/vpa/vpa-architecture-en.png)
