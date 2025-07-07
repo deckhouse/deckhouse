@@ -15,8 +15,10 @@
 package log_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -71,6 +73,39 @@ func Test_JSON_Logger(t *testing.T) {
 
 		assert.Contains(t, buf.String(), `{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":`)
 	})
+}
+
+// Test that adapter is working through default import in another package
+func Test_JSON_Logger_Unmarshal(t *testing.T) {
+	t.Parallel()
+
+	buf := bytes.NewBuffer([]byte{})
+
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelDebug),
+		log.WithOutput(buf),
+	)
+
+	logger.Debug("test debug message")
+	logger.Info("test info message")
+	logger.Warn("test warn message")
+	logger.Error("test error message")
+	logger.Log(context.Background(), log.LevelFatal.Level(), "test fatal message")
+
+	// Catch log lines
+	lines := []string{}
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	assert.Equal(t, 5, len(lines), "should have 5 log lines")
+
+	for _, line := range lines {
+		var record map[string]interface{}
+		err := json.Unmarshal([]byte(line), &record)
+		assert.NoError(t, err, line, "log line should be a valid JSON")
+	}
 }
 
 func Test_JSON_LoggerFormat(t *testing.T) {
