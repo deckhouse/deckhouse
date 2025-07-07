@@ -517,10 +517,11 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 
 ## Log transformations
 
-### Transform mixed log format plain strings to structured object
+### Transforming logs into a structured object
 
 You can use the `ParseMessage` transformation
-to wrap or parse a log entry format plain strings into a structured object.
+to convert a string in the `message` field into a structured object.
+If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -552,10 +553,10 @@ Transformed result:
 }
 ```
 
-### Transform mixed log format Klog to structured object
+### Transforming logs in Klog format into a structured object
 
 You can use the `ParseMessage` transformation
-to wrap or parse a log entry in format klog into a structured object.
+to parse logs in Klog format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -590,16 +591,16 @@ Transformed result:
 }
 ```
 
-### Parse Syslog logs to structured object
+### Transforming logs in Syslog format into a structured object
 
 You can use the `ParseMessage` transformation
-to parse Syslog logs into a structured object.
+to parse logs in Syslog format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: klog-to-json
+  name: syslog-to-json
 spec:
   ...
   transformations:
@@ -636,16 +637,16 @@ Transformed result:
 }
 ```
 
-### Parse CLF logs to structured object
+### Transforming logs in CLF format into a structured object
 
 You can use the `ParseMessage` transformation
-to parse CLF logs into a structured object.
+to parse logs in CLF format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: klog-to-json
+  name: clf-to-json
 spec:
   ...
   transformations:
@@ -678,16 +679,16 @@ Transformed result:
 }
 ```
 
-### Parse Logfmt logs to structured object
+### Transforming logs in Logfmt format into a structured object
 
 You can use the `ParseMessage` transformation
-to parse Logfmt logs into a structured object.
+to parse logs in Logfmt format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingDestination
 metadata:
-  name: klog-to-json
+  name: logfmt-to-json
 spec:
   ...
   transformations:
@@ -716,10 +717,10 @@ Transformed result:
 }
 ```
 
-### Parse JSON and reduce nesting
+### Parsing JSON and reducing the nesting depth
 
-You can use the `ParseMessage` transformation to parse a log entry in structured object.
-Also, you can control the nesting depth using the `depth` parameter.
+You can use the `ParseMessage` transformation to parse log entries in JSON format.
+Using the `depth` parameter, you can control the nesting depth.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -752,9 +753,9 @@ Transformed result:
 }
 ```
 
-### Example of parsing mixed logs into a structured object
+### Example of parsing mixed-format entries into a structured object
 
-The string transformation must be the last one.
+The string transformation must be applied last.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -808,9 +809,9 @@ Transformed result:
 }
 ```
 
-### Replace `source` with `target` in label keys
+### Replacing labels
 
-You can use the `ReplaceKeys` transformation to replace `source` in specified label keys with `target`.
+You can use the `ReplaceKeys` transformation to replace `source` with `target` in the specified label keys.
 
 > To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
@@ -849,7 +850,7 @@ Transformed result:
 }
 ```
 
-### Remove labels
+### Removing labels
 
 You can use the `DropLabels` transformation to remove specific labels from log messages.
 
@@ -872,7 +873,7 @@ spec:
 
 #### Example of removing a specific label from a structured message
 
-The following example shows how you can remove a nested label from a structured object message.
+The following example shows how you can remove a label from a structured JSON message.
 The `ParseMessage` transformation is applied first to parse the message,
 followed by `DropLabels` to remove the specified label.
 
