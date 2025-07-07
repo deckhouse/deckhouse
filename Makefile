@@ -1,11 +1,3 @@
-GO=$(shell which go)
-GIT=$(shell which git)
-GOLANGCI_LINT=$(shell which golangci-lint)
-
-.PHONY: go-check
-go-check:
-	$(call error-if-empty,$(GO),go)
-	
 export PATH := $(abspath bin/):${PATH}
 
 FORMATTING_BEGIN_YELLOW = \033[0;33m
@@ -436,6 +428,14 @@ build: set-build-envs ## Build Deckhouse images.
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
+
+GO=$(shell which go)
+GIT=$(shell which git)
+GOLANGCI_LINT=$(shell which golangci-lint)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
 
 .PHONY: go-module-version
 go-module-version: go-check
