@@ -445,7 +445,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
 		"socat1734":                       "imageHash-registrypackages-socat1734",
-		"systemctlPowerCommandsWrapper01": "imageHash-registrypackages-systemctlPowerCommandsWrapper01",
+		"systemctlPowerCommandsWrapper02": "imageHash-registrypackages-systemctlPowerCommandsWrapper02",
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
