@@ -21,6 +21,14 @@ data "vcd_nsxt_app_port_profile" "ssh" {
   scope = "SYSTEM"
 }
 
+data "vcd_nsxt_app_port_profile" "icmp" {
+  count = var.useNSXV ? 0 : 1
+  org   = var.providerClusterConfiguration.organization
+
+  name  = "ICMP ALL"
+  scope = "SYSTEM"
+}
+
 resource "vcd_nsxt_app_port_profile" "node_ports" {
   count       = var.useNSXV ? 0 : 1
   org         = var.providerClusterConfiguration.organization
@@ -52,13 +60,14 @@ resource "vcd_nsxt_firewall" "firewall" {
   }
 
   rule {
-    enabled         = true
-    action          = "ALLOW"
-    name            = format("%s-inbound-icmp", var.providerClusterConfiguration.mainNetwork)
-    direction       = "IN"
-    ip_protocol     = "ICMP"
-    source_ids      = []
-    destination_ids = [vcd_nsxt_ip_set.internal_network[0].id]
+    enabled              = true
+    action               = "ALLOW"
+    name                 = format("%s-inbound-icmp", var.providerClusterConfiguration.mainNetwork)
+    direction            = "IN"
+    ip_protocol          = "IPV4"
+    source_ids           = []
+    destination_ids      = [vcd_nsxt_ip_set.internal_network[0].id]
+    app_port_profile_ids = [data.vcd_nsxt_app_port_profile.icmp[0].id]
   }
 
   rule {
