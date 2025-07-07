@@ -67,6 +67,8 @@ const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
 	controllerName = "d8-deckhouse-release-controller"
+
+	fieldOwner = "deckhouse-release-controller"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -243,7 +245,15 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return res, nil
 
 	case v1alpha1.DeckhouseReleasePhaseDeployed:
-		return r.reconcileDeployedRelease(ctx, dr)
+		res, err := r.reconcileDeployedRelease(ctx, dr)
+		if err != nil {
+			r.logger.Debug("result of reconcile deployed release",
+				slog.String("module_name", dr.GetModuleName()),
+				slog.String("release_name", dr.GetName()),
+				slog.String("release_version", dr.Spec.Version),
+				log.Err(err))
+		}
+		return res, err
 	}
 
 	// update pending release with suspend annotation
@@ -257,7 +267,15 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return res, err
 	}
 
-	return r.pendingReleaseReconcile(ctx, dr)
+	res, err = r.pendingReleaseReconcile(ctx, dr)
+	if err != nil {
+		r.logger.Debug("result of reconcile pending release",
+			slog.String("module_name", dr.GetModuleName()),
+			slog.String("release_name", dr.GetName()),
+			slog.String("release_version", dr.Spec.Version),
+			log.Err(err))
+	}
+	return res, err
 }
 
 // patchManualRelease modify deckhouse release with approved status
@@ -771,15 +789,17 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
-		if len(depl.Spec.Template.Spec.Containers) == 0 {
-			return ErrDeploymentContainerIsNotFound
-		}
+	if len(depl.Spec.Template.Spec.Containers) == 0 {
+		return ErrDeploymentContainerIsNotFound
+	}
+	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-		depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	err = r.client.Patch(ctx, depl, client.Apply, client.FieldOwner(fieldOwner), client.ForceOwnership)
+	if err != nil {
+		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+	}
 
-		return nil
-	})
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
