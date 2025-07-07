@@ -447,6 +447,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			Message: strings.Join(msgs, ";"),
 		})
 		if err != nil {
+			r.logger.Debug("result of update release status",
+				slog.String("module_name", dr.GetModuleName()),
+				slog.String("release_name", dr.GetName()),
+				slog.String("release_version", dr.Spec.Version),
+				log.Err(err))
 			r.logger.Warn("met requirements status update ", slog.String("name", dr.GetName()), log.Err(err))
 		}
 
@@ -456,12 +461,22 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// handling error inside function
 	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
+		r.logger.Debug("result of pre-apply release check",
+			slog.String("module_name", dr.GetModuleName()),
+			slog.String("release_name", dr.GetName()),
+			slog.String("release_version", dr.Spec.Version),
+			log.Err(err))
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	err = r.ApplyRelease(ctx, dr, task)
 	if err != nil {
+		r.logger.Debug("result of apply pending release",
+			slog.String("module_name", dr.GetModuleName()),
+			slog.String("release_name", dr.GetName()),
+			slog.String("release_version", dr.Spec.Version),
+			log.Err(err))
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
@@ -1020,6 +1035,11 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 			return nil
 		})
 		if err != nil {
+			r.logger.Debug("result of update deployed release",
+				slog.String("module_name", dr.GetModuleName()),
+				slog.String("release_name", dr.GetName()),
+				slog.String("release_version", dr.Spec.Version),
+				log.Err(err))
 			return res, err
 		}
 
@@ -1032,6 +1052,11 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 			return nil
 		})
 		if err != nil {
+			r.logger.Debug("result of update status of deployed release",
+				slog.String("module_name", dr.GetModuleName()),
+				slog.String("release_name", dr.GetName()),
+				slog.String("release_version", dr.Spec.Version),
+				log.Err(err))
 			return res, err
 		}
 	}
