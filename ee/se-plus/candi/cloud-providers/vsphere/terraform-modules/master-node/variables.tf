@@ -9,7 +9,7 @@ variable "providerClusterConfiguration" {
   type = any
 
   validation {
-    condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
+    condition     = contains(keys(var.providerClusterConfiguration.masterNodeGroup.instanceClass), "additionalNetworks") ? can(cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 0)): true
     error_message = "Invalid internalNetworkCIDR in VsphereClusterConfiguration."
   }
 
