@@ -157,6 +157,7 @@ shell:
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
     done
     cp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /out/usr/lib/x86_64-linux-gnu/
+    ln -s /usr/lib64 /out/lib64
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -166,7 +167,5 @@ import:
   to: /
   includePaths:
   - usr/*
+  - lib64
   before: setup
-shell:
-  install:
-  - ln -s /usr/lib64 /lib64
