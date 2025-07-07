@@ -82,7 +82,7 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 		},
 	}
 
-	// Set up the manager with leader election and other options
+	// Set up the manager
 	mgr, err := ctrl.NewManager(cfg, options)
 
 	if err != nil {

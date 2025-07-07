@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -103,11 +102,6 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 		},
 	}
 
-	moduleConfig := getModuleConfigObject()
-	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetName() == moduleConfig.GetName()
-	})
-
 	podPredicate := predicate.Funcs{
 		GenericFunc: func(_ event.TypedGenericEvent[client.Object]) bool {
 			return false
@@ -139,11 +133,6 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 		For(
 			&corev1.Secret{},
 			builder.WithPredicates(configPredicate),
-		).
-		Watches(
-			&moduleConfig,
-			newConfigHandler("ModuleConfig"),
-			builder.WithPredicates(moduleConfigPredicate),
 		).
 		Watches(
 			&corev1.Node{},
@@ -182,21 +171,6 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	moduleEnabled, err := sc.checkModuleEnabled(ctx)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot check module enabled: %w", err)
-	}
-
-	if !moduleEnabled {
-		log.Info("Our Module is not enabled, stopping services")
-
-		err := sc.stopServices(ctx)
-		if err != nil {
-			err = fmt.Errorf("cannot stop services: %w", err)
-		}
-		return ctrl.Result{}, err
-	}
-
 	if !sc.checkPodReady(ctx) {
 		log.Info("Our pod is not ready, skipping reconcile")
 		return ctrl.Result{}, nil
@@ -225,21 +199,6 @@ func (sc *servicesController) checkNode(ctx context.Context) (bool, error) {
 	}
 
 	return hasMasterLabel(&node), nil
-}
-
-func (sc *servicesController) checkModuleEnabled(ctx context.Context) (bool, error) {
-	moduleConfig := getModuleConfigObject()
-	key := types.NamespacedName{Name: moduleConfig.GetName()}
-
-	if err := sc.Client.Get(ctx, key, &moduleConfig); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return false, nil
-		}
-		return false, fmt.Errorf("cannot get ModuleConfig: %w", err)
-	}
-
-	enabled, _, _ := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled")
-	return enabled, nil
 }
 
 func (sc *servicesController) checkPodReady(ctx context.Context) bool {
@@ -328,15 +287,6 @@ func (sc *servicesController) getConfigSecretName() string {
 func hasMasterLabel(node *corev1.Node) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
-}
-
-func getModuleConfigObject() unstructured.Unstructured {
-	ret := unstructured.Unstructured{}
-	ret.SetAPIVersion(moduleConfigAPIVersion)
-	ret.SetKind(moduleConfigKind)
-	ret.SetName(registryModuleName)
-
-	return ret
 }
 
 func isPodReady(pod *corev1.Pod) bool {
