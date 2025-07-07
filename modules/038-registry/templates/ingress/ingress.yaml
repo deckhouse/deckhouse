@@ -6,7 +6,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: embedded-registry
+  name: registry
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
   annotations:
@@ -25,12 +25,12 @@ metadata:
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "registry") }}
     http:
       paths:
       - backend:
           service:
-            name: embedded-registry
+            name: registry
             port:
               number: 5001
         path: /
@@ -39,14 +39,14 @@ spec:
       TLS for the ingress
       Condition: enabled if mode == CustomCertificate or CertManager
       How it works:
-          - if mode == CertManager - uses the certificate "embedded-registry-ingress-tls"
-          - if mode == CustomCertificate - uses the certificate "embedded-registry-ingress-tls-customcertificate"
+          - if mode == CertManager - uses the certificate "registry-ingress-tls"
+          - if mode == CustomCertificate - uses the certificate "registry-ingress-tls-customcertificate"
   */ -}}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" . ) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
-    secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
+    - {{ include "helm_lib_module_public_domain" (list . "registry") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-ingress-tls") }}
   {{- end }}
 
 {{- end }}

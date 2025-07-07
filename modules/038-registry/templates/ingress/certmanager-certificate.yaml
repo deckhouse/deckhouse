@@ -1,5 +1,5 @@
 {{- /*
-    Secret: "embedded-registry-ingress-tls"
+    Secret: "registry-ingress-tls"
     Condition: created if mode == "CertManager"
     How it works:
         - creates a certificate using cert-manager
@@ -15,15 +15,15 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: embedded-registry
+  name: registry-ingress
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "embedded-registry")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
-  secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
-  {{ include "helm_lib_module_generate_common_name" (list . "embedded-registry") | nindent 2 }}
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "registry") | nindent 2 }}
   dnsNames:
-    - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
+    - {{ include "helm_lib_module_public_domain" (list . "registry") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
