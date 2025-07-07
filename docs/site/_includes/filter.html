@@ -1,98 +1,5 @@
 <script>
     $(document).ready(function () {
-        /* const sliderContainer = document.querySelector('.filter__slider');
-        const sliderLeft = document.querySelector('.slider-left');
-        const sliderRight = document.querySelector('.slider-right');
-        const sliderRange = document.querySelector('.slider-range');
-
-        const minTime = document.querySelectorAll('.min_time');
-        const maxTime = document.querySelectorAll('.max_time');
-
-        const minValue = 0;
-        const maxValue = 60;
-        const sliderWidth = sliderContainer.offsetWidth;
-
-        let leftPos = 0;
-        let rightPos = sliderWidth;
-        let isLeftDragging = false;
-        let isRightDragging = false;
-
-        let initialLeftValue = 0;
-        let initialRightValue = 60;
-
-        function valueToPossition(value) {
-            return ((value - minValue) / (maxValue - minValue)) * sliderWidth;
-        }
-
-        function positionToValue(position) {
-            return minValue + (position / sliderWidth) * (maxValue - minValue);
-        }
-        
-        leftPos = valueToPossition(initialLeftValue);
-        rightPos = valueToPossition(initialRightValue);
-
-        sliderLeft.style.left = (leftPos - 1) + 'px';
-        sliderRight.style.left = (rightPos - 15) + 'px';
-
-        updateRange();
-
-        sliderLeft.addEventListener('mousedown', e => {
-            isLeftDragging = true;
-            sliderLeft.style.cursor = 'grabbing';
-        })
-
-        sliderRight.addEventListener('mousedown', e => {
-            isRightDragging = true;
-            sliderRight.style.cursor = 'grabbing';
-        })
-
-        document.addEventListener('mouseup', () => {
-            isLeftDragging = false;
-            isRightDragging = false;
-            sliderLeft.style.cursor = 'grab';
-            sliderRight.style.cursor = 'grab';
-        })
-
-        document.addEventListener('mousemove', e => {
-            if(isLeftDragging) {
-                const rect = sliderContainer.getBoundingClientRect();
-                let newLeftPos = e.clientX - rect.left;
-                newLeftPos = Math.max(0, Math.min(newLeftPos, rightPos));
-                leftPos = newLeftPos;
-                sliderLeft.style.left = (leftPos - 1) + 'px';
-                updateRange();
-                updateValue();
-            }
-
-            if(isRightDragging) {
-                const rect = sliderContainer.getBoundingClientRect();
-                let newRightPos = e.clientX - rect.left;
-                newRightPos = Math.min(sliderWidth, Math.max(newRightPos, leftPos));
-                rightPos = newRightPos;
-                sliderRight.style.left = (rightPos - 15) + 'px';
-                updateRange();
-                updateValue();
-            }
-        })
-
-        function updateRange() {
-            sliderRange.style.left = leftPos + 'px';
-            sliderRange.style.width = (rightPos - leftPos) + 'px';
-        }
-
-        function updateValue() {
-            let leftValue = Math.round(positionToValue(leftPos));
-            let rightValue = Math.round(positionToValue(rightPos));
-
-            for(const time of minTime) {
-                time.textContent = leftValue;
-            }
-
-            for(const time of maxTime) {
-                time.textContent = rightValue;
-            }
-        } */
-
         const filterCheckboxes = document.querySelector('.filter__checkboxes');
         const articles = document.querySelectorAll('.button-tile');
         const resetButton = document.querySelector('.reset-check');
@@ -138,7 +45,7 @@
                 resetButton.classList.remove('active');
             }
         }
-        
+
         function createFilters() {
             const tags = getTags();
             tags.forEach(tag => {
@@ -154,13 +61,6 @@
                 checkbox.checked = false;
             });
             filterArticles();
-
-            /*leftPos = valueToPossition(initialLeftValue);
-            rightPos = valueToPossition(initialRightValue);
-            sliderLeft.style.left = (leftPos - 1) + 'px';
-            sliderRight.style.left = (rightPos - 15) + 'px';
-            updateRange();
-            updateValue();*/
         })
 
         createFilters();
@@ -169,22 +69,6 @@
 </script>
 
 <div class="filter__container">
-    <!-- {%- if page.lang == "ru" %}
-        <h2 class="filter__container--title">Время чтения</h2>
-    {%- else %}
-        <h2 class="filter__container--title">Reading Time</h2>
-    {%- endif %}
-    <div class="filter__time">
-        <div class="filter__time--block min_time"><span>0</span></div>
-        <span class="filter__time--text">-</span>
-        <div class="filter__time--block max_time"><span>60</span></div>
-    </div>
-    <div class="filter__slider">
-        <div class="slider-range"></div>
-        <div class="slider slider-left"><div class="slider-runner"><div class="slider-number min_time"><span>0</span></div></div></div>
-        <div class="slider slider-right"><div class="slider-runner"><div class="slider-number max_time"><span>60</span></div></div></div>
-    </div> -->
-
     {%- if page.lang == "ru" %}
         <h2 class="filter__container--title">Категория</h2>
     {%- else %}
