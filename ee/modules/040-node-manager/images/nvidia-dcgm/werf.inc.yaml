@@ -138,10 +138,10 @@ import:
   before: install
 - image: libs/glibc
   add: /usr/bin/*
-  to: /tmp/
+  to: /tmp/usr/bin/
   includePaths:
   - ldd
-  before: setup
+  before: install
 shell:
   beforeInstall:
   - wget https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox && chmod a+x /busybox
