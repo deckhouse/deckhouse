@@ -19,7 +19,7 @@ Horizontal scaling in DKP can be based on any available metrics, such as:
    - Enables scaling based on metrics attached to DKP objects (e.g., Ingress, Service), or metrics aggregated from pods (sum or average per controller). Resources like ServiceMetric and IngressMetric are used for this.
 
 1. [Any other metrics, including external data](hpa.html#scaling-based-on-external-data) (e.g., Amazon SQS metrics, cloud load balancers, SaaS services, etc.).
-   - Useful when the metric source is outside the cluster (e.g., Amazon SQS, cloud Load Balancer, SaaS services). Configured using the CustomPrometheusRules resource.
+   - Useful when the metric source is outside the cluster (e.g., Amazon SQS, cloud Load Balancer, SaaS services). Configured using the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
 
 ## HPA recommendations
 
@@ -42,7 +42,7 @@ If metrics fluctuate, wrap the metric in an aggregation function (e.g., `avg_ove
 
 ## How to enable or disable HPA
 
-HPA does not require separate activation in DKP. However, if you want to scale based on metrics other than CPU and memory, you must enable the `prometheus-metrics-adapter` module. See how to enable it [in the documentation](scaling-by-metrics.html#how-to-enable-prometheus-metrics-adapter).
+HPA does not require separate activation in DKP. However, if you want to scale based on metrics other than CPU and memory, you must enable the [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) module. See how to enable it [in the documentation](scaling-by-metrics.html#how-to-enable-prometheus-metrics-adapter).
 
 ## HPA configuration
 

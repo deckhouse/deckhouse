@@ -167,7 +167,7 @@ metadata:
    d8 platform module enable pod-reloader
    ```
 
-1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](/modules/console/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `pod-reloader` и нажмите на него;
@@ -177,7 +177,7 @@ metadata:
 
 Механизм перезапуска подов работает «из коробки» и не требует обязательной конфигурации. По умолчанию он включён в наборах модулей Default и Managed и отключён в наборе Minimal.
 
-При необходимости его поведение можно изменить в настройках модуля pod-reloader (ModuleConfig `pod-reloader`).
+При необходимости его поведение можно изменить в настройках модуля [pod-reloader](/modules/pod-reloader/) (ModuleConfig `pod-reloader`).
 
 Доступные параметры:
 

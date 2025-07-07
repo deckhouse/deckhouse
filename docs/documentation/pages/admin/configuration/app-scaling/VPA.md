@@ -44,15 +44,15 @@ You can enable VPA in the following ways:
    d8 platform module enable vertical-pod-autoscaler
    ```
 
-1. Via the [Deckhouse Web Interface](../../../../../modules/console/stable/):
+1. Through the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section;
    - Find the vertical-pod-autoscaler module and click on it;
    - Toggle the “Module enabled” switch.
 
-The module has no required configuration — it can be enabled and used with default settings.
+The [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module has no required configuration — it can be enabled and used with default settings.
 
-After creating a [VerticalPodAutoscaler](../../../modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) resource, you can check VPA recommendations using the following command:
+After creating a [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) resource, you can check VPA recommendations using the following command:
 
 ```console
 kubectl describe vpa my-app-vpa

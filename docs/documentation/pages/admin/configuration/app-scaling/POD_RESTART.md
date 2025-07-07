@@ -166,11 +166,17 @@ You can enable or disable the pod restart functionality in the following ways:
    d8 platform module enable pod-reloader
    ```
 
+1. Through the [Deckhouse web interface](/modules/console/):
+
+   - Go to the “Deckhouse → Modules” section;
+   - Find the `pod-reloader` module and click on it;
+   - Toggle the “Module enabled” switch.
+
 ## Configuration
 
 The pod restart mechanism works out of the box and does not require any mandatory configuration. By default, it is enabled in the Default and Managed module bundles and disabled in the Minimal bundle.
 
-If needed, its behavior can be adjusted in the settings of the pod-reloader module (ModuleConfig `pod-reloader`).
+If needed, its behavior can be adjusted in the settings of the [pod-reloader](/modules/pod-reloader/) module (ModuleConfig `pod-reloader`).
 
 Available parameters:
 

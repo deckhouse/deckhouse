@@ -21,7 +21,7 @@ To simplify metric-based scaling configuration, DKP offers special resources (`C
 
 To configure scaling based on metrics, follow these steps:
 
-1. Enable the `prometheus-metrics-adapter` module. It allows you to define custom resources that describe metric calculation rules using PromQL queries.
+1. Enable the [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) module. It allows you to define custom resources that describe metric calculation rules using PromQL queries.
 
    You can enable the `prometheus-metrics-adapter` module in the Deckhouse web interface or via the following command:
 
@@ -31,7 +31,7 @@ To configure scaling based on metrics, follow these steps:
 
 1. Define a PromQL query that describes the desired metric (e.g., application request rate or CPU usage over time). This query is registered in the cluster as a metric for HPA.
 
-1. Create a [HorizontalPodAutoscaler](../../../reference/cr/horizontalpodautoscaler/) resource, specifying the metric name and threshold value. Kubernetes will query the result of your PromQL expression and compare it to the threshold, adjusting the number of replicas as needed (see the [HPA configuration documentation](hpa.html#hpa-configuration) for more details).
+1. Create a HorizontalPodAutoscaler) resource, specifying the metric name and threshold value. Kubernetes will query the result of your PromQL expression and compare it to the threshold, adjusting the number of replicas as needed (see the [HPA configuration documentation](hpa.html#hpa-configuration) for more details).
 
 Example PromQL query:
 
@@ -96,7 +96,7 @@ spec:
 
 ### Configuring metrics via CustomPrometheusRules
 
-If you need to define custom metric calculation rules without using the built-in DKP `Cluster*Metric` and `*Metric` resources, you can use the [CustomPrometheusRules](../../../reference/cr/customprometheusrules/) resource.
+If you need to define custom metric calculation rules without using the built-in DKP `Cluster*Metric` and `*Metric` resources, you can use the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
 
 Example:
 
@@ -166,7 +166,7 @@ kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
 
 ### Configuring autoscaling in the Deckhouse Web Interface
 
-In Deckhouse Kubernetes Platform, you can configure node autoscaling settings through the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/). This allows you to dynamically change the number of nodes depending on the load.
+In Deckhouse Kubernetes Platform, you can configure node autoscaling settings through the [Deckhouse web interface](/modules/console/). This allows you to dynamically change the number of nodes depending on the load.
 
 To configure autoscaling in the web interface:
 
