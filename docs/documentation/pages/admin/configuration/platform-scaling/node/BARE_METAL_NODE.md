@@ -255,7 +255,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 You cannot change the IP address of a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource.  
 If an incorrect address is specified in a StaticInstance, you need to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
 
-## Can a StaticInstance be deleted
+## Deleting a StaticInstance
 
 A [StaticInstance](/modules/node-manager/cr.html#staticinstance) in the `Pending` state can be safely deleted without any issues.
 

@@ -189,7 +189,7 @@ spec:
       tier: test
 ```
 
-## How to allocate nodes to specific loads
+## Allocating nodes for specific workloads
 
 {% alert level="warning" %}
 You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DKP components. Please, use the `dedicated` or `dedicated.client.com` keys.
@@ -206,7 +206,7 @@ DKP tolerates the `dedicated` by default, so we recommend using the `dedicated` 
 To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
-## How to speed up node provisioning on the cloud when scaling applications horizontally
+## Accelerating node provisioning in the cloud during horizontal application scaling
 
 To speed up the launch of new application replicas during automatic horizontal scaling, it is recommended to maintain a certain number of pre-provisioned (standby) nodes in the cluster.  
 This allows new application Pods to be scheduled quickly without waiting for node creation and initialization.
@@ -378,7 +378,7 @@ spec:
       ${CONFIG_TMP_FILE} 
 ```
 
-### How do I update kernel on nodes
+### Kernel update on nodes
 
 #### Debian-based distros
 
@@ -786,7 +786,55 @@ To add master nodes in a cloud cluster:
      --ssh-agent-private-keys /tmp/.ssh/<key>
    ```
 
-## How to interpret Node Group states
+## Using NodeGroup with priority
+
+The `priority` parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource allows you to define the order in which nodes are provisioned in the cluster.  
+For example, you can configure the cluster to first provision *spot-node* instances and fall back to regular nodes if spot capacity runs out.  
+Or you can instruct the system to prioritize larger nodes when available, and use smaller ones when resources are limited.
+
+Example of creating two NodeGroups using spot-node instances:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 50
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 30
+  nodeType: CloudEphemeral
+```
+
+In the example above, the `cluster-autoscaler` will first attempt to provision a spot-node.
+If it fails to add the node to the cluster within 15 minutes, the `worker-spot` NodeGroup will be paused for 20 minutes, and the `cluster-autoscaler` will start provisioning nodes from the `worker` NodeGroup.
+
+If a new node is needed again after 30 minutes, the autoscaler will again attempt worker-spot first, then fall back to worker.
+
+Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example), all further nodes will be provisioned from the `worker` NodeGroup.
+
+The node templates (labels/taints) for `worker` and `worker-spot` should be identical, or at least compatible with the workload that triggers scaling.
+
+## NodeGroup states and their interpretation
 
 **Ready** — the [NodeGroup](/modules/node-manager/cr.html#nodegroup) contains the minimum required number of scheduled nodes with the status `Ready` for all zones.
 

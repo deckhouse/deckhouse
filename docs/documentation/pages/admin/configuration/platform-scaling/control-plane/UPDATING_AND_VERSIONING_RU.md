@@ -13,7 +13,7 @@ lang: ru
 - Patch-версии (например, 1.27.3 → 1.27.5) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
 - Minor-версии задаются вручную в параметре `kubernetesVersion` в ресурсе ClusterConfiguration.
 
-### Как изменить версию Kubernetes
+### Изменение версии Kubernetes
 
 1. Откройте редактирование [ClusterConfiguration](/installing/configuration.html#clusterconfiguration):
 

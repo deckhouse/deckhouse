@@ -12,7 +12,7 @@ The control plane update process in DKP is fully automated.
 - Patch versions (e.g., 1.27.3 → 1.27.5) are updated automatically with Deckhouse and cannot be managed manually.
 - Minor versions are set manually using the `kubernetesVersion` parameter in the ClusterConfiguration resource.
 
-### How to change the Kubernetes version
+### Changing the Kubernetes version
 
 1. Open the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) editor:
 
