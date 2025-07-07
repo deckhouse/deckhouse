@@ -63,7 +63,7 @@ func filterRegistryDataDeviceNodes(obj *unstructured.Unstructured) (go_hook.Filt
 
 func handleRegistryDataDeviceNodes(input *go_hook.HookInput) error {
 	orchestratorTargetMode := registry_const.ToModeType(
-		input.Values.Get("registry.internal.orchestrator.target_mode").String())
+		input.Values.Get("registry.internal.orchestrator.state.target_mode").String())
 
 	// If the orchestrator is in direct or unmanaged mode, we do not need to check for data devices.
 	// In these modes, the there is no registry instance, so no data devices are required.

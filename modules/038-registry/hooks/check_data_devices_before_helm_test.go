@@ -42,7 +42,8 @@ global:
 registry:
   internal:
     orchestrator:
-      target_mode: "Local"
+      state:
+        target_mode: "Local"
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)
@@ -152,7 +153,7 @@ metadata:
 	Context("With Cloud cluster without devices and in Direct mode", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterConfiguration.clusterType", "Cloud")
-			f.ValuesSet("registry.internal.orchestrator.target_mode", "Direct")
+			f.ValuesSet("registry.internal.orchestrator.state.target_mode", "Direct")
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
@@ -171,7 +172,7 @@ metadata:
 	Context("With Cloud cluster without devices and in Unmanaged mode", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterConfiguration.clusterType", "Cloud")
-			f.ValuesSet("registry.internal.orchestrator.target_mode", "Unmanaged")
+			f.ValuesSet("registry.internal.orchestrator.state.target_mode", "Unmanaged")
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
