@@ -90,7 +90,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 8081
             {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
@@ -108,7 +108,7 @@ spec:
             - mountPath: "/mount/public/ru/modules"
               name: modules-docs-ru
         - name: backend
-          command: ["/app/server"]
+          command: ["/bin/sh","-c", "sleep 50; /app/server"]
           image: {{ index .Values.werf.image "web-backend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
@@ -122,7 +122,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 8082
             {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
