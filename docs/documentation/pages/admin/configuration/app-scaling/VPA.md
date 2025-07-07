@@ -44,7 +44,7 @@ You can enable VPA in the following ways:
    d8 platform module enable vertical-pod-autoscaler
    ```
 
-1. Via the Deckhouse Web Interface:
+1. Through the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section;
    - Find the vertical-pod-autoscaler module and click on it;

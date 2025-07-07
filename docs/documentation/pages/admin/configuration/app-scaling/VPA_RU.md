@@ -45,7 +45,7 @@ VPA может работать в двух режимах:
    d8 platform module enable vertical-pod-autoscaler
    ```
 
-1. Через веб-интерфейс Deckhouse:
+1. Через [веб-интерфейс Deckhouse](/modules/console/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `vertical-pod-autoscaler` и нажмите на него;

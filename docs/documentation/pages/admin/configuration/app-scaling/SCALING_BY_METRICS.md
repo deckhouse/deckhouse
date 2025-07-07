@@ -166,7 +166,7 @@ kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
 
 ### Configuring autoscaling in the Deckhouse Web Interface
 
-In Deckhouse Kubernetes Platform, you can configure node autoscaling settings through the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/). This allows you to dynamically change the number of nodes depending on the load.
+In Deckhouse Kubernetes Platform, you can configure node autoscaling settings through the [Deckhouse web interface](/modules/console/). This allows you to dynamically change the number of nodes depending on the load.
 
 To configure autoscaling in the web interface:
 

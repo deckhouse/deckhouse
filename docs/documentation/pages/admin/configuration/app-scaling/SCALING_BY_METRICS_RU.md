@@ -167,7 +167,7 @@ kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
 
 ### Настройка автомасштабирования в веб-интерфейсе Deckhouse
 
-В Deckhouse Kubernetes Platform можно настраивать параметры автомасштабирования узлов через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/). Это позволяет динамически изменять количество узлов в зависимости от нагрузки.
+В Deckhouse Kubernetes Platform можно настраивать параметры автомасштабирования узлов через [веб-интерфейс Deckhouse](/modules/console/). Это позволяет динамически изменять количество узлов в зависимости от нагрузки.
 
 Чтобы настроить автомасштабирование в веб-интерфейсе:
 

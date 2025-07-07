@@ -167,7 +167,7 @@ metadata:
    d8 platform module enable pod-reloader
    ```
 
-1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](/modules/console/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `pod-reloader` и нажмите на него;

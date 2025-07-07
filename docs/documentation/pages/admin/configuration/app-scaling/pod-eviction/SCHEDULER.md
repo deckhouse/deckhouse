@@ -280,7 +280,7 @@ You can do this in one of the following ways:
    d8 platform module disable descheduler
    ```
 
-1. Through the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/):
+1. Through the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section;
    - Find the `descheduler` module and click on it;
