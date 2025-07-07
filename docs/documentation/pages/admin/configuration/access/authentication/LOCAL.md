@@ -34,6 +34,15 @@ You can generate the hash using the following command:
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
+{% alert level="info" %}
+If `htpasswd` command not found, you need to install `apache2-utils` package for Debian-based distribution and `httpd-utils` for CentOS-based distribution.
+If the `htpasswd` command is not available, install the appropriate package:
+
+* `apache2-utils` — for Debian-based distributions.
+* `httpd-tools` — for CentOS-based distributions.
+* `apache2-htpasswd` — for ALT Linux.
+{% endalert %}
+
 ## Adding a user to a group
 
 To group static users together, create a Group resource.

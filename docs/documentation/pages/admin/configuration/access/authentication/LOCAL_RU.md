@@ -35,6 +35,15 @@ spec:
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
+{% alert level="info" %}
+Если команда `htpasswd` не найдена установите пакет `apache2-utils` для Debian-основанных дистрибутивов и `httpd-utils` для CentOS-основанных дистрибутивов.
+Если команда `htpasswd` недоступна, установите соответствующий пакет:
+
+* `apache2-utils` — для дистрибутивов, основанных на Debian;
+* `httpd-tools` — для дистрибутивов, основанных на CentOS;
+* `apache2-htpasswd` — для ALT Linux.
+{% endalert %}
+
 ## Добавление пользователя в группу
 
 Чтобы объединять статических пользователей в группы, создайте ресурс Group.
