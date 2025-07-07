@@ -2,7 +2,7 @@ module github.com/deckhouse/deckhouse/go_lib/cloud-data
 
 go 1.23.1
 
-toolchain go1.24.3
+toolchain go1.23.4
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
