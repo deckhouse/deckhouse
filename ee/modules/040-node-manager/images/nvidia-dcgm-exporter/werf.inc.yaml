@@ -77,7 +77,7 @@ import:
   before: setup
 - image: libs/glibc
   add: /
-  to: /tmp/glibc/
+  to: /
   includePaths:
   - usr/*
   - lib64/*
