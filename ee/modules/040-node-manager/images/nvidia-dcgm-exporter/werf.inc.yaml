@@ -81,7 +81,7 @@ import:
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /usr/lib/x86_64-linux-gnu/
-  to: /usr/lib64/
+  to: /lib/x86_64-linux-gnu/
   includePaths:
     - libdcgm.so.*
   before: setup
