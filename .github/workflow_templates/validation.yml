@@ -82,8 +82,7 @@ jobs:
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
       run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
       label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
-      run_doc_reference: ${{ steps.check_labels.outputs.run_doc_reference }}
-      label_doc_reference: ${{ steps.check_labels.outputs.label_doc_reference }}
+      run_doc_reference: "true"
       run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
