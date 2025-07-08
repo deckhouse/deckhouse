@@ -62,7 +62,7 @@ func applyModuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, fmt.Errorf("cannot convert object to module: %v", err)
 	}
 
-	return mc, nil
+	return mc.Name, nil
 }
 
 func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -72,7 +72,7 @@ func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
 	}
 
-	return mc, nil
+	return mc.Name, nil
 }
 
 func enablePrompp(input *go_hook.HookInput) error {
@@ -92,10 +92,10 @@ func enablePrompp(input *go_hook.HookInput) error {
 	mc := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ModuleConfig",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name": promppModuleName,
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"enabled": true,
 		},
 	}}
