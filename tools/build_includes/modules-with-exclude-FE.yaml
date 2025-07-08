@@ -330,6 +330,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
   excludePaths:
@@ -535,16 +548,6 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
   stageDependencies:
     install:
         - '**/*'

@@ -1892,9 +1892,17 @@ entries:
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
     - title:
-        en: Deckhouse CLI
-        ru: Deckhouse CLI
-      url: /deckhouse-cli/
+        en: Deckhouse CLI (d8)
+        ru: Deckhouse CLI (d8)
+      folders:
+      - title:
+          en: Overview and installation
+          ru: Описание и установка
+        url: /deckhouse-cli/
+      - title:
+          en: Reference
+          ru: Справка
+        url: /deckhouse-cli/reference/
     - title:
         en: Used software
         ru: Используемое ПО

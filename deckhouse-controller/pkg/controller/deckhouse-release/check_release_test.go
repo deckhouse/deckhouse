@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
@@ -34,8 +35,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
@@ -79,7 +83,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 					"version.json": fmt.Sprintf("{`version`: `%s`}", testDeckhouseVersion),
 				}}}, nil
 		}}
-
 	suite.Run("Have new deckhouse image", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
@@ -412,6 +415,42 @@ global:
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Release with module.yaml", func() {
+		moduleYaml := `
+name: deckhouse
+weight: 2
+stage: "General Availability"
+requirements:
+  kubernetes: ">= 1.27"
+subsystems:
+  - deckhouse
+namespace: d8-system
+disable:
+  confirmation: true
+  message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+`
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version": "v1.16.0"}`,
+						"module.yaml":  moduleYaml,
+					}},
+				}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
+			},
+		}, nil)
+
+		suite.setupController("release-with-module-yaml.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("StepByStepUpdateFailed", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",
@@ -558,13 +597,23 @@ global:
 			},
 		}, nil)
 
-		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode: v1alpha1.UpdateModeAuto.String(),
+		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha2.ModuleUpdatePolicySpec{
+			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+				Mode: v1alpha2.UpdateModeAuto.String(),
 			},
 			ReleaseChannel: "LTS",
 		})
 		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Correct links in registry", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.18.0",
+			// versions differ only in patch and we don't have requests to registry
+			[]string{"v1.15.0", "v1.16.0", "v1.17.0", "v1.18.0"})
+		suite.setupController("correct-link-registry.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		err := suite.ctr.checkDeckhouseRelease(context.TODO())
 		require.NoError(suite.T(), err)
 	})
 }
@@ -649,4 +698,52 @@ func TestKebabCase(t *testing.T) {
 
 		assert.Equal(t, result, kebabed)
 	}
+}
+
+func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags []string) *dependency.MockedContainer {
+	var manifestStub = func() (*v1.Manifest, error) {
+		return &v1.Manifest{
+			Layers: []v1.Descriptor{},
+		}, nil
+	}
+	deckhouseVersionsMock := cr.NewClientMock(t)
+
+	dc := dependency.NewMockedContainer()
+
+	dc.CRClientMap = map[string]cr.Client{}
+
+	deckhouseVersionsMock = deckhouseVersionsMock.ListTagsMock.Return(tags, nil)
+
+	dc.CRClientMap["my.registry.com/deckhouse/release-channel"] = deckhouseVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (v1.Image, error) {
+		_, err := semver.NewVersion(imageTag)
+		if err != nil {
+			imageTag = versionInChannel
+		}
+
+		moduleYaml := `
+name: deckhouse
+weight: 2
+stage: "General Availability"
+requirements:
+  kubernetes: ">= 1.27"
+`
+
+		return &fake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&utils.FakeLayer{},
+					&utils.FakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version": "` + imageTag + `"}`,
+						"module.yaml":  moduleYaml,
+					}},
+				}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.Hash{Algorithm: "sha256"}, nil
+			},
+		}, nil
+	})
+
+	return dc
 }

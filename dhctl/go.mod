@@ -14,7 +14,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.2.0
-	github.com/flant/kube-client v1.2.2
+	github.com/flant/kube-client v1.3.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/go-openapi/strfmt v0.19.5
@@ -43,10 +43,10 @@ require (
 	gopkg.in/satori/go.uuid.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.29.10
-	k8s.io/apiextensions-apiserver v0.29.8
-	k8s.io/apimachinery v0.29.10
-	k8s.io/client-go v0.29.10
+	k8s.io/api v0.30.11
+	k8s.io/apiextensions-apiserver v0.30.11
+	k8s.io/apimachinery v0.30.11
+	k8s.io/client-go v0.30.11
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
@@ -145,8 +145,8 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	k8s.io/cli-runtime v0.29.10 // indirect
-	k8s.io/component-base v0.29.10 // indirect
+	k8s.io/cli-runtime v0.30.11 // indirect
+	k8s.io/component-base v0.30.11 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/kubectl v0.29.10 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect

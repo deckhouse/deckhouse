@@ -30,6 +30,13 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{ $sandbox_image = "deckhouse.local/images:pause" }}
   {{- end }}
 
+  {{- $default_runtime := "runc" }}
+  {{- if .gpu }}
+    {{ $default_runtime = "nvidia" }}
+sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
+sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS 
+  {{- end }}
+
 systemd_cgroup=true
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
@@ -104,7 +111,7 @@ oom_score = 0
     device_ownership_from_security_context = true
     [plugins."io.containerd.grpc.v1.cri".containerd]
       snapshotter = "overlayfs"
-      default_runtime_name = "runc"
+      default_runtime_name = {{ $default_runtime | quote }}
       no_pivot = false
       disable_snapshot_annotations = true
       discard_unpacked_layers = true
@@ -129,6 +136,16 @@ oom_score = 0
           base_runtime_spec = ""
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
             SystemdCgroup = ${systemd_cgroup}
+  {{- if .gpu }}
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+          privileged_without_host_devices = false
+          runtime_engine = ""
+          runtime_root = ""
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+            BinaryName = "/usr/bin/nvidia-container-runtime"
+            SystemdCgroup = false
+  {{- end }}
     [plugins."io.containerd.grpc.v1.cri".cni]
       bin_dir = "/opt/cni/bin"
       conf_dir = "/etc/cni/net.d"

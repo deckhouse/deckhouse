@@ -159,7 +159,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
