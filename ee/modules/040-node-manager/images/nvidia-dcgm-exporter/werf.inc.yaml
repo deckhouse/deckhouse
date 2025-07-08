@@ -75,6 +75,12 @@ import:
   includePaths:
     - lib64
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /usr/lib/x86_64-linux-gnu/
+  to: /usr/lib64/
+  includePaths:
+    - libdcgm.so.*
+  before: setup
 - image: libs/glibc
   add: /
   to: /
