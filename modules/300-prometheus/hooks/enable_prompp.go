@@ -85,7 +85,7 @@ func enablePrompp(input *go_hook.HookInput) error {
 	}
 
 	if hasModuleConfig {
-		input.Logger.Info("prompp module is already enabled, nothing to do")
+		input.Logger.Info("prompp ModuleConfig is present, nothing to do")
 		return nil
 	}
 
