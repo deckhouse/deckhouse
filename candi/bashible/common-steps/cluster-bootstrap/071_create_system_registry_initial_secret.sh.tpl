@@ -32,7 +32,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=distribution.crt=$registry_pki_path/distribution.crt \
   --type='system-registry/node-pki-secret'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-node-${D8_NODE_HOSTNAME}-pki \
-  heritage=deckhouse module=embedded-registry type=node-pki-secret
+  heritage=deckhouse module=registry type=node-pki-secret
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-pki \
@@ -42,7 +42,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=registry-ca.crt=$registry_pki_path/ca.crt \
   --type='system-registry/ca-secret'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-pki \
-  heritage=deckhouse module=embedded-registry type=global-pki-secret
+  heritage=deckhouse module=registry type=global-pki-secret
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-user-rw || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-user-rw \
@@ -51,7 +51,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-literal=passwordHash='{{- $internalRegistryUserRW.passwordHash }}' \
   --type='system-registry/user'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-user-rw \
-  heritage=deckhouse module=embedded-registry type=system-registry-user
+  heritage=deckhouse module=registry type=system-registry-user
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-user-ro || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-user-ro \
@@ -60,6 +60,6 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-literal=passwordHash='{{- $internalRegistryUserRO.passwordHash }}' \
   --type='system-registry/user'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-user-ro \
-  heritage=deckhouse module=embedded-registry type=system-registry-user
+  heritage=deckhouse module=registry type=system-registry-user
 
 {{- end }}

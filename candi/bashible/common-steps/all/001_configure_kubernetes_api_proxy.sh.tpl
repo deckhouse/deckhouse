@@ -49,7 +49,7 @@ stream {
   }
 
 {{- with .registry.proxyEndpoints }}
-  upstream system-registry {
+  upstream registry {
     least_conn;
     {{- range $proxy_endpoint := . }}
     server {{ $proxy_endpoint }};
@@ -70,7 +70,7 @@ stream {
 {{- with .registry.proxyEndpoints }}
   server {
     listen 127.0.0.1:5001;
-    proxy_pass system-registry;
+    proxy_pass registry;
     # 1h timeout for very log pull/push operations
     proxy_timeout 1h;
     proxy_connect_timeout 1s;

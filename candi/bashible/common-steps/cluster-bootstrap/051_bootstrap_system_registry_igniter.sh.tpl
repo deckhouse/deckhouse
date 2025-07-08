@@ -51,7 +51,7 @@
 discovered_node_ip="$(bb-d8-node-ip)"
 
 # Install igniter packages
-bb-package-install "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
+bb-package-install "dockerAuth:{{ .images.registry.dockerAuth }}" "dockerDistribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
 
 # Create a directories for the system registry configuration
 mkdir -p $IGNITER_DIR
@@ -125,7 +125,7 @@ EOF
 
 # Auth certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-auth" \
+  -cn="registry-auth" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \
@@ -135,7 +135,7 @@ mv "${IGNITER_DIR}/auth-key.pem" "${IGNITER_DIR}/auth.key"
 
 # Distribution certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-distribution" \
+  -cn="registry-distribution" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \
@@ -145,7 +145,7 @@ mv "${IGNITER_DIR}/distribution-key.pem" "${IGNITER_DIR}/distribution.key"
 
 # Auth token certs
 echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-auth-token" \
+  -cn="registry-auth-token" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \

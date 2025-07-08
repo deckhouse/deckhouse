@@ -246,7 +246,7 @@ function is_annotation_exist(){
 
 
 # Skip for
-if is_annotation_exist "embedded-registry.deckhouse.io/data-device-mount-lock"; then
+if is_annotation_exist "registry.deckhouse.io/data-device-mount-lock"; then
     exit 0
 fi
 

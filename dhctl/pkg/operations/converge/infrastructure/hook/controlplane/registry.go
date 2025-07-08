@@ -38,9 +38,9 @@ import (
 )
 
 const (
-	registryDataDeviceMountLockAnnotation      = "embedded-registry.deckhouse.io/data-device-mount-lock"
-	registryDataDeviceUnmountAllowedAnnotation = "embedded-registry.deckhouse.io/data-device-umount-allowed"
-	registryDataDeviceUnmountDoneAnnotation    = "embedded-registry.deckhouse.io/data-device-umount-done"
+	registryDataDeviceMountLockAnnotation      = "registry.deckhouse.io/data-device-mount-lock"
+	registryDataDeviceUnmountAllowedAnnotation = "registry.deckhouse.io/data-device-umount-allowed"
+	registryDataDeviceUnmountDoneAnnotation    = "registry.deckhouse.io/data-device-umount-done"
 
 	registryDataDeviceLabel      = "node.deckhouse.io/registry-data-device-ready"
 	registryDataDeviceLabelValue = "true"

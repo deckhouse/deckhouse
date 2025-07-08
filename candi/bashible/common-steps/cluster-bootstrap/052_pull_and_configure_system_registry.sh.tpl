@@ -47,8 +47,8 @@
 {{- $internalRegistryScheme := .registry.bootstrap.upstreamRegistryData.scheme }}
 
 # other data
-{{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.systemRegistry "dockerDistribution") }}
-{{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.systemRegistry "dockerAuth") }}
+{{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
+{{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
 {{ $imgPause := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
 
 # Prepare vars
@@ -128,7 +128,7 @@ EOF
 
 # Auth certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-auth" \
+  -cn="registry-auth" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
@@ -138,7 +138,7 @@ mv "${registry_pki_path}/auth-key.pem" "${registry_pki_path}/auth.key"
 
 # Distribution certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-distribution" \
+  -cn="registry-distribution" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
@@ -148,7 +148,7 @@ mv "${registry_pki_path}/distribution-key.pem" "${registry_pki_path}/distributio
 
 # Auth token certs
 echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
-  -cn="embedded-registry-auth-token" \
+  -cn="registry-auth-token" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
