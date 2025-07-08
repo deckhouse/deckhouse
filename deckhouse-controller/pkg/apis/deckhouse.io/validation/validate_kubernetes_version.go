@@ -73,7 +73,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 			}
 		}
 
-		return allowResult("")
+		return allowResult(nil)
 	})
 
 	// Create webhook.

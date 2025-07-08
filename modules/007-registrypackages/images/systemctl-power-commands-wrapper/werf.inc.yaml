@@ -1,4 +1,4 @@
-{{- $version := "0.1" }}
+{{- $version := "0.2" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
