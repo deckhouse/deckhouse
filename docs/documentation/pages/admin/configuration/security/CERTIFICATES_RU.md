@@ -37,7 +37,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 - `letsencrypt` — выпускает TLS-сертификаты, используя публичный удостоверяющий центр Let’s Encrypt
   и HTTP-валидацию по протоколу ACME.
   Используется для автоматического получения доверенных сертификатов, подходящих для большинства публичных сервисов.
-  Подробное описание настроек доступно [в официальной документации инструмента `cert-manager`](https://cert-manager.io/docs/configuration/acme/).
+  Подробное описание настроек доступно [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/).
 
 - `letsencrypt-staging` — аналогичен `letsencrypt`, но использует тестовый сервер Let’s Encrypt.
   Подходит для отладки конфигурации и проверки процесса выпуска сертификатов.
@@ -54,7 +54,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 - если вы хотите использовать сертификат от Let’s Encrypt, но с DNS-валидацией через стороннего DNS-провайдера;
 - когда необходимо использовать удостоверяющий центр (CA), отличный от Let's Encrypt.
-  Все виды поддерживаемых удостоверяющих центров перечислены [в документации инструмента `cert-manager`](https://cert-manager.io/docs/configuration/issuers/).
+  Все виды поддерживаемых удостоверяющих центров перечислены [в документации `cert-manager`](https://cert-manager.io/docs/configuration/issuers/).
 
 ### Добавление ClusterIssuer с валидацией `DNS-01` через вебхук
 
@@ -62,7 +62,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 чтобы модуль `cert-manager` мог создавать TXT-записи в зоне DNS, связанной с доменом.
 У модуля `cert-manager` есть встроенная поддержка популярных DNS-провайдеров,
 таких как AWS Route53, Google Cloud DNS, Cloudflare и других.
-Полный перечень доступен [в официальной документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/).
+Полный перечень доступен [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
 
 Если провайдер не поддерживается напрямую,
 можно настроить вебхук и разместить в кластере собственный обработчик ACME-запросов,
@@ -243,7 +243,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 Чтобы заказать выпуск сертификата `letsencrypt`, выполните следующие шаги:
 
-1. Создайте ресурс Certificate, опираясь [на документацию инструмента `cert-manager`](https://cert-manager.io/docs/usage/certificate/).
+1. Создайте ресурс Certificate, опираясь [на документацию `cert-manager`](https://cert-manager.io/docs/usage/certificate/).
    Сверяйтесь с примером ниже:
 
    ```yaml
