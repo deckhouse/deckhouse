@@ -270,3 +270,106 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+
+  registry:
+    type: object
+    default:
+      mode: Unmanaged
+
+    x-examples:
+      - mode: Unmanaged
+      - mode: Direct
+        direct:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+    properties:
+      mode:
+        type: string
+        description: |
+          Registry mode
+        enum: [Unmanaged, Direct]
+        x-doc-default: Direct
+        default: Direct
+      direct:
+        type: object
+        description: |
+          Direct mode properties
+        x-example:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTP
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+        properties: &registryDirectProperties
+          imagesRepo:
+            type: string
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+            description: |
+              Address of the container registry with Deckhouse images.
+
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. registry in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
+            minLength: 1
+            x-example: registry.deckhouse.io/deckhouse/ee
+          license:
+            type: string
+            description: License key for accessing container registry with deckhouse images.
+            x-example:
+              - "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          username:
+            type: string
+            description: Username for accessing container registry with deckhouse images.
+            x-example:
+              - "registry-user"
+          password:
+            type: string
+            description: Password for accessing container registry with deckhouse images.
+            x-example:
+              - "123456"
+          scheme:
+            type: string
+            description: Registry access scheme (HTTP or HTTPS).
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+            x-example:
+              - HTTPS
+              - HTTP
+          ca:
+            type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
+
+# TODO(nabokihms): Uncomment the following validation rules. Commented for easier switching between registry modes.
+x-deckhouse-validations:
+- expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) && !has(self.registry.proxy) && !has(self.registry.local) : true"
+  message: "When mode is 'Direct', only 'direct' must be specified."
+# TODO(akraev): Uncomment for release
+# - expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
+#   message: "When mode is 'Unmanaged', 'direct', and 'proxy' options must be omitted."
+
+
+# TODO (akraev): remove (only for testing purposes)
+  imagesOverride:
+    type: object
+    default: {}
+    description: |
+      Images override
+    properties:
+      deckhouse:
+        type: string
+        description: |
+          Deckhouse img full path
+        x-example:
+          - dev-registry.deckhouse.io/deckhouse:latest
+        x-dmt-default: ""
