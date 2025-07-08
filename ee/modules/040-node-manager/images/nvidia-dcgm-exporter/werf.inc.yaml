@@ -68,3 +68,11 @@ import:
     - libdl.so.2
     - libm.so.6
   before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /usr/bin/bash
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/etc/*
+  to: /etc/dcgm-exporter/
+  before: setup
