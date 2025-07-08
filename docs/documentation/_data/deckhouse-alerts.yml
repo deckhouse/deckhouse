@@ -3703,8 +3703,18 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: ""
-      summary: ""
+      description: |
+        PVC `{{ $labels.persistentvolumeclaim }}` in namespace `{{ $labels.namespace }}` uses StorageClass `{{ $labels.storageclass }}`, which is not found in the cluster.
+
+        This could lead to missing data.
+
+        To investigate the issue, inspect the PVC using the following command:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get pvc {{ $labels.persistentvolumeclaim }}
+        ```
+      summary: |
+        StorageClass used by PVC {{ $labels.persistentvolumeclaim }} is not found.
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
