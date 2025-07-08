@@ -64,6 +64,7 @@ import:
   to: /
   includePaths:
   - usr/*
+  - lib
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/etc/*

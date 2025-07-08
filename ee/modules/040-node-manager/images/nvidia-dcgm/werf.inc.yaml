@@ -167,6 +167,7 @@ shell:
     done
     cp -a /tmp/glibc/* /out/
     ln -s /usr/lib64 /out/lib64
+    ln -s /usr/lib /out/lib
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
