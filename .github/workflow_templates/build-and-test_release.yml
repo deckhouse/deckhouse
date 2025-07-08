@@ -124,7 +124,6 @@ jobs:
   check_changelog:
     name: Check changelog
 {!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 4 }!}
-
   build_fe:
     name: Build FE
     needs:

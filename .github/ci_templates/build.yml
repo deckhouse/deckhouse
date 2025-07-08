@@ -15,6 +15,7 @@ steps:
       else
         echo "Not a tag push"
         echo "should_run=false" >> $GITHUB_OUTPUT
+      fi
 
   - name: Extract TAG version
     if: ${{ steps.check-tag.outputs.should_run == 'true' }}

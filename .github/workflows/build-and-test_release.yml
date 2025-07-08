@@ -360,6 +360,7 @@ jobs:
           else
             echo "Not a tag push"
             echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Extract TAG version
         if: ${{ steps.check-tag.outputs.should_run == 'true' }}
@@ -377,7 +378,6 @@ jobs:
             exit 1
           fi
     # </template: check_changelog_template>
-
 
   build_fe:
     name: Build FE
