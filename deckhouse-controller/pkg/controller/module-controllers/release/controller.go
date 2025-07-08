@@ -828,6 +828,7 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 		return nil, &ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	// nolint
 	marshalledPatch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"labels": map[string]any{

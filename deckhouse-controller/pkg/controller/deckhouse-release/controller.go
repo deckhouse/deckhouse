@@ -911,7 +911,10 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		},
 	}
 
-	jsonPatch, _ := json.Marshal(annotationsPatch)
+	jsonPatch, err := json.Marshal(annotationsPatch)
+	if err != nil {
+		return fmt.Errorf("marshal annotations patch: %w", err)
+	}
 	err = r.client.Patch(
 		ctx,
 		&appsv1.Deployment{
