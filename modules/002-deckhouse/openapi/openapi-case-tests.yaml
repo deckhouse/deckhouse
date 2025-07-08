@@ -25,16 +25,11 @@ positive:
         webhook: https://example.com/webhook
         auth:
           bearerToken: token
+
   - registry:
       mode: Direct
       direct:
         imagesRepo: registry.deckhouse.io/test
-  - registry:
-      mode: Proxy
-      proxy:
-        imagesRepo: registry.deckhouse.io/test
-  - registry:
-      mode: Local
   - registry:
       mode: Unmanaged
   values:
@@ -52,18 +47,8 @@ negative:
 #          to: '13:00'
 
   - registry:
-      mode: Direct
-      proxy:
-        imagesRepo: registry.deckhouse.io/test
-  - registry:
       mode: Unmanaged
-      proxy:
-        imagesRepo: registry.deckhouse.io/test
-  - registry:
-      mode: Direct
       direct:
-        imagesRepo: registry.deckhouse.io/test
-      proxy:
         imagesRepo: registry.deckhouse.io/test
 
   values:
