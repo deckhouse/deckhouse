@@ -35,10 +35,12 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Scheme:  "https",
+				Address: "test.registry.io",
+				CA:      "",
+			},
 		},
 	}
 
@@ -64,10 +66,12 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Scheme:  "https",
+				Address: "test.registry.io",
+				CA:      "",
+			},
 		},
 	}
 
@@ -93,10 +97,12 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Scheme:  "https",
+				Address: "test.registry.io",
+				CA:      "",
+			},
 		},
 	}
 

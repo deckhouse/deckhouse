@@ -85,7 +85,7 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 	}
 
 	var versionTagRef name.Reference
-	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" {
+	if strings.ToLower(pc.metaConfig.Registry.Data.Scheme) == "http" {
 		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true), name.Insecure)
 	} else {
 		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true))
@@ -149,13 +149,13 @@ func (pc *Checker) prepareTLS() (*http.Client, error) {
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" || len(pc.metaConfig.Registry.CA) == 0 {
+	if strings.ToLower(pc.metaConfig.Registry.Data.Scheme) == "http" || len(pc.metaConfig.Registry.Data.CA) == 0 {
 		client.Transport = httpTransport
 		return client, nil
 	}
 
 	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(pc.metaConfig.Registry.CA)); !ok {
+	if ok := certPool.AppendCertsFromPEM([]byte(pc.metaConfig.Registry.Data.CA)); !ok {
 		return nil, fmt.Errorf("invalid cert in CA PEM")
 	}
 
