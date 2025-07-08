@@ -59,16 +59,11 @@ import:
   - dcgm-exporter
   - dcgm-exporter-entrypoint.sh
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /usr/lib64
+- image: {{ .ModuleName }}/nvidia-dcgm-build-artifact
+  add: /out/
+  to: /
   includePaths:
-    - libc.so.6
-    - libresolv.so.2
-    - ld-linux-x86-64.so.2
-    - libpthread.so.0
-    - librt.so.1
-    - libdl.so.2
-    - libm.so.6
+  - usr/*
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/etc/*
@@ -79,18 +74,10 @@ import:
   includePaths:
     - lib64
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /usr/lib/x86_64-linux-gnu/
-  to: /lib/x86_64-linux-gnu/
-  includePaths:
-    - libdcgm.so.*
-  before: setup
 - image: libs/glibc
   add: /
   to: /
   includePaths:
-  - usr/*
-  - lib64/*
   - sbin/*
   before: setup
 - image: tools/bash
