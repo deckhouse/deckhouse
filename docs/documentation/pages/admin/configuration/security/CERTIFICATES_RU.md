@@ -4,18 +4,8 @@ permalink: ru/admin/configuration/security/certificates.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет доступ к [`cert-manager`](https://github.com/jetstack/cert-manager),
-инструменту автоматизации при работе с TLS-сертификатами в кластере.
-
-При установке `cert-manager` в кластер учитываются особенности инфраструктуры:
-
-- вебхук-компонент, к которому обращается `kube-apiserver`, размещается на master-узлах;
-- при недоступности вебхука временно удаляется `apiservice`, чтобы не блокировать работу кластера;
-- обновление инструмента `cert-manager` и миграция его ресурсов происходят автоматически.
-
-## Возможности DKP по управлению сертификатами
-
-DKP поддерживает все возможности оригинального `cert-manager`, включая:
+Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства управления TLS-сертификатами в кластере
+и поддерживает:
 
 - заказ сертификатов во всех поддерживаемых источниках, таких как [Let’s Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/);
 - выпуск самоподписанных сертификатов;
@@ -47,7 +37,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 - `letsencrypt` — выпускает TLS-сертификаты, используя публичный удостоверяющий центр Let’s Encrypt
   и HTTP-валидацию по протоколу ACME.
   Используется для автоматического получения доверенных сертификатов, подходящих для большинства публичных сервисов.
-  Подробное описание настроек доступно [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/).
+  Подробное описание настроек доступно [в официальной документации инструмента `cert-manager`](https://cert-manager.io/docs/configuration/acme/).
 
 - `letsencrypt-staging` — аналогичен `letsencrypt`, но использует тестовый сервер Let’s Encrypt.
   Подходит для отладки конфигурации и проверки процесса выпуска сертификатов.
@@ -64,13 +54,13 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 - если вы хотите использовать сертификат от Let’s Encrypt, но с DNS-валидацией через стороннего DNS-провайдера;
 - когда необходимо использовать удостоверяющий центр (CA), отличный от Let's Encrypt.
-  Все виды поддерживаемых удостоверяющих центров перечислены [в документации `cert-manager`](https://cert-manager.io/docs/configuration/issuers/).
+  Все виды поддерживаемых удостоверяющих центров перечислены [в документации инструмента `cert-manager`](https://cert-manager.io/docs/configuration/issuers/).
 
 ### Добавление ClusterIssuer с валидацией `DNS-01` через вебхук
 
 Для подтверждения владения доменом через Let’s Encrypt с помощью метода `DNS-01` необходимо,
-чтобы `cert-manager` мог создавать TXT-записи в зоне DNS, связанной с доменом.
-У `cert-manager` есть встроенная поддержка популярных DNS-провайдеров,
+чтобы модуль `cert-manager` мог создавать TXT-записи в зоне DNS, связанной с доменом.
+У модуля `cert-manager` есть встроенная поддержка популярных DNS-провайдеров,
 таких как AWS Route53, Google Cloud DNS, Cloudflare и других.
 Полный перечень доступен [в официальной документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/).
 
@@ -161,7 +151,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 для всех компонентов DKP или конкретного компонента.
 
 Например, чтобы использовать ClusterIssuer для получения сертификатов для всех компонентов DKP,
-укажите его имя в глобальном параметре `clusterIssuerName`(#TODO):
+укажите его имя в глобальном параметре `clusterIssuerName`:
 
 ```yaml
   spec:
@@ -253,7 +243,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 Чтобы заказать выпуск сертификата `letsencrypt`, выполните следующие шаги:
 
-1. Создайте ресурс Certificate, опираясь [на документацию `cert-manager`](https://cert-manager.io/docs/usage/certificate/).
+1. Создайте ресурс Certificate, опираясь [на документацию инструмента `cert-manager`](https://cert-manager.io/docs/usage/certificate/).
    Сверяйтесь с примером ниже:
 
    ```yaml
@@ -273,9 +263,9 @@ DKP экспортирует метрики в Prometheus, что позволя
      - admin.example.com
    ```
 
-1. `Cert-manager` автоматически запустит проверку владения доменом (challenge) с использованием метода,
+1. Модуль `cert-manager` автоматически запустит проверку владения доменом (challenge) с использованием метода,
    указанного в ресурсе ClusterIssuer — например, `HTTP-01` или `DNS-01`.
-1. `Cert-manager` автоматически создаст временный ресурс Ingress для проверки владения доменом.
+1. Модуль `cert-manager` автоматически создаст временный ресурс Ingress для проверки владения доменом.
    Временный ресурс не влияет на работу основного Ingress-ресурса.
 1. После успешной проверки выпущенный сертификат будет сохранён в Secret, указанный в поле `secretName`.
 
@@ -294,7 +284,7 @@ DKP экспортирует метрики в Prometheus, что позволя
    - ваша почта указана наверху под **Email Address**;
    - для просмотра API-ключа нажмите **View** напротив **Global API Key** внизу страницы.
 
-1. Отредактируйте [настройки `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
+1. Отредактируйте [настройки модуля `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
@@ -388,7 +378,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 
    - зайдите на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) и добавьте пользователя с созданной ранее политикой.
 
-1. Отредактируйте [настройки `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
+1. Отредактируйте [настройки модуля `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
