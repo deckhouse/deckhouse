@@ -316,7 +316,6 @@ apiVersions:
           description:
             Configure firewall rules for the cluster.
           type: boolean
-          default: false
           x-doc-default: false
         mainNetwork:
           description: |
