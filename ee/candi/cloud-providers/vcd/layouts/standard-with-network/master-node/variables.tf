@@ -9,21 +9,21 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 variable "nodeIndex" {
   type    = number
   default = 0
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
-variable "clusterUUID" {
-  type = string
-}
-
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }

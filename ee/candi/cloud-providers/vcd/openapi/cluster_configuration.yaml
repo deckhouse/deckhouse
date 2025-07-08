@@ -293,11 +293,11 @@ apiVersions:
               type: string
               pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
               description: |
-                External IP for build DNAT rule for master node.
+                External IP address for build DNAT rule for master node.
             externalPort:
               type: integer
               description: |
-                External port for build DNAT rule for master node.
+                External TCP port for build DNAT rule for master node.
               minimum: 1
               maximum: 65535
               example: 10022
@@ -389,6 +389,8 @@ apiVersions:
             internalNetworkDNSServers:
               not: {}
             edgeGateway:
+              not: {}
+            enableFirewall:
               not: {}
         - required: [layout, internalNetworkDNSServers, internalNetworkCIDR, edgeGateway]
           properties:
