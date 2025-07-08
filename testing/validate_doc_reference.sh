@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeo pipefail
+
 D8_CLI_VERSION=$(yq eval .d8.d8CliVersion candi/version_map.yml)
 D8_CLI_DOC_VERSION=$(jq -r .version docs/documentation/_data/reference/d8-cli.json)
 
