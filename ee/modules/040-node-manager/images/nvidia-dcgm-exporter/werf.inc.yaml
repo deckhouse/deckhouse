@@ -44,9 +44,7 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/ binary
   - cp cmd/dcgm-exporter/dcgm-exporter /
-  - cp docker/dcgm-exporter-entrypoint.sh /dcgm-exporter-entrypoint.sh
-  - sed -i "s/env bash/bash/" /dcgm-exporter-entrypoint.sh
-  - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
+  - chmod 700 /dcgm-exporter
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -56,7 +54,6 @@ import:
   to: /usr/bin/
   includePaths:
   - dcgm-exporter
-  - dcgm-exporter-entrypoint.sh
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /usr/lib64
@@ -68,10 +65,6 @@ import:
     - librt.so.1
     - libdl.so.2
     - libm.so.6
-  before: setup
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /usr/bin/bash
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/etc/*
