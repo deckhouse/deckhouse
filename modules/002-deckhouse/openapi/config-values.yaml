@@ -1,5 +1,19 @@
 type: object
 properties:
+  # TODO (akraev): remove (only for testing purposes)
+  imagesOverride:
+    type: object
+    default: {}
+    description: |
+      Images override
+    properties:
+      deckhouse:
+        type: string
+        description: |
+          Deckhouse img full path
+        x-example:
+          - dev-registry.deckhouse.io/deckhouse:latest
+        x-dmt-default: ""
   logLevel:
     type: string
     enum: ["Debug", "Info", "Error"]
@@ -357,19 +371,3 @@ x-deckhouse-validations:
 # TODO(akraev): Uncomment for release
 # - expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
 #   message: "When mode is 'Unmanaged', 'direct', and 'proxy' options must be omitted."
-
-
-# TODO (akraev): remove (only for testing purposes)
-  imagesOverride:
-    type: object
-    default: {}
-    description: |
-      Images override
-    properties:
-      deckhouse:
-        type: string
-        description: |
-          Deckhouse img full path
-        x-example:
-          - dev-registry.deckhouse.io/deckhouse:latest
-        x-dmt-default: ""
