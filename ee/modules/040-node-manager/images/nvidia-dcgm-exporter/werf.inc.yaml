@@ -75,3 +75,11 @@ import:
   includePaths:
     - lib64
   before: setup
+- image: libs/glibc
+  add: /
+  to: /tmp/glibc/
+  includePaths:
+  - usr/*
+  - lib64/*
+  - sbin/*
+  before: setup
