@@ -45,6 +45,7 @@ shell:
   - make PREFIX=/ binary
   - cp cmd/dcgm-exporter/dcgm-exporter /
   - cp docker/dcgm-exporter-entrypoint.sh /dcgm-exporter-entrypoint.sh
+  - sed -i "s/env bash/bash/" /dcgm-exporter-entrypoint.sh
   - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
