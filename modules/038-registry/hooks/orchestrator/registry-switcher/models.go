@@ -125,6 +125,7 @@ func (s *State) processResult(params Params, inputs Inputs) Result {
 			Message: "Waiting for deckhouse-controller to become ready",
 		}
 	}
+
 	return Result{
 		Ready: true,
 	}

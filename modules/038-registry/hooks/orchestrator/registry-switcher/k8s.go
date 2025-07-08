@@ -17,6 +17,7 @@ limitations under the License.
 package registryswitcher
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,18 +75,16 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 
 func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 	deckhousePod, err := helpers.SnapshotToSingle[DeckhousePodStatus](input, name)
-	if err != nil {
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return Inputs{}, err
 	}
 
 	if !deckhousePod.IsExist {
-		return Inputs{
-			DeckhousePod: DeckhousePodStatus{
-				IsExist:  false,
-				IsReady:  false,
-				ReadyMsg: "No Deckhouse leader pod found",
-			},
-		}, nil
+		deckhousePod = DeckhousePodStatus{
+			IsExist:  false,
+			IsReady:  false,
+			ReadyMsg: "No Deckhouse leader pod found",
+		}
 	}
 	return Inputs{DeckhousePod: deckhousePod}, err
 }
