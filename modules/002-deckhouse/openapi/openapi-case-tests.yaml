@@ -46,10 +46,11 @@ negative:
 #        - from: '8:00'
 #          to: '13:00'
 
-  - registry:
-      mode: Unmanaged
-      direct:
-        imagesRepo: registry.deckhouse.io/test
+# TODO(akraev): uncomment before release
+#  - registry:
+#      mode: Unmanaged
+#      direct:
+#        imagesRepo: registry.deckhouse.io/test
 
   values:
   - internal:
