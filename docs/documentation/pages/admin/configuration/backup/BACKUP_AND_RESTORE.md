@@ -88,8 +88,8 @@ To properly restore the cluster, follow these steps on the master node:
 1. Restore the etcd database from the snapshot using `etcdctl`:
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
    ```
 
    After the command completes, check that files have appeared in `/var/lib/etcd/`, reflecting the restored state.
@@ -107,6 +107,8 @@ To properly restore the cluster, follow these steps on the master node:
    ```
 
    Pod startup may take some time. Once etcd is running, the cluster will be restored from the snapshot.
+
+1. Restart the master node.
 
 ### Restoring a multi-master cluster
 

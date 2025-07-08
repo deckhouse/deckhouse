@@ -89,8 +89,8 @@ lang: ru
 1. Восстановите базу данных etcd из резервной копии. Воспользуйтесь `etcdctl` для восстановления:
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
    ```
 
    После завершения команды проверьте, что в каталоге `/var/lib/etcd/` появились файлы, соответствующие восстановленному состоянию.
@@ -108,6 +108,8 @@ lang: ru
    ```
 
    Процесс запуска может занять некоторое время. После успешного старта etcd кластер будет восстановлен из резервной копии.
+
+1. Перезапустите master-узел.
 
 ### Восстановление мультимастерного кластера
 
