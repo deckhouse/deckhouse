@@ -2,7 +2,7 @@
   rules:
   - alert: DeckhouseModuleUsesDeletedStorageClass
     expr: |
-      kube_persistentvolumeclaim_info{namespace=~"d8-.*"} unless(kube_persistentvolumeclaim_info{namespace=~"d8-.*"} * on(storageclass) group_left() kube_storageclass_info)
+      sum(kube_persistentvolumeclaim_info{namespace=~"d8-.*"}) by (namespace, persistentvolumeclaim, storageclass) unless on(storageclass) kube_storageclass_info
     for: 10m
     labels:
       tier: cluster
