@@ -95,6 +95,9 @@ common:
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
+  tech_support_stronghold_notice_ce:
+    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Kubernetes Platform, with a valid Deckhouse Kubernetes Platform Technical Support certificate and compliance with the Terms."
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Kubernetes Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Kubernetes Platform и выполнения Условий, опубликованных на legal.flant.ru"
   for_example:
     en: for example
     ru: например

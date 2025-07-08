@@ -315,12 +315,27 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
   },
-  "stronghold": {
+  "stronghold (CE)": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "stronghold (EE)": {
     "editions": [
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "be",
@@ -334,10 +349,18 @@
       "all": {
         "en": "A&nbsp;separate license is&nbsp;required",
         "ru": "Требуется отдельная лицензия"
+      },
+      "cse-lite": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      },
+      "cse-pro": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/stronghold/stable/"
+    "path": "/products/stronghold/documentation/about/editions.html"
   },
   "user-authz": {
     "editionFullyAvailable": [
