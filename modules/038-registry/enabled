@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# 	 http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  # Like control-plane
+  if values::has global.clusterConfiguration ; then
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
+  fi
+
+  # # Only for "Static"
+  # if ! values::has global.clusterConfiguration.clusterType ; then
+  #   echo "Unknown cluster type"
+  #   echo "false" > "$MODULE_ENABLED_RESULT"
+  #   return
+  # fi
+  # cluster_type=$(values::get global.clusterConfiguration.clusterType)
+  # if [ "$cluster_type" != "Static" ]; then
+  #   echo "false" > "$MODULE_ENABLED_RESULT"
+  #   echo "The module is supported only for cluster type Static."
+  #   return
+  # fi
+}
+
+enabled::run "$@"

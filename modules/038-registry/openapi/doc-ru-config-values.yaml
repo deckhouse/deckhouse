@@ -1,0 +1,44 @@
+type: object
+properties:
+  whitelistSourceRanges:
+    description: "Список адресов в формате CIDR, которым разрешено подключение к registry. Если не указано, то разрешено подключение с любых адресов"
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для registry.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед ingress-ом стоит внешний HTTPS-балансер, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+      certManager:
+        description: "Настройки для certmanager."
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для ingress-а registry.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  # TODO (nabokihms): remove (only for testing purposes)
+  imagesOverride:
+    description: |
+      Переопределение образов
+    properties:
+      registryManager:
+        description: |
+          Образ registry manager-а
