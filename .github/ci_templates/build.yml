@@ -1,3 +1,39 @@
+{!{ define "check_changelog_template" }!}
+# <template: check_changelog_template>
+runs-on: ubuntu-latest
+outputs:
+  should-run: ${{ steps.check-tag.outputs.should_run }}
+steps:
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
+
+  - name: Check if this is a tag
+    id: check-tag
+    run: |
+      if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+        echo "This is a tag push"
+        echo "should_run=true" >> $GITHUB_OUTPUT
+      else
+        echo "Not a tag push"
+        echo "should_run=false" >> $GITHUB_OUTPUT
+
+  - name: Extract TAG version
+    if: ${{ steps.check-tag.outputs.should_run == 'true' }}
+    id: get_tag
+    run: |
+      TAG_VERSION="${GITHUB_REF#refs/tags/}"
+      echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+
+  - name: Check if changelog exists
+    if: ${{ steps.check-tag.outputs.should_run == 'true' }}
+    run: |
+      FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
+      if [ ! -f "$FILE" ]; then
+        echo "❌ Changelog file $FILE not found"
+        exit 1
+      fi
+# </template: check_changelog_template>
+{!{ end }!}
+
 {!{ define "go_generate_template" }!}
 # <template: go_generate_template>
 runs-on: [self-hosted, regular]
