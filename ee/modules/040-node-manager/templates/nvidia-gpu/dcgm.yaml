@@ -77,6 +77,13 @@ spec:
             cpu: 200m
             memory: 512Mi
         {{- end }}
+        env:
+          - name: NVIDIA_VISIBLE_DEVICES
+            value: "all"
+          - name: NVIDIA_DISABLE_REQUIRE
+            value: "true"
+          - name: NVIDIA_DRIVER_CAPABILITIES
+            value: "compute,utility,compat32"
         securityContext:
           privileged: true
         ports:
