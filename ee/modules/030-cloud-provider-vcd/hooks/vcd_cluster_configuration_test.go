@@ -43,7 +43,6 @@ virtualApplicationName: vapp
 layout: Standard
 internalNetworkCIDR: 172.16.2.0/24
 mainNetwork: internal
-enableFirewall: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
