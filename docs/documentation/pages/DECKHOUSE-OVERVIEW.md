@@ -13,7 +13,7 @@ Here are some tips on how to find what you need:
 
 If you have any questions, feel free to contact us at [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}). We will do our best to help you.
 
-Commertial Edition users can contact us at [email](mailto:support@deckhouse.io). We will be glad to provide assistance!
+Commercial Edition users can contact us at [email](mailto:support@deckhouse.io). We will be glad to provide assistance!
 
 Interested in improving Deckhouse Kubernetes Platform? Feel free to open a GitHub [Issue](https://github.com/deckhouse/deckhouse/issues/), suggest an [idea](https://github.com/deckhouse/deckhouse/discussions) or join the list of [contributors](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
 
