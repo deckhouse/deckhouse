@@ -6,22 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      customCertificateData:
-        type: object
-        properties:
-          tls.crt:
-            type: string
-            x-examples:
-              - plainstring
-          tls.key:
-            type: string
-            x-examples:
-              - plainstring
-          ca.crt:
-            type: string
-            x-examples:
-              - plainstring
-
       orchestrator:
         type: object
         default: {}
@@ -36,10 +20,10 @@ properties:
             properties:
               target_mode:
                 type: string
-                enum: [Unmanaged, Direct, Proxy, Local]
+                enum: [Unmanaged, Direct]
               mode:
                 type: string
-                enum: [Unmanaged, Direct, Proxy, Local]
+                enum: [Unmanaged, Direct]
               pki:
                 type: object
                 properties:
@@ -69,12 +53,6 @@ properties:
                         type: string
                       password_hash:
                         type: string
-                  rw:
-                    <<: *user
-                  mirror_puller:
-                    <<: *user
-                  mirror_pusher:
-                    <<: *user
               bashible:
                 type: object
                 properties:
@@ -96,25 +74,7 @@ properties:
                     properties:
                       mode:
                         type: string
-                        enum: [Unmanaged, Direct, Proxy, Local]
-                      proxy:
-                        type: object
-                        properties:
-                          ca:
-                            type: string
-                          username:
-                            type: string
-                          password:
-                            type: string
-                      local:
-                        type: object
-                        properties:
-                          ca:
-                            type: string
-                          username:
-                            type: string
-                          password:
-                            type: string
+                        enum: [Unmanaged, Direct]
                       unmanaged:
                         type: object
                         properties:
@@ -185,23 +145,6 @@ properties:
                                 type: string
                               user:
                                 <<: *user
-              node_services:
-                type: object
-                properties:
-                  run:
-                    type: boolean
-                    default: false
-                  nodes:
-                    type: object
-                    additionalProperties:
-                      type: object
-                      properties:
-                        config:
-                          type: object
-                          additionalProperties: true
-                          x-kubernetes-preserve-unknown-fields: true
-                        version:
-                          type: string
               ingress_enabled:
                 type: boolean
               registry_service:

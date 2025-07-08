@@ -17,7 +17,6 @@ limitations under the License.
 package bashible
 
 import (
-	"slices"
 	"strings"
 )
 
@@ -27,10 +26,7 @@ const (
 	ModeUnmanaged ModeType = "Unmanaged"
 	ModeDirect    ModeType = "Direct"
 	ModeProxy     ModeType = "Proxy"
-
-	// The same:
-	ModeDetached ModeType = "Detached" // TODO: remove
-	ModeLocal    ModeType = "Local"
+	ModeLocal     ModeType = "Local"
 )
 
 func ToModeType(mode string) ModeType {
@@ -40,17 +36,9 @@ func ToModeType(mode string) ModeType {
 		return ModeDirect
 	case "proxy":
 		return ModeProxy
-	case "detached":
-		return ModeDetached
 	case "local":
 		return ModeLocal
 	default:
 		return ModeUnmanaged
 	}
-}
-
-func ShouldRunStaticPodRegistry(mode ModeType) bool {
-	staticPodsRegistryModes := []string{ModeProxy, ModeDetached, ModeLocal}
-
-	return slices.Contains(staticPodsRegistryModes, mode)
 }

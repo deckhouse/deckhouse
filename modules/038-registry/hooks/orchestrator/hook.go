@@ -34,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
-	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswitcher "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
@@ -51,7 +50,6 @@ const (
 	pkiSnapName              = "pki"
 	secretsSnapName          = "secrets"
 	usersSnapName            = "users"
-	nodeServicesSnapName     = "node-services"
 	inClusterProxySnapName   = "incluster-proxy"
 	registryServiceSnapName  = "registry-service"
 	bashibleSnapName         = "bashible"
@@ -135,7 +133,6 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		registryswitcher.KubernetesConfig(registrySwitcherSnapName),
 	}
 
-	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
 	ret = append(ret, bashible.KubernetesConfig(bashibleSnapName)...)
 	return ret
 }
@@ -203,11 +200,6 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}
 
-	inputs.IngressClientCA, err = helpers.GetIngressClientCA(input)
-	if err != nil {
-		return fmt.Errorf("get Ingress client CA value error: %w", err)
-	}
-
 	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("get PKI snapshot error: %w", err)
@@ -216,11 +208,6 @@ func handle(input *go_hook.HookInput) error {
 	inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
 	if err != nil {
 		return fmt.Errorf("get Users snapshot error: %w", err)
-	}
-
-	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
-	if err != nil {
-		return fmt.Errorf("get NodeServices snapshots error: %w", err)
 	}
 
 	inputs.InClusterProxy, err = inclusterproxy.InputsFromSnapshot(input, inClusterProxySnapName)

@@ -24,7 +24,6 @@ import (
 
 const (
 	ConditionTypeReady                          = "Ready"
-	ConditionTypeNodeServices                   = "NodeServicesReady"
 	ConditionTypeNodeServicesCleanup            = "CleanupNodeServices"
 	ConditionTypeInClusterProxy                 = "InClusterProxyReady"
 	ConditionTypeInClusterProxyCleanup          = "CleanupInClusterProxy"
@@ -41,7 +40,6 @@ const (
 
 var supportedConditions = map[string]struct{}{
 	ConditionTypeReady:                          {},
-	ConditionTypeNodeServices:                   {},
 	ConditionTypeNodeServicesCleanup:            {},
 	ConditionTypeInClusterProxy:                 {},
 	ConditionTypeInClusterProxyCleanup:          {},

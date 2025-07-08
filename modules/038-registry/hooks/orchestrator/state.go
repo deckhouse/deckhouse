@@ -19,7 +19,6 @@ package orchestrator
 import (
 	"crypto/x509"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
-	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswitcher "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
@@ -48,7 +46,6 @@ type State struct {
 	PKI             pki.State              `json:"pki,omitempty"`
 	Secrets         secrets.State          `json:"secrets,omitempty"`
 	Users           users.State            `json:"users,omitempty"`
-	NodeServices    nodeservices.State     `json:"node_services,omitempty"`
 	InClusterProxy  inclusterproxy.State   `json:"in_cluster_proxy,omitempty"`
 	IngressEnabled  bool                   `json:"ingress_enabled,omitempty"`
 	RegistryService registryservice.Mode   `json:"registry_service,omitempty"`
@@ -104,11 +101,8 @@ func (state *State) clearConditions() {
 }
 
 func (state *State) process(log go_hook.Logger, inputs Inputs) error {
-	switch inputs.Params.Mode {
-	case "":
+	if inputs.Params.Mode == "" {
 		inputs.Params.Mode = registry_const.ModeUnmanaged
-	case registry_const.ModeDetached:
-		inputs.Params.Mode = registry_const.ModeLocal
 	}
 
 	if state.TargetMode != inputs.Params.Mode {
@@ -124,10 +118,6 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	switch state.TargetMode {
-	case registry_const.ModeLocal:
-		return state.transitionToLocal(log, inputs)
-	case registry_const.ModeProxy:
-		return state.transitionToProxy(log, inputs)
 	case registry_const.ModeDirect:
 		return state.transitionToDirect(log, inputs)
 	case registry_const.ModeUnmanaged:
@@ -135,312 +125,6 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
-}
-
-func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
-	if state.Mode == registry_const.ModeProxy {
-		return ErrTransitionNotSupported{
-			From: state.Mode,
-			To:   state.TargetMode,
-		}
-	}
-
-	// Preflight Checks
-	if !state.bashiblePreflightCheck(inputs) {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// PKI
-	pkiResult, err := state.PKI.Process(log)
-	if err != nil {
-		return fmt.Errorf("cannot process PKI: %w", err)
-	}
-
-	// Secrets
-	if err := state.Secrets.Process(); err != nil {
-		return fmt.Errorf("cannot process Secrets: %w", err)
-	}
-
-	// Users
-	usersParams := state.Users.GetParams()
-	usersParams.RO = true
-	usersParams.RW = true
-	usersParams.Mirrorer = true
-
-	if err := state.Users.Process(usersParams, inputs.Users); err != nil {
-		return fmt.Errorf("cannot process Users: %w", err)
-	}
-
-	nodeservicesParams := nodeservices.Params{
-		CA:         pkiResult.CA,
-		Token:      pkiResult.Token,
-		HTTPSecret: state.Secrets.HTTP,
-		UserRO:     *state.Users.RO,
-		Local: &nodeservices.LocalModeParams{
-			UserRW:          *state.Users.RW,
-			UserPuller:      *state.Users.MirrorPuller,
-			UserPusher:      *state.Users.MirrorPusher,
-			IngressClientCA: inputs.IngressClientCA,
-		},
-	}
-	bashibleParam := bashible.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		ModeParams: bashible.ModeParams{
-			Local: &bashible.ProxyLocalModeParams{
-				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-				Username: state.Users.RO.UserName,
-				Password: state.Users.RO.Password,
-			},
-		},
-	}
-	registrySecretParams := registryswitcher.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		ManagedMode: &registryswitcher.ManagedModeParams{
-			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-			Username: state.Users.RO.UserName,
-			Password: state.Users.RO.Password,
-		},
-	}
-
-	// Ingress
-	state.IngressEnabled = true
-
-	// NodeServices
-	nodeServicesResult, err := state.processNodeServices(log, nodeservicesParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !nodeServicesResult.IsReady() {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Check images in nodese registries
-	checkerReady, err := state.processCheckerNodes(
-		inputs,
-		nodeServicesResult,
-		nodeservicesParams.UserRO,
-		nodeservicesParams.CA.Cert,
-	)
-	if err != nil {
-		return fmt.Errorf("cannot process checkper on upstream: %w", err)
-	}
-
-	if !checkerReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Registry service
-	state.RegistryService = registryservice.ModeNodeServices
-
-	// Update Deckhouse-registry secret and wait
-	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedRegistrySwitcher {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Cleanup
-	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
-
-	if !inClusterProxyReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// All done
-	state.Mode = state.TargetMode
-	state.Bashible.UnmanagedParams = nil
-	state.setReadyCondition(true, inputs)
-
-	return nil
-}
-
-func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
-	if state.Mode == registry_const.ModeLocal {
-		return ErrTransitionNotSupported{
-			From: state.Mode,
-			To:   state.TargetMode,
-		}
-	}
-
-	// check upstream registry
-	checkerRegistryParams := checker.RegistryParams{
-		Address:  inputs.Params.ImagesRepo,
-		Scheme:   strings.ToUpper(inputs.Params.Scheme),
-		Username: inputs.Params.UserName,
-		Password: inputs.Params.Password,
-	}
-	if inputs.Params.CA != nil {
-		checkerRegistryParams.CA = string(registry_pki.EncodeCertificate(inputs.Params.CA))
-	}
-
-	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
-	if err != nil {
-		return fmt.Errorf("cannot process checkper on upstream: %w", err)
-	}
-
-	if !checkerReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Preflight Checks
-	if !state.bashiblePreflightCheck(inputs) {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// PKI
-	pkiResult, err := state.PKI.Process(log)
-	if err != nil {
-		return fmt.Errorf("cannot process PKI: %w", err)
-	}
-
-	// Secrets
-	if err := state.Secrets.Process(); err != nil {
-		return fmt.Errorf("cannot process Secrets: %w", err)
-	}
-
-	// Users
-	usersParams := state.Users.GetParams()
-	usersParams.RO = true
-
-	if err := state.Users.Process(usersParams, inputs.Users); err != nil {
-		return fmt.Errorf("cannot process Users: %w", err)
-	}
-
-	nodeservicesParams := nodeservices.Params{
-		CA:         pkiResult.CA,
-		Token:      pkiResult.Token,
-		HTTPSecret: state.Secrets.HTTP,
-		UserRO:     *state.Users.RO,
-		Proxy: &nodeservices.ProxyModeParams{
-			Scheme:     inputs.Params.Scheme,
-			ImagesRepo: inputs.Params.ImagesRepo,
-			UserName:   inputs.Params.UserName,
-			Password:   inputs.Params.Password,
-			TTL:        inputs.Params.TTL,
-			UpstreamCA: inputs.Params.CA,
-		},
-	}
-	bashibleParam := bashible.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		ModeParams: bashible.ModeParams{
-			Proxy: &bashible.ProxyLocalModeParams{
-				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-				Username: state.Users.RO.UserName,
-				Password: state.Users.RO.Password,
-			},
-		},
-	}
-	registrySecretParams := registryswitcher.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		ManagedMode: &registryswitcher.ManagedModeParams{
-			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-			Username: state.Users.RO.UserName,
-			Password: state.Users.RO.Password,
-		},
-	}
-
-	// NodeServices
-	nodeServicesResult, err := state.processNodeServices(log, nodeservicesParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !nodeServicesResult.IsReady() {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Registry service
-	state.RegistryService = registryservice.ModeNodeServices
-
-	// Update Deckhouse-registry secret and wait
-	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedRegistrySwitcher {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Cleanup
-	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
-
-	state.IngressEnabled = false
-
-	if !inClusterProxyReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	usersParams = users.Params{
-		RO: true,
-	}
-
-	if err := state.Users.Process(usersParams, inputs.Users); err != nil {
-		return fmt.Errorf("cannot process Users: %w", err)
-	}
-
-	// All done
-	state.Mode = state.TargetMode
-	state.Bashible.UnmanagedParams = &bashible.UnmanagedModeParams{
-		ImagesRepo: inputs.Params.ImagesRepo,
-		Scheme:     inputs.Params.Scheme,
-		CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
-		Username:   inputs.Params.UserName,
-		Password:   inputs.Params.Password,
-	}
-	state.setReadyCondition(true, inputs)
-
-	return nil
 }
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
@@ -564,17 +248,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Cleanup
-	nodeServicesReady, err := state.cleanupNodeServices(inputs)
-	if err != nil {
-		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
-	}
-
 	state.IngressEnabled = false
-
-	if !nodeServicesReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
 
 	state.Users = users.State{}
 
@@ -683,20 +357,12 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		return nil
 	}
 
-	nodeServicesReady, err := state.cleanupNodeServices(inputs)
-	if err != nil {
-		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
-	}
 	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	state.RegistryService = registryservice.ModeDisabled
 
 	state.IngressEnabled = false
 
-	if !nodeServicesReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
 	if !inClusterProxyReady {
 		state.setReadyCondition(false, inputs)
 		return nil
@@ -812,67 +478,6 @@ func (state *State) processBashibleUnmanagedFinalize(registrySecret deckhouse_re
 	return true, nil
 }
 
-func (state *State) processNodeServices(log go_hook.Logger, params nodeservices.Params, inputs Inputs) (nodeservices.ProcessResult, error) {
-	result, err := state.NodeServices.Process(log, params, inputs.NodeServices)
-	if err != nil {
-		return result, fmt.Errorf("cannot process NodeServices: %w", err)
-	}
-
-	if !result.IsReady() {
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeNodeServices,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            result.GetConditionMessage(),
-		})
-		return result, nil
-	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeNodeServices,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-	return result, nil
-}
-
-func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
-	nodes, err := state.NodeServices.Stop(inputs.NodeServices)
-	if err != nil {
-		return false, fmt.Errorf("cannot stop: %w", err)
-	}
-
-	if len(nodes) > 0 {
-		sort.Strings(nodes)
-
-		builder := new(strings.Builder)
-
-		fmt.Fprintln(builder, "Waiting for nodes cleanup:")
-
-		for _, name := range nodes {
-			fmt.Fprintf(builder, "- %v\n", name)
-		}
-
-		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeNodeServicesCleanup,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: inputs.Params.Generation,
-			Reason:             ConditionReasonProcessing,
-			Message:            builder.String(),
-		})
-		return false, nil
-	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeNodeServicesCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
-	return true, nil
-}
-
 func (state *State) processInClusterProxy(log go_hook.Logger, params inclusterproxy.Params, inputs Inputs) (bool, error) {
 	result, err := state.InClusterProxy.Process(log, params, inputs.InClusterProxy)
 	if err != nil {
@@ -961,49 +566,6 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 			registryAddr: params,
 		},
 		Version: checkerVersion,
-	}
-
-	isReady := state.setCheckerCondition(inputs)
-	return isReady, nil
-}
-
-func (state *State) processCheckerNodes(
-	inputs Inputs,
-	nodeServicesResult nodeservices.ProcessResult,
-	user users.User,
-	ca *x509.Certificate,
-) (bool, error) {
-	checkerRegistry := checker.RegistryParams{
-		Scheme:   "HTTPS",
-		Username: user.UserName,
-		Password: user.Password,
-	}
-
-	if ca != nil {
-		checkerRegistry.CA = string(registry_pki.EncodeCertificate(ca))
-	}
-
-	version, err := helpers.ComputeHash(
-		checkerRegistry,
-		state.TargetMode,
-	)
-	if err != nil {
-		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
-	}
-
-	state.CheckerParams = checker.Params{
-		Registries: make(map[string]checker.RegistryParams),
-		Version:    version,
-	}
-
-	for node, result := range nodeServicesResult {
-		if result.Address == "" {
-			continue
-		}
-
-		params := checkerRegistry
-		params.Address = registry_const.NodeRegistryAddr(result.Address)
-		state.CheckerParams.Registries[node] = params
 	}
 
 	isReady := state.setCheckerCondition(inputs)

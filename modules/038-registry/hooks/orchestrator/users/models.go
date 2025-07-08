@@ -25,13 +25,11 @@ import (
 type User = users.User
 
 type Params struct {
-	RO       bool `json:"ro,omitempty"`
-	RW       bool `json:"rw,omitempty"`
-	Mirrorer bool `json:"mirrorer,omitempty"`
+	RO bool `json:"ro,omitempty"`
 }
 
 func (params Params) Any() bool {
-	return params.RO || params.RW || params.Mirrorer
+	return params.RO
 }
 
 type Inputs map[string]User
@@ -45,9 +43,7 @@ type State struct {
 
 func (state *State) GetParams() Params {
 	return Params{
-		RO:       state.RO != nil,
-		RW:       state.RW != nil,
-		Mirrorer: state.MirrorPuller != nil || state.MirrorPusher != nil,
+		RO: state.RO != nil,
 	}
 }
 
@@ -60,33 +56,6 @@ func (state *State) Process(params Params, inputs Inputs) error {
 		}
 	} else {
 		state.RO = nil
-	}
-
-	if params.RW {
-		if user, err := processUser("rw", state.RW, inputs); err == nil {
-			state.RW = &user
-		} else {
-			return fmt.Errorf("cannot process rw user: %w", err)
-		}
-	} else {
-		state.RW = nil
-	}
-
-	if params.Mirrorer {
-		if user, err := processUser("mirror-puller", state.MirrorPuller, inputs); err == nil {
-			state.MirrorPuller = &user
-		} else {
-			return fmt.Errorf("cannot process mirror-puller user: %w", err)
-		}
-
-		if user, err := processUser("mirror-pusher", state.MirrorPusher, inputs); err == nil {
-			state.MirrorPusher = &user
-		} else {
-			return fmt.Errorf("cannot process mirror-pusher user: %w", err)
-		}
-	} else {
-		state.MirrorPuller = nil
-		state.MirrorPusher = nil
 	}
 
 	return nil

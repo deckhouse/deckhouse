@@ -24,7 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
-	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswither "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
@@ -44,14 +43,12 @@ type Params struct {
 }
 
 type Inputs struct {
-	Params          Params
-	RegistrySecret  deckhouse_registry.Config
-	IngressClientCA *x509.Certificate // optional
+	Params         Params
+	RegistrySecret deckhouse_registry.Config
 
 	PKI              pki.Inputs
 	Secrets          secrets.Inputs
 	Users            users.Inputs
-	NodeServices     nodeservices.Inputs
 	InClusterProxy   inclusterproxy.Inputs
 	RegistryService  registryservice.Inputs
 	Bashible         bashible.Inputs

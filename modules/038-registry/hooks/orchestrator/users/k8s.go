@@ -39,9 +39,6 @@ func KubernetsConfig(name string) go_hook.KubernetesConfig {
 		NameSelector: &types.NameSelector{
 			MatchNames: []string{
 				SecretName("ro"),
-				SecretName("rw"),
-				SecretName("mirror-puller"),
-				SecretName("mirror-pusher"),
 			},
 		},
 		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
