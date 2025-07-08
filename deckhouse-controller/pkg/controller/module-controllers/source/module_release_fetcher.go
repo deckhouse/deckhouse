@@ -451,6 +451,10 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		return nil
 	}
 
+	if len(release.Annotations) == 0 {
+		release.Annotations = make(map[string]string, 1)
+	}
+
 	release.Annotations[v1alpha1.ModuleReleaseAnnotationChangeCause] = changeCause
 
 	release.Spec = v1alpha1.ModuleReleaseSpec{
