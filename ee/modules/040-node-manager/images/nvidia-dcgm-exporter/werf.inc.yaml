@@ -70,3 +70,8 @@ import:
   add: /src/etc/*
   to: /etc/dcgm-exporter/
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  includePaths:
+    - lib64
+  before: setup
