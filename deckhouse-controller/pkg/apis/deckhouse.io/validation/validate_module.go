@@ -35,7 +35,7 @@ func moduleValidationHandler() http.Handler {
 			return rejectResult("manual Module change is forbidden")
 		}
 
-		return allowResult("")
+		return allowResult(nil)
 	})
 
 	// Create webhook.

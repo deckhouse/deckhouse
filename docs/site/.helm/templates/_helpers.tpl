@@ -29,3 +29,21 @@ resources:
   value: {{ pluck .Values.web.env .Values.vrouter.urlValidation | first | default .Values.vrouter.urlValidation._default | quote }}
 {{- end }}
 
+{{- define "readiness_probe" }}
+failureThreshold: 3
+periodSeconds: 5
+initialDelaySeconds: 5
+timeoutSeconds: 2
+{{- end }}
+{{- define "liveness_probe" }}
+failureThreshold: 3
+periodSeconds: 5
+initialDelaySeconds: 5
+timeoutSeconds: 2
+{{- end }}
+{{- define "startup_probe" }}
+failureThreshold: 6
+periodSeconds: 10
+initialDelaySeconds: 5
+timeoutSeconds: 2
+{{- end }}

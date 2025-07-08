@@ -601,7 +601,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		}
 
 		// TODO(ipaqsa): remove it
-		if policy.Spec.Update.Mode == v1alpha1.ModuleUpdatePolicyModeIgnore {
+		if policy.Spec.Update.Mode == v1alpha2.ModuleUpdatePolicyModeIgnore {
 			if err := r.updateReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); err != nil {
 				logger.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
@@ -759,7 +759,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	us := &releaseUpdater.Settings{
 		NotificationConfig: config,
-		Mode:               v1alpha1.ParseUpdateMode(policy.Spec.Update.Mode),
+		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
 		Windows:            policy.Spec.Update.Windows,
 		Subject:            releaseUpdater.SubjectModule,
 	}
