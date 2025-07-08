@@ -850,7 +850,7 @@ entries:
             - title:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
-              url: /user/configuration/app-scaling/vpa.html      
+              url: /user/configuration/app-scaling/vpa.html
         - title:
             en: Network
             ru: Сеть
@@ -1123,7 +1123,7 @@ entries:
         - title:
             en: VPA
             ru: VPA
-          url: /architecture/vpa.html 
+          url: /architecture/vpa.html
         - title:
             en: Authentication
             ru: Аутентификация
@@ -1690,9 +1690,21 @@ entries:
                 ru: Настройки
               url: /modules/node-local-dns/configuration.html
     - title:
-        en: Deckhouse CLI
-        ru: Deckhouse CLI
-      url: /deckhouse-cli/
+        en: Console utilities
+        ru: Консольные утилиты
+      folders:
+      - title:
+          en: Deckhouse CLI (d8)
+          ru: Deckhouse CLI (d8)
+        folders:
+        - title:
+            en: Overview and installation
+            ru: Описание и установка
+          url: /cli/d8/
+        - title:
+            en: Reference
+            ru: Справка
+          url: /cli/d8/reference/
     - title:
         en: Release notes
         ru: История изменений
