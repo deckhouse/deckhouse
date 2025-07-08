@@ -19,6 +19,9 @@ set -Eeo pipefail
 D8_CLI_VERSION=$(yq eval .d8.d8CliVersion candi/version_map.yml)
 D8_CLI_DOC_VERSION=$(jq -r .version docs/documentation/_data/reference/d8-cli.json)
 
+echo "Deckhouse CLI version in the candi/version_map.yml is ${D8_CLI_VERSION}."
+echo "Deckhouse CLI version in the documentation reference is ${D8_CLI_DOC_VERSION})."
+
 if [ "$D8_CLI_VERSION" != "$D8_CLI_DOC_VERSION" ]; then
   echo -e "!\n! Validation failed!"
   echo "! Deckhouse CLI version in the candi/version_map.yml file (${D8_CLI_VERSION}) is different from the version in the documentation reference (${D8_CLI_DOC_VERSION})."
