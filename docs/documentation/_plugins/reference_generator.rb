@@ -6,19 +6,17 @@ module ReferenceGenerator
 
     def generate(site)
       languages = ['ru', 'en']
-      converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
 
       puts "Generating reference for D8..."
       languages.each do |lang|
-        site.pages << ReferenceD8Page.new(site, lang, converter)
+        site.pages << ReferenceD8Page.new(site, lang)
       end
     end
   end
 
   class ReferenceD8Page < Jekyll::Page
-    def initialize(site, lang, converter)
+    def initialize(site, lang)
       @site = site
-      @converter = converter
       @baseUrl = '/deckhouse-cli/reference/'
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
