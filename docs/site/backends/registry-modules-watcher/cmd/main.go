@@ -36,9 +36,10 @@ import (
 )
 
 func main() {
-	logger := log.NewLogger(log.Options{
-		Level: log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level(),
-	})
+	logger := log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
+		log.WithHandlerType(log.TextHandlerType),
+	)
 
 	registries := flag.String("watch-registries", "", "a list for followed registries")
 	scanInterval := flag.Duration("scan-interval", 15*time.Minute, "interval for scanning the images. default 15 minutes")
