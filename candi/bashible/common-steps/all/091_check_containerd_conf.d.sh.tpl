@@ -30,7 +30,7 @@ set_containerd_config_label() {
     if [ "$ctrd_version" == "v1" ]; then
       for path in "${full_conf_path}/"*.toml; do
         if bb-ctrd-v1-has-registry-fields "${path}"; then
-        registry_label_value="custom"
+          registry_label_value="custom"
         break
         fi
       done
