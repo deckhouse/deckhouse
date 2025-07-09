@@ -9,7 +9,7 @@ metadata:
 provisioner: csi.dvp.deckhouse.io
 volumeBindingMode: {{ $storageClass.volumeBindingMode | quote }}
 reclaimPolicy: {{ $storageClass.reclaimPolicy | quote }}
-allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion | quote }}
+allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion }}
 parameters:
   dvpStorageClass: {{ $storageClass.dvpStorageClass | quote }}
 {{- end }}
