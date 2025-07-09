@@ -6,19 +6,17 @@ module ReferenceGenerator
 
     def generate(site)
       languages = ['ru', 'en']
-      converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
 
       puts "Generating reference for D8..."
       languages.each do |lang|
-        site.pages << ReferenceD8Page.new(site, lang, converter)
+        site.pages << ReferenceD8Page.new(site, lang)
       end
     end
   end
 
   class ReferenceD8Page < Jekyll::Page
-    def initialize(site, lang, converter)
+    def initialize(site, lang)
       @site = site
-      @converter = converter
       @baseUrl = '/deckhouse-cli/reference/'
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
@@ -101,9 +99,9 @@ module ReferenceGenerator
     end
 
     def render_flag_item(flag_name, flag_data)
-      result = %Q(<li><p><code>--#{flag_name}</code>)
+      result = %Q(<li><code>--#{flag_name}</code>)
       result += %Q(, <code>-#{flag_data['shorthand']}</code>) if flag_data['shorthand'].to_s.size > 0
-      result += %Q( — #{@converter.convert(flag_data['description']).sub(/^<p>|<\/p>$/, '')}</p></li>)
+      result += %Q(<div style="white-space: pre-wrap; margin: 0.5em 0 0 0; line-height: 1.7em;">#{flag_data['description']}</div></li>)
     end
 
     def renderD8Section(data, depth, parent_titles)
@@ -127,7 +125,7 @@ module ReferenceGenerator
         end
       end
 
-      result += "\n#{data['description']}\n\n" if data['description']
+      result += "<p>#{data['description']}</p>\n" if data['description']
 
       # Render flags
       result += render_flags(data['flags'], depth) if data['flags'] && data['flags'].size > 0
