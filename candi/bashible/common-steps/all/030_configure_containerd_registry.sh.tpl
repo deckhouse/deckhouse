@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 {{- $exist_registry_host_list := list }}
 
 # PR: https://github.com/deckhouse/deckhouse/pull/11939
 #
 # Enabled by settings in /etc/containerd/config.toml:
+# Containerd v1:
 # ```
 # [plugins."io.containerd.grpc.v1.cri".registry]
+#   config_path = "/etc/containerd/registry.d"
+# ```
+# Containerd v2:
+# ```
+# [plugins.'io.containerd.cri.v1.images'.registry]
 #   config_path = "/etc/containerd/registry.d"
 # ```
 #
