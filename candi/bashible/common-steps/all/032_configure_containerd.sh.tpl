@@ -61,36 +61,6 @@ fi
 
 
 {{- if eq .cri "ContainerdV2" }}
-mkdir -p  /etc/containerd/registry.d/_default
-bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
-
-[host."{{ .registry.scheme }}://{{ .registry.address }}"]
-  capabilities = ["pull", "resolve"]
-  {{- if .registry.ca }}
-  ca = ["/opt/deckhouse/share/ca-certificates/registry-ca.crt"]
-  {{- end }}
-
-  {{- if eq .registry.scheme "http" }}
-  skip_verify = true
-  {{- end }}
-
-    [host."{{ .registry.scheme }}://{{ .registry.address }}".auth]
-    auth = {{ .registry.auth | default "" | quote }}
-EOF
-
-{{- if eq .runType "Normal" }}
-  {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-    {{- if $ca }}
-mkdir -p  /etc/containerd/registry.d/{{ $registryAddr | lower }}
-bb-sync-file /etc/containerd/registry.d/{{ $registryAddr | lower }}/hosts.toml - << EOF
-server = "https://{{ $registryAddr | lower }}"
-ca = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-EOF
-    {{- end }}
-  {{- end }}
-{{- end }}
-
-
 # generated using `containerd config migrate` by containerd version `containerd containerd.io 2.0.4 1a43cb6a1035441f9aca8f5666a9b3ef9e70ab20`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 3
