@@ -38,6 +38,7 @@ func (e *ErrObjectNotFound) Error() string {
 type KubeObject map[string]interface{}
 
 func (obj KubeObject) Field(path string) library.KubeResult {
+	// nolint
 	jsonBytes, _ := json.Marshal(obj)
 
 	result := gjson.GetBytes(jsonBytes, path)
@@ -46,6 +47,7 @@ func (obj KubeObject) Field(path string) library.KubeResult {
 }
 
 func (obj KubeObject) Parse() library.KubeResult {
+	// nolint
 	jsonBytes, _ := json.Marshal(obj)
 
 	result := gjson.ParseBytes(jsonBytes)

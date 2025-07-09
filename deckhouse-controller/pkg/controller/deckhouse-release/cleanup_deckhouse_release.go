@@ -81,10 +81,13 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
-		sp, _ := json.Marshal(releaseUpdater.StatusPatch{
+		sp, err := json.Marshal(releaseUpdater.StatusPatch{
 			Phase:          v1alpha1.DeckhouseReleasePhaseSuperseded,
 			TransitionTime: metav1.NewTime(now),
 		})
+		if err != nil {
+			return fmt.Errorf("marshal status patch: %w", err)
+		}
 		// everything except the last Deployed release
 		for i := 1; i < len(deployedReleasesIndexes); i++ {
 			index := deployedReleasesIndexes[i]
@@ -112,11 +115,14 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	// mark them as Skipped
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
-		sp, _ := json.Marshal(releaseUpdater.StatusPatch{
+		sp, err := json.Marshal(releaseUpdater.StatusPatch{
 			Phase:          v1alpha1.DeckhouseReleasePhaseSkipped,
 			Message:        "Skipped by cleanup hook",
 			TransitionTime: metav1.NewTime(now),
 		})
+		if err != nil {
+			return fmt.Errorf("marshal status patch: %w", err)
+		}
 
 		for _, index := range pendingReleasesIndexes {
 			if index <= lastDeployed {
