@@ -24,7 +24,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -107,7 +107,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(max(DCGM_FI_DEV_POWER_USAGE{}) by(Hostname, device))",
@@ -222,7 +222,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -305,7 +305,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "(sum(DCGM_FI_DEV_MEM_COPY_UTIL) / (count(DCGM_FI_DEV_MEM_COPY_UTIL) * 100)) * 100",

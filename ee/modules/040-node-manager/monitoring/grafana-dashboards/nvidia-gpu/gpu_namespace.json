@@ -425,7 +425,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -508,7 +508,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_DEV_FB_USED{exported_pod=~\"$pod\", exported_namespace=\"$namespace\"}) by(exported_pod)",
@@ -607,7 +607,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_DEV_MEM_COPY_UTIL{exported_namespace=\"$namespace\", exported_pod=~\"$pod\"}) by(exported_pod) ",
@@ -834,7 +834,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -913,7 +913,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_PROF_PCIE_RX_BYTES{exported_namespace=\"$namespace\", exported_pod=~\"$pod\"}) by(exported_pod, exported_pod)",
@@ -929,7 +929,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1008,7 +1008,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_PROF_PCIE_TX_BYTES{exported_namespace=\"$namespace\", exported_pod=~\"$pod\"}) by(exported_pod )",
@@ -1116,7 +1116,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_DEV_SM_CLOCK{exported_namespace=\"$namespace\", exported_pod=~\"$pod\"}) by(exported_pod) * 1000000",
@@ -1211,7 +1211,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "sum(DCGM_FI_DEV_MEM_CLOCK{exported_namespace=\"$namespace\", exported_pod=~\"$pod\"}) by(exported_pod) * 1000000",
@@ -1290,7 +1290,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "${ds_prometheus}"
         },
         "definition": "label_values(DCGM_FI_DEV_GPU_UTIL{exported_namespace=\"$namespace\"},exported_pod)",
         "hide": 0,

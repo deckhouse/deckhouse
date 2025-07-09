@@ -610,7 +610,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -689,7 +689,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "max(DCGM_FI_DEV_GPU_TEMP{Hostname=\"$node\"}) by (Hostname, device)",
@@ -2129,7 +2129,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "${ds_prometheus}"
         },
         "definition": "label_values(DCGM_FI_DEV_POWER_USAGE{Hostname=\"$node\"},device)",
         "hide": 0,
