@@ -2355,6 +2355,36 @@ alerts:
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
       markupFormat: markdown
+    - name: D8NodeLocalDNSCacheDenialEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
+
+        This might indicate denial cache size is insufficient (e.g. `denial 9984`).
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns denial cache is being frequently evicted.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8NodeLocalDNSCacheSuccessEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
+
+        This could mean cache capacity is too small (e.g. `success 39936`), or traffic patterns changed.
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns success cache is being frequently evicted.
+      severity: "6"
+      markupFormat: markdown
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -6361,6 +6391,7 @@ modules-having-alerts:
     - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
+    - node-local-dns
     - node-manager
     - okmeter
     - openvpn
