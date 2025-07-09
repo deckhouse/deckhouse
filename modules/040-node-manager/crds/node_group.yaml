@@ -424,13 +424,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
-                  deprecated: true
+                  x-doc-deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
@@ -1726,7 +1726,7 @@ spec:
                   properties:
                     quickShutdown:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
@@ -1796,7 +1796,6 @@ spec:
                           description: |
                             Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
                         notHeldResources:
-                          deprecated: true
                           x-doc-deprecated: true
                           description: |
                             Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
@@ -1936,7 +1935,7 @@ spec:
                       description: |
                         This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
-                      deprecated: true
+                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |
