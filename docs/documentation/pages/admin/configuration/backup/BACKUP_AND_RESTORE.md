@@ -118,10 +118,10 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Switch the cluster to single master mode:
 
-   - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane.html#типовые-сценарии-масштабирования).
+   - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
    - In a static cluster, manually remove the additional master nodes.
 
-1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#восстановление-кластера-с-одним-control-plane-узлом) for restoring a cluster with a single control-plane node.
+1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
 
 1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
@@ -133,15 +133,15 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Wait for Deckhouse to process all tasks in the queue:
 
-   ```console
+   ```shell
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane.html#common-scaling-scenarios).
+1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
 
-## Restoring Individual Objects
+## Restoring individual objects
 
-### Restoring Kubernetes Objects from an etcd Backup
+### Restoring Kubernetes objects from an etcd backup
 
 To restore individual cluster objects (e.g., specific Deployments, Secrets, or ConfigMaps) from an etcd snapshot, follow these steps:
 
@@ -221,14 +221,14 @@ kubectl delete po etcd-restore --force
 
 {% endofftopic %}
 
-## Manual object export
+### Manual object export
 
 The steps below describe how to manually launch a temporary etcd instance, restore data from a snapshot into it, and export only the objects you need as JSON files.
 
 1. Prepare a temporary Pod with `etcd` and `ubuntu` containers using the `etcd.pod.yaml` template. The template includes two containers:
 
-   - `etcd` — must match the version of etcd from which the snapshot was created.
-   - `ubuntu` — an auxiliary container for debugging purposes (modern etcd images may not include a shell like `bash` or `sh`).
+   - `etcd`: Must match the version of etcd from which the snapshot was created.
+   - `ubuntu`: An auxiliary container for debugging purposes (modern etcd images may not include a shell like `bash` or `sh`).
 
      Substitute the actual etcd image version (matching your original cluster) into the template and create the Pod using the following commands:
 
@@ -276,7 +276,7 @@ The steps below describe how to manually launch a temporary etcd instance, resto
    kubectl cp etcd-snapshot.bin etcd-restore:/etcd-backup -c ubuntu
    ```
 
-   he backup file will now be accessible to the etcd container.
+   The backup file will now be accessible to the etcd container.
 
 1. Restore data from the snapshot into a new directory. Run the following command inside the etcd container, specifying the snapshot path and a new data directory:
 
@@ -328,9 +328,7 @@ The steps below describe how to manually launch a temporary etcd instance, resto
 
 ### Restoring cluster objects from exported JSON files
 
-Для восстановления объектов выполните следующие шаги:
-
-To restore Kubernetes objects from exported JSON files, follow these steps:
+To restore objects from exported JSON files, follow these steps:
 
 1. Prepare the JSON files for restoration. Before applying them to the cluster, remove technical fields that may be outdated or interfere with the recovery process:
 
@@ -380,22 +378,22 @@ To restore etcd objects after changing the master node's IP address, follow thes
 
 1. Wait for kubelet to regenerate its own certificate.
 
-These actions can be performed either [automatically](#automated-object-extraction-when-changing-the-ip-address) using a script, or [manually](#manual-object-restore-after-changing-the-ip-address) by running the required commands step-by-step.
+These actions can be performed either [automatically](#automated-object-extraction-when-changing-ip-address) using a script, or [manually](#manual-object-restore-after-changing-the-ip-address) by running the required commands step-by-step.
 
-## Automated object extraction when changing IP address
+### Automated object extraction when changing IP address
 
 To simplify cluster recovery after the master node's IP address changes, use the script provided below. Before running the script:
 
 1. Specify the correct paths and IP addresses:
-   - `ETCD_SNAPSHOT_PATH` — the path to the etcd snapshot backup.
-   - `OLD_IP` — the old master node IP address used when the backup was created.
-   - `NEW_IP` — the new IP address of the master node.
+   - `ETCD_SNAPSHOT_PATH`: The path to the etcd snapshot backup.
+   - `OLD_IP`: The old master node IP address used when the backup was created.
+   - `NEW_IP`: The new IP address of the master node.
 
 2. Make sure the Kubernetes version (`KUBERNETES_VERSION`) matches the one used in the cluster. This is necessary for downloading the correct version of kubeadm.
 
 3. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
 
-{% offtopic title="Object Extraction Script" %}
+{% offtopic title="Object extraction script" %}
 
 ```shell
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
@@ -457,7 +455,7 @@ If you prefer to manually make changes during cluster recovery after the master 
    - Find or download the `etcdctl` utility if it’s not available, and perform the snapshot restore:
 
      ```shell
-     ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot
+     ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
      ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
 
      ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore \
@@ -480,8 +478,8 @@ If you prefer to manually make changes during cluster recovery after the master 
 1. Update the IP address in static configuration files. If the old IP address is used in manifests or kubelet services, replace it with the new one:
 
     ```shell
-    OLD_IP=10.242.32.34                         # Old master node IP address
-    NEW_IP=10.242.32.21                         # New master node IP address
+    OLD_IP=10.242.32.34                         # Old master node IP address.
+    NEW_IP=10.242.32.21                         # New master node IP address.
 
     find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
@@ -502,7 +500,7 @@ If you prefer to manually make changes during cluster recovery after the master 
    - Install or download kubeadm to match the current Kubernetes version:
 
      ```shell
-     KUBERNETES_VERSION=1.28.0 # Kubernetes version
+     KUBERNETES_VERSION=1.28.0 # Kubernetes version.
      curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
      chmod +x kubeadm
      ```
@@ -524,9 +522,9 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl restart kubelet.service
     ```
 
-    kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
+    Kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
 
-1. Wait for kubelet to regenerate its own certificate. kubelet will automatically generate a new certificate with the updated IP address:
+1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 
    - Check the `/var/lib/kubelet/pki/` directory.
    - Ensure the new certificate is present and valid.
@@ -537,9 +535,9 @@ Once these steps are completed, the cluster will be successfully restored and fu
 
 Deckhouse CLI (`d8`) provides the `backup` command for creating backups of various cluster components:
 
-- `etcd` — snapshot of the Deckhouse key-value data store;
-- `cluster-config` — archive containing key configuration objects of the cluster;
-- `loki` — export of logs from the built-in Loki API.
+- `etcd`: Snapshot of the Deckhouse key-value data store.
+- `cluster-config`: Archive containing key configuration objects of the cluster.
+- `loki`: Export of logs from the built-in Loki API.
 
 ### Backing up etcd
 
@@ -547,19 +545,19 @@ An etcd snapshot allows you to preserve the current state of the cluster at the 
 
 To create a snapshot, run the following command:
 
-```console
+```shell
 d8 backup etcd <path-to-snapshot> [flags]
 ```
 
 Flags:
 
-- `-p`, `--etcd-pod string` — name of the etcd pod to snapshot;
-- `-h`, `--help` — show help for the etcd command;
-- `--verbose` — enable verbose output for detailed logging.
+- `-p`, `--etcd-pod string`: Name of the etcd pod to snapshot.
+- `-h`, `--help`: Show help for the etcd command.
+- `--verbose`: Enable verbose output for detailed logging.
 
 Example:
 
-```console
+```shell
 d8 backup etcd mybackup.snapshot
 ```
 
@@ -574,7 +572,7 @@ Example output:
 
 Deckhouse automatically performs a daily etcd backup using a CronJob that runs inside the `d8-etcd-backup` pod in the `kube-system` namespace. The job creates a snapshot of the database, compresses it, and saves the archive locally on the node at `/var/lib/etcd/`:
 
-```console
+```shell
 etcdctl snapshot save etcd-backup.snapshot
 tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
 mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
@@ -607,13 +605,13 @@ The `d8 backup cluster-config` command creates an archive containing a set of ke
 
 To create the backup, run the following command:
 
-```console
+```shell
 d8 backup cluster-config <path-to-backup-file>
 ```
 
 Example:
 
-```console
+```shell
 d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 ```
 
@@ -716,20 +714,24 @@ subjects:
 
 To create a log backup, run the following command:
 
-```console
+```shell
 d8 backup loki [flags]
 ```
 
 Example:
 
-```console
+```shell
 d8 backup loki --days 1 > ./loki.log
 ```
 
 Flags:
 
-- `--start`, `--end` — time range boundaries in the format "YYYY-MM-DD HH:MM:SS";
-- `--days` — the time window size for log export (default is 5 days);
-- `--limit` — the maximum number of log lines per request (default is 5000).
+- `--start`, `--end`: Time range boundaries in the format "YYYY-MM-DD HH:MM:SS".
+- `--days`: The time window size for log export (default is 5 days).
+- `--limit`: The maximum number of log lines per request (default is 5000).
 
-You can list all available flags using the following command `d8 backup loki --help`.
+You can list all available flags using the following command:
+
+```shell
+d8 backup loki --help
+```

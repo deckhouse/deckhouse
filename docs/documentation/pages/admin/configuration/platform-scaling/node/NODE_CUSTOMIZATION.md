@@ -3,25 +3,25 @@ title: "Custom node configuration"
 permalink: en/admin/configuration/platform-scaling/node/node-customization.html
 ---
 
-To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
+To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
 
 - Installing and configuring additional OS packages.  
 
   Examples:  
-  - [Installing the cert-manager plugin for kubectl on master nodes](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
+  - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
   - [Configuring containerd with Nvidia GPU support](node-customization.html#how-to-use-containerd-with-nvidia-gpu-support)
 
 - Updating the OS kernel to a specific version.
 
   Examples:
-  - [Debian kernel update](node-customization.html#debian-based-distros)  
-  - [CentOS kernel update](node-customization.html#centos-based-distros)
+  - [Debian kernel update](cloud-node.html#debian-based-distros)  
+  - [CentOS kernel update](cloud-node.html#centos-based-distros)
 
 - Modifying OS parameters.
 
   Examples:  
-  - [Tuning a sysctl parameter](node-customization.html#setting-a-sysctl-parameter)  
-  - [Adding a root certificate](node-customization.html#adding-a-root-certificate-to-the-host)
+  - [Tuning a sysctl parameter](cloud-node.html#setting-a-sysctl-parameter)  
+  - [Adding a root certificate](cloud-node.html#adding-a-root-certificate-to-the-host)
 
 - Collecting information on the node and performing similar tasks.
 
@@ -31,7 +31,7 @@ The script code is specified in the `content` field of the resource. When a scri
 
 Available template variables include:
 <ul>
-<li><code>.cloudProvider</code> (for node groups with <code>CloudEphemeral</code> or <code>CloudPermanent</code> nodeType) — an object with cloud provider data.
+<li><code>.cloudProvider</code> (for node groups with <code>CloudEphemeral</code> or <code>CloudPermanent</code> nodeType) — an array of cloud provider data.
 {% offtopic title="Example data..." %}
 ```yaml
 cloudProvider:
@@ -63,7 +63,7 @@ cloudProvider:
 ```
 {% endofftopic %}
 </li>
-<li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is supported).</li>
+<li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is used).</li>
 <li><code>.kubernetesVersion</code> — the version of Kubernetes in use.</li>
 <li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="cr.html#nodeuser">NodeUser</a> resource.
 {% offtopic title="Example data..." %}
@@ -80,7 +80,7 @@ nodeUsers:
 ```
 {% endofftopic %}
 </li>
-<li><code>.nodeGroup</code> — an object containing NodeGroup configuration data.
+<li><code>.nodeGroup</code> — an array of NodeGroup data.
 {% offtopic title="Example data..." %}
 ```yaml
 nodeGroup:
@@ -119,7 +119,7 @@ echo 'Tuning environment for user {{ .name }}'
 {{- end }}
 ```
 
-Example of using bashbooster commands:
+Example of using Bash Booster commands:
 
 ```shell
 bb-event-on 'bb-package-installed' 'post-install'
@@ -139,7 +139,7 @@ You can view the script execution log on a node in the `bashible` service log us
 journalctl -u bashible.service
 ```
 
-The scripts themselves are located on the node in the `/var/lib/bashible/bundle_steps/` directory.
+The scripts are located in the `/var/lib/bashible/bundle_steps/` directory on the node.
 
 ## Script re-execution mechanism
 
@@ -155,7 +155,7 @@ The checksum comparison is performed by the service every minute.
 
 The checksum in the cluster is updated every 4 hours, thereby re-triggering the execution of scripts on all nodes.
 
-To manually trigger bashible execution on a node, you can delete the checksum file using the following command:
+To manually trigger `bashible` execution on a node, you can delete the checksum file using the following command:
 
 ```bash
 rm /var/lib/bashible/configuration_checksum
@@ -166,31 +166,11 @@ rm /var/lib/bashible/configuration_checksum
 When writing scripts, it's important to consider the following features of their usage in Deckhouse:
 
 1. Scripts in DKP are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
-1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when assigning priority to custom scripts. For example, if a custom script restarts a service, it must run **after** the script that installs that service. Otherwise, the custom script won't be able to run during the initial provisioning of the node (since the service won’t be installed yet).
+1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when assigning priority to custom scripts. For example, if a custom script restarts a service, it must run after the script that installs that service. Otherwise, the custom script won't be able to run during the initial provisioning of the node (since the service won’t be installed yet).
 
 Useful specifics of certain scripts:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — merges all `containerd` service configuration files located in `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. Note that the `/etc/containerd/conf.d/` directory is not created automatically, and any configuration files in it should be created by scripts with a priority lower than `32`.
-
-## How to automatically assign custom labels to a node
-
-1. Create the `/var/lib/node_labels` directory on the node.
-
-1. Create one or more files inside this directory containing the desired labels. Any number of files and any level of subdirectory nesting is allowed.
-
-1. Add the required labels to the files in `key=value` format. For example:
-
-   ```console
-   example-label=test
-   ```
-
-1. Save the files.
-
-When the node is added to the cluster, the labels specified in the files will be automatically applied to the node.
-
-{% alert level="warning" %}
-Note that it is not possible to use this method to apply labels that are reserved by DKP. This method works only with custom labels that do not conflict with those reserved by Deckhouse.
-{% endalert %}
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl): Merges all `containerd` service configuration files located in `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. Note that the `/etc/containerd/conf.d/` directory is not created automatically, and any configuration files in it should be created by scripts with a priority lower than `32`.
 
 ## How to use containerd with Nvidia GPU support
 
@@ -209,7 +189,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Next, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) for the `gpu` NodeGroup to configure `containerd`:
+Next, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for the `gpu` NodeGroup to configure `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -228,10 +208,35 @@ spec:
     #
     #     http://www.apache.org/licenses/LICENSE-2.0
     #
-    # Unless
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          default_runtime_name = "nvidia"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = ""
+                runtime_root = ""
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                  BinaryName = "/usr/bin/nvidia-container-runtime"
+                  SystemdCgroup = false
+    EOF
+  nodeGroups:
+  - gpu
+  weight: 31
 ```
 
-Add a NodeGroupConfiguration to install Nvidia drivers for the `gpu` NodeGroup.
+Add a NodeGroupConfiguration resource to install Nvidia drivers for the `gpu` NodeGroup.
 
 ### Ubuntu
 
@@ -270,7 +275,7 @@ spec:
   weight: 30
 ```
 
-### Centos
+### CentOS
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -306,7 +311,7 @@ spec:
   weight: 30
 ```
 
-After the configurations are applied, you need to perform a bootstrap and reboot the nodes to apply the settings and install the drivers.
+After the configurations are applied, bootstrap and reboot the nodes to apply the settings and install the drivers.
 
 ### Verifying successful installation
 
@@ -336,7 +341,12 @@ spec:
 Check the logs with the following command:
 
 ```shell
-$ kubectl logs job/nvidia-cuda-test
+kubectl logs job/nvidia-cuda-test
+```
+
+Example output:
+
+```console
 Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
@@ -383,7 +393,12 @@ spec:
 Check the logs with the following command:
 
 ```shell
-$ kubectl logs job/gpu-operator-test
+kubectl logs job/gpu-operator-test
+```
+
+Example output:
+
+```console
 [Vector addition of 50000 elements]
 Copy input data from the host memory to the CUDA device
 CUDA kernel launch with 196 blocks of 256 threads
@@ -398,7 +413,7 @@ Done
 Adding custom settings will trigger a restart of the `containerd` service.
 {% endalert %}
 
-Bashible on the nodes merges the DKP containerd configuration with configurations from `/etc/containerd/conf.d/*.toml`.
+`bashible` on the nodes merges the DKP `containerd` configuration with configurations from `/etc/containerd/conf.d/*.toml`.
 
 {% alert level="warning" %}
 You can override the parameter values defined in the `/etc/containerd/deckhouse.toml` file. However, you are responsible for ensuring the correct operation of such changes. It is recommended **not to modify the configuration** on control plane (master) nodes (NodeGroup `master`).
@@ -539,11 +554,17 @@ spec:
     mkdir -p ${CERTS_FOLDER}
     mkdir -p /etc/containerd/conf.d
 
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-
+    
     CONFIG_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
 
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
@@ -561,7 +582,7 @@ spec:
 
 1. On the node, create the directory `/var/lib/node_labels`.
 
-1. Create a file or files containing the necessary labels in it. The number of files can be any, as well as the number of subdirectories containing them.
+1. In this directory, create a single of multiple files containing the necessary labels. There can be any number of files, as well as the number of subdirectories containing them.
 
 1. Add the necessary labels to the files in the `key=value` format. For example:
 
@@ -574,5 +595,5 @@ spec:
 When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
 
 {% alert level="warning" %}
-Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+Note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}

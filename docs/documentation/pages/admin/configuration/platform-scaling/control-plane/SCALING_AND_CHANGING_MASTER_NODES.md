@@ -28,16 +28,16 @@ Automatic control of master nodes includes:
 
 - **Adding the label** `node-role.kubernetes.io/control-plane=""` to a node:
   - All control plane components are deployed.
-  - The node is added to the `etcd` cluster.
+  - The node is added to the etcd cluster.
   - Certificates and configuration files are regenerated automatically.
 
 - **Removing the label**:
   - Control plane components are removed.
-  - The node is properly removed from the `etcd` cluster.
+  - The node is properly removed from the etcd cluster.
   - Related configuration files are updated.
 
 {% alert level="info" %}
-Transitioning from 2 to 1 master node requires manual `etcd` adjustment. All other changes in master node count are handled automatically.
+Transitioning from 2 to 1 master node requires manual etcd adjustment. All other changes in master node count are handled automatically.
 {% endalert %}
 
 ### Common scaling scenarios
@@ -70,7 +70,7 @@ In cloud clusters, all necessary actions are automatically handled by the `dhctl
    - Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
 {% alert level="warning" %}
-An odd number of master nodes is required to maintain `etcd` quorum stability.
+An odd number of master nodes is required to maintain etcd quorum stability.
 {% endalert %}
 
 ### Removing the master role from a node without deleting the node itself
@@ -113,7 +113,7 @@ After completing these steps, the node will no longer be considered a master nod
 
 ### Changing the OS image of master nodes in a multi-master cluster
 
-1. Back up `etcd` and the `/etc/kubernetes` directory.
+1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
 1. Ensure the DKP queue is empty.
@@ -136,7 +136,7 @@ After completing these steps, the node will no longer be considered a master nod
    The output should indicate that Terraform has found no discrepancies and no changes are required.
 
 1. **In the installer container**, run the following command and specify the desired OS image in the `masterNodeGroup.instanceClass` parameter  
-(provide all master node addresses using the `--ssh-host` parameter):
+   (provide all master node addresses using the `--ssh-host` parameter):
 
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
@@ -154,7 +154,7 @@ After completing these steps, the node will no longer be considered a master nod
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   The following steps (9–12) should be performed sequentially on each master node, starting with the highest numbered node (with suffix 2) and ending with the lowest (with suffix 0).
+   The following steps (9–12) should be performed **sequentially on each** master node, starting with the highest numbered node (with suffix 2) and ending with the lowest (with suffix 0).
 
 1. **On the newly created node**, open the systemd journal for the `bashible.service`.  
    Wait until the setup process is complete — the log should contain the message `nothing to do`:
@@ -184,69 +184,72 @@ After completing these steps, the node will no longer be considered a master nod
 
 ### Changing the OS image in a single-master cluster
 
-1. Convert the single-master cluster into a multi-master one according to the [instructions](#how-to-add-master-nodes-in-a-cloud-cluster).
+1. Convert the single-master cluster into a multi-master one according to the [instructions](#adding-master-nodes-in-a-cloud-cluster).
 1. Update the master nodes as described in the [instructions](#changing-the-os-image-of-master-nodes-in-a-multi-master-cluster).
-1. Convert the multi-master cluster back to a single-master one following the [instructions](#how-to-add-master-nodes-in-a-cloud-cluster).
+1. Convert the multi-master cluster back to a single-master one following the [instructions](#reducing-the-number-of-master-nodes-in-a-cloud-cluster).
 
 ## Adding master nodes in a cloud cluster
 
 This section describes how to convert a single-master cluster into a multi-master cluster.
 
-> Before adding nodes, make sure the required quotas are available.
->
-> It's important to have an odd number of master nodes to maintain etcd quorum.
+{% alert level="warning" %}
+Before adding nodes, make sure the required quotas are available.
+It's important to have an odd number of master nodes to maintain etcd quorum.
+{% endalert %}
 
-1. Create a [backup of `etcd`](/admin/backup/backup-and-restore.html) and the `/etc/kubernetes` directory.
+1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no active alerts in the cluster that may interfere with adding new master nodes.
 1. Make sure the Deckhouse queue is empty:
 
-   ```console
+   ```shell
    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
-1. On the local machine, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
+1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
 
-   ```console
+   ```bash
    DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
    DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
-1. In the installer container, run the following command to verify the state before proceeding:
+1. **In the installer container**, run the following command to verify the state before proceeding:
 
-   ```console
+   ```bash
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
    The output should confirm that Terraform found no differences and no changes are needed.
 
-1. In the installer container, run the following command and set the desired number of master nodes in the `masterNodeGroup.replicas` parameter:
+1. **In the installer container**, run the following command and set the target number of master nodes in the `masterNodeGroup.replicas` parameter:
 
-   ```console
+   ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For Yandex Cloud, if public IPs are assigned to master nodes, the number of elements in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using the Auto value (automatic public IP assignment), the number of items in the array must still match.
+   > For **Yandex Cloud**, if public IPs are assigned to master nodes, the number of elements in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using the `Auto` value (automatic public IP assignment), the number of items in the array must still match.
    >
-   >For example, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic IP assignment, the `externalIPAddresses` section would look like:
+   > For example, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
    >
    > ```yaml
    > externalIPAddresses:
    > - "Auto"
+   > - "Auto"
+   > - "Auto"
    > ```
 
-1. In the installer container, run the following command to trigger scaling:
+1. **In the installer container**, run the following command to trigger scaling:
 
-   ```console
+   ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
 1. Wait until the required number of master nodes reaches the `Ready` status and all [`control-plane-manager`](/modules/control-plane-manager/) pods become ready:
 
-   ```console
+   ```bash
    kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
@@ -255,15 +258,15 @@ This section describes how to convert a single-master cluster into a multi-maste
 This section describes the process of converting a multi-master cluster into a single-master cluster.
 
 {% alert level="warning" %}
-The following steps must be performed starting from the first master node (master-0) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove master-0 and master-1 while leaving master-2.
+The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
 {% endalert %}
 
-1. Create a [backup of `etcd`](/admin/backup/backup-and-restore.html) and the `/etc/kubernetes` directory.
+1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
 1. Make sure the DKP queue is empty:
 
-   ```console
+   ```shell
    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
@@ -283,9 +286,9 @@ The following steps must be performed starting from the first master node (maste
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For Yandex Cloud, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
    >
-   > For example, for a single master node (`masterNodeGroup.replicas: 1`) with automatic public IPs::
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
    >
    > ```yaml
    > externalIPAddresses:

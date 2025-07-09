@@ -3,7 +3,7 @@ title: "General management and configuration of the control plane"
 permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
 ---
 
-## Overview
+## Main features
 
 Deckhouse Kubernetes Platform (DKP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
 
@@ -17,9 +17,9 @@ The control plane management functionality includes:
 
 - Managing the etcd cluster configuration and its members. DKP scales master nodes and performs migrations between single-master and multi-master modes.
 
-- Configuring `kubeconfig`. DKP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
+- Configuring kubeconfig. DKP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
 
-> Some parameters affecting Control Plane behavior are taken from the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) resource.
+> Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) resource.
 
 ## Enabling, disabling, and configuring the module
 
@@ -27,7 +27,7 @@ The control plane management functionality includes:
 
 You can enable or disable the [`control-plane-manager`](/modules/control-plane-manager/) module in the following ways:
 
-1. Create (or modify) the `ModuleConfig/control-plane-manager` resource by setting `spec.enabled` to `true` or `false`:
+1. Create (or modify) the ModuleConfig/control-plane-manager resource by setting `spec.enabled` to `true` or `false`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -54,8 +54,8 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
   
 1. Via the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/):
 
-   - Go to the “Deckhouse → Modules” section;
-   - Find the `control-plane-manager` module and click on it;
+   - Go to the “Deckhouse → Modules” section.
+   - Find the `control-plane-manager` module and click on it.
    - Toggle the “Module enabled” switch.
 
 ### Configuration
@@ -87,13 +87,13 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 
 1. Make sure the module is enabled:
 
-   ```console
+   ```shell
    kubectl get modules control-plane-manager
    ```
 
 1. Check the status of `control-plane-manager` pods (they run in the `kube-system` namespace and have the label `app=d8-control-plane-manager`):
 
-   ```console
+   ```shell
    kubectl -n kube-system get pods -l app=d8-control-plane-manager -o wide
    ```
 
@@ -101,19 +101,19 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 
 1. Verify that master nodes are in the `Ready` state:
 
-   ```console
+   ```shell
    kubectl get nodes -l node-role.kubernetes.io/control-plane
    ```
 
    To view detailed information:
 
-   ```console
-   kubectl describe node <имя-узла>
+   ```shell
+   kubectl describe node <node-name>
    ```
 
 1. Get the list of queues and active tasks:
 
-   ```console
+   ```shell
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
     deckhouse-controller queue list
    ```
@@ -135,13 +135,13 @@ Before performing heavy operations (e.g., transitioning from single-master to mu
 
 In DKP, the [`control-plane-manager`](/modules/control-plane-manager/) module is responsible for issuing and renewing all SSL certificates for control plane components. It manages:
 
-1. Server certificates for kube-apiserver and etcd, stored in the `d8-pki` secret (namespace: `kube-system`):
-   - Kubernetes root CA (`ca.crt`, `ca.key`);
-   - etcd root CA (`etcd/ca.crt`, `etcd/ca.key`);
-   - RSA certificate and key for signing Service Accounts (`sa.pub`, `sa.key`);
+1. **Server certificates** for kube-apiserver and etcd, stored in the `d8-pki` secret (namespace: `kube-system`):
+   - Kubernetes root CA (`ca.crt`, `ca.key`).
+   - etcd root CA (`etcd/ca.crt`, `etcd/ca.key`).
+   - RSA certificate and key for signing Service Accounts (`sa.pub`, `sa.key`).
    - Root CA for extension API servers (`front-proxy-ca.key`, `front-proxy-ca.crt`).
 
-1. Client certificates required for mutual communication between control plane components (e.g., `apiserver.crt`, `apiserver-etcd-client.crt`, etc.). These files are stored only on the nodes. If any changes occur (e.g., new SANs are added), certificates are automatically reissued, and the kubeconfig is synchronized.
+1. **Client certificates** required for mutual communication between control plane components (e.g., `apiserver.crt`, `apiserver-etcd-client.crt`, etc.). These files are stored only on the nodes. If any changes occur (e.g., new SANs are added), certificates are automatically reissued, and the kubeconfig is synchronized.
 
 ### PKI management
 
@@ -150,22 +150,22 @@ DKP also manages the Public Key Infrastructure (PKI) used for encryption and aut
 - PKI for control plane components (kube-apiserver, kube-controller-manager, kube-scheduler, etc.).
 - PKI for the etcd cluster (etcd certificates and inter-node communication).
 
-DKP assumes control of this PKI after the initial cluster installation and once its pods are running. As a result, all key issuance, renewal, and rotation operations are performed automatically and centrally, without requiring manual intervention.
+DKP assumes control of this PKI after the initial cluster installation and once its pods are running. As a result, all key issuance, renewal, and rotation operations (both for control plane and etcd) are performed automatically and centrally, without requiring manual intervention.
 
 ### Additional SANs and auto-update
 
 Deckhouse simplifies the addition of new Subject Alternative Names (SANs) for the Kubernetes API endpoint: you only need to specify them in the configuration. After any SAN change, the module automatically regenerates the certificates and updates the kubeconfig.
 
-To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the `spec.settings.apiserver.certSANs` field of your `ModuleConfig/control-plane-manager`.
+To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the `spec.settings.apiserver.certSANs` field of your ModuleConfig/control-plane-manager resource.
 
-DKP will automatically generate new certificates and update all required configuration files (including `kubeconfig`).
+DKP will automatically generate new certificates and update all required configuration files (including kubeconfig).
 
 ### Kubelet certificate rotation
 
 In Deckhouse Kubernetes Platform, kubelet does not use the `--tls-cert-file` or `--tls-private-key-file` flags directly. Instead, it relies on dynamic certificates:
 
-- By default, kubelet generates its keys in `/var/lib/kubelet/pki/` and requests renewal from the kube-apiserver when needed;
-- Issued certificates are valid for 1 year, but kubelet starts renewing them early (around 5–10% of the remaining validity period);
+- By default, kubelet generates its keys in `/var/lib/kubelet/pki/` and requests renewal from the kube-apiserver when needed.
+- Issued certificates are valid for 1 year, but kubelet starts renewing them early (around 5–10% of the remaining validity period).
 - If the certificate fails to renew in time, the node is marked as `NotReady` and is eventually replaced.
 
 ### Manual renewal of control plane certificates
@@ -228,8 +228,8 @@ To manually renew the control plane certificates, use the `kubeadm` utility on e
    ```
 
    For more details on configuring the content of `audit-policy.yaml`, see:
-   * [Official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
-   * [GCE helper script source code](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+   * [Official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
+   * [GCE helper script source code](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862)
 
 ### Excluding built-in audit policies
 
@@ -280,7 +280,7 @@ It is assumed that a log scraper is installed on master nodes (`log-shipper`, `p
 
 The log rotation parameters for this file are predefined and cannot be changed:
 
-* Maximum disk space: `1000 МБ`.
+* Maximum disk space: `1000 MB`.
 * Maximum retention period: `30 days`.
 
 Depending on the policy settings and the number of requests to the `apiserver`, logs may accumulate rapidly. In such cases, the actual retention period may be less than 30 minutes.
@@ -289,7 +289,7 @@ Depending on the policy settings and the number of requests to the `apiserver`, 
 This feature does not guarantee safety. If the secret contains unsupported options or typos, the `apiserver` may fail to start.
 {% endalert %}
 
-If problems arise with launching the `apiserver`, you need to manually remove the `--audit-log-*` parameters from `/etc/kubernetes/manifests/kube-apiserver.yaml` and restart the apiserver:
+If problems arise with launching the `apiserver`, you need to manually remove the `--audit-log-*` parameters from `/etc/kubernetes/manifests/kube-apiserver.yaml` and restart the `apiserver`:
 
 ```bash
 docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')

@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/platform-scaling/node/node-customization.html
 lang: ru
 ---
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). С его помощью можно выполнять на узлах bash-скрипты, используя набор команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также применять шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). С его помощью можно выполнять на узлах bash-скрипты, используя набор команд [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также применять шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 
 - Установка и настройки дополнительных пакетов ОС.  
 
@@ -119,7 +119,7 @@ echo 'Tuning environment for user {{ .name }}'
 {{- end }}
 ```
 
-Пример использования команд bashbooster:
+Пример использования команд Bash Booster:
 
 ```shell
 bb-event-on 'bb-package-installed' 'post-install'
@@ -133,7 +133,7 @@ post-install() {
 
 ## Мониторинг выполнения скриптов
 
-Ход выполнения скриптов можно увидеть на узле в журнале сервиса bashible c помощью команды:
+Ход выполнения скриптов можно увидеть на узле в журнале сервиса `bashible` c помощью команды:
 
 ```bash
 journalctl -u bashible.service
@@ -143,7 +143,8 @@ journalctl -u bashible.service
 
 ## Механизм повторного запуска скриптов
 
-Сервис принимает решение о повторном запуске скриптов путем сравнения единой контрольной суммы всех файлов, расположенной по пути `/var/lib/bashible/configuration_checksum` с контрольной суммой размещенной в кластере `kubernetes` в секрете `configuration-checksums` пространства имён `d8-cloud-instance-manager`.
+Сервис принимает решение о повторном запуске скриптов путем сравнения единой контрольной суммы всех файлов, расположенной по пути `/var/lib/bashible/configuration_checksum` с контрольной суммой размещенной в кластере Kubernetes в секрете `configuration-checksums` пространства имён `d8-cloud-instance-manager`.
+
 Проверить контрольную сумму можно следующей командой:  
 
 ```bash
@@ -153,7 +154,8 @@ kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 Сравнение контрольных сумм сервис совершает каждую минуту.  
 
 Контрольная сумма в кластере изменяется раз в 4 часа, тем самым повторно запуская скрипты на всех узлах.  
-Принудительный запуск скриптов bashible на узле можно выполнить, удалив файл контрольной суммы с помощью следующей команды:
+
+Принудительный запуск скриптов `bashible` на узле можно выполнить, удалив файл контрольной суммы с помощью следующей команды:
 
 ```bash
 rm /var/lib/bashible/configuration_checksum
@@ -168,7 +170,7 @@ rm /var/lib/bashible/configuration_checksum
 
 Полезные особенности некоторых скриптов:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса. Следует учитывать что директория `/etc/containerd/conf.d/` не создается автоматически, а также что создание файлов в этой директории следует производить в скриптах с приоритетом менее `32`.
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса. Следует учитывать что директория `/etc/containerd/conf.d/` не создается автоматически, а также что создание файлов в этой директории следует производить в скриптах с приоритетом менее `32`.
 
 ## Как использовать containerd с поддержкой Nvidia GPU
 
@@ -187,7 +189,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Далее создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации containerd:
+Далее создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -234,7 +236,7 @@ spec:
   weight: 31
 ```
 
-Добавьте NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
+Добавьте ресурс NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
 
 ### Ubuntu
 
@@ -273,7 +275,7 @@ spec:
   weight: 30
 ```
 
-### Centos
+### CentOS
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -339,7 +341,12 @@ spec:
 Проверьте логи командой:
 
 ```shell
-$ kubectl logs job/nvidia-cuda-test
+kubectl logs job/nvidia-cuda-test
+```
+
+Пример вывода:
+
+```console
 Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
@@ -386,7 +393,12 @@ spec:
 Проверьте логи командой:
 
 ```shell
-$ kubectl logs job/gpu-operator-test
+kubectl logs job/gpu-operator-test
+```
+
+Пример вывода:
+
+```console
 [Vector addition of 50000 elements]
 Copy input data from the host memory to the CUDA device
 CUDA kernel launch with 196 blocks of 256 threads
@@ -401,7 +413,7 @@ Done
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для DKP с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
+`bashible` на узлах объединяет конфигурацию `containerd` для DKP с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
 
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`. При этом корректную работу таких изменений необходимо обеспечить самостоятельно. Рекомендуется **не изменять** конфигурацию на управляющих (master) узлах (NodeGroup `master`).
@@ -493,7 +505,7 @@ spec:
 ## Настройка сертификата для дополнительного registry
 
 {% alert level="info" %}
-Помимо containerd, сертификат можно одновременно добавить и в операционной системе.
+Помимо `containerd`, сертификат можно одновременно добавить и в операционной системе.
 {% endalert %}
 
 Пример NodeGroupConfiguration для настройки сертификата для дополнительного registry:
@@ -527,23 +539,7 @@ spec:
     CERT_CONTENT=$(cat <<"EOF"
     -----BEGIN CERTIFICATE-----
     MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
-    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
-    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
-    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
-    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
-    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
-    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
-    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
-    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
-    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
-    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
-    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
-    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
-    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
-    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
-    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
+    ...
     -----END CERTIFICATE-----
     EOF
     )

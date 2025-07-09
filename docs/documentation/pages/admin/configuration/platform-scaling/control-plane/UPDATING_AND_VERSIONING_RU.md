@@ -10,14 +10,14 @@ lang: ru
 
 - В DKP поддерживаются последние пять версий Kubernetes.
 - Control plane можно откатывать на одну минорную версию назад и обновлять на несколько версий вперёд — шаг за шагом, по одной версии за раз.
-- Patch-версии (например, 1.27.3 → 1.27.5) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
+- Patch-версии (например, `1.27.3` → `1.27.5`) обновляются автоматически вместе с версией Deckhouse, и управлять этим процессом нельзя.
 - Minor-версии задаются вручную в параметре `kubernetesVersion` в ресурсе ClusterConfiguration.
 
 ### Изменение версии Kubernetes
 
 1. Откройте редактирование [ClusterConfiguration](/installing/configuration.html#clusterconfiguration):
 
-   ```console
+   ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
      deckhouse-controller edit cluster-configuration
    ```

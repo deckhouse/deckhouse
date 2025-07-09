@@ -24,7 +24,7 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 
    You can obtain the script from the Deckhouse web interface under the “Node Groups → Scripts” tab or via the following `kubectl` command:
 
-   ```console
+   ```shell
    kubectl -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
    ```
 
@@ -37,16 +37,16 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 DKP supports automatic addition of physical (bare-metal) servers to the cluster without the need to manually run an installation script on each node. To enable this:
 
 1. Prepare the server (OS, networking):
-   - Install a supported operating system;
-   - Configure networking and ensure the server is accessible via SSH;
-   - Create a system user (e.g., `ubuntu`) for SSH access;
+   - Install a supported operating system.
+   - Configure networking and ensure the server is accessible via SSH.
+   - Create a system user (e.g., `ubuntu`) for SSH access.
    - Ensure the user can execute commands using `sudo`.
 
 1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
-   - A private SSH key;
-   - The OS user;
-   - The SSH port;
-   - (Optional) a `sudo` password, if required.
+   - A private SSH key.
+   - The OS user.
+   - The SSH port.
+   - (Optional) A `sudo` password, if required.
 
      Example:
 
@@ -84,16 +84,16 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
        name: static-nodes
    ```
 
-   A separate StaticInstance resource must be created for each server, but the same SSHCredentials can be reused to access multiple servers.
+   A separate [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource must be created for each server, but the same SSHCredentials can be reused to access multiple servers.
 
    Possible StaticInstance states:
 
-   - `Pending` — the server has not yet been configured; the corresponding node is not present in the cluster.
-   - `Bootstrapping` — the server is being configured and the node is being added to the cluster.
-   - `Running` — the server is successfully configured and the node has joined the cluster.
-   - `Cleaning` — the server is being cleaned up and the node is being removed from the cluster.
+   - `Pending`: The server has not yet been configured; the corresponding node is not present in the cluster.
+   - `Bootstrapping`: The server is being configured and the node is being added to the cluster.
+   - `Running`: The server is successfully configured and the node has joined the cluster.
+   - `Cleaning`: The server is being cleaned up and the node is being removed from the cluster.
 
-     These states reflect the current stage of node management. CAPS automatically transitions a `StaticInstance` between these states depending on whether a node needs to be added or removed from a group.
+   These states reflect the current stage of node management. CAPS automatically transitions a StaticInstance between these states depending on whether a node needs to be added or removed from a group.
 
 1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DKP should use these servers:
 
@@ -114,14 +114,15 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
          node-role.deckhouse.io/worker: ""
    ```
 
-   This section defines parameters for using `StaticInstance` resources:  
-   - `count` specifies how many nodes will be added to the group;  
+   This section defines parameters for using StaticInstance resources:
+
+   - `count` specifies how many nodes will be added to the group.  
    - `labelSelector` defines the rules for selecting nodes.
 
    When using the Cluster API Provider Static (CAPS), it is important to correctly set the `nodeType` to `Static` and provide the `staticInstances` section in the NodeGroup resource:
 
    - If the `labelSelector` is not specified, CAPS will use any available StaticInstance resources in the cluster.
-   - The same `StaticInstance` can be used in multiple NodeGroups if it matches the filters.
+   - The same StaticInstance can be used in multiple NodeGroups if it matches the filters.
    - CAPS automatically maintains the number of nodes in the group according to the `count` parameter.
    - When a node is removed, CAPS performs cleanup and disconnection, and the corresponding StaticInstance transitions to the `Pending` status, allowing it to be reused.
 
@@ -130,7 +131,7 @@ After the node group is created, a script for adding servers to the group will b
 ## Moving a static node between NodeGroups
 
 {% alert level="warning" %}
-During the migration of static nodes between [NodeGroup](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
+During the migration of static nodes between [NodeGroups](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
 {% endalert %}
 
 1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
@@ -153,23 +154,23 @@ During the migration of static nodes between [NodeGroup](/modules/node-manager/c
 1. Change the `role` label of the existing [StaticInstance](/modules/node-manager/cr.html#staticinstance) from `worker` to `front`.  
    This will allow the new NodeGroup named `front` to manage this node:
 
-   ```console
+   ```shell
    kubectl label staticinstance static-worker-1 role=front --overwrite
    ```
 
 1. Update the `worker` NodeGroup resource by decreasing the `count` parameter from `1` to `0`:
 
-   ```console
+   ```shell
    kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
    ```
 
 ### Manual cleanup of a static node
 
-To remove a node from the cluster and clean the server (virtual machine), run the `/var/lib/bashible/cleanup_static_node.sh` script, which is already present on every static node.
+To remove a node from the cluster and clean the server, run the `/var/lib/bashible/cleanup_static_node.sh` script, which is already present on every static node.
 
 Example of disconnecting a node from the cluster and cleaning the server:
 
-```console
+```shell
 bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
 ```
 
@@ -240,10 +241,10 @@ Node updates involve disruption. Depending on the `disruption` settings for the 
 
 ## Changing the NodeGroup of a static node
 
-If a node is managed by CAPS, it is not possible to change its associated NodeGroup.  
-The only option is to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
+If a node is managed by [CAPS](#automatic-method), you can't change its associated NodeGroup.  
+The only option is to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
-To move an existing manually added static node from one `NodeGroup` to another, you need to update the group label on the node:
+To move an existing manually added static node from one NodeGroup to another, you need to update the group label on the node:
 
 ```shell
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -253,7 +254,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ## Changing the IP address in a StaticInstance
 
 You cannot change the IP address of a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource.  
-If an incorrect address is specified in a StaticInstance, you need to [delete the StaticInstance](#can-a-staticinstance-be-deleted) and create a new one.
+If an incorrect address is specified in a StaticInstance, you need to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
 ## Deleting a StaticInstance
 

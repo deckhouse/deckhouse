@@ -5,8 +5,8 @@ permalink: en/admin/configuration/platform-scaling/node/cloud-node.html
 
 In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following types:
 
-- **CloudEphemeral** — temporary nodes that are automatically created and deleted;
-- **CloudPermanent** — permanent nodes managed manually via `replicas`;
+- **CloudEphemeral** — temporary nodes that are automatically created and deleted.
+- **CloudPermanent** — permanent nodes managed manually via `replicas`.
 - **CloudStatic** — nodes created outside of DKP but integrated into the cluster.
 
 Below are instructions for adding and configuring each type.
@@ -17,7 +17,7 @@ CloudEphemeral nodes are automatically created and managed within the cluster us
 
 To add nodes:
 
-1. Ensure that the cloud provider module is enabled. For example: [cloud-provider-yandex](/modules/cloud-provider-yandex/), [cloud-provider-openstack](/modules/cloud-provider-openstack/), [cloud-provider-aws](/modules/cloud-provider-aws/).
+1. Ensure that the cloud provider module is enabled. For example: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
 1. Create an [InstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) object with the machine configuration. This object describes the parameters of the virtual machines to be created in the cloud.
 
@@ -37,10 +37,10 @@ To add nodes:
   
    The following parameters are specified:
 
-   - `flavorName` — instance type (CPU/RAM);
-   - `imageName` — OS image;
-   - `rootDiskSize` — size of the root disk;
-   - `mainNetwork` — cloud network for the instance.
+   - `flavorName`: Instance type (CPU/RAM).
+   - `imageName`: OS image.
+   - `rootDiskSize`: Size of the root disk.
+   - `mainNetwork`: Cloud network for the instance.
 
 1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudEphemeral` type. Example manifest:
 
@@ -69,7 +69,7 @@ To add nodes:
 
 ## Configuration for CloudEphemeral NodeGroups
 
-NodeGroups of type `CloudEphemeral` are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of group is commonly used in cloud-based DKP clusters.
+NodeGroups of CloudEphemeral type are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of groups is commonly used in cloud-based DKP clusters.
 
 Node configuration is defined in the `cloudInstances` section and includes parameters for scaling, zoning, fault tolerance, and prioritization.
 
@@ -95,11 +95,11 @@ Autoscaling is triggered only when there are Pending pods that cannot be schedul
 
 Key scaling parameters are defined in the `cloudInstances` section of the NodeGroup resource:
 
-- `minPerZone` — the minimum number of virtual machines per zone. This number is always maintained, even with no workload.
-- `maxPerZone` — the maximum number of nodes that can be created per zone. This defines the upper scaling limit.
-- `maxUnavailablePerZone` — limits the number of unavailable nodes during updates, deletions, or creation.
-- `standby` — optional parameter that allows pre-provisioning standby nodes.
-- `priority` — integer priority of the group. When scaling, `Cluster Autoscaler` prefers groups with a higher `priority` value. This allows you to define scaling order among multiple NodeGroups.
+- `minPerZone`: The minimum number of virtual machines per zone. This number is always maintained, even with no workload.
+- `maxPerZone`: The maximum number of nodes that can be created per zone. This defines the upper scaling limit.
+- `maxUnavailablePerZone`: Limits the number of unavailable nodes during updates, deletions, or creation.
+- `standby`: Optional parameter that allows pre-provisioning standby nodes.
+- `priority`: Integer priority of the group. When scaling, `Cluster Autoscaler` prefers groups with a higher `priority` value. This allows you to define scaling order among multiple NodeGroups.
 
 Example configuration of a NodeGroup with autoscaling:
 
@@ -118,7 +118,7 @@ spec:
 
 ### Example autoscaling scenario
 
-Assume the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) configuration:
+Assume the following NodeGroup configuration:
 
 ```yaml
 spec:
@@ -155,18 +155,58 @@ In this case, launching all replicas will require 3 nodes — one in each zone.
 
 Now let's increase the number of replicas to 5. As a result, two Pods will enter the `Pending` state.
 
-Cluster Autoscaler:
+`Cluster Autoscaler`:
 
-- Detect the situation;
-- Calculate how much resource is missing;
-- Decide to create two more nodes;
-- Hand off the task to the Machine Controller Manager;
-- Two new VMs will be created in the cloud and automatically join the cluster;
+- Detects the situation.
+- Calculates the amount of lacking resources.
+- Decides to create two more nodes.
+- Hands off the task to the Machine Controller Manager.
+- Two new VMs will be created in the cloud and automatically join the cluster.
 - The Pods will be scheduled onto the new nodes.
 
-### Example NodeGroup definition
+### Allocating nodes for specific workloads
 
-#### Cloud nodes
+{% alert level="warning" %}
+You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DKP components. Use the `dedicated` or `dedicated.client.com` keys instead.
+{% endalert %}
+
+There are two ways to solve this problem:
+
+1. You can set labels to [NodeGroup](/modules/node-manager/cr.html#nodegroup) `spec.nodeTemplate.labels`, to use them in the `Pod`'s [`spec.nodeSelector`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [`spec.affinity.nodeAffinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
+1. You cat set taints to NodeGroup's `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [`spec.tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
+
+{% alert level="info" %}
+DKP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.️
+
+To use custom keys for taints (e.g., `dedicated.client.com`), you must add the key's value to the `modules.placement.customTolerationKeys` parameter. This way, Deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+{% endalert %}
+
+### Accelerating node provisioning in the cloud during horizontal application scaling
+
+To speed up the launch of new application replicas during automatic horizontal scaling, it is recommended to maintain a certain number of pre-provisioned (standby) nodes in the cluster.  
+This allows new application Pods to be scheduled quickly without waiting for node creation and initialization.
+Keep in mind that having standby nodes increases infrastructure costs.
+
+The target [NodeGroup](/modules/node-manager/cr.html#nodegroup) configuration should be as follows:
+
+1. Specify the absolute number of pre-provisioned nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` parameter.
+1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
+1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
+
+Example:
+
+```yaml
+cloudInstances:
+  maxPerZone: 10
+  minPerZone: 1
+  standby: 10%
+  standbyHolder:
+    overprovisioningRate: 30%
+```
+
+## Example NodeGroup definition
+
+### Cloud nodes
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -189,56 +229,15 @@ spec:
       tier: test
 ```
 
-## Allocating nodes for specific workloads
-
-{% alert level="warning" %}
-You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DKP components. Please, use the `dedicated` or `dedicated.client.com` keys.
-{% endalert %}
-
-There are two ways to solve this problem:
-
-1. You can set labels to [NodeGroup](/modules/node-manager/cr.html#nodegroup) `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
-1. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
-
-{% alert level="info" %}
-DKP tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
-
-To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
-{% endalert %}
-
-## Accelerating node provisioning in the cloud during horizontal application scaling
-
-To speed up the launch of new application replicas during automatic horizontal scaling, it is recommended to maintain a certain number of pre-provisioned (standby) nodes in the cluster.  
-This allows new application Pods to be scheduled quickly without waiting for node creation and initialization.
-
-Keep in mind that having standby nodes increases infrastructure costs.
-
-Here is how you should configure the target [NodeGroup](/modules/node-manager/cr.html#nodegroup):
-
-1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
-1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
-1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
-
-An example:
-
-```yaml
-cloudInstances:
-  maxPerZone: 10
-  minPerZone: 1
-  standby: 10%
-  standbyHolder:
-    overprovisioningRate: 30%
-```
-
 ## Configuring CloudEphemeral nodes using NodeGroupConfiguration
 
 Additional settings for cloud nodes can be defined using [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) objects. These allow you to:
 
-- Modify OS parameters (e.g., `sysctl`);
-- Add root certificates;
+- Modify OS parameters (e.g., `sysctl`).
+- Add root certificates.
 - Configure trust for private image registries, etc.
 
-NodeGroupConfiguration is applied to new nodes at creation time, including `CloudEphemeral` nodes.
+NodeGroupConfiguration is applied to new nodes at creation time, including CloudEphemeral nodes.
   
 {% alert level="info" %}  
 NodeGroupConfiguration applies only to nodes with a specified operating system image (`bundle`).  
@@ -267,13 +266,12 @@ spec:
 #### Adding a root certificate to the host
 
 {% alert level="warning" %}
-This example is for Ubuntu OS.  
-The method for adding certificates to the trust store may differ depending on the OS.  
-When adapting the script to another OS, adjust the `bundles` and `content` fields accordingly.
-{% endalert %}
 
-{% alert level="warning" %} 
-To use the certificate in `containerd`, you must restart the service after adding the certificate.
+- This example is for Ubuntu OS.  
+  The method for adding certificates to the trust store may differ depending on the OS.  
+  When adapting the script to another OS, adjust the `bundles` and `content` fields accordingly.
+- To use the certificate in `containerd`, you must restart the `containerd` service after adding the certificate.
+
 {% endalert %}
 
 ```yaml
@@ -304,13 +302,19 @@ spec:
     
     bb-event-on "ca-file-updated" "update-certs"
     
-    update-certs() {
+    update-certs() {          # Function with commands for adding a certificate to the store
       update-ca-certificates
     }
 
+    # bb-tmp-file - Creating temp file function. More information: http://www.bashbooster.net/#tmp
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
     
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
+
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
       ${CERT_TMP_FILE} \
@@ -356,17 +360,28 @@ spec:
     
     mkdir -p /etc/containerd/conf.d
 
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
     
     CONFIG_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
 
+    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+    ## ca-file-updated   - Event name
+    ## update-certs      - The function name that the event will call
+    
     bb-event-on "ca-file-updated" "update-certs"
     
-    update-certs() {
-      update-ca-certificates  # containerd restart is handled by script 032_configure_containerd.sh
+    update-certs() {          # Function with commands for adding a certificate to the store
+      update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
     }
+
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
 
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
@@ -378,11 +393,12 @@ spec:
       ${CONFIG_TMP_FILE} 
 ```
 
+
 ### Kernel update on nodes
 
 #### Debian-based distros
 
-Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the target kernel version in the `desired_version` variable of the shell script (the resource's `spec.content` parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -430,7 +446,7 @@ spec:
 
 #### CentOS-based distros
 
-Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource by specifying the target kernel version in the `desired_version` variable of the shell script (the resource's `spec.content` parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -476,21 +492,21 @@ spec:
     bb-dnf-install "kernel-${desired_version}"
 ```
 
-## Adding CloudPermanent nodes to a сloud сluster
+## Adding CloudPermanent nodes to a cloud cluster
 
-To add `CloudPermanent` nodes to a DKP cloud cluster:
+To add CloudPermanent nodes to a DKP cloud cluster:
 
-1. Make sure the cloud provider module is enabled. For example: [cloud-provider-yandex](/modules/cloud-provider-yandex/), [cloud-provider-openstack](/modules/cloud-provider-openstack/), [cloud-provider-aws](/modules/cloud-provider-aws/), etc.
+1. Make sure the cloud provider module is enabled. For example: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/), etc.
 
    You can check this by running the following command:
 
-   ```console
+   ```shell
    kubectl -n d8-system get modules
    ```
 
    Or view it in the Deckhouse web interface.
 
-1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the type `CloudPermanent`. Nodes of this type are managed via Terraform, which is integrated into DKP. The configuration for such nodes is located in the `(Provider)ClusterConfiguration` object. You must edit this configuration using the `dhctl` utility from the installation container. Example:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the `CloudPermanent` type. Nodes of this type are managed via Terraform, which is integrated into DKP. The configuration for such nodes is located in the `(Provider)ClusterConfiguration` object. You edit this configuration using the `dhctl` utility from the installation container. Example:
 
    ```yaml
    nodeGroups:
@@ -506,17 +522,17 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
    ```
 
 1. Specify the instance template parameters. The fields inside the `instanceClass` section depend on the specific cloud provider. Below is an example for OpenStack:
-   - `flavorName` — instance type (resources: CPU, RAM);
-   - `imageName` — OS image;
-   - `rootDiskSize` — size of the root disk (in GB);
-   - `mainNetwork` — network name;
-   - if needed: ETCD disk, zones, volume types, etc.
+   - `flavorName`: Instance type (resources: CPU, RAM).
+   - `imageName`: OS image.
+   - `rootDiskSize`: Size of the root disk (in GB).
+   - `mainNetwork`: Network name.
+   - If needed: etcd disk, zones, volume types, etc.
 
-   For other cloud providers, the field names and structure may differ. Refer to the CRD definition or the documentation for the corresponding cloud provider for the actual fields.
+   For other cloud providers, the field names and structure may differ. For specific fields, refer to the CRD definition or the documentation for the corresponding cloud provider.
 
 1. Apply the configuration using `dhctl converge`. After editing the `(Provider)ClusterConfiguration`, run:
 
-   ```console
+   ```shell
    dhctl converge \
      --ssh-host <master node IP> \
      --ssh-user <username> \
@@ -525,27 +541,27 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
 
    This command will:
 
-   - launch Terraform,
-   - create the required virtual machines,
-   - install DKP on them (using `bootstrap.sh`),
-   - register the nodes in the cluster.
+   - Launch Terraform.
+   - Create the required virtual machines.
+   - Install DKP on them (using `bootstrap.sh`).
+   - Register the nodes in the cluster.
 
 1. Done — the new nodes will automatically appear in the cluster.  
    You can view them by running:
 
-   ```console
+   ```shell
    kubectl get nodes
    ```
 
-   Or in the Deckhouse web interface.
+   The list of newly created nodes is also available in the Deckhouse web interface.
 
 Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services (e.g., GKE and EKS).  
 In such cases, the [`node-manager`](/modules/node-manager/) module provides node configuration management and automation,  
 but its capabilities may be limited by the respective cloud provider's API.
 
-## Adding a static node to a cluster
+## Adding a CloudStatic node to a cluster
 
-Adding a static node can be done manually or using the Cluster API Provider Static.
+Adding a static node can be done manually or using the Cluster API Provider Static (CAPS).
 
 ### Manually
 
@@ -555,7 +571,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    - [For AWS](/modules/cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For GCP](/modules/cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For YC](/modules/cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-1. Use the existing one or create a new [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource for the NodeGroup. The `nodeType` parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
+1. Use the existing [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource or create a new one. The `nodeType` parameter for static nodes in the NodeGroup must be set to `Static` or `CloudStatic`.
 1. Get the Base64-encoded script code to add and configure the node.
 
    Here is how you can get Base64-encoded script code to add a node to the `worker` NodeGroup:
@@ -581,16 +597,16 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
 
 1. Prepare the necessary resources.
 
-   * Allocate a server (or a virtual machine), configure networking, etc. If required, install specific OS packages and add the mount points on the node.
+   * Allocate a server (or a virtual machine), configure networking connectivity, etc. If required, install specific OS packages and add the mount points on the node.
 
-   * Create a user (`caps` in the example below) and add it to sudoers by running the following command **on the server**:
+   * Create a user (`caps` in the example below) capable of executing `sudo` by running the following command **on the server**:
 
      ```shell
      useradd -m -s /bin/bash caps 
      usermod -aG sudo caps
      ```
 
-   * Allow the user to run sudo commands without having to enter a password. For this, add the following line to the sudo configuration **on the server** (you can either edit the `/etc/sudoers` file, or run the `sudo visudo` command, or use some other method):
+   * Allow the user to run `sudo` commands without entering a password. For this, add the following line to the `sudo` configuration **on the server** (you can either edit the `/etc/sudoers` file or run the `sudo visudo` command, or use some other method):
 
      ```text
      caps ALL=(ALL) NOPASSWD: ALL
@@ -614,7 +630,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
      chown -R caps:caps /home/caps/
      ```
 
-1. Create a [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster:
+1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster:
 
    Run the following command in the user key directory **on the server** to encode the private key to Base64:
 
@@ -628,7 +644,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
     CAPS_PRIVATE_KEY_BASE64=<BASE64-ENCODED PRIVATE KEY>
    ```
 
-   Create a [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster):
+   To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster), run the following command:
 
    ```shell
    kubectl create -f - <<EOF
@@ -642,7 +658,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    EOF
    ```
 
-1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster; specify the IP address of the static node server:
+1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -660,11 +676,12 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    EOF
    ```
 
-1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource in the cluster. Value of `count` defines number of `staticInstances`  which fall under the `labelSelector` that will be bootstrapped and joined into the `nodeGroup`, in this example this is `1`:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource in the cluster. The value of `count` defines a number of `staticInstances` which fall under the `labelSelector` that will be added to the cluster. In this example it's `1`:
 
    > The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 
-   ```yaml
+   ```shell
+   kubectl create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -681,11 +698,11 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
 
 ### Using Cluster API Provider Static for multiple node groups
 
-This example shows how you can use filters in the StaticInstance `label selector` to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
+This example shows how you can use filters in the [StaticInstance](/modules/node-manager/cr.html#staticinstance) `label selector` to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
 
-1. Prepare the required resources (3 servers or virtual machines) and create the `SSHCredentials` resource in the same way as step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
+1. Prepare the required resources (3 servers or virtual machines) and create the [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource the same way as on step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
 
-1. Create two [NodeGroup](cr.html#nodegroup) in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `kubectl` configured to manage the cluster):
 
    > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 
@@ -779,7 +796,7 @@ To add master nodes in a cloud cluster:
 
 1. Apply the changes using `dhctl converge`:
 
-   ```console
+   ```shell
    dhctl converge \
      --ssh-host <master node IP> \
      --ssh-user <username> \
@@ -825,18 +842,18 @@ spec:
   nodeType: CloudEphemeral
 ```
 
-In the example above, the `cluster-autoscaler` will first attempt to provision a spot-node.
-If it fails to add the node to the cluster within 15 minutes, the `worker-spot` NodeGroup will be paused for 20 minutes, and the `cluster-autoscaler` will start provisioning nodes from the `worker` NodeGroup.
+In the example above, the `Cluster Autoscaler` will first attempt to provision a spot-node.
+If it fails to add the node to the cluster within 15 minutes, the `worker-spot` NodeGroup will be paused for 20 minutes, and the `Cluster Autoscaler` will start provisioning nodes from the `worker` NodeGroup.
 
-If a new node is needed again after 30 minutes, the autoscaler will again attempt worker-spot first, then fall back to worker.
+If a new node is needed again after 30 minutes, `Cluster Autoscaler` will again attempt `worker-spot` first, then fall back to `worker`.
 
 Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example), all further nodes will be provisioned from the `worker` NodeGroup.
 
-The node templates (labels/taints) for `worker` and `worker-spot` should be identical, or at least compatible with the workload that triggers scaling.
+The node templates (labels/taints) for `worker` and `worker-spot` NodeGroups should be identical or at least compatible with the workload that triggers scaling.
 
 ## NodeGroup states and their interpretation
 
-**Ready** — the [NodeGroup](/modules/node-manager/cr.html#nodegroup) contains the minimum required number of scheduled nodes with the status `Ready` for all zones.
+**Ready** — the NodeGroup contains the minimum required number of scheduled nodes with the status `Ready` for all zones.
 
 Example 1. A group of nodes in the `Ready` state:
 
@@ -896,17 +913,17 @@ status:
     type: Ready
 ```
 
-**Updating** — a node group contains at least one node in which there is an annotation with the prefix `update.node.deckhouse.io` (for example, `update.node.deckhouse.io/waiting-for-approval`).
+**Updating**: A node group contains at least one node in which there is an annotation with the prefix `update.node.deckhouse.io` (for example, `update.node.deckhouse.io/waiting-for-approval`).
 
-**WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation `update.node.deckhouse.io/disruption-required` and
+**WaitingForDisruptiveApproval**: A node group contains at least one node that has an annotation `update.node.deckhouse.io/disruption-required` and
 there is no annotation `update.node.deckhouse.io/disruption-approved`.
 
-**Scaling** — calculated only for node groups with the type `CloudEphemeral`. The state `True` can be in two cases:
+**Scaling**: Calculated only for node groups with the type `CloudEphemeral`. The state `True` can be in two cases:
 
-1. When the number of nodes is less than the *desired number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
-1. When a node is marked for deletion or the number of nodes is greater than the *desired number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
+1. When the number of nodes is less than the *target number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
+1. When a node is marked for deletion or the number of nodes is greater than the *target number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
 
-The *desired number of nodes* is the sum of all replicas in the node group.
+The *target number of nodes* is the sum of all replicas in the node group.
 
 Example. The desired number of nodes is 2:
 
@@ -926,4 +943,4 @@ status:
 ...
 ```
 
-**Error** — contains the last error that occurred when creating a node in a node group.
+**Error**: Contains the last error that occurred when creating a node in a node group.

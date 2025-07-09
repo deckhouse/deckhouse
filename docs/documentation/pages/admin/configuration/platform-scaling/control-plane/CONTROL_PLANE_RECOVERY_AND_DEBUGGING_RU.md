@@ -12,7 +12,7 @@ lang: ru
 
 Если кластер etcd не функционирует и не удается восстановить его из резервной копии, вы можете попытаться восстановить его с нуля, следуя шагам ниже.
 
-1. Сначала на всех узлах, которые являются частью вашего кластера etcd, кроме одного, удалите манифест `etcd.yaml`, который находится в директории `/etc/kubernetes/manifests/`. После этого только один узел останется активным, и с него будет происходить восстановление состояния мультимастерного кластера.
+1. Сначала на всех узлах, которые являются частью вашего кластера etcd, **кроме одного**, удалите манифест `etcd.yaml`, который находится в директории `/etc/kubernetes/manifests/`. После этого только один узел останется активным, и с него будет происходить восстановление состояния мультимастерного кластера.
 1. На оставшемся узле откройте файл манифеста `etcd.yaml` и укажите параметр `--force-new-cluster` в `spec.containers.command`.
 1. После успешного восстановления кластера, удалите параметр `--force-new-cluster`.
 
@@ -29,25 +29,25 @@ lang: ru
 
 ### containerd
 
-Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением DKP выполнить команду:
+1. Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением DKP выполнить команду:
 
-```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
-```
+   ```shell
+   kubectl -n d8-system get secrets deckhouse-registry -o json |
+   jq -r '.data.".dockerconfigjson"' | base64 -d |
+   jq -r '.auths."registry.deckhouse.io".auth'
+   ```
 
-Скопируйте вывод команды и присвойте переменной `AUTH` на поврежденном master-узле.
+1. Скопируйте вывод команды и присвойте переменной `AUTH` на поврежденном master-узле.
 
-Далее на поврежденном master-узле загрузите образы компонентов `control-plane`:
+1. Далее на поврежденном master-узле загрузите образы компонентов control plane:
 
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  crictl pull --auth $AUTH $image
-done
-```
+   ```shell
+   for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+     crictl pull --auth $AUTH $image
+   done
+   ```
 
-После загрузки образов перезапустите `kubelet`.
+1. После загрузки образов перезапустите kubelet.
 
 ## Восстановление etcd
 
@@ -57,7 +57,7 @@ done
 
 1. Найдите под etcd:
 
-   ```console
+   ```shell
    kubectl -n kube-system get pods -l component=etcd,tier=control-plane
    ```
 
@@ -65,7 +65,7 @@ done
 
 1. Выполните команду на любом доступном etcd-поде (предполагается, что он запущен в пространстве имён `kube-system`):
 
-   ```console
+   ```shell
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
      etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
@@ -84,7 +84,7 @@ done
 Будьте осторожны: эти действия полностью уничтожают предыдущие данные и формируют новый кластер etcd.
 {% endalert %}
 
-### Восстановление etcd при ошибке `panic: unexpected removal of unknown remote peer`
+### Восстановление etcd при ошибке panic: unexpected removal of unknown remote peer
 
 В некоторых случаях помогает ручное восстановление через `etcdutl snapshot restore`:
 
@@ -95,7 +95,7 @@ done
 
 ### Действия при переполнении базы данных etcd (превышение quota-backend-bytes)
 
-Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится `read-only`. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
+Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится read-only. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
 ```shell
 kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
@@ -106,7 +106,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 Если в поле `ERRORS` вы видите подобное сообщение `alarm:NOSPACE`, значит вам нужно предпринять следующие шаги:
 
-1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, раположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
+1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, расположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
@@ -116,14 +116,14 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-1. Измените параметр [maxDbSize](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) в настройках [`control-plane-manager`](/modules/control-plane-manager/) на тот, который был задан в манифесте.
+1. Измените параметр [`maxDbSize`](/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) в настройках модуля `control-plane-manager` на тот, который был задан в манифесте.
 
 ## Отказоустойчивость
 
 Если какой-либо компонент control plane становится недоступным, кластер временно сохраняет текущее состояние, но не может обрабатывать новые события. Например:
 
-- При сбое kube-controller-manager перестаёт работать масштабирование deployment'ов.
-- При недоступности kube-apiserver невозможны любые запросы к Kubernetes API, но уже запущенные приложения продолжают функционировать.
+- При сбое `kube-controller-manager` перестаёт работать масштабирование deployment'ов.
+- При недоступности `kube-apiserver` невозможны любые запросы к Kubernetes API, но уже запущенные приложения продолжают функционировать.
 
 Однако при продолжительной недоступности компонентов нарушается обработка новых объектов, реакция на сбои узлов и другие процессы. Со временем это может привести к деградации работы кластера и повлиять на пользовательские приложения.
 
