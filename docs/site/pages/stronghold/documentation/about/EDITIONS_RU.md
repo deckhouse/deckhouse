@@ -16,8 +16,7 @@ Deckhouse Stronghold Enterprise Edition и Certified Security Edition лицен
 
 {% capture coming_soon %}<img src="/images/icons/note.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
 {% capture techsupport_notice_ce %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.tech_support_stronghold_notice_ce[page.lang] }}" aria-expanded="false">{% endcapture %}
-{% capture techsupport_notice_ee %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.tech_support_stronghold_notice_ee[page.lang] }}" aria-expanded="false">{% endcapture %}
-{% capture techsupport_notice_cse %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.tech_support_stronghold_notice_cse[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% capture techsupport_notice_commercial %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.tech_support_stronghold_notice_commercial[page.lang] }}" aria-expanded="false">{% endcapture %}
 
 {% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
 {% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
@@ -40,6 +39,6 @@ Deckhouse Stronghold Enterprise Edition и Certified Security Edition лицен
 | Возможность поставки в виде исполняемого файла (Standalone)                                                      | {{ not_supported }}                                  | {{ supported }}                                                 | {{ supported }}                                |
 | Сертификат соответствия требованиям Приказа ФСТЭК России №76 по 4 уровню доверия                                 | {{ not_supported }}                                  | {{ not_supported }}                                             | {{ supported }}                                |
 | Возможность запуска в Deckhouse Kubernetes Platform Community Edition                                            | {{ supported }}                                  | {{ not_supported }}                                             | {{ not_supported }}                            |
-| [Гарантийная техническая поддержка](https://deckhouse.ru/tech-support/)                                          | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_ee }}                                     | {{ techsupport_notice_cse }}                   |
-| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)                                                    | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_ee }}                                     | {{ techsupport_notice_cse }}                   |
-| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/)                                                  | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_ee }}                                     | {{ techsupport_notice_cse }}                   |
+| [Гарантийная техническая поддержка](https://deckhouse.ru/tech-support/)                                         | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ tech_support_notice_commercial }}                   |
+| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)                                                   | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ tech_support_notice_commercial }}                   |
+| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/)                                                 | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ tech_support_notice_commercial }}                   |
