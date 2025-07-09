@@ -58,7 +58,7 @@ set_containerd_registry_label() {
     set_containerd_registry_label "/etc/containerd/conf2.d" "v2"
     rm -f /var/lib/node_labels/containerd-conf
   {{- else }}
-    rm -f /var/lib/node_labels/containerd-conf var/lib/node_labels/containerd-v2-config
+    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-config
     rm -f /var/lib/node_labels/containerd-conf-registry
   {{- end }}
 {{- end }}
