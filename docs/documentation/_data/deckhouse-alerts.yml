@@ -2361,19 +2361,14 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        The `denial` cache (NXDOMAIN responses) in `node-local-dns` is frequently evicting entries.
+        The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
 
-        This may increase load on kube-dns and slow down DNS propagation when services or pods appear.
+        This might indicate denial cache size is insufficient (e.g. `denial 2500`).
 
-        Consider increasing the denial cache size (e.g. `denial 2500`) in the node-local-dns configuration.
-
-        Example pod:
-        ```
-        {{$labels.pod}} (node {{$labels.node}})
-        ```
+        Affected node: `{{$labels.node}}`
       summary: |
         node-local-dns denial cache is being frequently evicted.
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: D8NodeLocalDNSCacheSuccessEvictionsHigh
       sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
@@ -2381,19 +2376,14 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        The `success` cache in the `node-local-dns` pod is frequently evicting entries (more than 100 evictions in 5 minutes).
+        The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
 
-        This may indicate that the success cache size (e.g. `success 39936`) is too small to hold hot DNS records.
+        This could mean cache capacity is too small (e.g. `success 39936`), or traffic patterns changed.
 
-        Consider increasing the cache capacity in the node-local-dns config if eviction is unexpected.
-
-        Example pod:
-        ```
-        {{$labels.pod}} (node {{$labels.node}})
-        ```
+        Affected node: `{{$labels.node}}`
       summary: |
         node-local-dns success cache is being frequently evicted.
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: D8NodeLocalDNSServingStaleRecords
       sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
@@ -2401,24 +2391,20 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        `node-local-dns` is responding with expired DNS records (`serve_stale`), which indicates it cannot reach its upstream (e.g., `d8-kube-dns`).
+        node-local-dns is responding with expired DNS records via `serve_stale`.
 
-        This usually happens when kube-dns is slow or unavailable, and may cause clients to receive outdated IPs.
+        This usually means kube-dns is temporarily unavailable or slow.
 
-        Check the health of kube-dns and underlying networking.
+        Affected node: `{{$labels.node}}`
 
-        Example pod:
-        ```
-        {{$labels.pod}} (node {{$labels.node}})
-        ```
+        Check upstream kube-dns pods:
 
-        Example command:
         ```bash
         kubectl get pods -n kube-system -l k8s-app=kube-dns
         ```
       summary: |
         node-local-dns is serving stale DNS entries.
-      severity: "4"
+      severity: "3"
       markupFormat: markdown
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
