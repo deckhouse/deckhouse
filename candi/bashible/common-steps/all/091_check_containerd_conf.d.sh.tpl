@@ -15,44 +15,50 @@
 set_containerd_config_label() {
   local label_name="$1"
   local conf_dir="$2"
-  local label_file_name="$3"
-  local ctrd_version="$4"
-  
+  local label_file_name="$3"  
   local label_dir_path="/var/lib/node_labels/"
   local full_conf_path="/etc/containerd/${conf_dir}"
   local label_value="default"
 
-  local registry_label_value="default"
-  local registry_label_file_name="containerd-conf-registry"
-  local registry_label_name="containerd-config-registry"
-
   if ls "${full_conf_path}/"*.toml >/dev/null 2>&1; then
-    if [ "$ctrd_version" == "v1" ]; then
-      for path in "${full_conf_path}/"*.toml; do
-        if bb-ctrd-v1-has-registry-fields "${path}"; then
-          registry_label_value="custom"
-        break
-        fi
-      done
-    fi
     label_value="custom"
   fi
 
   mkdir -p /var/lib/node_labels/
   echo "node.deckhouse.io/${label_name}=${label_value}" > $label_dir_path/$label_file_name
-  echo "node.deckhouse.io/${registry_label_name}=${registry_label_value}" > $label_dir_path/$registry_label_file_name
+}
+
+set_containerd_registry_label() {
+  local full_conf_path="$1"
+  local ctrd_version="$2"
+  local label_value="default"
+
+  if [ "$ctrd_version" = "v1" ]; then
+    if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+      for path in ${full_conf_path}/*.toml; do
+        if bb-ctrd-v1-has-registry-fields "$path"; then
+          label_value="custom"
+          break
+        fi
+      done
+    fi
+  fi
+
+  mkdir -p /var/lib/node_labels/
+  echo "node.deckhouse.io/containerd-config-registry=${label_value}" > /var/lib/node_labels/containerd-conf-registry
 }
 
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
-    set_containerd_config_label "containerd-config" "conf.d" "containerd-conf" "v1"
+    set_containerd_config_label "containerd-config" "conf.d" "containerd-conf"
+    set_containerd_registry_label "/etc/containerd/conf.d" "v1"
     rm -f /var/lib/node_labels/containerd-v2-config
   {{- else if eq .cri "ContainerdV2" }}
-    set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf" "v2"
+    set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf"
+    set_containerd_registry_label "/etc/containerd/conf2.d" "v2"
     rm -f /var/lib/node_labels/containerd-conf
   {{- else }}
-    rm -f /var/lib/node_labels/containerd-conf \
-          /var/lib/node_labels/containerd-v2-config \
-          /var/lib/node_labels/containerd-conf-registry
+    rm -f /var/lib/node_labels/containerd-conf var/lib/node_labels/containerd-v2-config
+    rm -f /var/lib/node_labels/containerd-conf-registry
   {{- end }}
 {{- end }}

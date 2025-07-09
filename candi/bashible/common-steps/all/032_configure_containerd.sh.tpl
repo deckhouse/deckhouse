@@ -439,34 +439,42 @@ EOF
 additional_configs() {
   local conf_dir="$1"
   local unusable_conf_dir="$2"
-  local ctrd_version="$3"
   local root_path="/etc/containerd"
   local full_conf_path="$root_path/$conf_dir"
 
   rm -rf "$root_path/$unusable_conf_dir/"
   
   if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
-    {{- if .registry.registryModuleEnable }}
-    if [ "$ctrd_version" == "v1" ]; then
-      for path in "${full_conf_path}/"*.toml; do
-        if bb-ctrd-v1-has-registry-fields "${path}"; then
-          >&2 echo "Failed to merge $path: config contains custom registry fields"
-          exit 1
-        fi
-      done
-    fi
-    {{- end }}
     toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
   else
     cat "$root_path/deckhouse.toml"
   fi
 }
 
+check_additional_configs() {
+  local full_conf_path="$1"
+  local ctrd_version="$2"
+
+  if [ "$ctrd_version" = "v1" ]; then
+    if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+      for path in ${full_conf_path}/*.toml; do
+        if bb-ctrd-v1-has-registry-fields "${path}"; then
+          >&2 echo "Failed to merge $path: config contains custom registry fields"
+          exit 1
+        fi
+      done
+    fi
+  fi
+}
+
 # Check additional configs
 {{- if eq .cri "ContainerdV2" }}
-containerd_toml=$(additional_configs conf2.d conf.d "v2")
+containerd_toml=$(additional_configs conf2.d conf.d)
 {{- else if eq .cri "Containerd" }}
-containerd_toml=$(additional_configs conf.d conf2.d "v1")
+  {{- if .registry.registryModuleEnable }}
+check_additional_configs /etc/containerd/conf.d "v1"
+  {{- end }}
+containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
