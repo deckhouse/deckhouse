@@ -1864,38 +1864,6 @@ modules:
     namespace: d8-operator-trivy
     subsystems:
     - security
-  pod-reloader:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:pod-reloader:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - pod-reloader
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:pod-reloader:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - pod-reloader
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-pod-reloader
-    subsystems:
-    - infrastructure
   priority-class:
     capabilities:
       manage:
@@ -2526,7 +2494,6 @@ subsystems:
     - vertical-pod-autoscaler
     - descheduler
     - loki
-    - pod-reloader
     - chrony
     namespaces:
     - d8-chrony
@@ -2546,7 +2513,6 @@ subsystems:
     - d8-keepalived
     - d8-local-path-provisioner
     - d8-monitoring
-    - d8-pod-reloader
     - d8-system
     - kube-system
   kubernetes:

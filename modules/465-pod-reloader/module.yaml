@@ -1,8 +1,0 @@
-name: pod-reloader
-weight: 465
-stage: "General Availability"
-subsystems:
-  - infrastructure
-namespace: d8-pod-reloader
-requirements:
-  bootstrapped: true
