@@ -15,7 +15,7 @@
 set_containerd_config_label() {
   local label_name="$1"
   local conf_dir="$2"
-  local label_file_name="$3"  
+  local label_file_name="$3"
   local label_dir_path="/var/lib/node_labels/"
   local full_conf_path="/etc/containerd/${conf_dir}"
   local label_value="default"
