@@ -89,6 +89,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: "spec.nodeName"
+        - name: LD_LIBRARY_PATH
+          value: "/usr/lib/x86_64-linux-gnu"
         securityContext:
           privileged: true
           runAsNonRoot: false
