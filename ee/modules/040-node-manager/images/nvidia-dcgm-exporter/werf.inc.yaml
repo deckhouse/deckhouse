@@ -62,7 +62,12 @@ import:
   to: /etc/
   includePaths:
   - ld.so.conf
-  - ld.so.conf.d/x86_64-linux-gnu.conf
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /ldconf/ld.so.conf.d/
+  to: /etc/ld.so.conf.d/
+  includePaths:
+  - x86_64-linux-gnu.conf
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /
