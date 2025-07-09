@@ -449,7 +449,7 @@ additional_configs() {
     {{- if .registry.registryModuleEnable }}
     if [ "$ctrd_version" == "v1" ]; then
       for path in "${full_conf_path}/"*.toml; do
-        if bb-ctrd-has-registry-fields "${path}"; then
+        if bb-ctrd-v1-has-registry-fields "${path}"; then
           >&2 echo "Failed to merge $path: config contains custom registry fields"
           exit 1
         fi

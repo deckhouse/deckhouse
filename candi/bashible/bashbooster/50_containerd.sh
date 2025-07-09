@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# bb-ctrd-has-registry-fields:
+# bb-ctrd-v1-has-registry-fields:
 # Check if a containerd TOML configuration file contains the
 # registry section: `plugins."io.containerd.grpc.v1.cri".registry`
 #
@@ -37,7 +37,7 @@
 #             auth = "token"
 #           [plugins."io.containerd.grpc.v1.cri".registry.configs."my.registry".tls]
 #             insecure_skip_verify = true
-bb-ctrd-has-registry-fields() {
+bb-ctrd-v1-has-registry-fields() {
   local path="$1"
   local has_registry
   if ! has_registry=$(/opt/deckhouse/bin/yq -ptoml -oy \
