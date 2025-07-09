@@ -179,6 +179,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
+  to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
   stageDependencies:
