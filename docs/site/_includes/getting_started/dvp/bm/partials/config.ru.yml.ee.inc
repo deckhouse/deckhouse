@@ -15,6 +15,9 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
+# [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
+# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/virtualization-platform/reference/cr/initconfiguration.html
