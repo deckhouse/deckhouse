@@ -48,10 +48,22 @@ shell:
   - sed -i "s/env bash/bash/" /dcgm-exporter-entrypoint.sh
   - sed -E -i "s#DCGM_EXPORTER=.+#DCGM_EXPORTER=/usr/bin/dcgm-exporter#" /dcgm-exporter-entrypoint.sh
   - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
+  - |
+    mkdir -p /ldconf
+    echo "include /etc/ld.so.conf.d/*.conf" > /ldconf/ld.so.conf
+    mkdir -p /ldconf/etc/ld.so.conf.d
+    echo "/usr/lib/x86_64-linux-gnu" > /ldconf/etc/ld.so.conf.d/x86_64-linux-gnu.conf
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /ldconf/
+  to: /etc/
+  includePaths:
+  - ld.so.conf
+  - ld.so.conf.d/x86_64-linux-gnu.conf
+  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /
   to: /usr/bin/
