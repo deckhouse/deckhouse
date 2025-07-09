@@ -371,5 +371,3 @@ spec:
     - admin.example.com                      # Ещё один дополнительный домен.
     secretName: example-com-tls              # Имя для Certificate и Secret.
 ```
-
-
