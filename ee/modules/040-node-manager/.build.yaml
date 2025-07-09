@@ -1,3 +1,4 @@
 cloud-providers/*
 capi/*
 templates/nvidia-gpu
+monitoring/*
