@@ -328,6 +328,162 @@ extraLabels:
   cef.severity: '1'
 ```
 
+## Преобразование логов
+
+Вы можете настроить один или несколько видов трансформаций, которые будут применяться к логам перед отправкой в хранилище.
+
+### Преобразование записи в структурированный объект
+
+Трансформация [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage) позволяет преобразовать строку в поле `message` в структурированный JSON-объект
+на основе одного или нескольких заданных форматов (String, Klog, SysLog и другие).
+
+{% alert level="warning" %}
+При использовании нескольких трансформаций `ParseMessage`
+преобразование строки (`sourceFormat: String`) должно выполняться в последнюю очередь.
+{%- endalert %}
+
+Пример настройки преобразования записей смешанных форматов:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+      string:
+        targetField: "text"
+```
+
+Пример изначальной записи в логе:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+{... "message": {
+  "level" : "{ "severity": "info" }",
+  "msg" : "fetching.module.release"
+  }
+}
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
+```
+
+### Замена лейблов
+
+Трансформация [`ReplaceKeys`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-replacekeys) позволяет рекурсивно заменить все совпадения шаблона `source` на значение `target` в указанных ключах лейблов.
+
+{% alert level="warning" %}
+Перед применением трансформации `ReplaceKeys` к полю `message` или его вложенным полям
+преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
+{%- endalert %}
+
+Пример настройки замены точек на нижние подчеркивания в лейблах:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: replace-dot
+spec:
+  ...
+  transformations:
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - .pod_labels
+```
+
+Пример изначальной записи в логе:
+
+```json
+{"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  },
+  "pod_labels": {
+    "pod_app": "test"
+  }
+}
+```
+
+### Удаление лейблов
+
+Трансформация [`DropLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-droplabels) позволяет удалить указанные лейблы из структурированного JSON-сообщения.
+
+{% alert level="warning" %}
+Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
+преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
+{%- endalert %}
+
+Пример конфигурации с удалением лейбла и предварительной трансформацией `ParseMessage`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .message.example
+```
+
+Пример изначальной записи в логе:
+
+```json
+{"msg" : "fetching.module.release", "example": "test"}
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  }
+}
+```
+
 ## Фильтрация логов
 
 В Deckhouse предусмотрены фильтры, позволяющие исключить лишние сообщения для оптимизации процесса сбора логов:
