@@ -465,6 +465,12 @@ properties:
               properties:
                 name:
                   type: string
+                volumeBindingMode:
+                  type: string
+                reclaimPolicy:
+                  type: string
+                allowVolumeExpansion:
+                  type: boolean
                 isEnabled:
                   type: boolean
                 IsDefault:
@@ -476,5 +482,11 @@ properties:
           properties:
             name:
               type: string
+            volumeBindingMode:
+              type: string
+            reclaimPolicy:
+              type: string
+            allowVolumeExpansion:
+              type: boolean
             dvpStorageClass:
               type: string
