@@ -1,4 +1,4 @@
 cloud-providers/*
 capi/*
-templates/nvidia-gpu
+templates/*
 monitoring/*
