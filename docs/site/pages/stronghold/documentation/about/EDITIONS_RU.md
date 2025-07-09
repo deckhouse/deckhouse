@@ -4,13 +4,11 @@ permalink: ru/stronghold/documentation/about/editions.html
 lang: ru
 ---
 
-Deckhouse Stronghold доступен в редакциях Community Edition (CE), Enterprise Edition (EE). Редакция Certified Security Edition (CSE), сертифицированная ФСТЭК России для сред с повышенными требованиями к информационной безопасности, **ожидается в 2025 году**.
+Deckhouse Stronghold поставляется в редакциях Community Edition (CE), Enterprise Edition (EE). Редакция Certified Security Edition (CSE), сертифицированная ФСТЭК России для сред с повышенными требованиями к информационной безопасности, **ожидается в 2025 году**.
 
 Deckhouse Stronghold Community Edition доступен для использования в любой редакции Deckhouse Kubernetes Platform.
 
-Deckhouse Stronghold Enterprise Edition и Certified Security Edition лицензируются отдельно. Deckhouse Stronghold Enterprise Edition доступен для использования в любой коммерческой редакции Deckhouse Kubernetes Platform. Deckhouse Stronghold Certified Security Edition будет доступен для использования только в редакции Deckhouse Kubernetes Platform Certified Security Edition.
-
-Для подробного сравнения возможностей перейдите к разделу [Сравнение редакций Deckhouse Kubernetes Platform](../../../kubernetes-platform/documentation/v1/revision-comparison.html).
+Deckhouse Stronghold Enterprise Edition и Certified Security Edition лицензируются отдельно. Deckhouse Stronghold Enterprise Edition доступен для использования в любой **коммерческой редакции** Deckhouse Kubernetes Platform. Deckhouse Stronghold Certified Security Edition будет доступен для использования только в редакции Deckhouse Kubernetes Platform Certified Security Edition.
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
@@ -39,6 +37,6 @@ Deckhouse Stronghold Enterprise Edition и Certified Security Edition лицен
 | Возможность поставки в виде исполняемого файла (Standalone)                                                      | {{ not_supported }}                                  | {{ supported }}                                                 | {{ supported }}                                |
 | Сертификат соответствия требованиям Приказа ФСТЭК России №76 по 4 уровню доверия                                 | {{ not_supported }}                                  | {{ not_supported }}                                             | {{ supported }}                                |
 | Возможность запуска в Deckhouse Kubernetes Platform Community Edition                                            | {{ supported }}                                  | {{ not_supported }}                                             | {{ not_supported }}                            |
-| [Гарантийная техническая поддержка](https://deckhouse.ru/tech-support/)                                         | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
-| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)                                                   | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
-| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/)                                                 | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
+| [Гарантийная техническая поддержка](https://deckhouse.ru/tech-support/)                                          | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
+| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)                                                    | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
+| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/)                                                  | {{ techsupport_notice_ce }}                                  | {{ techsupport_notice_commercial }}                             | {{ techsupport_notice_commercial }}            |
