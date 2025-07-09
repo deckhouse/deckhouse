@@ -393,7 +393,7 @@ module.exports.checkLabel = checkLabel;
  * @returns {Promise<void|*>}
  */
 const removeLabel = async ({ github, context, core, issue_number, label }) => {
-  core.startGroup(`Remove label '${label}' from issue ${issue_number} ...`);
+  core.startGroup(`Remove label '${label}' from ${context.payload.pull_request ? 'PR' : 'issue'} #${issue_number} ...`);
   try {
     const response = await github.rest.issues.removeLabel({
       owner: context.repo.owner,
@@ -1037,7 +1037,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         // If edition/ce label is set, edition/ee label should be removed and vice versa.
         for (const edition of removeEditions) {
           core.notice(`Remove label '${edition}' from PR#${prNumber}`);
-          await removeLabel({ github, context, core, issue_number, label: edition });
+          await removeLabel({ github, context, core, issue_number: prNumber, label: edition });
         }
       }
 
