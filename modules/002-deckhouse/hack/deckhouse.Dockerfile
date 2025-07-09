@@ -82,7 +82,7 @@ RUN mkdir -p /out/ && \
     setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /out/caps-deckhouse-controller
 
 # Replace controller
-FROM --platform=linux/amd64 dev-registry.deckhouse.io/sys/deckhouse-oss:pr8229
+FROM --platform=linux/amd64 dev-registry.deckhouse.io/sys/deckhouse-oss:pr14327
 
 COPY --from=build /out/deckhouse-controller /usr/bin/deckhouse-controller
 COPY --from=build /out/caps-deckhouse-controller /usr/bin/caps-deckhouse-controller
@@ -92,7 +92,7 @@ USER root
 RUN ["/bin/bash", "-c", "cp /bin/bash /bin/sh"]
 
 # Replace module helm chart
-RUN rm -r \
+RUN rm -rf \
   /deckhouse/modules/038-registry/templates \
   /deckhouse/modules/038-registry/openapi \
   /deckhouse/modules/038-registry/monitoring \
