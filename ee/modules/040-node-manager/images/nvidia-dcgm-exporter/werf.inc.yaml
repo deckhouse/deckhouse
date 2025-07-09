@@ -51,8 +51,8 @@ shell:
   - |
     mkdir -p /ldconf
     echo "include /etc/ld.so.conf.d/*.conf" > /ldconf/ld.so.conf
-    mkdir -p /ldconf/etc/ld.so.conf.d
-    echo "/usr/lib/x86_64-linux-gnu" > /ldconf/etc/ld.so.conf.d/x86_64-linux-gnu.conf
+    mkdir -p /ldconf/ld.so.conf.d
+    echo "/usr/lib/x86_64-linux-gnu" > /ldconf/ld.so.conf.d/x86_64-linux-gnu.conf
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
