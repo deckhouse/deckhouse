@@ -76,7 +76,6 @@ metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
 spec:
   maxUnavailable: 1
-  minAvailable: 1
   selector:
     matchLabels:
       service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
