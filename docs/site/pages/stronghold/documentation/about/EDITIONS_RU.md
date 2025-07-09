@@ -1,5 +1,5 @@
 ---
-title: "Редакции платформы"
+title: "Редакции"
 permalink: ru/stronghold/documentation/about/editions.html
 lang: ru
 ---

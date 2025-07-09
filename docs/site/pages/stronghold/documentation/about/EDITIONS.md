@@ -1,5 +1,5 @@
 ---
-title: "Platform editions"
+title: "Editions"
 permalink: en/stronghold/documentation/about/editions.html
 ---
 
