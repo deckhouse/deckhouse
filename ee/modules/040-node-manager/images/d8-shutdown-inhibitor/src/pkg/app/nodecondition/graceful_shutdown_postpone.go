@@ -26,6 +26,10 @@ func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 type gracefulShutdownPostpone struct{}
 
 func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
+	if err := uncordonOnStart(nodeName); err != nil {
+		return err
+	}
+
 	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonOnStart)
 }
 
@@ -51,6 +55,39 @@ func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) err
 	k := kubernetes.NewDefaultKubectl()
 	err := k.PatchCondition("Node", nodeName, GracefulShutdownPostponeType, status, reason, "")
 	return reformatExitError(err)
+}
+
+func uncordonOnStart(nodeName string) error {
+	k := kubernetes.NewDefaultKubectl()
+
+	condition, err := k.GetCondition(nodeName, ReasonPodsArePresent)
+	if err != nil {
+		return err
+	}
+
+	if condition.Status == "True" &&
+		condition.Type == GracefulShutdownPostponeType &&
+		condition.Reason == ReasonPodsArePresent {
+		// inhibitor already in shutdown state
+		return nil
+	}
+
+	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
+	if err != nil {
+		return reformatExitError(err)
+	}
+
+	if cordonBy == kubernetes.CordonAnnotationValue {
+		// check that 'cordon' was set by inhibitor.
+		if _, err := k.Uncordon(nodeName); err != nil {
+			return reformatExitError(err)
+		}
+		if _, err := k.RemoveCordonAnnotation(nodeName); err != nil {
+			return reformatExitError(err)
+		}
+	}
+
+	return nil
 }
 
 func reformatExitError(err error) error {
