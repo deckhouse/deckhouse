@@ -414,6 +414,8 @@ apiVersions:
           natInstanceResources:
             description: |
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
+
+              > **Warning!** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This could lead to network traffic interruption.
             type: object
             default: {"cores": 2, "memory": 2048}
             x-doc-default: {}
