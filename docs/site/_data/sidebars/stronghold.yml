@@ -9,8 +9,8 @@ entries:
         ru: О платформе
       folders:
         - title:
-            en: Platform editions
-            ru: Редакции платформы
+            en: Editions
+            ru: Редакции
           url: /stronghold/documentation/about/editions.html
         - title:
             en: Update channels
