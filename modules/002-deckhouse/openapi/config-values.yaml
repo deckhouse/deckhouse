@@ -304,7 +304,7 @@ properties:
           Registry mode
         enum: [Unmanaged, Direct]
         x-doc-default: Direct
-        default: Direct
+        default: Unmanaged
       direct:
         type: object
         description: |
