@@ -51,7 +51,7 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ee')
+    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/ee')
     needs:
       - git_info
       - pull_request_info
@@ -62,7 +62,7 @@ jobs:
 
   build_se:
     name: Build SE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se')
+    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/se')
     needs:
       - git_info
       - pull_request_info
@@ -73,7 +73,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se-plus')
+    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/se-plus')
     needs:
       - git_info
       - pull_request_info
@@ -84,7 +84,7 @@ jobs:
 
   build_be:
     name: Build BE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/be')
+    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/be')
     needs:
       - git_info
       - pull_request_info
@@ -95,7 +95,7 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ce')
+    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/ce')
     needs:
       - git_info
       - pull_request_info
