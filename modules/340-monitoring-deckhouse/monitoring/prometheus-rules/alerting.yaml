@@ -305,13 +305,14 @@
       summary: |
         Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
 
-        Please, if possible, get the memory and CPU dumps for debugging purposes:
+        Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
 
         ```bash
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" > /tmp/heap
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/cpu" > /tmp/cpu
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
         ```
 
-        and send these files (/tmp/heap and /tmp/cpu) to the support team.
+        and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
       description: |
         Deckhouse memory usage is too high.
