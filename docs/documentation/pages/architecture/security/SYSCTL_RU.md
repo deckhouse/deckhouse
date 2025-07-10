@@ -1,6 +1,6 @@
 ---
 title: Параметры sysctl
-permalink: ru/admin/configuration/security/sysctl.html
+permalink: ru/architecture/security/sysctl.html
 lang: ru
 ---
 

@@ -732,10 +732,6 @@ entries:
                     ru: Политики безопасности
                   url: /admin/configuration/security/policies.html
                 - title:
-                    en: Sysctl parameters
-                    ru: Параметры sysctl
-                  url: /admin/configuration/security/sysctl.html
-                - title:
                     en: Vulnerability scanning
                     ru: Сканирование на уязвимости
                   url: /admin/configuration/security/scanning.html
@@ -979,6 +975,10 @@ entries:
             ru: Сбор логов из приложения
           url: /user/logging.html
         - title:
+            en: Using TLS certificates
+            ru: Использование TLS-сертификатов
+          url: /user/tls.html
+        - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения
           draft: true
@@ -1168,6 +1168,10 @@ entries:
                 en: Common settings
                 ru: Общие настройки
               url: /architecture/security/used_directories.html
+            - title:
+                en: Sysctl parameters
+                ru: Параметры sysctl
+              url: /architecture/security/sysctl.html
         - title:
             en: Used software
             ru: Используемое ПО
