@@ -23,9 +23,7 @@ shell:
   - set -ex
   - export DEBIAN_FRONTEND=noninteractive
   - apt update
-  - apt full-upgrade --quiet --assume-yes
   - apt install --quiet --assume-yes --no-install-recommends autoconf automake bison build-essential curl file flex gawk git gperf help2man libexpat1-dev libncurses5-dev libtool libtool-bin python3 python3-dev subversion texinfo unzip wget
-  - apt install --reinstall --quiet --assume-yes ca-certificates; update-ca-certificates -f
   - apt autoremove --purge --quiet --assume-yes
   - apt clean --quiet --assume-yes
   - rm -rf /var/lib/apt/lists/*
@@ -65,7 +63,6 @@ shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive
   - apt update
-  - apt full-upgrade --quiet --assume-yes
   - apt install --quiet --assume-yes --no-install-recommends bzip2 cpio curl dwz elfutils file gcovr gettext graphviz libedit-dev make ninja-build patch pkg-config pylint python3 python3-dev python3-distro python3-requests rpm software-properties-common unzip vim wget xz-utils yq git
   - apt autoremove --purge --quiet --assume-yes
   - apt clean --quiet --assume-yes
@@ -162,6 +159,14 @@ shell:
     for i in {{ $libs }}
       do
         cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
+    done
+    for i in /out/usr/bin/*
+      do
+        strip $i
+    done
+    for i in /out/usr/lib/x86_64-linux-gnu/*
+      do
+        strip $i
     done
     cp -a /tmp/glibc/* /out/
     ln -s /usr/lib64 /out/lib64
