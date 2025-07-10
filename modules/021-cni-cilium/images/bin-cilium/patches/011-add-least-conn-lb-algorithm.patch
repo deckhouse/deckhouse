@@ -1,4 +1,4 @@
-From 20ee87374c2d9bc588f6f8a0138559e4c5117d3c Mon Sep 17 00:00:00 2001
+From 9bb663307c273cf946371dd3c6b055164436741d Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -16,8 +16,8 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/datapath/maps/map.go                |   8 +
  pkg/datapath/types/lbmap.go             |   2 +-
  pkg/loadbalancer/loadbalancer.go        |  10 +-
- pkg/maps/ctmap/ctmap.go                 |  27 +++
- pkg/maps/ctmap/gc/gc.go                 |   5 +
+ pkg/maps/ctmap/ctmap.go                 |  26 +++
+ pkg/maps/ctmap/gc/gc.go                 |   7 +
  pkg/maps/ctmap/types.go                 |   4 +
  pkg/maps/lbmap/lbmap.go                 |  21 +-
  pkg/maps/lbmap/leastconn.go             | 159 +++++++++++++
@@ -27,7 +27,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  22 +-
  pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 22 files changed, 658 insertions(+), 18 deletions(-)
+ 22 files changed, 659 insertions(+), 18 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -613,7 +613,7 @@ index d6f2588624..c6862b3cdc 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..3cac662d2a 100644
+index ad69a5379d..cfac34212d 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
 @@ -14,6 +14,7 @@ import (
@@ -684,16 +684,8 @@ index ad69a5379d..3cac662d2a 100644
  			}
  		default:
  			log.Warningf("Encountered unknown type while scanning conntrack table: %v", reflect.TypeOf(key))
-@@ -600,6 +626,7 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
- 	// when keys are being evicted underneath us from concurrent goroutines.
- 	globalDeleteLock[m.mapType].Lock()
- 	stats.dumpError = m.DumpReliablyWithCallback(filterCallback, stats.DumpStats)
-+	lbmap.FlushCachedCounterLeastConnBackends()
- 	globalDeleteLock[m.mapType].Unlock()
- 	return stats
- }
 diff --git a/pkg/maps/ctmap/gc/gc.go b/pkg/maps/ctmap/gc/gc.go
-index 68cdfd1567..758c5f741c 100644
+index 68cdfd1567..4bef1c73f8 100644
 --- a/pkg/maps/ctmap/gc/gc.go
 +++ b/pkg/maps/ctmap/gc/gc.go
 @@ -20,6 +20,7 @@ import (
@@ -715,6 +707,15 @@ index 68cdfd1567..758c5f741c 100644
  				maxDeleteRatio, success = gc.runGC(nil, ipv4, ipv6, triggeredBySignal, gcFilter)
  			}
  			for _, e := range eps {
+@@ -329,6 +334,8 @@ func (gc *GC) runGC(e *endpoint.Endpoint, ipv4, ipv6, triggeredBySignal bool, fi
+ 		}
+ 	}
+ 
++	lbmap.FlushCachedCounterLeastConnBackends()
++
+ 	if e == nil && triggeredBySignal {
+ 		vsns := []ctmap.CTMapIPVersion{}
+ 		if ipv4 {
 diff --git a/pkg/maps/ctmap/types.go b/pkg/maps/ctmap/types.go
 index 75761e70c1..93ce1550fb 100644
 --- a/pkg/maps/ctmap/types.go
