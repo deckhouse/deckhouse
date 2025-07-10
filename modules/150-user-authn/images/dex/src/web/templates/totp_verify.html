@@ -11,9 +11,9 @@
   {{ if not (eq .QRCode "") }}
   <div class="content-text">
     {{ if eq (extra "lang") "en" }}
-    Scan the QR code below using your preferred authenticator app for future authentications</p>
+    Scan the QR code with your authenticator app
     {{ else }}
-    Отсканируйте QR-код ниже с помощью вашего приложения для аутентификации для будущих аутентификаций</p>
+    Отсканируйте QR-код в приложении для аутентификации
     {{ end }}
     <br/>
     <img src="data:image/png;base64, {{ .QRCode }}" style="display: block; margin: 0 auto;" alt="QR code"/>
@@ -21,9 +21,9 @@
   {{ else }}
   <div class="content-text">
     {{ if eq (extra "lang") "en" }}
-  Open your authenticator app and enter the code for <b>{{ .Issuer }}: ({{ .Connector }})</b></p>
+  Open your authenticator app and enter the code for <b>{{ .Issuer }}: ({{ .Connector }})</b>
     {{ else }}
-  Откройте приложение для аутентификации и введите код для <b>{{ .Issuer }}: ({{ .Connector }})</b></p>
+  Откройте приложение для аутентификации и введите код для <b>{{ .Issuer }}: ({{ .Connector }})</b>
     {{ end }}
   </div>
   {{ end }}
