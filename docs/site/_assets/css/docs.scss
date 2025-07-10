@@ -44,6 +44,8 @@
 }
 
 .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
     color: #bbb;
     font-size: 14px;
     font-weight: normal;
