@@ -330,6 +330,8 @@ apiVersions:
               - Allows all incoming ICMP packets to mainNetwork.
               - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
               - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
+
+            **Attention!** Using this option together with an Edge Gateway of type NSX-T implies that only one cluster should be deployed per VDC, because in this case all existing firewall rules will be overwritten.
           x-doc-default: false
         mainNetwork:
           description: |
