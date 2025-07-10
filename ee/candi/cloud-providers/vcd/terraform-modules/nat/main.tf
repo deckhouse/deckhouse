@@ -56,8 +56,8 @@ resource "vcd_nsxv_snat" "snat" {
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = var.providerClusterConfiguration.edgeGateway.externalNetworkType
-  network_name = var.providerClusterConfiguration.edgeGateway.externalNetworkName
+  network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
+  network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
 
   original_address   = var.providerClusterConfiguration.internalNetworkCIDR
   translated_address = var.providerClusterConfiguration.edgeGateway.externalIP
@@ -72,8 +72,8 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   org         = var.providerClusterConfiguration.organization
 
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = var.providerClusterConfiguration.edgeGateway.externalNetworkType
-  network_name = var.providerClusterConfiguration.edgeGateway.externalNetworkName
+  network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
+  network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
 
   original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
