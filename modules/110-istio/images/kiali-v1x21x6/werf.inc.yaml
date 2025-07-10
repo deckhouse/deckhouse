@@ -65,5 +65,5 @@ shell:
   - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
   - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
   {{- end }}
-  - yarn install --frozen-lockfile --verbose
+  - yarn install --frozen-lockfile --verbose || yarn install --frozen-lockfile --verbose
   - yarn run build
