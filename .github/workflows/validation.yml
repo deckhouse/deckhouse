@@ -261,6 +261,7 @@ jobs:
             core.setOutput('labels', JSON.stringify(pr.labels));
             core.setOutput('security_rootless_scan', security_rootless_scan);
             core.setCommandEcho(false);
+            core.info(JSON.stringify(pr.labels))
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
