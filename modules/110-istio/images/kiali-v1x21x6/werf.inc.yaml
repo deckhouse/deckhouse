@@ -61,7 +61,7 @@ shell:
   {{- include "node packages proxy" . | nindent 2 }}
   - cd /src/kiali/frontend
   {{- if .DistroPackagesProxy }}
-  - sed -i 's|https://registry.yarnpkg.com https://github.com|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
   {{- end }}
   - yarn install --frozen-lockfile
   - yarn run build
