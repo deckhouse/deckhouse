@@ -513,6 +513,8 @@ If you prefer to manually make changes during cluster recovery after the master 
      ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
      ```
 
+     The new IP address will be included in the generated certificates.
+
 1. Restart all services that use the updated configuration and certificates. To immediately stop active containers, run:
 
     ```shell
