@@ -18,11 +18,11 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"github.com/tidwall/gjson"
-	"sigs.k8s.io/yaml"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
