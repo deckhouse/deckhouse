@@ -380,7 +380,7 @@ func (d *Discoverer) getVAppTemplates(client *govcd.VCDClient) ([]string, error)
 			d.logger.Debug("got unusable template with empty name or catalog name, skipping", "template_id", t.ID)
 			continue
 		}
-		templates = append(templates, fmt.Sprintf("%s/%s", t.CatalogName, t.Name))
+		templates = append(templates, fmt.Sprintf("%s/%s/%s", t.Org, t.CatalogName, t.Name))
 	}
 
 	return templates, nil
