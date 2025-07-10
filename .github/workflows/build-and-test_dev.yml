@@ -700,7 +700,7 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/ee')
+    if: contains(needs.pull_request_info.outputs.labels, 'edition/ee')
     needs:
       - git_info
       - pull_request_info
@@ -1017,7 +1017,7 @@ jobs:
 
   build_se:
     name: Build SE
-    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/se')
+    if: contains(needs.pull_request_info.outputs.labels, 'edition/se')
     needs:
       - git_info
       - pull_request_info
@@ -1334,7 +1334,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/se-plus')
+    if: contains(needs.pull_request_info.outputs.labels, 'edition/se-plus')
     needs:
       - git_info
       - pull_request_info
@@ -1651,7 +1651,7 @@ jobs:
 
   build_be:
     name: Build BE
-    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/be')
+    if: contains(needs.pull_request_info.outputs.labels, 'edition/be')
     needs:
       - git_info
       - pull_request_info
@@ -1968,7 +1968,7 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: contains(needs.pull_request_info.outputs.labels.*.name, 'edition/ce')
+    if: contains(needs.pull_request_info.outputs.labels, 'edition/ce')
     needs:
       - git_info
       - pull_request_info
