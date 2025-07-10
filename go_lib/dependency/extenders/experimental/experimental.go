@@ -29,10 +29,6 @@ import (
 const (
 	// Name is the identifier of the extender returned to the scheduler
 	Name extenders.ExtenderName = "Experimental"
-
-	// The label/annotation key from which the module stage is obtained.
-	// Scheduler passes module metadata as a map[string]string into Filter()
-	stageLabelKey = "stage"
 )
 
 type Extender struct {
