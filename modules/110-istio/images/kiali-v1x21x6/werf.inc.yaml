@@ -65,5 +65,6 @@ shell:
   - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
   - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
   {{- end }}
-  - yarn install --frozen-lockfile --verbose || yarn install --frozen-lockfile --verbose
+  - yarn install --frozen-lockfile --network-timeout 300000
   - yarn run build
+  - rm -rf node_modules .npmrc /root/.cache /usr/local/share/.cache
