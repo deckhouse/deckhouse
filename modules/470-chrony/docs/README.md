@@ -4,7 +4,7 @@ title: "The chrony module"
 
 Provides time synchronization on all cluster nodes using the [chrony](https://chrony.tuxfamily.org/) utility.
 
-# How it works
+## How it works
 
 The module starts `chrony` agents on all cluster nodes.
 

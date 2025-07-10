@@ -4,7 +4,7 @@ title: "Модуль chrony"
 
 Обеспечивает синхронизацию времени на всех узлах кластера с помощью утилиты [chrony](https://chrony.tuxfamily.org/).
 
-# Как работает
+## Как работает
 
 Модуль запускает `chrony` агенты на всех узлах кластера.
 По умолчанию используется NTP сервер `pool.ntp.org`. NTP сервер можно изменить через [настройки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) модуля.
@@ -30,4 +30,3 @@ MS Name/IP address         Stratum Poll Reach LastRx Last sample
 Таким образом, агенты на мастер узлах синхронизируют время только из списка хостов, указанных в `module config`(по умолчанию с `pool.ntp.org`). А агенты на остальных узлах синхронизируют время со списком NTP серверов из `module config` плюс с `chrony` агентов на мастер узлах.  
 
 Это сделано для того, чтобы в случае недоступности NTP серверов, указанных в `module config`, время синхронизировалось с мастер узлами.
-
