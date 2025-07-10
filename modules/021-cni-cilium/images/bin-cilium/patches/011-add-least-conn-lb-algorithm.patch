@@ -1,4 +1,4 @@
-From de7fa52b0a5bf51550cd1360c869e02687524009 Mon Sep 17 00:00:00 2001
+From 304835dbb59a959183b4ac6868a298e779921cd5 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -17,17 +17,17 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/datapath/types/lbmap.go             |   2 +-
  pkg/loadbalancer/loadbalancer.go        |  10 +-
  pkg/maps/ctmap/ctmap.go                 |  27 +++
- pkg/maps/ctmap/gc/gc.go                 |   4 +
+ pkg/maps/ctmap/gc/gc.go                 |   5 +
  pkg/maps/ctmap/types.go                 |   4 +
  pkg/maps/lbmap/lbmap.go                 |  21 +-
- pkg/maps/lbmap/leastconn.go             | 159 +++++++++++++
+ pkg/maps/lbmap/leastconn.go             | 155 +++++++++++++
  pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
  pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
  pkg/metrics/features/metrics.go         |   1 +
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  22 +-
  pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 22 files changed, 657 insertions(+), 18 deletions(-)
+ 22 files changed, 654 insertions(+), 18 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -693,7 +693,7 @@ index ad69a5379d..3cac662d2a 100644
  	return stats
  }
 diff --git a/pkg/maps/ctmap/gc/gc.go b/pkg/maps/ctmap/gc/gc.go
-index 68cdfd1567..0e41b3139c 100644
+index 68cdfd1567..758c5f741c 100644
 --- a/pkg/maps/ctmap/gc/gc.go
 +++ b/pkg/maps/ctmap/gc/gc.go
 @@ -20,6 +20,7 @@ import (
@@ -704,11 +704,12 @@ index 68cdfd1567..0e41b3139c 100644
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/time"
  )
-@@ -174,6 +175,9 @@ func (gc *GC) Enable() {
+@@ -174,6 +175,10 @@ func (gc *GC) Enable() {
  
  			if len(eps) > 0 || initialScan {
  				gc.logger.Info("Starting initial GC of connection tracking")
-+				if initialScan {
++				if initialScan && (option.Config.NodePortAlg == option.NodePortAlgLeastConn ||
++					option.Config.LoadBalancerAlgorithmAnnotation) {
 +					lbmap.InitBackendCachedMap()
 +				}
  				maxDeleteRatio, success = gc.runGC(nil, ipv4, ipv6, triggeredBySignal, gcFilter)
@@ -799,10 +800,10 @@ index 12686cec41..d9a56201af 100644
  
 diff --git a/pkg/maps/lbmap/leastconn.go b/pkg/maps/lbmap/leastconn.go
 new file mode 100644
-index 0000000000..296e8ed6cf
+index 0000000000..4938077bdf
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn.go
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,155 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
@@ -855,7 +856,7 @@ index 0000000000..296e8ed6cf
 +	mapPath := bpf.MapPath(LeastConnService4MapName)
 +	svcMap, err := ebpf.LoadPinnedMap(mapPath)
 +	if err != nil {
-+		log.WithError(err).Error("Unable to load pinned least-conn service BPF map", key)
++		log.WithError(err).Warn("Unable to load pinned least-conn service BPF map", key)
 +		return
 +	}
 +
@@ -871,7 +872,6 @@ index 0000000000..296e8ed6cf
 +func DeleteLeastConnBackendByID(id lb.BackendID) {
 +	bckMap := leastConnBackend4Map
 +	if bckMap == nil {
-+		log.Error("Unable to delete least-conn backend entry from BPF map - map is not opened")
 +		return
 +	}
 +
@@ -889,7 +889,6 @@ index 0000000000..296e8ed6cf
 +func DecrementCounterLeastConnBackendByID(id lb.BackendID) {
 +	bckMap := leastConnBackend4Map
 +	if bckMap == nil {
-+		log.Error("Unable to delete least-conn backend entry from BPF map - map is not opened")
 +		return
 +	}
 +
@@ -937,8 +936,6 @@ index 0000000000..296e8ed6cf
 +		val := LeastConnBackendVal{Count: 1}
 +		backendCachedMap[key] = val
 +	}
-+
-+	log.Debug("Incremented least-conn backend counter", key)
 +}
 +
 +func FlushCachedCounterLeastConnBackends() {
@@ -958,7 +955,7 @@ index 0000000000..296e8ed6cf
 +
 +	for key, val := range backendCachedMap {
 +		if err := bckMap.Update(key, val, vbpf.UpdateAny); err != nil {
-+			log.WithError(err).Warn("Unable to flush least-conn backend entry")
++			log.WithError(err).Error("Unable to flush least-conn backend entry")
 +		}
 +	}
 +}
