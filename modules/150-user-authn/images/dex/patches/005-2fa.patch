@@ -2259,28 +2259,6 @@ index a9ca3816..72161ca3 100644
  	)
  	if err != nil {
  		if err == sql.ErrNoRows {
-diff --git a/storage/sql/migrate.go b/storage/sql/migrate.go
-index 83e9c20d..870fa25b 100644
---- a/storage/sql/migrate.go
-+++ b/storage/sql/migrate.go
-@@ -298,4 +298,17 @@ var migrations = []migration{
- 				add column hmac_key bytea;`,
- 		},
- 	},
-+	{
-+		stmts: []string{
-+			`
-+			alter table offline_session
-+				add column totp text default '';`,
-+			`
-+			alter table offline_session
-+				add column totp_confirmed boolean default false;`,
-+			`
-+			alter table auth_request
-+				add column totp_validated boolean not null default false;`,
-+		},
-+	},
- }
 diff --git a/storage/storage.go b/storage/storage.go
 index 574b0a5a..4ebc2eb4 100644
 --- a/storage/storage.go
