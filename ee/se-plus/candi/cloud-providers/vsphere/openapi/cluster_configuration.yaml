@@ -100,7 +100,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, template, mainNetwork, datastore]
+            required: [numCPUs, memory, template, datastore]
             description: |
               Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
             properties: &instanceClassProperties
@@ -299,7 +299,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, template, mainNetwork, datastore]
+              required: [numCPUs, memory, template, datastore]
               description: |
                 Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties:

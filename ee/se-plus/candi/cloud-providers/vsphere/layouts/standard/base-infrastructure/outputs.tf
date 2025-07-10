@@ -8,5 +8,9 @@ output "cloud_discovery_data" {
     "vmFolderPath"     = var.providerClusterConfiguration.vmFolderPath
     "resourcePoolPath" = local.use_nested_resource_pool == true ? (local.base_resource_pool != "" ? join("/", [local.base_resource_pool, local.prefix]) : local.prefix) : ""
     "zones"            = var.providerClusterConfiguration.zones
+    "internalNetworkNames" = var.providerClusterConfiguration.internalNetworkNames
+    "instances" = {
+      "mainNetwork" = length(var.providerClusterConfiguration.masterNodeGroup.instanceClass.mainNetwork) > 0 ? var.providerClusterConfiguration.masterNodeGroup.instanceClass.mainNetwork : var.providerClusterConfiguration.internalNetworkNames[0]
+    }
   }
 }
