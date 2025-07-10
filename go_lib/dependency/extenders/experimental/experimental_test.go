@@ -47,7 +47,7 @@ func TestExtender_Filter(t *testing.T) {
 			allow:            false,
 			markExperimental: true,
 			wantDecision:     ptr.To(false),
-			wantErr:          true,
+			wantErr:          false,
 		},
 		{
 			name:             "non-experimental allowed when flag is false",
@@ -60,7 +60,7 @@ func TestExtender_Filter(t *testing.T) {
 			name:             "experimental allowed when flag is true",
 			allow:            true,
 			markExperimental: true,
-			wantDecision:     ptr.To(true),
+			wantDecision:     nil,
 			wantErr:          false,
 		},
 	}

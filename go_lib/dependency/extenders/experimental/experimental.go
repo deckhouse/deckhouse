@@ -16,11 +16,9 @@ limitations under the License.
 package experimental
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
-	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -71,13 +69,13 @@ func (e *Extender) DeleteConstraint(name string) {
 // If the stage is Experimental and the flag is true  - allow (true, nil)
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	if e.allowExperimental {
-		e.logger.Debug("experimental modules allowed", slog.String("name", name))
-		return ptr.To(true), nil
+		e.logger.Warn("experimental modules allowed", slog.String("name", name))
+		return nil, nil
 	}
 
 	if _, ok := e.modules[name]; ok {
-		e.logger.Error("experimental module is forbidden by policy", slog.String("name", name))
-		return ptr.To(false), &scherror.PermanentError{Err: fmt.Errorf("requirements are not satisfied: experimental modules are disabled (allowExperimentalModules=false)")}
+		e.logger.Warn("skipping experimental module (allowExperimentalModules=false)", slog.String("name", name))
+		return ptr.To(false), nil
 	}
 
 	return nil, nil
