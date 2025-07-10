@@ -15,12 +15,12 @@
 </head>
 
 <body>
-  <div class="content">
     {%- if site.mode == 'module' %}
     {% include header.html %}
     {%- else %}
      <!--#include virtual="/includes/header.html" -->
     {%- endif %}
+  <div class="content">
     {{ content }}
   </div>
      <!--#include virtual="/includes/footer.html" -->
