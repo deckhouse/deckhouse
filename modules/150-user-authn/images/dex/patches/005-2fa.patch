@@ -51,29 +51,76 @@ index 68abe1f7..004330ce 100644
  			Level:  slog.LevelDebug,
  			Format: "json",
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index ac715e60..5c0ab717 100644
+index 8a69c7ee..168008e5 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -307,6 +307,8 @@ func runServe(options serveOptions) error {
- 		PrometheusRegistry:         prometheusRegistry,
- 		HealthChecker:              healthChecker,
- 		ContinueOnConnectorFailure: featureflags.ContinueOnConnectorFailure.Enabled(),
+@@ -287,21 +287,23 @@ func runServe(options serveOptions) error {
+ 	healthChecker := gosundheit.New()
+
+ 	serverConfig := server.Config{
+-		AllowedGrantTypes:      c.OAuth2.GrantTypes,
+-		SupportedResponseTypes: c.OAuth2.ResponseTypes,
+-		SkipApprovalScreen:     c.OAuth2.SkipApprovalScreen,
+-		AlwaysShowLoginScreen:  c.OAuth2.AlwaysShowLoginScreen,
+-		PasswordConnector:      c.OAuth2.PasswordConnector,
+-		Headers:                c.Web.Headers.ToHTTPHeader(),
+-		AllowedOrigins:         c.Web.AllowedOrigins,
+-		AllowedHeaders:         c.Web.AllowedHeaders,
+-		Issuer:                 c.Issuer,
+-		Storage:                s,
+-		Web:                    c.Frontend,
+-		Logger:                 logger,
+-		Now:                    now,
+-		PrometheusRegistry:     prometheusRegistry,
+-		HealthChecker:          healthChecker,
++		AllowedGrantTypes:          c.OAuth2.GrantTypes,
++		SupportedResponseTypes:     c.OAuth2.ResponseTypes,
++		SkipApprovalScreen:         c.OAuth2.SkipApprovalScreen,
++		AlwaysShowLoginScreen:      c.OAuth2.AlwaysShowLoginScreen,
++		PasswordConnector:          c.OAuth2.PasswordConnector,
++		Headers:                    c.Web.Headers.ToHTTPHeader(),
++		AllowedOrigins:             c.Web.AllowedOrigins,
++		AllowedHeaders:             c.Web.AllowedHeaders,
++		Issuer:                     c.Issuer,
++		Storage:                    s,
++		Web:                        c.Frontend,
++		Logger:                     logger,
++		Now:                        now,
++		PrometheusRegistry:         prometheusRegistry,
++		HealthChecker:              healthChecker,
 +		TOTPIssuer:                 c.TOTP.Issuer,
 +		TOTPConnectors:             c.TOTP.Connectors,
  	}
  	if c.Expiry.SigningKeys != "" {
  		signingKeys, err := time.ParseDuration(c.Expiry.SigningKeys)
+diff --git a/examples/config-dev.yaml b/examples/config-dev.yaml
+index 147597a2..f57edb70 100644
+--- a/examples/config-dev.yaml
++++ b/examples/config-dev.yaml
+@@ -75,6 +75,12 @@ telemetry:
+   http: 0.0.0.0:5558
+   # enableProfiling: true
+
++# Configuration for the two-factor authentication
++twoFactorAuthn:
++  issuer: "dex"
++  connectors:
++  - mock
++
+ # Uncomment this block to enable the gRPC API. This values MUST be different
+ # from the HTTP endpoints.
+ # grpc:
 diff --git a/go.mod b/go.mod
-index 33f06a4b..a1252dc9 100644
+index 8404620f..b8e20dd2 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -26,6 +26,7 @@ require (
- 	github.com/mattn/go-sqlite3 v1.14.28
+ 	github.com/mattn/go-sqlite3 v1.14.24
  	github.com/oklog/run v1.1.0
  	github.com/pkg/errors v0.9.1
 +	github.com/pquerna/otp v1.4.0
- 	github.com/prometheus/client_golang v1.22.0
- 	github.com/russellhaering/goxmldsig v1.5.0
+ 	github.com/prometheus/client_golang v1.20.5
+ 	github.com/russellhaering/goxmldsig v1.4.0
  	github.com/spf13/cobra v1.9.1
 @@ -55,6 +56,7 @@ require (
  	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
@@ -81,13 +128,13 @@ index 33f06a4b..a1252dc9 100644
  	github.com/bmatcuk/doublestar v1.3.4 // indirect
 +	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
- 	github.com/coreos/go-semver v0.3.1 // indirect
- 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+ 	github.com/coreos/go-semver v0.3.0 // indirect
+ 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 diff --git a/go.sum b/go.sum
-index 1789a401..29ae87a2 100644
+index 5ba3d05b..d455a00f 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -40,6 +40,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+@@ -41,6 +41,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
  github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
  github.com/bmatcuk/doublestar v1.3.4 h1:gPypJ5xD31uhX6Tf54sDPUOBXTqKH4c9aPY66CyQrS0=
  github.com/bmatcuk/doublestar v1.3.4/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
@@ -95,18 +142,18 @@ index 1789a401..29ae87a2 100644
 +github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
  github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
  github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
- github.com/coreos/go-oidc/v3 v3.14.1 h1:9ePWwfdwC4QKRlCXsJGou56adA/owXczOzwKdOumLqk=
-@@ -162,6 +164,8 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+ github.com/coreos/go-oidc/v3 v3.12.0 h1:sJk+8G2qq94rDI6ehZ71Bol3oUHy63qNYmkiSjrc/Jo=
+@@ -168,6 +170,8 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
  github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
  github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
  github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 +github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
 +github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
- github.com/prometheus/client_golang v1.22.0 h1:rb93p9lokFEsctTys46VnV1kLCDpVZ0a/Y92Vm0Zc6Q=
- github.com/prometheus/client_golang v1.22.0/go.mod h1:R7ljNsLXhuQXYZYtw6GAE9AZg8Y7vEW5scdCXrWRXC0=
+ github.com/prometheus/client_golang v1.20.5 h1:cxppBPuYhUnsO6yo/aoRol4L7q7UFfdm+bR9r+8l63Y=
+ github.com/prometheus/client_golang v1.20.5/go.mod h1:PIEt8X02hGcP8JWbeHyeZ53Y/jReSnHgO035n//V5WE=
  github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
 diff --git a/server/handlers.go b/server/handlers.go
-index f8d0ed64..c45df264 100644
+index a00b290b..2db4d074 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -11,7 +11,6 @@ import (
@@ -260,20 +307,20 @@ index f8d0ed64..c45df264 100644
  		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
  		return
 diff --git a/server/server.go b/server/server.go
-index 0f48fc11..dd18e4fa 100644
+index 8c046296..3b46ed18 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -120,6 +120,9 @@ type Config struct {
+@@ -119,6 +119,9 @@ type Config struct {
+ 	PrometheusRegistry *prometheus.Registry
 
  	HealthChecker gosundheit.Health
-
++
 +	TOTPIssuer     string
 +	TOTPConnectors []string
-+
- 	// If enabled, the server will continue starting even if some connectors fail to initialize.
- 	// This allows the server to operate with a subset of connectors if some are misconfigured.
- 	ContinueOnConnectorFailure bool
-@@ -200,6 +203,8 @@ type Server struct {
+ }
+
+ // WebConfig holds the server's frontend templates and asset configuration.
+@@ -196,6 +199,8 @@ type Server struct {
  	refreshTokenPolicy *RefreshTokenPolicy
 
  	logger *slog.Logger
@@ -282,7 +329,7 @@ index 0f48fc11..dd18e4fa 100644
  }
 
  // NewServer constructs a server from the provided config.
-@@ -315,6 +320,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+@@ -311,6 +316,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
  		now:                    now,
  		templates:              tmpls,
  		passwordConnector:      c.PasswordConnector,
@@ -290,7 +337,7 @@ index 0f48fc11..dd18e4fa 100644
  		logger:                 c.Logger,
  	}
 
-@@ -500,6 +506,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+@@ -486,6 +492,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
  	// "authproxy" connector.
  	handleFunc("/callback/{connector}", s.handleConnectorCallback)
  	handleFunc("/approval", s.handleApproval)
@@ -356,513 +403,6 @@ index b77663e1..46bca92e 100644
  func (t *templates) login(r *http.Request, w http.ResponseWriter, connectors []connectorInfo) error {
  	sort.Sort(byName(connectors))
  	data := struct {
-diff --git a/server/totphandler.go b/server/totphandler.go
-new file mode 100644
-index 00000000..cc79ce3d
---- /dev/null
-+++ b/server/totphandler.go
-@@ -0,0 +1,187 @@
-+package server
-+
-+import (
-+	"bytes"
-+	"crypto/hmac"
-+	"crypto/sha256"
-+	"encoding/base64"
-+	"fmt"
-+	"image/png"
-+	"net/http"
-+	"strings"
-+
-+	"github.com/pquerna/otp"
-+	"github.com/pquerna/otp/totp"
-+
-+	"github.com/dexidp/dex/storage"
-+)
-+
-+func (s *Server) handleTOTPVerify(w http.ResponseWriter, r *http.Request) {
-+	macEncoded := r.FormValue("hmac")
-+	if macEncoded == "" {
-+		s.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
-+		return
-+	}
-+	mac, err := base64.RawURLEncoding.DecodeString(macEncoded)
-+	if err != nil {
-+		s.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
-+		return
-+	}
-+
-+	authReq, err := s.storage.GetAuthRequest(r.Context(), r.FormValue("req"))
-+	if err != nil {
-+		s.logger.ErrorContext(r.Context(), "failed to get auth request", "err", err)
-+		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
-+		return
-+	}
-+	if !authReq.LoggedIn {
-+		s.logger.ErrorContext(r.Context(), "auth request does not have an identity for TOTP verification")
-+		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
-+		return
-+	}
-+
-+	// build expected hmac with secret key
-+	h := hmac.New(sha256.New, authReq.HMACKey)
-+	h.Write([]byte(authReq.ID))
-+	expectedMAC := h.Sum(nil)
-+	// constant time comparison
-+	if !hmac.Equal(mac, expectedMAC) {
-+		s.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
-+		return
-+	}
-+
-+	offlineSession, err := s.storage.GetOfflineSessions(r.Context(), authReq.Claims.UserID, authReq.ConnectorID)
-+	if err != nil {
-+		s.logger.ErrorContext(r.Context(), "failed to get offline session", "err", err, "connector_id", authReq.ConnectorID, "user_id", authReq.Claims.UserID)
-+		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
-+		return
-+	}
-+
-+	// TODO(nabokihms): compose the redirect URL the right way
-+	returnURL := strings.ReplaceAll(r.URL.String(), "/totp", "/approval")
-+	if offlineSession.TOTP == "" || authReq.TOTPValidated {
-+		http.Redirect(w, r, returnURL, http.StatusSeeOther)
-+		return
-+	}
-+
-+	switch r.Method {
-+	case http.MethodGet:
-+		s.renderTOTPValidatePage(offlineSession, false, w, r)
-+		return
-+	case http.MethodPost:
-+		password := r.FormValue("totp")
-+
-+		generated, err := otp.NewKeyFromURL(offlineSession.TOTP)
-+		if err != nil {
-+			s.logger.ErrorContext(r.Context(), "failed to load TOTP QR code", "err", err, "connector_id", offlineSession.ConnID, "user_id", offlineSession.ConnID)
-+			s.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
-+			return
-+		}
-+
-+		ok := totp.Validate(password, generated.Secret())
-+		if !ok {
-+			s.renderTOTPValidatePage(offlineSession, true, w, r)
-+			s.logger.ErrorContext(r.Context(), "failed TOTP attempt: Invalid credentials.", "user", "????")
-+			return
-+		}
-+
-+		// If the TOTP is valid, update the offline session and auth request to reflect that.
-+		if err := s.storage.UpdateOfflineSessions(r.Context(), offlineSession.UserID, offlineSession.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
-+			old.TOTPConfirmed = true
-+			return old, nil
-+		}); err != nil {
-+			s.logger.ErrorContext(r.Context(), "failed to update offline session", "err", err, "connector_id", offlineSession.ConnID, "user_id", offlineSession.ConnID)
-+			s.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
-+			return
-+		}
-+		if err := s.storage.UpdateAuthRequest(r.Context(), authReq.ID, func(old storage.AuthRequest) (storage.AuthRequest, error) {
-+			old.TOTPValidated = true
-+			return old, nil
-+		}); err != nil {
-+			s.logger.ErrorContext(r.Context(), "failed to update auth request", "err", err, "auth_request_id", authReq.ID)
-+			s.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
-+			return
-+		}
-+
-+		// we can skip the redirect to /approval and go ahead and send code if it's not required
-+		if s.skipApproval && !authReq.ForceApprovalPrompt {
-+			authReq, err = s.storage.GetAuthRequest(r.Context(), authReq.ID)
-+			if err != nil {
-+				s.logger.ErrorContext(r.Context(), "failed to get finalized auth request", "err", err)
-+				s.renderError(r, w, http.StatusInternalServerError, "Login error.")
-+				return
-+			}
-+			s.sendCodeResponse(w, r, authReq)
-+			return
-+		}
-+		http.Redirect(w, r, returnURL, http.StatusSeeOther)
-+	default:
-+		s.renderError(r, w, http.StatusBadRequest, "Unsupported request method.")
-+	}
-+}
-+
-+// generateQRCode generates a QR code image for the OTP key.
-+// Returned value is a base64 encoded PNG image.
-+func generateQRCode(o storage.OfflineSessions) (string, error) {
-+	generated, err := otp.NewKeyFromURL(o.TOTP)
-+	if err != nil {
-+		return "", fmt.Errorf("failed to load TOTP QR code: %w", err)
-+	}
-+
-+	qrCodeImage, err := generated.Image(300, 300)
-+	if err != nil {
-+		return "", fmt.Errorf("failed to generate TOTP QR code: %w", err)
-+	}
-+
-+	var buf bytes.Buffer
-+	err = png.Encode(&buf, qrCodeImage)
-+	if err != nil {
-+		return "", fmt.Errorf("failed to encode TOTP QR code: %w", err)
-+	}
-+
-+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
-+}
-+
-+func (s *Server) renderTOTPValidatePage(o storage.OfflineSessions, lastFail bool, w http.ResponseWriter, r *http.Request) {
-+	qrCode := ""
-+	var err error
-+
-+	// Show QR code only once when the offline session is registered
-+	if o.TOTP != "" && !o.TOTPConfirmed {
-+		qrCode, err = generateQRCode(o)
-+		if err != nil {
-+			s.logger.ErrorContext(r.Context(), "failed to generate QR code", "err", err, "connector_id", o.ConnID, "user_id", o.ConnID)
-+			s.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
-+			return
-+		}
-+	}
-+	if err := s.templates.totpVerify(r, w, r.URL.String(), s.totp.issuer, o.ConnID, qrCode, lastFail); err != nil {
-+		s.logger.ErrorContext(r.Context(), "server template error", "err", err)
-+	}
-+}
-+
-+type secondFactorAuthenticator struct {
-+	issuer string
-+	// To check that TOTP is enabled for the connector.
-+	connectors map[string]struct{}
-+}
-+
-+func newSecondFactorAuthenticator(issuer string, connectors []string) *secondFactorAuthenticator {
-+	c := make(map[string]struct{})
-+	for _, conn := range connectors {
-+		c[conn] = struct{}{}
-+	}
-+	return &secondFactorAuthenticator{issuer: issuer, connectors: c}
-+}
-+
-+func (s *secondFactorAuthenticator) generate(connID, email string) (*otp.Key, error) {
-+	return totp.Generate(totp.GenerateOpts{
-+		Issuer:      s.issuer,
-+		AccountName: fmt.Sprintf("(%s) %s", connID, email),
-+	})
-+}
-+
-+func (s *secondFactorAuthenticator) enabledForConnector(connID string) bool {
-+	_, ok := s.connectors[connID]
-+	return ok
-+}
-diff --git a/server/totphandler_test.go b/server/totphandler_test.go
-new file mode 100644
-index 00000000..712400c3
---- /dev/null
-+++ b/server/totphandler_test.go
-@@ -0,0 +1,308 @@
-+package server
-+
-+import (
-+	"context"
-+	"crypto/hmac"
-+	"crypto/sha256"
-+	"encoding/base64"
-+	"io"
-+	"net/http"
-+	"net/http/httptest"
-+	"net/url"
-+	"path"
-+	"testing"
-+	"time"
-+
-+	"github.com/pquerna/otp"
-+	"github.com/pquerna/otp/totp"
-+
-+	"github.com/dexidp/dex/storage"
-+)
-+
-+const testTOTPKey = "otpauth://totp/Example:user3?secret=JBSWY3DPEHPK3PXP&issuer=Example"
-+
-+func testNewHMAC(id, key string) string {
-+	h := hmac.New(sha256.New, []byte(key))
-+	h.Write([]byte(id))
-+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
-+}
-+
-+func testGenerateTOTPCode() string {
-+	key, _ := otp.NewKeyFromURL(testTOTPKey)
-+	code, _ := totp.GenerateCode(key.Secret(), time.Now())
-+	return code
-+}
-+
-+func TestHandleTOTPVerify(t *testing.T) {
-+	tests := []struct {
-+		testName               string
-+		authRequest            storage.AuthRequest
-+		offlineSession         storage.OfflineSessions
-+		values                 url.Values
-+		expectedResponseCode   int
-+		expectedServerResponse string
-+	}{
-+		{
-+			testName: "Missing HMAC",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq1",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user1"},
-+				ConnectorID: "conn1",
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user1",
-+				ConnID: "conn1",
-+				TOTP:   "otpauth://totp/Example:user1?secret=JBSWY3DPEHPK3PXP&issuer=Example",
-+			},
-+			values: url.Values(map[string][]string{
-+				"req": {"authReq1"},
-+			}),
-+			expectedResponseCode: http.StatusUnauthorized,
-+		},
-+		{
-+			testName: "Already validated",
-+			authRequest: storage.AuthRequest{
-+				ID:            "authReq3",
-+				LoggedIn:      true,
-+				HMACKey:       []byte("secret"),
-+				Claims:        storage.Claims{UserID: "user3"},
-+				ConnectorID:   "conn3",
-+				TOTPValidated: true,
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user3",
-+				ConnID: "conn3",
-+				TOTP:   testTOTPKey,
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq3"},
-+				"hmac": {testNewHMAC("authReq3", "secret")},
-+			}),
-+			expectedResponseCode: http.StatusSeeOther,
-+		},
-+		{
-+			testName: "Not logged user",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq100",
-+				LoggedIn:    false,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user1"},
-+				ConnectorID: "conn1",
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user1",
-+				ConnID: "conn1",
-+				TOTP:   "otpauth://totp/Example:user1?secret=JBSWY3DPEHPK3PXP&issuer=Example",
-+			},
-+			values: url.Values(map[string][]string{
-+				"req": {"authReq100"},
-+			}),
-+			expectedResponseCode: http.StatusUnauthorized,
-+		},
-+		{
-+			testName: "Invalid HMAC",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq2",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user2"},
-+				ConnectorID: "conn2",
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user2",
-+				ConnID: "conn2",
-+				TOTP:   "otpauth://totp/Example:user2?secret=JBSWY3DPEHPK3PXP&issuer=Example",
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq2"},
-+				"hmac": {base64.RawURLEncoding.EncodeToString([]byte("invalidvalidhmac"))},
-+			}),
-+			expectedResponseCode: http.StatusUnauthorized,
-+		},
-+		{
-+			testName: "Redirect if no TOTP",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq3",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user3"},
-+				ConnectorID: "conn3",
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user3",
-+				ConnID: "conn3",
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq3"},
-+				"hmac": {testNewHMAC("authReq3", "secret")},
-+			}),
-+			expectedResponseCode: http.StatusSeeOther,
-+		},
-+		{
-+			testName: "Successful TOTP Verification page",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq3",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user3"},
-+				ConnectorID: "conn3",
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID: "user3",
-+				ConnID: "conn3",
-+				TOTP:   testTOTPKey,
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq3"},
-+				"hmac": {testNewHMAC("authReq3", "secret")},
-+			}),
-+			expectedResponseCode: http.StatusOK,
-+		},
-+	}
-+
-+	for _, tc := range tests {
-+		t.Run(tc.testName, func(t *testing.T) {
-+			ctx, cancel := context.WithCancel(context.Background())
-+			defer cancel()
-+
-+			// Setup a dex server.
-+			httpServer, s := newTestServer(ctx, t, func(c *Config) {
-+				c.Now = time.Now
-+			})
-+			defer httpServer.Close()
-+
-+			if err := s.storage.CreateAuthRequest(context.TODO(), tc.authRequest); err != nil {
-+				t.Fatalf("failed to create auth request: %v", err)
-+			}
-+
-+			if err := s.storage.CreateOfflineSessions(context.TODO(), tc.offlineSession); err != nil {
-+				t.Fatalf("failed to create offline session: %v", err)
-+			}
-+
-+			u, err := url.Parse(s.issuerURL.String())
-+			if err != nil {
-+				t.Fatalf("Could not parse issuer URL %v", err)
-+			}
-+			u.Path = path.Join(u.Path, "totp")
-+			u.RawQuery = tc.values.Encode()
-+			req, _ := http.NewRequest("GET", u.String(), nil)
-+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
-+
-+			rr := httptest.NewRecorder()
-+			s.ServeHTTP(rr, req)
-+			if rr.Code != tc.expectedResponseCode {
-+				t.Errorf("%s: Unexpected Response Type. Expected %v got %v: %s", tc.testName, tc.expectedResponseCode, rr.Code, rr.Body.String())
-+			}
-+
-+			if len(tc.expectedServerResponse) > 0 {
-+				result, _ := io.ReadAll(rr.Body)
-+				if string(result) != tc.expectedServerResponse {
-+					t.Errorf("%s: Unexpected Response. Expected %q got %q", tc.testName, tc.expectedServerResponse, result)
-+				}
-+			}
-+		})
-+	}
-+}
-+
-+func TestHandleTOTPForm(t *testing.T) {
-+	tests := []struct {
-+		testName               string
-+		authRequest            storage.AuthRequest
-+		offlineSession         storage.OfflineSessions
-+		values                 url.Values
-+		expectedResponseCode   int
-+		expectedServerResponse string
-+	}{
-+		{
-+			testName: "Successful TOTP Verification",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq3",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user3"},
-+				ConnectorID: "conn3",
-+				Expiry:      time.Now().Add(time.Hour),
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID:        "user3",
-+				ConnID:        "conn3",
-+				TOTP:          testTOTPKey,
-+				TOTPConfirmed: true,
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq3"},
-+				"hmac": {testNewHMAC("authReq3", "secret")},
-+				"totp": {testGenerateTOTPCode()},
-+			}),
-+			expectedResponseCode: http.StatusSeeOther,
-+		},
-+		{
-+			testName: "Unsuccessful TOTP Verification",
-+			authRequest: storage.AuthRequest{
-+				ID:          "authReq3",
-+				LoggedIn:    true,
-+				HMACKey:     []byte("secret"),
-+				Claims:      storage.Claims{UserID: "user3"},
-+				ConnectorID: "conn3",
-+				Expiry:      time.Now().Add(time.Hour),
-+			},
-+			offlineSession: storage.OfflineSessions{
-+				UserID:        "user3",
-+				ConnID:        "conn3",
-+				TOTP:          testTOTPKey,
-+				TOTPConfirmed: true,
-+			},
-+			values: url.Values(map[string][]string{
-+				"req":  {"authReq3"},
-+				"hmac": {testNewHMAC("authReq3", "secret")},
-+				"totp": {"invalidpassword"},
-+			}),
-+			expectedResponseCode: http.StatusUnauthorized,
-+		},
-+	}
-+
-+	for _, tc := range tests {
-+		t.Run(tc.testName, func(t *testing.T) {
-+			ctx, cancel := context.WithCancel(context.Background())
-+			defer cancel()
-+
-+			// Setup a dex server.
-+			httpServer, s := newTestServer(ctx, t, func(c *Config) {
-+				c.Now = time.Now
-+			})
-+			defer httpServer.Close()
-+
-+			if err := s.storage.CreateAuthRequest(context.TODO(), tc.authRequest); err != nil {
-+				t.Fatalf("failed to create auth request: %v", err)
-+			}
-+
-+			if err := s.storage.CreateOfflineSessions(context.TODO(), tc.offlineSession); err != nil {
-+				t.Fatalf("failed to create offline session: %v", err)
-+			}
-+
-+			u, err := url.Parse(s.issuerURL.String())
-+			if err != nil {
-+				t.Fatalf("Could not parse issuer URL %v", err)
-+			}
-+			u.Path = path.Join(u.Path, "totp")
-+			u.RawQuery = tc.values.Encode()
-+			req, _ := http.NewRequest("POST", u.String(), nil)
-+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
-+
-+			rr := httptest.NewRecorder()
-+			s.ServeHTTP(rr, req)
-+			if rr.Code != tc.expectedResponseCode {
-+				t.Errorf("%s: Unexpected Response Type. Expected %v got %v: %s %s", tc.testName, tc.expectedResponseCode, rr.Code, rr.Result().Header.Get("Location"), rr.Body.String())
-+			}
-+
-+			if len(tc.expectedServerResponse) > 0 {
-+				result, _ := io.ReadAll(rr.Body)
-+				if string(result) != tc.expectedServerResponse {
-+					t.Errorf("%s: Unexpected Response. Expected %q got %q", tc.testName, tc.expectedServerResponse, result)
-+				}
-+			}
-+		})
-+	}
-+}
 diff --git a/storage/ent/client/authrequest.go b/storage/ent/client/authrequest.go
 index 25d3e415..1e17c8e4 100644
 --- a/storage/ent/client/authrequest.go
@@ -2285,37 +1825,3 @@ index 574b0a5a..4ebc2eb4 100644
  }
 
  // Password is an email to password mapping managed by the storage.
-diff --git a/web/templates/totp_verify.html b/web/templates/totp_verify.html
-new file mode 100644
-index 00000000..2a77b8d3
---- /dev/null
-+++ b/web/templates/totp_verify.html
-@@ -0,0 +1,28 @@
-+{{ template "header.html" . }}
-+
-+<div class="theme-panel">
-+    <h2 class="theme-heading">Two-factor authentication</h2>
-+    {{ if not (eq .QRCode "") }}
-+    <p>Scan the QR code below using your preferred authenticator app for future authentications</p>
-+    <img src="data:image/png;base64, {{ .QRCode }}" alt="QR code"/>
-+    {{ else }}
-+    <p>Open your authenticator app and enter the code <br/>for <b>{{ .Issuer }}: ({{ .Connector }})</b></p>
-+    {{ end }}
-+    <form method="post" action="{{ .PostURL }}">
-+      <div class="theme-form-row">
-+        <div class="theme-form-label">
-+            <label for="totp">One-time password</label>
-+        </div>
-+        <input tabindex="1" required id="totp" name="totp" type="password" class="theme-form-input" placeholder="password" {{ if .Invalid }} autofocus {{ end }}/>
-+      </div>
-+        {{ if .Invalid }}
-+        <div id="login-error" class="dex-error-box">
-+            The code is invalid.
-+        </div>
-+        {{ end }}
-+
-+        <button tabindex="2" id="submit-login" type="submit" class="dex-btn theme-btn--primary">Send</button>
-+    </form>
-+</div>
-+
-+{{ template "footer.html" . }}
