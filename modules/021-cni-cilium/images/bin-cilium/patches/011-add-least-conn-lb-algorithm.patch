@@ -1,4 +1,4 @@
-From 304835dbb59a959183b4ac6868a298e779921cd5 Mon Sep 17 00:00:00 2001
+From 20ee87374c2d9bc588f6f8a0138559e4c5117d3c Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -20,14 +20,14 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/maps/ctmap/gc/gc.go                 |   5 +
  pkg/maps/ctmap/types.go                 |   4 +
  pkg/maps/lbmap/lbmap.go                 |  21 +-
- pkg/maps/lbmap/leastconn.go             | 155 +++++++++++++
+ pkg/maps/lbmap/leastconn.go             | 159 +++++++++++++
  pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
  pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
  pkg/metrics/features/metrics.go         |   1 +
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  22 +-
  pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 22 files changed, 654 insertions(+), 18 deletions(-)
+ 22 files changed, 658 insertions(+), 18 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -800,10 +800,10 @@ index 12686cec41..d9a56201af 100644
  
 diff --git a/pkg/maps/lbmap/leastconn.go b/pkg/maps/lbmap/leastconn.go
 new file mode 100644
-index 0000000000..4938077bdf
+index 0000000000..6a6f39db06
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn.go
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,159 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
@@ -897,7 +897,7 @@ index 0000000000..4938077bdf
 +	}
 +	val := LeastConnBackendVal{}
 +	if err := bckMap.Lookup(key, &val); err != nil {
-+		log.WithError(err).Warn("DEBUG Unable to lookup least-conn backend entry from BPF map")
++		log.WithError(err).Debug("Unable to lookup least-conn backend entry from BPF map")
 +		return
 +	}
 +
@@ -947,6 +947,8 @@ index 0000000000..4938077bdf
 +		backendCachedMap = nil
 +	}()
 +
++	log.Debug("Flush least-conn backend counters")
++
 +	bckMap := leastConnBackend4Map
 +	if bckMap == nil {
 +		log.Warn("Unable to flush cached backends - bpf map is not opened")
@@ -956,7 +958,9 @@ index 0000000000..4938077bdf
 +	for key, val := range backendCachedMap {
 +		if err := bckMap.Update(key, val, vbpf.UpdateAny); err != nil {
 +			log.WithError(err).Error("Unable to flush least-conn backend entry")
++			continue
 +		}
++		log.Debug("Flushed least-conn backend entry", key, val.Count)
 +	}
 +}
 diff --git a/pkg/maps/lbmap/leastconn_backend_map.go b/pkg/maps/lbmap/leastconn_backend_map.go
