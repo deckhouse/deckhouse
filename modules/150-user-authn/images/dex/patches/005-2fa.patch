@@ -136,7 +136,7 @@ index 5ba3d05b..d455a00f 100644
  github.com/prometheus/client_golang v1.20.5/go.mod h1:PIEt8X02hGcP8JWbeHyeZ53Y/jReSnHgO035n//V5WE=
  github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
 diff --git a/server/handlers.go b/server/handlers.go
-index a00b290b..2db4d074 100644
+index a00b290b..1698b019 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -11,7 +11,6 @@ import (
@@ -159,7 +159,7 @@ index a00b290b..2db4d074 100644
  		return a, nil
  	}
  	if err := s.storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
-@@ -536,63 +540,82 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -536,63 +540,81 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		"connector_id", authReq.ConnectorID, "username", claims.Username,
  		"preferred_username", claims.PreferredUsername, "email", email, "groups", claims.Groups)
 
@@ -172,8 +172,7 @@ index a00b290b..2db4d074 100644
 +	// TODO(nabokihms): We create an offline session even if the offline access is not requested.
 +	//   In the future it will be possible to migrate to sessions.
 +	//   Sessions may contain attributes like approval status, etc.
-+	_, err := s.storage.GetOfflineSessions(ctx, identity.UserID, authReq.ConnectorID)
-+	if err != nil {
++	if _, err := s.storage.GetOfflineSessions(ctx, identity.UserID, authReq.ConnectorID); err != nil {
 +		if err != storage.ErrNotFound {
 +			s.logger.ErrorContext(ctx, "failed to get offline session", "err", err)
 +			return "", false, err
@@ -280,7 +279,7 @@ index a00b290b..2db4d074 100644
  }
 
  func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
-@@ -614,7 +637,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+@@ -614,7 +636,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
  		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
  		return
  	}
