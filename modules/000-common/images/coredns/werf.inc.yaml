@@ -13,9 +13,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 -b v1.12.0 $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
+    - git clone --depth 1 -b v1.12.2 $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - echo "kubeforward:github.com/deckhouse/coredns-kubeforward" >> plugin.cfg
     - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -35,6 +35,8 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    - go get github.com/deckhouse/coredns-kubeforward@v0.1.0
+    - go generate
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.0' -o /coredns
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
