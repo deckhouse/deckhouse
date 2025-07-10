@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-e837687ca73b6d97b720c72228fa886b2d159aae2fc408b7d6125c2bc7a72d2f",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2025-05-07T22:06:23.7823+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "timestamp": "2025-05-06T14:17:49.782779+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "timestamp": "2025-05-07T22:05:46.082802+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-47108"
+      },
+      "timestamp": "2025-05-06T14:17:33.774559+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+    }
+  ]
+}
