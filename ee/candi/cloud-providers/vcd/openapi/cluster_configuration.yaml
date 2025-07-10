@@ -323,6 +323,7 @@ apiVersions:
                     External network type for build DNAT rule for master node (one of "org" or "ext").
                   enum: [org, ext]
         createDefaultFirewallRules:
+          type: boolean
           description: |
             If enabled, configures the following default firewall rules for the cluster's main network (mainNetwork):
               - Allows all outgoing connections from mainNetwork.
