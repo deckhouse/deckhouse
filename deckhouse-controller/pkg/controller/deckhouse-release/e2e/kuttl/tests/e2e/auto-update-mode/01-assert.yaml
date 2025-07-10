@@ -1,0 +1,8 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.65.0
+status:
+  phase: Deployed

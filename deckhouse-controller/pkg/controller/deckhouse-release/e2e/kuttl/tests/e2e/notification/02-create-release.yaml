@@ -1,0 +1,11 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+    release.deckhouse.io/current-restored: "true"
+  name: v1.65.0
+spec:
+  version: v1.65.0
