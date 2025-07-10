@@ -302,7 +302,7 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: |
+      description: |
         Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
 
         Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
@@ -314,5 +314,5 @@
         ```
 
         and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
-      description: |
+      summary: |
         Deckhouse memory usage is too high.

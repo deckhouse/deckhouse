@@ -3443,9 +3443,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse memory usage is too high.
+        Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
+
+        Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
+
+        ```bash
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
+        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
+        ```
+
+        and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
       summary: |
-        Deckhouse pod {{ $labels.pod }} on node {{ $labels.node }} has high memory usage.  Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):  bash curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap&quot; -o /tmp/heap.pprof curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine&quot; -o /tmp/goroutine.pprof curl -s &quot;http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30&quot; -o /tmp/cpu.pprof   and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
+        Deckhouse memory usage is too high.
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
