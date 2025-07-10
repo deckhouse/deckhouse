@@ -92,6 +92,23 @@ properties:
             A CA for accessing the API:
             * If the parameter is not set, Kubernetes CA is used.
             * We recommend using a self-signed certificate (and specify it as masterCA) if an HTTP proxy (that terminates HTTPS traffic) is used for exposing.
+  staticUsers2FA:
+    type: object
+    default: {}
+    required: [enabled]
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          If set to `true`, the static users will be required to use two-factor authentication (2FA) when logging in.
+          This option is useful for enhancing security by requiring an additional verification step during the login process.
+      issuerName:
+        type: string
+        default: "Deckhouse"
+        description: |
+          The issuer name for the two-factor authentication (2FA) tokens.
+          This name is visible to users in the 2FA application (e.g., Google Authenticator).
   idTokenTTL:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
