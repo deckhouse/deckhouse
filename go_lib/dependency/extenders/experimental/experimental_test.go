@@ -19,9 +19,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestExtender_IsTerminator(t *testing.T) {
