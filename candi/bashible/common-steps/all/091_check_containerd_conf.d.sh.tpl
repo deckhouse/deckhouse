@@ -52,13 +52,13 @@ set_containerd_registry_label() {
   {{- if eq .cri "Containerd" }}
     set_containerd_config_label "containerd-config" "conf.d" "containerd-conf"
     set_containerd_registry_label "/etc/containerd/conf.d" "v1"
-    rm -f /var/lib/node_labels/containerd-v2-config
+    rm -f /var/lib/node_labels/containerd-v2-conf
   {{- else if eq .cri "ContainerdV2" }}
     set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf"
     set_containerd_registry_label "/etc/containerd/conf2.d" "v2"
     rm -f /var/lib/node_labels/containerd-conf
   {{- else }}
-    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-config
+    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-conf
     rm -f /var/lib/node_labels/containerd-conf-registry
   {{- end }}
 {{- end }}
