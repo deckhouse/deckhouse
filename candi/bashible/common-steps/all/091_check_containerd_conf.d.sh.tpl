@@ -12,53 +12,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set_containerd_config_label() {
+  local label_name="$1"
+  local conf_dir="$2"
+  local label_file_name="$3"
+  local label_dir_path="/var/lib/node_labels/"
+  local full_conf_path="/etc/containerd/${conf_dir}"
+  local label_value="default"
+
+  if ls "${full_conf_path}/"*.toml >/dev/null 2>&1; then
+    label_value="custom"
+  fi
+
+  mkdir -p /var/lib/node_labels/
+  echo "node.deckhouse.io/${label_name}=${label_value}" > $label_dir_path/$label_file_name
+}
+
+set_containerd_registry_label() {
+  local full_conf_path="$1"
+  local ctrd_version="$2"
+  local label_value="default"
+
+  if [ "$ctrd_version" = "v1" ]; then
+    if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+      for path in ${full_conf_path}/*.toml; do
+        if bb-ctrd-v1-has-registry-fields "$path"; then
+          label_value="custom"
+          break
+        fi
+      done
+    fi
+  fi
+
+  mkdir -p /var/lib/node_labels/
+  echo "node.deckhouse.io/containerd-config-registry=${label_value}" > /var/lib/node_labels/containerd-conf-registry
+}
+
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
-
-{{/*
-Detect and label containerd configuration type for the current node.
-
-This code inspects the /etc/containerd/conf.d/*.toml configuration directory
-to determine whether the node uses a custom containerd configuration
-and whether a custom registry configuration is present.
-
-It writes the following node labels:
-
-  1. node.deckhouse.io/containerd-config:
-    - "default" — if no .toml files found in /etc/containerd/conf.d/
-    - "custom"  — if one or more files exist
-    This annotation is required for the transition to containerd v2.
-
-  2. node.deckhouse.io/containerd-config-registry:
-    - "default" — if no registry section found in custom config files
-    - "custom"  — if at least one file contains plugins."io.containerd.grpc.v1.cri".registry
-    This annotation is required for the registry module.
-*/}}
-
-mkdir -p /var/lib/node_labels
-
-config_label_path="/var/lib/node_labels/containerd-conf"
-registry_label_path="/var/lib/node_labels/containerd-conf-registry"
-config_label_value="default"
-registry_label_value="default"
-
-# Check additional configs containerd
-if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  config_label_value="custom"
-
-  # Check each additional config file for a registry block
-  for path in /etc/containerd/conf.d/*.toml; do
-    if bb-ctrd-has-registry-fields "${path}"; then
-      registry_label_value="custom"
-      break
-    fi
-  done
-fi
-
-echo "node.deckhouse.io/containerd-config=${config_label_value}" > "${config_label_path}"
-echo "node.deckhouse.io/containerd-config-registry=${registry_label_value}" > "${registry_label_path}"
-  {{- else -}}
-rm -f "${config_label_path}"
-rm -f "${registry_label_path}"
-  {{- end  }}
-{{- end  }}
+    set_containerd_config_label "containerd-config" "conf.d" "containerd-conf"
+    set_containerd_registry_label "/etc/containerd/conf.d" "v1"
+    rm -f /var/lib/node_labels/containerd-v2-conf
+  {{- else if eq .cri "ContainerdV2" }}
+    set_containerd_config_label "containerd-v2-config" "conf2.d" "containerd-v2-conf"
+    set_containerd_registry_label "/etc/containerd/conf2.d" "v2"
+    rm -f /var/lib/node_labels/containerd-conf
+  {{- else }}
+    rm -f /var/lib/node_labels/containerd-conf /var/lib/node_labels/containerd-v2-conf
+    rm -f /var/lib/node_labels/containerd-conf-registry
+  {{- end }}
+{{- end }}
