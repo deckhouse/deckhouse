@@ -1,0 +1,5 @@
+cni-cilium:
+  fixes:
+    - summary: Fix cilium least-conn lb algorithm bugs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14356
+
