@@ -141,39 +141,41 @@ apiVersions:
             Имя VMware Cloud Director Virtual Application (принадлежащее Virtual Data Center).
         edgeGateway:
           description: |
-            VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
+            Свойства VMware Cloud Director Edge Gateway (принадлежащее Virtual Data Center).
           properties:
             name:
               description: |
-                VMware Cloud Director Edge Gateway name.
+                Имя VMware Cloud Director Edge Gateway.
             type:
               description: |
-                VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
+                Тип VMware Cloud Director Edge Gateway (один из "NSX-V" или "NSX-T").
             externalIP:
               description: |
-                The IP address accessible from external networks through which
-                incoming SSH connections are forwarded to the master node using DNAT.
+                IP-адрес, доступный из внешних сетей, через который
+                входящие SSH-соединения перенаправляются на мастер-узел с использованием DNAT.
             externalPort:
               description: |
-                The external port mapped by the DNAT rule to forward incoming SSH
-                connections to the master node.
+                Внешний порт, сопоставленный правилом DNAT для перенаправления входящих SSH
+                соединений на мастер-узел.
             NSX-V:
               description: |
-                Additional parameters required if `type` is NSX-V.
+                Дополнительные параметры, необходимые, если `type` равно NSX-V.
               properties:
                 externalNetworkName:
                   description: |
-                    External network name for build DNAT rule for master node.
+                    Имя внешней сети для создания правила DNAT для мастер-узла.
                 externalNetworkType:
                   description: |
-                    External network type for build DNAT rule for master node (one of "org" or "ext").
+                    Тип внешней сети для создания правила DNAT для мастер-узла (один из "org" или "ext").
         createDefaultFirewallRules:
           description: |
-            If enabled, configures the following default firewall rules for the cluster's main network (mainNetwork):
-              - Allows all outgoing connections from mainNetwork.
-              - Allows all incoming ICMP packets to mainNetwork.
-              - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
-              - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
+            Если включено, настраивает следующие правила брандмауэра по умолчанию для основной сети кластера (mainNetwork):
+              - Разрешает все исходящие соединения из mainNetwork.
+              - Разрешает все входящие ICMP-пакеты в mainNetwork.
+              - Разрешает все входящие TCP-соединения в mainNetwork на порт 22 (SSH).
+              - Разрешает все входящие TCP и UDP-соединения в mainNetwork для NodePorts в диапазоне 30000–32767.
+
+            **Внимание!** Использование этой опции совместно с Edge Gateway типа NSX-T подразумевает, что в одном VDC должен быть развернут только один кластер, поскольку в этом случае все существующие правила брандмауэра будут перезаписаны.
           x-doc-default: false
         mainNetwork:
           description: |
