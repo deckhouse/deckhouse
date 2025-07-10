@@ -17,9 +17,14 @@
     {%- if forloop.last %}
       <li class="breadcrumbs__item">{{ page.title }}</li>
     {%- else %}
+      {%- unless page_url_parts[i].title %}
+        {%- continue %}
+      {%- endunless -%}
+
       {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
       {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-      {%- assign breadcrumb = site.data[page.product_code]['breadcrumbs'][current_breadcrumb_url] %}
+
+      {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
       {%- if breadcrumb %}
           <li class="breadcrumbs__item">
               {%- if breadcrumb.url %}<a href="{{ breadcrumb.url | true_relative_url }}">{% endif %}
