@@ -21,14 +21,9 @@ apiVersions:
         type: array
         items:
           type: string
-      internalNetworkNames:
-        description: List of cluster internal network names
-        type: array
-        items:
-          type: string
       instances:
-              type: object
-              additionalProperties: false
-              properties:
-                mainNetwork:
-                  type: string
+        type: object
+        additionalProperties: false
+        properties:
+          mainNetwork:
+            type: string
