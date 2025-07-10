@@ -49,8 +49,8 @@ apiVersions:
         items:
           type: string
       instances:
-              type: object
-              additionalProperties: false
-              properties:
-                mainNetwork:
-                  type: string
+        type: object
+        additionalProperties: false
+        properties:
+          mainNetwork:
+            type: string

@@ -27,7 +27,6 @@ spec:
               required:
                 - numCPUs
                 - memory
-                - mainNetwork
               properties:
                 numCPUs:
                   description: |
