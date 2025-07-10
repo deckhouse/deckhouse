@@ -62,8 +62,8 @@ shell:
   - cd /src/kiali/frontend
   {{- if .DistroPackagesProxy }}
   - yarn config set registry http://{{ $.DistroPackagesProxy }}/repository/npmjs/
-  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs|g' yarn.lock
-  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  # - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs|g' yarn.lock
+  # - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
   - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
   {{- end }}
   - yarn install --frozen-lockfile
