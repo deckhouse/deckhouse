@@ -36,7 +36,6 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-
 ## StandardWithNetwork
 
 Пример конфигурации схемы размещения:
