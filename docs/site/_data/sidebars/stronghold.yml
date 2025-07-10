@@ -294,8 +294,8 @@ entries:
                 ru: 2FA / MFA
               folders:
               - title:
-                  en: Multifactor.ru
-                  ru: Мультифактор.ру
+                  en: MULTIFACTOR Ldap Adapter
+                  ru: MULTIFACTOR Ldap Adapter
                 url: /stronghold/documentation/user/auth/mfa/multifactor.html
               - title:
                   en: TOTP
