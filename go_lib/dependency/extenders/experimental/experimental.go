@@ -18,7 +18,6 @@ package experimental
 import (
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
@@ -40,7 +39,6 @@ type Extender struct {
 	allowExperimental bool
 	logger            *log.Logger
 	modules           map[string]struct{}
-	lock              sync.RWMutex
 }
 
 // Instance returns a singleton extender (same pattern as other extenders)
@@ -48,14 +46,8 @@ func NewExtender(allowExperimental bool, logger *log.Logger) *Extender {
 	return &Extender{
 		logger:            logger,
 		allowExperimental: allowExperimental,
+		modules:           make(map[string]struct{}),
 	}
-}
-
-func (e *Extender) SetAllowExperimental(allow bool) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	e.allowExperimental = allow
-	e.logger.Info("Updated allowExperimental", "value", allow)
 }
 
 // Name returns the extender identifier
@@ -82,9 +74,6 @@ func (e *Extender) DeleteConstraint(name string) {
 // If the stage is Experimental and the flag is false - deny with an error
 // If the stage is Experimental and the flag is true  - allow (true, nil)
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
-
 	if e.allowExperimental {
 		e.logger.Debug("experimental modules allowed", slog.String("name", name))
 		return ptr.To(true), nil
