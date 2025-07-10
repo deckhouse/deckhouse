@@ -24,5 +24,5 @@ output "cloud_discovery_data" {
 }
 
 output "bastion_ip_address_for_ssh" {
-  value = local.bastion_instance != {} ? openstack_compute_floatingip_v2.bastion[0].address : ""
+  value = local.bastion_instance != {} ? openstack_networking_floatingip_v2.bastion[0].address : ""
 }
