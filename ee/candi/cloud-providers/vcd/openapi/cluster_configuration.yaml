@@ -284,6 +284,8 @@ apiVersions:
               type: string
               description: |
                 VMware Cloud Director Edge Gateway name.
+              minLength: 1
+              maxLength: 128
             type:
               type: string
               description: |
@@ -293,29 +295,40 @@ apiVersions:
               type: string
               pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
               description: |
-                External IP address for build DNAT rule for master node.
+                The IP address accessible from external networks through which
+                incoming SSH connections are forwarded to the master node using DNAT.
             externalPort:
               type: integer
               description: |
-                External TCP port for build DNAT rule for master node.
+                The external port mapped by the DNAT rule to forward incoming SSH 
+                connections to the master node.
               minimum: 1
               maximum: 65535
               example: 10022
-            externalNetworkName:
-              type: string
+            NSX-V:
+              type: object
+              additionalProperties: false
               description: |
-                External network name for build DNAT rule for master node.
-                Required only if `type` is `NSX-V`.
-            externalNetworkType:
-              type: string
-              description: |
-                External network type for build DNAT rule for master node (one of "org" or "ext").
-                Required only if `type` is `NSX-V`.
-              enum: [org, ext]
-        enableFirewall:
-          description:
-            Configure firewall rules for the cluster.
-          type: boolean
+                Additional parameters required if `type` is NSX-V.
+              properties:
+                externalNetworkName:
+                  type: string
+                  description: |
+                    External network name for build DNAT rule for master node.
+                  minLength: 1
+                  maxLength: 128
+                externalNetworkType:
+                  type: string
+                  description: |
+                    External network type for build DNAT rule for master node (one of "org" or "ext").
+                  enum: [org, ext]
+        createDefaultFirewallRules:
+          description: |
+            If enabled, configures the following default firewall rules for the cluster's main network (mainNetwork):
+              - Allows all outgoing connections from mainNetwork.
+              - Allows all incoming ICMP packets to mainNetwork.
+              - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
+              - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
           x-doc-default: false
         mainNetwork:
           description: |
@@ -389,7 +402,7 @@ apiVersions:
               not: {}
             edgeGateway:
               not: {}
-            enableFirewall:
+            createDefaultFirewallRules:
               not: {}
         - required: [layout, internalNetworkDNSServers, internalNetworkCIDR, edgeGateway]
           properties:
@@ -403,14 +416,12 @@ apiVersions:
                   type:
                     type: string
                     enum: [NSX-V]
-                required: [type, name, externalIP, externalPort, externalNetworkName, externalNetworkType]
+                required: [type, name, externalIP, externalPort, NSX-V]
               - properties:
                   type:
                     type: string
                     enum: [NSX-T]
-                  externalNetworkName:
-                    not: {}
-                  externalNetworkType:
+                  NSXV:
                     not: {}
                 required: [type, name, externalIP, externalPort]
       - oneOf:

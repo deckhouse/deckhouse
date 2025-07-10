@@ -41,6 +41,11 @@ resource "vcd_nsxt_app_port_profile" "node_ports" {
     protocol = "TCP"
     port     = ["30000-32767"]
   }
+
+  app_port {
+    protocol = "UDP"
+    port     = ["30000-32767"]
+  }
 }
 
 resource "vcd_nsxt_firewall" "firewall" {
@@ -135,12 +140,12 @@ resource "vcd_nsxv_firewall_rule" "icmp" {
   }
 }
 
-resource "vcd_nsxv_firewall_rule" "node_ports" {
+resource "vcd_nsxv_firewall_rule" "node_ports_tcp" {
   count        = var.useNSXV ? 1 : 0
   org          = var.providerClusterConfiguration.organization
   edge_gateway = var.providerClusterConfiguration.edgeGateway.name
 
-  name = format("%s-inbound-node-ports", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-inbound-tcp-node-ports", var.providerClusterConfiguration.mainNetwork)
 
   source {
     ip_addresses = ["any"]
@@ -152,6 +157,27 @@ resource "vcd_nsxv_firewall_rule" "node_ports" {
 
   service {
     protocol = "tcp"
+    port     = "30000-32767"
+  }
+}
+
+resource "vcd_nsxv_firewall_rule" "node_ports_udp" {
+  count        = var.useNSXV ? 1 : 0
+  org          = var.providerClusterConfiguration.organization
+  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+
+  name = format("%s-inbound-udp-node-ports", var.providerClusterConfiguration.mainNetwork)
+
+  source {
+    ip_addresses = ["any"]
+  }
+
+  destination {
+    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+  }
+
+  service {
+    protocol = "udp"
     port     = "30000-32767"
   }
 }

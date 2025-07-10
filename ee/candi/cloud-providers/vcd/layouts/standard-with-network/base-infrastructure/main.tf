@@ -4,7 +4,7 @@
 locals {
   useNSXV        = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
   edgeGatewayId  = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
-  enableFirewall = contains(keys(var.providerClusterConfiguration), "enableFirewall") ? var.providerClusterConfiguration.enableFirewall : false
+  createDefaultFirewallRules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -48,7 +48,7 @@ module "nat" {
 }
 
 module "firewall" {
-  count = local.enableFirewall ? 1 : 0
+  count = local.createDefaultFirewallRules ? 1 : 0
 
   source                       = "../../../terraform-modules/firewall"
   providerClusterConfiguration = var.providerClusterConfiguration
