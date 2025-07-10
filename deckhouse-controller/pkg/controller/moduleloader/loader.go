@@ -207,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.IsExperimental(), def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -313,6 +313,14 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	return nil
 }
 
+func addStageLabel(base map[string]string, stage string) map[string]string {
+	if base == nil {
+		base = make(map[string]string, 1)
+	}
+	base["stage"] = stage
+	return base
+}
+
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
 	module := new(v1alpha1.Module)
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
@@ -333,7 +341,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        def.Name,
 						Annotations: def.Annotations(),
-						Labels:      def.Labels(),
+						Labels:      addStageLabel(def.Labels(), def.Stage),
 					},
 					Properties: v1alpha1.ModuleProperties{
 						Weight:       def.Weight,
@@ -359,7 +367,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
 
 			module.SetAnnotations(def.Annotations())
-			module.SetLabels(def.Labels())
+			module.SetLabels(addStageLabel(def.Labels(), def.Stage))
 
 			if embedded {
 				// set deckhouse release channel to embedded modules

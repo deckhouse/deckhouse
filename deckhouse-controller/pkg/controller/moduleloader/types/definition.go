@@ -130,3 +130,7 @@ func (d *Definition) Labels() map[string]string {
 
 	return labels
 }
+
+func (d *Definition) IsExperimental() bool {
+	return d.Stage == "Experimental"
+}

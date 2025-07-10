@@ -19,6 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -29,13 +30,15 @@ import (
 )
 
 const (
-	DefaultBundle   = "Default"
-	DefaultLogLevel = "Info"
+	DefaultBundle                   = "Default"
+	DefaultLogLevel                 = "Info"
+	DefaultAllowExperimentalModules = "false"
 )
 
 type DeckhouseInstaller struct {
 	Registry                 RegistryData
 	LogLevel                 string
+	AllowExperimentalModules string
 	Bundle                   string
 	DevBranch                string
 	UUID                     string
@@ -137,6 +140,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
+	allowExperimental := DefaultAllowExperimentalModules
 
 	schemasStore := NewSchemaStore()
 
@@ -153,6 +157,16 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			logLevel = logLevelRaw.(string)
 		}
+		if allowExpRaw, ok := mc.Spec.Settings["allowExperimentalModules"]; ok {
+			switch v := allowExpRaw.(type) {
+			case bool:
+				allowExperimental = strconv.FormatBool(v)
+			case string:
+				allowExperimental = v
+			default:
+				return nil, fmt.Errorf("allowExperimentalModules must be boolean or string bool")
+			}
+		}
 		bundleRaw, ok := mc.Spec.Settings["bundle"]
 		if ok {
 			bundle = bundleRaw.(string)
@@ -161,8 +175,9 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	if deckhouseCm == nil {
 		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
-			"bundle":   bundle,
-			"logLevel": logLevel,
+			"bundle":                   bundle,
+			"logLevel":                 logLevel,
+			"allowExperimentalModules": allowExperimental == "true",
 		})
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
@@ -171,17 +186,18 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	installConfig := DeckhouseInstaller{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		Bundle:                bundle,
-		LogLevel:              logLevel,
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ProviderClusterConfig: providerClusterConfig,
-		StaticClusterConfig:   staticClusterConfig,
-		ClusterConfig:         clusterConfig,
-		ModuleConfigs:         metaConfig.ModuleConfigs,
-		InstallerVersion:      metaConfig.InstallerVersion,
+		UUID:                     metaConfig.UUID,
+		Registry:                 metaConfig.Registry,
+		DevBranch:                metaConfig.DeckhouseConfig.DevBranch,
+		Bundle:                   bundle,
+		LogLevel:                 logLevel,
+		AllowExperimentalModules: allowExperimental,
+		KubeDNSAddress:           metaConfig.ClusterDNSAddress,
+		ProviderClusterConfig:    providerClusterConfig,
+		StaticClusterConfig:      staticClusterConfig,
+		ClusterConfig:            clusterConfig,
+		ModuleConfigs:            metaConfig.ModuleConfigs,
+		InstallerVersion:         metaConfig.InstallerVersion,
 	}
 
 	return &installConfig, nil
