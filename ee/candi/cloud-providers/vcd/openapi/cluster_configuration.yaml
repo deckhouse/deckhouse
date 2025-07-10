@@ -346,7 +346,7 @@ apiVersions:
           x-unsafe: true
         internalNetworkDNSServers:
           description: |
-            A list of addresses of the recursive DNSs of the internal cluster network.
+            A list of addresses of the recursive DNSs servers.
           type: array
           minItems: 0
           maxItems: 2
