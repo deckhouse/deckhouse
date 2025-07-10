@@ -7,7 +7,7 @@ In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following type
 
 - **CloudEphemeral** — temporary nodes that are automatically created and deleted.
 - **CloudPermanent** — permanent nodes managed manually via `replicas`.
-- **CloudStatic** — nodes created outside of DKP but integrated into the cluster.
+- **CloudStatic** — static cloud nodes. The machines are created manually or by external tools and DKP connects them to the cluster and manages them just like the regular nodes.
 
 Below are instructions for adding and configuring each type.
 

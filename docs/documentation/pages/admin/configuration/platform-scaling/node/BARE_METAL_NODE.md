@@ -195,6 +195,8 @@ spec:
   nodeType: Static
 ```
 
+Nodes are added to such a group manually using preconfigured scripts or automatically via CAPS.
+
 ## Changing the CRI for a NodeGroup
 
 CRI (Container Runtime Interface) is a standard interface between the kubelet and the container runtime.
@@ -250,6 +252,8 @@ To move an existing manually added static node from one NodeGroup to another, yo
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
 kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
+
+It will take some time for the changes to take effect.
 
 ## Changing the IP address in a StaticInstance
 

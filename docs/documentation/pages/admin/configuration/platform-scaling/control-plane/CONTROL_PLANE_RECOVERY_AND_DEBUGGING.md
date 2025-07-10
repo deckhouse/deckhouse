@@ -105,7 +105,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to take the following steps:
 
-1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` — this sets the limit to 8 GB.
+1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and increase the value by multiplying the specified number by two. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` — this sets the limit to 8 GB.
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell

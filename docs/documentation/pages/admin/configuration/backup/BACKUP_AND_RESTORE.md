@@ -139,6 +139,8 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
 
+Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
+
 ## Restoring individual objects
 
 ### Restoring Kubernetes objects from an etcd backup
