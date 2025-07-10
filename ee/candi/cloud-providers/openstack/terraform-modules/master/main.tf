@@ -95,20 +95,13 @@ resource "openstack_compute_instance_v2" "master" {
   }
 }
 
-resource "openstack_compute_floatingip_v2" "master" {
+resource "openstack_networking_floatingip_v2" "master" {
   count = var.floating_ip_network == "" ? 0 : 1
   pool  = var.floating_ip_network
 }
 
-resource "openstack_compute_floatingip_associate_v2" "master" {
-  count                 = var.floating_ip_network == "" ? 0 : 1
-  floating_ip           = openstack_compute_floatingip_v2.master[0].address
-  instance_id           = openstack_compute_instance_v2.master.id
-  wait_until_associated = true
-
-  lifecycle {
-    ignore_changes = [
-      wait_until_associated,
-    ]
-  }
+resource "openstack_networking_floatingip_associate_v2" "master" {
+  count       = var.floating_ip_network == "" ? 0 : 1
+  floating_ip = openstack_networking_floatingip_v2.master[0].address
+  port_id     = var.network_port_ids[0]
 }
