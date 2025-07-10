@@ -142,7 +142,7 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
-			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.externalNetworkType",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
 			// ignore internal values
@@ -179,7 +179,7 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
-			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.externalNetworkType",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
@@ -230,14 +230,14 @@ var (
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
 			// ignore enum values "org" and "ext"
-			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"ee/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
 			// ignore enum values "NSX-T" and "NSX-V"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
 			// ignore enum values "org" and "ext"
-			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.externalNetworkType",
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 	}
 

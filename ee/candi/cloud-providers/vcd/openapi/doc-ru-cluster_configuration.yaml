@@ -139,12 +139,42 @@ apiVersions:
         virtualApplicationName:
           description: |
             Имя VMware Cloud Director Virtual Application (принадлежащее Virtual Data Center).
-        edgeGatewayName:
+        edgeGateway:
           description: |
-            Имя VMware Cloud Director Edge Gateway (принадлежащее Virtual Data Center).
-        edgeGatewayType:
+            VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
+          properties:
+            name:
+              description: |
+                VMware Cloud Director Edge Gateway name.
+            type:
+              description: |
+                VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
+            externalIP:
+              description: |
+                The IP address accessible from external networks through which
+                incoming SSH connections are forwarded to the master node using DNAT.
+            externalPort:
+              description: |
+                The external port mapped by the DNAT rule to forward incoming SSH
+                connections to the master node.
+            NSX-V:
+              description: |
+                Additional parameters required if `type` is NSX-V.
+              properties:
+                externalNetworkName:
+                  description: |
+                    External network name for build DNAT rule for master node.
+                externalNetworkType:
+                  description: |
+                    External network type for build DNAT rule for master node (one of "org" or "ext").
+        createDefaultFirewallRules:
           description: |
-            Тип VMware Cloud Director Edge Gateway (один из "NSX-V" или "NSX-T").
+            If enabled, configures the following default firewall rules for the cluster's main network (mainNetwork):
+              - Allows all outgoing connections from mainNetwork.
+              - Allows all incoming ICMP packets to mainNetwork.
+              - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
+              - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
+          x-doc-default: false
         mainNetwork:
           description: |
             Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
