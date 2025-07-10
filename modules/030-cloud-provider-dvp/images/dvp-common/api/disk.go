@@ -92,12 +92,6 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 		return nil, err
 	}
 
-	// FIXME: delete after tests
-	// err = d.WaitDiskCreation(ctx, diskName)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	newDisk, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
 		return nil, err
@@ -138,12 +132,6 @@ func (d *DiskService) CreateDiskFromDataSource(
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return nil, err
 	}
-
-	// FIXME: remove after testing
-	// err = d.WaitDiskCreation(ctx, diskName)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	newDisk, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
