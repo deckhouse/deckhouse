@@ -58,7 +58,8 @@ import:
   before: setup
 shell:
   setup:
-  {{- include "node packages proxy" . | nindent 2 }}
   - cd /src/kiali/frontend
+  {{- include "node packages proxy" . | nindent 2 }}
+  {{- include "yarn3 packages proxy" . | nindent 2 }}
   - yarn install --frozen-lockfile
   - yarn run build
