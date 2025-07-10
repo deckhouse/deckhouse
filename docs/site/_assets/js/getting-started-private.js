@@ -1,4 +1,4 @@
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
   let proxyHttpsURI = sessionStorage.getItem('dhctl-proxy-https-uri')
   let proxyHttpURI = sessionStorage.getItem('dhctl-proxy-http-uri')
   let noProxyAddressList = sessionStorage.getItem('dhctl-noproxy-address-list')
@@ -79,7 +79,10 @@ $(document).ready(function () {
     const cleanedRegistryImagesRepo = registryImagesRepo.replace(/\/+$/, '');
     update_parameter('dhctl-registry-docker-cfg', 'registryDockerCfg', '<YOUR_PRIVATE_ACCESS_STRING_IS_HERE>', null, '[config-yml]');
     update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
-    update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]', 4);
+    if (registryCA && registryCA.length > 0) {
+      console.warn("registryCA: ", registryCA);
+      update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]', 4);
+    }
     if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
       update_parameter('HTTP', 'registryScheme', 'HTTPS', null, null);
       updateTextInSnippet('[config-yml]', /registryScheme: HTTPS.+\n---/s, "registryScheme: HTTP\n---");
