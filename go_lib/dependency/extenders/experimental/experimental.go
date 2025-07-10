@@ -79,7 +79,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return ptr.To(true), nil
 	}
 
-	if _, ok := e.modules[stageLabelKey]; ok {
+	if _, ok := e.modules[name]; ok {
 		e.logger.Error("experimental module is forbidden by policy", slog.String("name", name))
 		return ptr.To(false), &scherror.PermanentError{Err: fmt.Errorf("requirements are not satisfied: experimental modules are disabled (allowExperimentalModules=false)")}
 	}
