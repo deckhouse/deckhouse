@@ -177,11 +177,11 @@ pull_request_info:
     security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
-    edition_ce: ${{ steps.pr_props.outputs.edition_ce }}
-    edition_be: ${{ steps.pr_props.outputs.edition_be }}
-    edition_se: ${{ steps.pr_props.outputs.edition_se }}
-    edition_se-plus: ${{ steps.pr_props.outputs.edition_se-plus }}
-    edition_ee: ${{ steps.pr_props.outputs.edition_ee }}
+    build_ce: ${{ steps.pr_props.outputs.build_ce }}
+    build_be: ${{ steps.pr_props.outputs.build_be }}
+    build_se: ${{ steps.pr_props.outputs.build_se }}
+    build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
+    build_ee: ${{ steps.pr_props.outputs.build_ee }}
 
   # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
   if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}

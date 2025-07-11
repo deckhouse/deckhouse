@@ -51,7 +51,7 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: ${{ needs.pull_request_info.outputs.edition_ee == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -62,7 +62,7 @@ jobs:
 
   build_se:
     name: Build SE
-    if: ${{ needs.pull_request_info.outputs.edition_se == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -73,7 +73,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: ${{ needs.pull_request_info.outputs.edition_se-plus == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -84,7 +84,7 @@ jobs:
 
   build_be:
     name: Build BE
-    if: ${{ needs.pull_request_info.outputs.edition_be == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -95,7 +95,7 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: ${{ needs.pull_request_info.outputs.edition_ce == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
     needs:
       - git_info
       - pull_request_info
