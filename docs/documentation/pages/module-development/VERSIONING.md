@@ -85,6 +85,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
 </table>
 
 - **Experiments** — Functionality checks, experiments, and testing;
+**Important**: Modules at the `Experimental` stage are not installed by default. To install them, the `allowExperimentalModules` flag must be set to true. This flag is set via the `DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES` environment variable.
 - **Beta testing** — Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production;
 - **Limited use** — Development environments, pilot projects, low-impact production environments;
 - **Production use** — Production environments and those equivalent to them;
