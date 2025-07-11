@@ -67,6 +67,7 @@ const (
 	ModuleReasonReconciling                 = "Reconciling"
 	ModuleReasonInstalling                  = "Installing"
 	ModuleReasonError                       = "Error"
+	ModuleReasonExperimentalExtender        = "ExperimentalExtender"
 
 	ModuleMessageBundle                      = "turned off by bundle"
 	ModuleMessageModuleConfig                = "turned off by module config"
@@ -76,6 +77,7 @@ const (
 	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
 	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
 	ModuleMessageModuleDependencyExtender    = "turned off because of unmet module dependencies"
+	ModuleMessageExperimentalExtender        = "turned off because experimental extender are false"
 	ModuleMessageNotInstalled                = "not installed"
 	ModuleMessageDisabled                    = "disabled"
 	ModuleMessageConflict                    = "several available sources"
@@ -84,10 +86,11 @@ const (
 	ModuleMessageInstalling                  = "installing"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
 
-	DeckhouseRequirementFieldName        string = "deckhouse"
-	KubernetesRequirementFieldName       string = "kubernetes"
-	BootstrappedRequirementFieldName     string = "bootstrapped"
-	ModuleDependencyRequirementFieldName string = "modules"
+	DeckhouseRequirementFieldName                string = "deckhouse"
+	KubernetesRequirementFieldName               string = "kubernetes"
+	BootstrappedRequirementFieldName             string = "bootstrapped"
+	ModuleDependencyRequirementFieldName         string = "modules"
+	AllowExperimentalModulesRequirementFieldName string = "allowExperimentalModules"
 )
 
 var (
@@ -142,9 +145,10 @@ type ModuleRequirements struct {
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
-	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	Deckhouse                string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes               string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	Bootstrapped             string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	AllowExperimentalModules string `json:"allowExperimentalModules,omitempty" yaml:"allowExperimentalModules,omitempty"`
 }
 
 type ModuleProperties struct {

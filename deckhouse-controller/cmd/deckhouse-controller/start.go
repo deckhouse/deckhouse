@@ -18,10 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -56,10 +58,11 @@ const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
 	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
-	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
-	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
-	modulesDirEnv      = "MODULES_DIR"
-	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
+	deckhouseBundleEnv       = "DECKHOUSE_BUNDLE"
+	chrootDirEnv             = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
+	modulesDirEnv            = "MODULES_DIR"
+	skipEntrypointEnv        = "SKIP_ENTRYPOINT_EXECUTION"
+	allowExperimentalModules = "DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES"
 
 	serviceDeckhouse = "deckhouse"
 	leaseName        = "deckhouse-leader-election"
@@ -246,7 +249,12 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
+	allowExpRaw := os.Getenv(allowExperimentalModules)
+	allowExp, err := strconv.ParseBool(allowExpRaw)
+	if err != nil {
+		logger.Warn("Bad environment value 'DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES' - must be bool", slog.String("value", allowExpRaw))
+	}
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, allowExp, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
