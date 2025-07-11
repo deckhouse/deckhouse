@@ -214,7 +214,7 @@ jobs:
             }
 
             // Set editions from current labels to build_ce, build_ee and so on.
-            const build_editions = input_labels.filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+            const build_editions = pr.labels.filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
 
             // Set security rootless scan from labels.
             const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
