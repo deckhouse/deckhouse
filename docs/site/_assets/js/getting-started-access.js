@@ -27,6 +27,6 @@ function domain_update() {
     }
 }
 
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
     domain_update();
 });
