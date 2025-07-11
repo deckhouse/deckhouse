@@ -54,11 +54,13 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "dex-authenticator"
+      controlledValues: RequestsAndLimits
       minAllowed:
         {{- include "dex_authenticator_resources" . | nindent 8 }}
       maxAllowed:
         {{- include "dex_authenticator_limits" . | nindent 8 }}
     - containerName: "redis"
+      controlledValues: RequestsAndLimits
       minAllowed:
         {{- include "redis_resources" . | nindent 8 }}
       maxAllowed:
