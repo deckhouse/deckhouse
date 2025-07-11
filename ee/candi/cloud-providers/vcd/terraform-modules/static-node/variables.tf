@@ -9,7 +9,7 @@ variable "providerClusterConfiguration" {
   type = any
 
   validation {
-    condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
+    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
     error_message = "Invalid internalNetworkCIDR in VCDClusterConfiguration."
   }
 
@@ -25,7 +25,7 @@ variable "nodeIndex" {
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -38,17 +38,17 @@ variable "nodeGroupName" {
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }
 
 locals {
-  prefix = var.clusterConfiguration.cloud.prefix
-  vapp_name = var.providerClusterConfiguration.virtualApplicationName
+  prefix                = var.clusterConfiguration.cloud.prefix
+  vapp_name             = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
-  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
-  instance_class = local.ng["instanceClass"]
-  node_group_name = local.ng.name
-  main_ip_addresses  = lookup(local.instance_class, "mainNetworkIPAddresses", [])
-  main_network_name = var.providerClusterConfiguration.mainNetwork
+  ng                    = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
+  instance_class        = local.ng["instanceClass"]
+  node_group_name       = local.ng.name
+  main_ip_addresses     = lookup(local.instance_class, "mainNetworkIPAddresses", [])
+  main_network_name     = var.providerClusterConfiguration.mainNetwork
 }
