@@ -1,0 +1,68 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /scripts
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: install
+shell:
+  install:
+  - chmod +x /scripts/entrypoint.sh
+  - cd /usr/bin
+  - |
+    for mode in legacy nft; do
+      for base in iptables ip6tables; do
+        for cmd in ${base}-${mode} ${base}-${mode}-save ${base}-${mode}-restore; do
+          ln -sf xtables-${mode}-multi "${cmd}"
+        done
+      done
+    done
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common-base
+import:
+- image: common/ethtool
+  add: /ethtool
+  to: /usr/bin/ethtool
+  before: install
+- image: common/pwru
+  add: /pwru
+  to: /usr/bin/pwru
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - iptables-*
+  - ip6tables-*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /scripts/etc/bashrc
+  to: /etc/bashrc
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /scripts/entrypoint.sh
+  to: /opt/entrypoint.sh
+  before: install
+imageSpec:
+  config:
+    env: { "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    workingDir: "/"
+    user: "root:root"
+    entrypoint: ["/opt/entrypoint.sh"]
+    cmd: ["/bin/bash"]
