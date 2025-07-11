@@ -61,36 +61,6 @@ fi
 
 
 {{- if eq .cri "ContainerdV2" }}
-mkdir -p  /etc/containerd/registry.d/_default
-bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << EOF
-
-[host."{{ .registry.scheme }}://{{ .registry.address }}"]
-  capabilities = ["pull", "resolve"]
-  {{- if .registry.ca }}
-  ca = ["/opt/deckhouse/share/ca-certificates/registry-ca.crt"]
-  {{- end }}
-
-  {{- if eq .registry.scheme "http" }}
-  skip_verify = true
-  {{- end }}
-
-    [host."{{ .registry.scheme }}://{{ .registry.address }}".auth]
-    auth = {{ .registry.auth | default "" | quote }}
-EOF
-
-{{- if eq .runType "Normal" }}
-  {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-    {{- if $ca }}
-mkdir -p  /etc/containerd/registry.d/{{ $registryAddr | lower }}
-bb-sync-file /etc/containerd/registry.d/{{ $registryAddr | lower }}/hosts.toml - << EOF
-server = "https://{{ $registryAddr | lower }}"
-ca = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-EOF
-    {{- end }}
-  {{- end }}
-{{- end }}
-
-
 # generated using `containerd config migrate` by containerd version `containerd containerd.io 2.0.4 1a43cb6a1035441f9aca8f5666a9b3ef9e70ab20`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 3
@@ -395,21 +365,35 @@ oom_score = 0
       max_conf_num = 1
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
+{{- if .registry.registryModuleEnable }}
+    config_path = "/etc/containerd/registry.d"
+{{- else }}
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
           endpoint = ["https://registry-1.docker.io"]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
-          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth | default "" }}"
-  {{- if .registry.ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- range $host_name, $host_values := .registry.hosts }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $host_name }}"]
+          endpoint = [{{- range $i, $mirror := $host_values.mirrors }}{{ if $i }}, {{ end }}{{ printf "%s://%s" $mirror.scheme $mirror.host| quote }}{{- end }}]
   {{- end }}
-  {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+  {{- range $host_name, $host_values := .registry.hosts }}
+    {{- range $mirror := $host_values.mirrors }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".auth]
+          {{- if (($mirror).auth).username }}
+          username = {{ $mirror.auth.username | quote }}
+          password = {{ $mirror.auth.password | default "" | quote }}
+          {{- else }}
+          auth = {{ (($mirror).auth).auth | default "" | quote }}
+          {{- end }}
+      {{- if $mirror.ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt"
+      {{- end }}
+      {{- if eq $mirror.scheme "http" }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
           insecure_skip_verify = true
+      {{- end }}
+    {{- end }}
   {{- end }}
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
@@ -419,6 +403,7 @@ oom_score = 0
       {{- end }}
     {{- end }}
   {{- end }}
+{{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
@@ -466,10 +451,36 @@ additional_configs() {
   fi
 }
 
+check_additional_configs() {
+  local full_conf_path="$1"
+  local ctrd_version="$2"
+
+  if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+    for path in ${full_conf_path}/*.toml; do
+      if [ "$ctrd_version" = "v1" ]; then
+        if bb-ctrd-v1-has-registry-fields "${path}"; then
+          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
+          exit 1
+        fi
+      fi
+      if [ "$ctrd_version" = "v2" ]; then
+        if bb-ctrd-v2-has-registry-fields "${path}"; then
+          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
+          exit 1
+        fi
+      fi
+    done
+  fi
+}
+
 # Check additional configs
 {{- if eq .cri "ContainerdV2" }}
+check_additional_configs /etc/containerd/conf2.d "v2"
 containerd_toml=$(additional_configs conf2.d conf.d)
 {{- else if eq .cri "Containerd" }}
+  {{- if .registry.registryModuleEnable }}
+check_additional_configs /etc/containerd/conf.d "v1"
+  {{- end }}
 containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
