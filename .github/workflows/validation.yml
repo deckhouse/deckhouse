@@ -247,7 +247,7 @@ jobs:
             core.setOutput('security_rootless_scan', security_rootless_scan);
             core.startGroup('Set build editions based on pr labels')
             for (build_edition of build_editions) {
-              core.setOutput(build_edition, 'true');
+              core.setOutput(`${build_edition}`, 'true');
               core.info(`${build_edition}`)
             }
             core.endGroup()
