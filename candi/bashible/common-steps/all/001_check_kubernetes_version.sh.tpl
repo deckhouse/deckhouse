@@ -1,0 +1,29 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- if eq .runType "Normal" }}
+function kubectl_exec() {
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+}
+
+{{ $kubernetesVersion := .kubernetesVersion | toString }}
+currentVersion=$(kubectl_exec get no "$(D8_NODE_HOSTNAME)" -o json |jq -r '.status.nodeInfo.kubeletVersion' |sed -E "s/v([0-9]+[.][0-9]+)[.].+/\1/")
+desiredVersion={{ $kubernetesVersion }}
+
+if [[ "${desiredVersion}" = "1.31" && ("${currentVersion}" != "${desiredVersion}") ]]
+  then
+    bb-deckhouse-get-disruptive-update-approval
+fi
+
+{{- end }}
