@@ -21,3 +21,9 @@ apiVersions:
         type: array
         items:
           type: string
+      instances:
+        type: object
+        additionalProperties: false
+        properties:
+          mainNetwork:
+            type: string
