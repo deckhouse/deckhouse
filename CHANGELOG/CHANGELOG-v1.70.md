@@ -85,6 +85,7 @@
  - **[cloud-provider-dynamix]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-dynamix]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-gcp]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-huaweicloud]** fix virtualMachineClassName in terraform [#14251](https://github.com/deckhouse/deckhouse/pull/14251)
  - **[cloud-provider-huaweicloud]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-huaweicloud]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-huaweicloud]** Added the `--cluster-name` CLI flag to the `cloud-controller-manager`. [#12950](https://github.com/deckhouse/deckhouse/pull/12950)
