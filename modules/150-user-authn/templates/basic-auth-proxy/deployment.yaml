@@ -4,8 +4,8 @@ memory: {{ .Values.userAuthn.resources.basicAuthProxy.requests.memory | default 
 {{- end }}
 
 {{- define "proxy_limits" }}
-cpu: {{ .Values.userAuthn.resources.basicAuthProxy.limits.cpu | default "100m" }}
-memory: {{ .Values.userAuthn.resources.basicAuthProxy.limits.memory | default "100Mi" }}
+cpu: {{ .Values.userAuthn.resources.basicAuthProxy.limits.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.basicAuthProxy.limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- if include "is_basic_auth_enabled" . }}
@@ -172,10 +172,8 @@ spec:
             {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "proxy_resources" . | nindent 12 }}
             {{- end }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "proxy_limits" . | nindent 12 }}
-          {{- end }}
       volumes:
       - name: client-certs
         secret:

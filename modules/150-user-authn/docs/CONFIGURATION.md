@@ -16,11 +16,11 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 The module allows you to configure resource limits and requests for all components. By default, the following values are used:
 
-- **Dex OIDC Provider**: 100m CPU / 128Mi memory (requests), 250m CPU / 256Mi memory (limits)
-- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Dex OIDC Provider**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
+- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 20m CPU / 50Mi memory (limits)
 
 ### Example Configuration
 
@@ -35,39 +35,39 @@ spec:
     resources:
       dex:
         requests:
-          cpu: "100m"
-          memory: "128Mi"
+          cpu: "10m"
+          memory: "25Mi"
         limits:
-          cpu: "250m"
-          memory: "256Mi"
+          cpu: "20m"
+          memory: "50Mi"
       kubeconfigGenerator:
         requests:
           cpu: "10m"
           memory: "25Mi"
         limits:
-          cpu: "100m"
-          memory: "100Mi"
+          cpu: "20m"
+          memory: "50Mi"
       basicAuthProxy:
         requests:
           cpu: "10m"
           memory: "25Mi"
         limits:
-          cpu: "100m"
-          memory: "100Mi"
+          cpu: "20m"
+          memory: "50Mi"
       dexAuthenticator:
         requests:
           cpu: "10m"
           memory: "25Mi"
         limits:
-          cpu: "100m"
-          memory: "100Mi"
+          cpu: "20m"
+          memory: "50Mi"
       redis:
         requests:
           cpu: "10m"
           memory: "25Mi"
         limits:
-          cpu: "100m"
-          memory: "100Mi"
+          cpu: "20m"
+          memory: "50Mi"
 ```
 
 **Note:** When Vertical Pod Autoscaler (VPA) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
