@@ -289,7 +289,8 @@ apiVersions:
             type:
               type: string
               description: |
-                VMware Cloud Director Edge Gateway type (one of "NSX-V" or "NSX-T").
+                Network virtualization platform type providing the VMware Cloud Director Edge Gateway (one of "NSX-V" or "NSX-T").
+                The type can be obtained from your administrator.
               enum: ["NSX-V", "NSX-T"]
             externalIP:
               type: string
