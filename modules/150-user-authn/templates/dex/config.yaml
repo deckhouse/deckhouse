@@ -39,7 +39,14 @@
     format: json
   oauth2:
     responseTypes: ["code", "token", "id_token"]
+  {{- with $context.Values.userAuthn.staticUsers2FA }}
+    {{ /* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */ }}
+    {{ if .enabled }}
+    skipApprovalScreen: false
+    {{- else }}
     skipApprovalScreen: true
+    {{- end }}
+  {{- end }}
   {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
   enablePasswordDB: true
   {{- end }}
