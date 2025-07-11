@@ -316,7 +316,7 @@ apiVersions:
                   type: string
                   description: |
                     External network name for build DNAT rule for master node.
-                    The external network is the one connected to the Edge Gateway via an interface of type "uplink" or "external" and has an external IP address.
+                    The external network is the one connected to the Edge Gateway in `Gateway Interface` and has an external IP address.
                   minLength: 1
                   maxLength: 128
                 externalNetworkType:
