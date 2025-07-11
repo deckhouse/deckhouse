@@ -17,7 +17,6 @@
 bb-event-on 'bb-package-installed' 'post-install'
 
 # This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
-# from bb-rp-install() function (defined in 50_deckhouse_registrypackages.sh).
 # All arguments (except the event name, i.e. 'bb-package-installed')
 # passed to the bb-event-fire() function are passed to the post-install() function.
 # This means that the post-install() function is called with an argument
