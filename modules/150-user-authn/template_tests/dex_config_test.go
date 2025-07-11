@@ -42,6 +42,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
+
+		hec.HelmRender()
 	})
 
 	Context("Without Users and Providers", func() {
