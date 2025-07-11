@@ -409,7 +409,7 @@ When the database volume of etcd reaches the limit set by the `quota-backend-byt
 
 If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to take the following steps:
 
-1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` - this sets the limit to 8 GB.
+1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it (If you have three master nodes, this action must be performed on all of them). If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` - this sets the limit to 8 GB.
 
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
