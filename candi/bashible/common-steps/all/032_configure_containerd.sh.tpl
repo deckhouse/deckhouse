@@ -455,20 +455,27 @@ check_additional_configs() {
   local full_conf_path="$1"
   local ctrd_version="$2"
 
-  if [ "$ctrd_version" = "v1" ]; then
-    if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
-      for path in ${full_conf_path}/*.toml; do
+  if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+    for path in ${full_conf_path}/*.toml; do
+      if [ "$ctrd_version" = "v1" ]; then
         if bb-ctrd-v1-has-registry-fields "${path}"; then
           >&2 echo "Failed to merge $path: config contains custom registry fields"
           exit 1
         fi
-      done
-    fi
+      fi
+      if [ "$ctrd_version" = "v2" ]; then
+        if bb-ctrd-v2-has-registry-fields "${path}"; then
+          >&2 echo "Failed to merge $path: config contains custom registry fields"
+          exit 1
+        fi
+      fi
+    done
   fi
 }
 
 # Check additional configs
 {{- if eq .cri "ContainerdV2" }}
+check_additional_configs /etc/containerd/conf2.d "v2"
 containerd_toml=$(additional_configs conf2.d conf.d)
 {{- else if eq .cri "Containerd" }}
   {{- if .registry.registryModuleEnable }}
