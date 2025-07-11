@@ -66,7 +66,7 @@ sysctl -w kernel.numa_balancing=0 # disable the overly smart NUMA node balancer 
 sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
-{{- if .gpu }}
+{{- if .nodeGroup.gpu }}
 sysctl -w net.core.bpf_jit_harden=1 # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
 {{- end }}
 
