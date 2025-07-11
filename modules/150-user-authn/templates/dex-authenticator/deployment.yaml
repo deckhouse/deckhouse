@@ -12,8 +12,8 @@ memory: {{ $requests.memory | default "25Mi" }}
 {{- $resources := $userAuthn.resources | default (dict) }}
 {{- $dexAuthenticator := $resources.dexAuthenticator | default (dict) }}
 {{- $limits := $dexAuthenticator.limits | default (dict) }}
-cpu: {{ $limits.cpu | default "100m" }}
-memory: {{ $limits.memory | default "100Mi" }}
+cpu: {{ $limits.cpu | default "20m" }}
+memory: {{ $limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- define "redis_resources" }}
@@ -30,8 +30,8 @@ memory: {{ $requests.memory | default "25Mi" }}
 {{- $resources := $userAuthn.resources | default (dict) }}
 {{- $redis := $resources.redis | default (dict) }}
 {{- $limits := $redis.limits | default (dict) }}
-cpu: {{ $limits.cpu | default "100m" }}
-memory: {{ $limits.memory | default "100Mi" }}
+cpu: {{ $limits.cpu | default "20m" }}
+memory: {{ $limits.memory | default "50Mi" }}
 {{- end }}
 
 {{- $context := . }}
@@ -233,10 +233,8 @@ spec:
             {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" $context | nindent 12 }}
             {{- end }}
-          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "dex_authenticator_limits" $context | nindent 12 }}
-          {{- end }}
         ports:
         - name: dex-https
           containerPort: 8443
@@ -257,8 +255,6 @@ spec:
             {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "redis_resources" $context | nindent 12 }}
             {{- end }}
-          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "redis_limits" $context | nindent 12 }}
-          {{- end }}
 {{- end }}
