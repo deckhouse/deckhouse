@@ -153,6 +153,9 @@ common:
   documentation:
     en: Documentation
     ru: Документация
+  documentation_platform:
+    en: Platform documentation
+    ru: Документация платформы
   platform:
     en: Platform
     ru: Платформа

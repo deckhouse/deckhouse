@@ -37,6 +37,10 @@ func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 	kubectl := kubernetes.NewDefaultKubectl()
 	output, err := kubectl.Cordon(n.NodeName)
 	if err != nil {
-		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, string(output))
+		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, output)
+	}
+	output, err = kubectl.SetCordonAnnotation(n.NodeName)
+	if err != nil {
+		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n, output: %s\n", err, output)
 	}
 }

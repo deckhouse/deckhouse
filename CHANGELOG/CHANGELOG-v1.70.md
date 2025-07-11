@@ -105,6 +105,8 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** Fixed issues with etcd backup restoration process, ensuring reliable master node scaling from 1 to 3. [#14083](https://github.com/deckhouse/deckhouse/pull/14083)
+    Users can now restore etcd backups and scale their master nodes efficiently without encountering previous errors.
  - **[control-plane-manager]** Fix default behaviour for etcd backup. [#14146](https://github.com/deckhouse/deckhouse/pull/14146)
  - **[control-plane-manager]** fix kubeadm v1beta4 config [#14058](https://github.com/deckhouse/deckhouse/pull/14058)
  - **[control-plane-manager]** audit-log-maxage value to 30 days [#14044](https://github.com/deckhouse/deckhouse/pull/14044)
@@ -132,6 +134,7 @@
  - **[dhctl]** Added waiting for `kubeadm` command completion result. [#12826](https://github.com/deckhouse/deckhouse/pull/12826)
  - **[dhctl]** Fixed a bug that prevented `PersistentVolumes` from being properly deleted by the `dhctl destroy` command in `Stronghold`. [#12814](https://github.com/deckhouse/deckhouse/pull/12814)
  - **[docs]** Update docs about Keycloak configuration for IP [#13766](https://github.com/deckhouse/deckhouse/pull/13766)
+ - **[ingress-nginx]** Validation is switched off temporarily. [#14348](https://github.com/deckhouse/deckhouse/pull/14348)
  - **[ingress-nginx]** fixed geoip issues in validator [#14164](https://github.com/deckhouse/deckhouse/pull/14164)
  - **[ingress-nginx]** Automatic geoip updating feature was reverted. [#14161](https://github.com/deckhouse/deckhouse/pull/14161)
  - **[ingress-nginx]** Ingress resource validation in ingress-nginx controller re-enabled. [#13648](https://github.com/deckhouse/deckhouse/pull/13648)
@@ -160,6 +163,7 @@
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
  - **[operator-trivy]** Add support anon registry creds for bdu updater. [#13855](https://github.com/deckhouse/deckhouse/pull/13855)
+ - **[prometheus]** Fix fake longterm emptydir alert. [#14100](https://github.com/deckhouse/deckhouse/pull/14100)
  - **[prometheus]** Add headers field to values spec [#13823](https://github.com/deckhouse/deckhouse/pull/13823)
  - **[prometheus]** Improved caching of the long-range requests. [#13436](https://github.com/deckhouse/deckhouse/pull/13436)
     Aggregating-proxy will be rollout restarted with no disruption.

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -148,16 +151,22 @@ type approvedPod struct {
 
 func handleUpdateApproval(input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snap := input.Snapshots["nodes"]
-	for _, s := range snap {
-		node := s.(approvedNode)
+	snaps := input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+
 		nodeMap[node.Name] = node
 	}
 
 	// Remove approved annotations if pod is ready and node has annotation
-	snap = input.Snapshots["control_plane_manager"]
-	for _, s := range snap {
-		pod := s.(approvedPod)
+	snaps = input.NewSnapshots.Get("control_plane_manager")
+	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)
+		}
+
 		if !pod.IsReady {
 			continue
 		}

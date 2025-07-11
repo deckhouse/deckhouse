@@ -132,12 +132,18 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 	if len(vcdAPIVers) == 0 {
 		input.Logger.Warn("VCD API version not defined")
 
-		legacyMode := input.Snapshots["legacy_mode"][0].(bool)
+		snaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "legacy_mode")
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'legacy_mode' snapshot: %w", err)
+		}
+		if len(snaps) == 0 {
+			return fmt.Errorf("'legacy_mode' snapshot is empty")
+		}
+		legacyMode := snaps[0]
 		if legacyMode {
 			// legacyMode is set in the provider cluster configuration secret
 			input.Values.Set("cloudProviderVcd.internal.legacyMode", legacyMode)
 		}
-
 		return nil
 	}
 
