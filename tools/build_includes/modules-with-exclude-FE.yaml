@@ -58,6 +58,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se-plus/modules/015-admission-policy-engine/templates/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
@@ -213,19 +226,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/015-admission-policy-engine/templates/ratify
-  to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:
@@ -319,6 +319,19 @@
     - .build.yaml
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
   excludePaths:
     - docs
     - README.md
@@ -535,16 +548,6 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
   stageDependencies:
     install:
         - '**/*'

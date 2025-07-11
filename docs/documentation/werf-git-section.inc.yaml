@@ -40,6 +40,13 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /candi/openapi/dhctl
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
 - add: /deckhouse-controller/crds
   to: /src/global/crds
   owner: jekyll
@@ -338,6 +345,27 @@
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/dvp/openapi
+  to: /src/modules/030-cloud-provider-dvp/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/dvp/openapi
+  to: /src/modules/030-cloud-provider-dvp/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/dvp/docs
+  to: /src/modules/030-cloud-provider-dvp/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/version_map.yml

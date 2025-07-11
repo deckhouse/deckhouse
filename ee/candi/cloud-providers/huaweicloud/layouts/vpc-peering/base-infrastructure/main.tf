@@ -13,6 +13,7 @@ module "network_security" {
   prefix         = local.prefix
   ssh_allow_list = local.ssh_allow_list
   enabled        = local.network_security
+  enterprise_project_id = local.enterprise_project_id
 }
 
 module "keypair" {

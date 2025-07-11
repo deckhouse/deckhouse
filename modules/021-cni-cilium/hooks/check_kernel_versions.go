@@ -53,8 +53,9 @@ type nodeConstraint struct {
 }
 
 const (
-	nodeKernelCheckMetricsGroup = "node_kernel_check"
-	nodeKernelCheckMetricName   = "d8_node_kernel_does_not_satisfy_requirements"
+	nodeKernelCheckMetricsGroup          = "node_kernel_check"
+	nodeKernelCheckMetricName            = "d8_node_kernel_does_not_satisfy_requirements"
+	minKernelVersionForExtraLBAlgorithms = "5.15"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -98,6 +99,22 @@ func handleNodes(input *go_hook.HookInput) error {
 			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
 			modulesListInUse:        []string{"cni-cilium"},
 		},
+	}
+	extraLoadBalancerAlgorithmsEnabled := input.Values.Get("cniCilium.extraLoadBalancerAlgorithmsEnabled").Bool()
+	if extraLoadBalancerAlgorithmsEnabled {
+		currentConstraint := constraints[0].kernelVersionConstraint
+		currentVersionStr := strings.TrimSpace(strings.TrimPrefix(currentConstraint, ">="))
+		currentVersion, err := semver.NewVersion(currentVersionStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse current version from constraint %q: %v", currentConstraint, err)
+		}
+		extraLBMinVersion, err := semver.NewVersion(minKernelVersionForExtraLBAlgorithms)
+		if err != nil {
+			return fmt.Errorf("invalid minKernelVersionForExtraLBAlgorithms %q: %v", minKernelVersionForExtraLBAlgorithms, err)
+		}
+		if extraLBMinVersion.GreaterThan(currentVersion) {
+			constraints[0].kernelVersionConstraint = fmt.Sprintf(">= %s", extraLBMinVersion.String())
+		}
 	}
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)

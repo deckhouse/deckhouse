@@ -14,9 +14,10 @@ If you don't have access to wildcard DNS records, you can use [sslip.io](https:/
 
 The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](./installing/configuration.html#clusterconfiguration-clusterdomain) parameter. We do not recommend changing the `clusterDomain` value unless absolutely necessary.
 
-For the template to work correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which access to the service web interfaces is required.
+For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
 
-If the template matches the domain of the node network (for example, if the nodes are in the zone `company.my` and the template is `%s.company.my`), use only the A records of the frontend node addresses to assign the platform's web interfaces.
+If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.  
+For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:

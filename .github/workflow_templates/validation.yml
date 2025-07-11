@@ -82,6 +82,7 @@ jobs:
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
       run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
       label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_doc_reference: "true"
       run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
@@ -133,6 +134,10 @@ jobs:
     name: Docs Validation (spellcheck)
 {!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
 
+  doc_validation_reference:
+    name: Docs Validation (reference)
+{!{ tmpl.Exec "validation_template" (slice $ctx "doc_reference") | strings.Indent 4 }!}
+
   copyright_validation:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
@@ -167,7 +172,7 @@ jobs:
             const { findIn } = require('./.github/scripts/js/parsers/modules-parser.js');
             const { parseMarkdown, findSectionInMarkdown } = require('./.github/scripts/js/parsers/md-parser.js');
             const { validatePullRequestChangelog } = require('./.github/scripts/js/validators/pr-changes-validator.js');
-            
+
             const allowedModules = findIn('.');
 
             /**
@@ -193,14 +198,14 @@ jobs:
             } catch(error) {
               core.info(`
               \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
-              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields. 
-              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly. 
-              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌 
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields.
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly.
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌
               \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
               `);
               throw(error);
             }
-            
+
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}

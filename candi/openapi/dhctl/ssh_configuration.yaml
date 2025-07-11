@@ -25,10 +25,13 @@ apiVersions:
         enum: [SSHConfig]
       sshUser:
         type: string
+        description: SSH username.
       sshPort:
         type: integer
+        description: SSH port.
       sshExtraArgs:
         type: string
+        description: Additional arguments for SSH connection.
       sshAgentPrivateKeys:
         type: array
         minItems: 1
@@ -40,14 +43,19 @@ apiVersions:
           properties:
             key:
               type: string
+              description: Private SSH key.
             passphrase:
               type: string
+              description: Password for SSH key.
       sshBastionHost:
         type: string
+        description: SSH bastion host.
       sshBastionPort:
         type: integer
+        description: Port of SSH bastion.
       sshBastionUser:
         type: string
+        description: Username for bastion.
       sudoPassword:
         description: |
           A sudo password for the user.

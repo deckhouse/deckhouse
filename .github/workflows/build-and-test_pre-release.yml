@@ -468,6 +468,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -546,6 +547,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -556,6 +561,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -768,6 +781,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -846,6 +860,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -856,6 +874,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -1068,6 +1094,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -1146,6 +1173,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -1156,6 +1187,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -1368,6 +1407,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -1446,6 +1486,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -1456,6 +1500,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -1668,6 +1720,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -1746,6 +1799,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -1756,6 +1813,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -1968,6 +2033,7 @@ jobs:
 
           # Temporary directory is moved to ensure
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
 
           # Registry path to publish images for Git tags.
@@ -2046,6 +2112,10 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
@@ -2056,6 +2126,14 @@ jobs:
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: |
+            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
     # </template: build_template>
 
@@ -2323,7 +2401,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:737a858312525d525f3d04e6c4282d1eedc0b9767cbc5a7918d8b53c3ddad22d"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:f019a6df57f2c9539c5f3b4ae64577f983e2f7516b7acd869dff86a7e9fc7643"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3325,3 +3403,84 @@ jobs:
           WERF_SET_DCNAME: "web.dc_name=prod-25"
       # </template: deploy_doc_template>
 
+  list_changed_modules:
+    name: List changed modules
+    needs:
+      - git_info
+      - build_fe
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+      - name: List changed modules from latest released version
+        id: list_changed_modules
+        env:
+          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+        run: |
+          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
+          if [[ -n "${TAG_FROM}" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+            python .github/scripts/python/compare_version_modules.py
+          else
+            echo "No released versions exist. Skipping."
+          fi
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>

@@ -30,10 +30,13 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
+    status: superseded
   name: parca-1.26.2
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -51,7 +54,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
@@ -67,7 +70,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1004"
+  resourceVersion: "1005"
 spec:
   moduleName: parca
   version: 1.27.0
@@ -79,3 +82,18 @@ status:
   pullDuration: 9m15s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
+  phase: Ready

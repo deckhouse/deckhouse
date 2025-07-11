@@ -165,7 +165,6 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},

@@ -44,6 +44,11 @@ subjects:
     name: label-proxy
     namespace: d8-observability
 {{- end }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  - kind: ServiceAccount
+    name: d8-vertical-pod-autoscaler-recommender
+    namespace: kube-system
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

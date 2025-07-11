@@ -191,6 +191,17 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	// TODO: remove after 1.73+
+	if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
+		patch := client.MergeFrom(moduleConfig.DeepCopy())
+		controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
+
+		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
+			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
+
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
@@ -431,6 +442,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			needsUpdate = true
 		}
+
 		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 			needsUpdate = true
@@ -446,14 +458,22 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			return false
 		}
-		// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-		if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
+
+		switch module.Status.Phase {
+		case v1alpha1.ModulePhaseConflict,
+			v1alpha1.ModulePhaseDownloading,
+			v1alpha1.ModulePhaseDownloadingError:
+			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
+			// same thing if module is not installed
 			module.Status.Phase = v1alpha1.ModulePhaseAvailable
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		default:
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		}
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+
+		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
 
 		return true
 	})

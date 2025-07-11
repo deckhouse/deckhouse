@@ -87,6 +87,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -305,11 +306,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -574,11 +575,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -843,11 +844,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1112,11 +1113,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1381,11 +1382,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1650,11 +1651,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1919,11 +1920,11 @@ jobs:
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
-
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 

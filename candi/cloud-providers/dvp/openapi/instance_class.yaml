@@ -66,7 +66,7 @@ spec:
                       description: |
                         The name of the VirtualMachineClass.
 
-                        The VirtualMachineClass resource is intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
+                        Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                     bootloader:
                       type: string
                       enum:
@@ -74,7 +74,7 @@ spec:
                         - EFI
                         - EFIWithSecureBoot
                       default: EFI
-                      description: >
+                      description: |
                         Defines a bootloader for the virtual machine.
 
                         * `BIOS`: Use BIOS.

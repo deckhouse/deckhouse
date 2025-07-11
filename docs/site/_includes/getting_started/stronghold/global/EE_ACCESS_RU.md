@@ -23,10 +23,10 @@
 <script>
 $(document).ready(function() {
 
-    tokenInputElement{{ revision }} = $('[license-token-{{ revision }}]');
+    tokenInputElement{{ revision | replace: '-', '' }}  = $('[license-token-{{ revision }}]');
     if ($.cookie("demotoken") || $.cookie("license-token")) {
         let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-        tokenInputElement{{ revision }}.val(token);
+        tokenInputElement{{ revision | replace: '-', '' }} .val(token);
     }
 })
 </script>

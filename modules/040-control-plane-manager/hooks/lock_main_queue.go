@@ -83,7 +83,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type controlPlaneManagerPod struct {
 	NodeName   string
-	Generation string
+	Generation int64
 	IsReady    bool
 }
 
@@ -95,7 +95,11 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	podGeneration := pod.Labels["pod-template-generation"]
+	podGenerationStr := pod.Labels["pod-template-generation"]
+	podGeneration, err := strconv.ParseInt(podGenerationStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	var isReady bool
 	for _, cond := range pod.Status.Conditions {
@@ -143,7 +147,6 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	dsGenerationStr := strconv.FormatInt(dsGeneration, 10)
 
 	podsSnaps := input.NewSnapshots.Get("cpm_pods")
-
 	if len(podsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}
@@ -158,6 +161,11 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
 			continue
 		}
+
+		if pod.Generation < dsGeneration {
+			return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
+		}
+
 		expectedReadyPodsCount++
 
 		if pod.IsReady {
