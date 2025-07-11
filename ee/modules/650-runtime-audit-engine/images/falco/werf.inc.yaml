@@ -165,6 +165,10 @@ shell:
   - mkdir -p /src/build
   - cd /src/build
   - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src
+  {{- if .DistroPackagesProxy }}
+  # build in the closed env
+  - nginx -s stop
+  {{- end }}
   # fix build tbb lib on altlinux (redefine FORTIFY_SOURCE)
   - sed -i 's|cd /src/build/tbb-prefix/src/tbb && /usr/bin/cmake -E touch /src/build/tbb-prefix/src/tbb-stamp/tbb-configure|&\n\tsed -i "s\|-D_FORTIFY_SOURCE=2\|-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2\|g" /src/build/tbb-prefix/src/tbb/src/tbb/CMakeFiles/tbb.dir/flags.make|' CMakeFiles/tbb.dir/build.make
   - make falco -j ${BUILD_THREADS}
@@ -172,10 +176,6 @@ shell:
   - "sed -i 's|time_format_iso_8601: false|time_format_iso_8601: true|' /out/etc/falco/falco.yaml"
   # cleanup to reduce artifact size
   - make clean
-  {{- if .DistroPackagesProxy }}
-  # build in the closed env
-  - nginx -s stop
-  {{- end }}
   - cd /out
   - /binary_replace.sh -i usr/bin/falco -o /out
   - chown -R 64535:64535 /out
