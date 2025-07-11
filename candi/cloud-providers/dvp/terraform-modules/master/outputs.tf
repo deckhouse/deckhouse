@@ -22,6 +22,6 @@ output "node_internal_ip_address" {
 
 output "kubernetes_data_device_path" {
   # vd-${disk-name}
-  value = "/dev/disk/by-id/scsi-SQEMU_QEMU_HARDDISK_${var.kubernetes_data_disk.md5_id}"
+  value = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_${var.kubernetes_data_disk.md5_id}"
 }
 

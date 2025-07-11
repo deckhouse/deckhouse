@@ -138,10 +138,10 @@ properties:
                           coreFraction:
                             type: string
                             default: "100%"
-                            enum: ["5%", "10%", "25%", "50%", "100%"]
+                            pattern: ^100%$|^[1-9][0-9]?%$
                             description: |
                               Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
-                              Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
+                              Supported values: `1% - 100%`.
                             example: "100%"
                       memory:
                         type: object
@@ -465,6 +465,12 @@ properties:
               properties:
                 name:
                   type: string
+                volumeBindingMode:
+                  type: string
+                reclaimPolicy:
+                  type: string
+                allowVolumeExpansion:
+                  type: boolean
                 isEnabled:
                   type: boolean
                 IsDefault:
@@ -476,5 +482,11 @@ properties:
           properties:
             name:
               type: string
+            volumeBindingMode:
+              type: string
+            reclaimPolicy:
+              type: string
+            allowVolumeExpansion:
+              type: boolean
             dvpStorageClass:
               type: string
