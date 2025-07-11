@@ -25,6 +25,13 @@ positive:
         webhook: https://example.com/webhook
         auth:
           bearerToken: token
+
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Unmanaged
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
@@ -38,6 +45,13 @@ negative:
 #      windows:
 #        - from: '8:00'
 #          to: '13:00'
+
+# TODO(akraev): uncomment before release
+#  - registry:
+#      mode: Unmanaged
+#      direct:
+#        imagesRepo: registry.deckhouse.io/test
+
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev??sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4

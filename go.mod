@@ -55,12 +55,15 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.3.1
+	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/swag v0.23.0
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/golang/protobuf v1.5.4
 	github.com/itchyny/gojq v0.12.17
@@ -129,7 +132,6 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect

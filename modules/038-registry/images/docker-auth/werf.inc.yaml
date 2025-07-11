@@ -1,0 +1,56 @@
+{{- $REPO := "https://github.com/deckhouse/3p-docker_auth.git"}}
+{{- $BRANCH := "1.13-flant"}}
+{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/cesanta/docker_auth"}}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+fromImage: builder/golang-alpine
+fromCacheVersion: 2025012201
+final: false
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+git:
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /scripts
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  beforeInstall:
+  - mkdir -m 1777 /tmp-tmp
+  - apk add --no-cache git make
+  install:
+    - git config --global advice.detachedHead false
+    - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
+    - cd {{ $GIT_CLONE_DEST_PATH }}/auth_server
+    - export GOPROXY={{ .GOPROXY }}
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - export CGO_ENABLED=0
+    - make build
+
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /tmp-tmp
+    to: /tmp
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "{{ $GIT_CLONE_DEST_PATH }}/auth_server/auth_server"
+    to: /auth_server
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /scripts
+    to: /
+    before: setup
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
+
+imageSpec:
+  config:
+    entrypoint: ["/auth_server"]
+
