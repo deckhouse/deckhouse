@@ -148,7 +148,8 @@ apiVersions:
                 Имя VMware Cloud Director Edge Gateway.
             type:
               description: |
-                Тип VMware Cloud Director Edge Gateway (один из "NSX-V" или "NSX-T").
+                Тип платформы сетевой виртуализации, обеспечивающей работу VMware Cloud Director Edge Gateway (один из "NSX-V" или "NSX-T").
+                Тип платформы можно узнать у администратора. 
             externalIP:
               description: |
                 IP-адрес, доступный из внешних сетей, через который
