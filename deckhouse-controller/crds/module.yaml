@@ -47,6 +47,7 @@ spec:
                     - Incubating
                     - Graduated
                     - Deprecated
+                    - General Availability
                 version:
                   type: string
                   description: The module version.
