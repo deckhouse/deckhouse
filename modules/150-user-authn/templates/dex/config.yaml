@@ -40,7 +40,7 @@
   oauth2:
     responseTypes: ["code", "token", "id_token"]
   {{- with $context.Values.userAuthn.staticUsers2FA }}
-    {{ /* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */ }}
+    {{/* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */}}
     {{ if .enabled }}
     skipApprovalScreen: false
     {{- else }}
@@ -126,7 +126,7 @@
         {{- if $provider.ldap.insecureNoSSL }}
         insecureNoSSL: true
         {{- end }}
-        {{- if $provider.ldap.rootCAData }}
+        {{- if $provider.ldap.rootCAData }}Ï
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
         {{- if $provider.ldap.bindDN  }}
