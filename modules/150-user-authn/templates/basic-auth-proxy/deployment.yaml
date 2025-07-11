@@ -54,6 +54,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "proxy"
+      controlledValues: RequestsAndLimits
       minAllowed:
         {{- include "proxy_resources" . | nindent 8 }}
       maxAllowed:
