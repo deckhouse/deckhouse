@@ -18,12 +18,15 @@ function kubectl_exec() {
 }
 
 {{ $kubernetesVersion := .kubernetesVersion | toString }}
-currentVersion=$(kubectl_exec get no "$(D8_NODE_HOSTNAME)" -o json |jq -r '.status.nodeInfo.kubeletVersion' |sed -E "s/v([0-9]+[.][0-9]+)[.].+/\1/")
-desiredVersion={{ $kubernetesVersion }}
 
-if [[ "${desiredVersion}" = "1.31" && ("${currentVersion}" != "${desiredVersion}") ]]
-  then
-    bb-deckhouse-get-disruptive-update-approval
+if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
+  currentVersion=$(kubectl_exec get no "$(D8_NODE_HOSTNAME)" -o json |jq -r '.status.nodeInfo.kubeletVersion' |sed -E "s/v([0-9]+[.][0-9]+)[.].+/\1/")
+  desiredVersion={{ $kubernetesVersion }}
+
+  if [[ "${desiredVersion}" = "1.31" && ("${currentVersion}" != "${desiredVersion}") ]]
+    then
+      bb-deckhouse-get-disruptive-update-approval
+  fi
 fi
 
 {{- end }}
