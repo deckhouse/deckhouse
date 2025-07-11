@@ -21,18 +21,18 @@ import (
 )
 
 const (
-	multitenancyManagerService = "neuvector.d8-neuvector.svc"
+	neuvectorManagerService = "neuvector.d8-neuvector.svc"
 )
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
-		multitenancyManagerService,
-		tls_certificate.ClusterDomainSAN(multitenancyManagerService),
+		neuvectorManagerService,
+		tls_certificate.ClusterDomainSAN(neuvectorManagerService),
 	}),
 
-	CN: multitenancyManagerService,
+	CN: neuvectorManagerService,
 
 	Namespace:            "d8-neuvector",
 	TLSSecretName:        "admission-webhook-certs",
-	FullValuesPathPrefix: "multitenancyManager.internal.admissionWebhookCert",
+	FullValuesPathPrefix: "neuvector.internal.admissionWebhookCert",
 })

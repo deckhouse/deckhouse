@@ -12,127 +12,101 @@ Read more about the security platform on the official website [NeuVector](https:
 
 ## Features
 
-### Core Security Capabilities
-- **Runtime Protection**: Behavioral learning and anomaly detection for containers
-- **Network Firewall**: Application-layer container firewall with micro-segmentation
-- **Vulnerability Scanning**: Comprehensive CVE scanning for images, registries, and running containers
-- **Threat Detection**: Real-time monitoring for suspicious activities and attacks
-- **Compliance Management**: Automated compliance reporting and policy enforcement
+The `neuvector` module solves critical security challenges for containerized applications:
 
-### Kubernetes Integration
-- **Native Kubernetes**: Deployed as Kubernetes resources with CRD-based configuration
-- **Policy as Code**: Security policies defined and versioned in Git repositories
-- **RBAC Integration**: Native Kubernetes RBAC with additional security roles
-- **Multi-cluster Support**: Centralized management across multiple Kubernetes clusters
-- **CI/CD Integration**: Automated security scanning in build pipelines
+- **Runtime Protection:**
+  - Real-time threat detection and prevention during container execution.
+  - Behavioral learning to establish baseline security profiles.
+  - Zero-trust network segmentation between services.
+  - Process and file integrity monitoring.
+  - Detection of suspicious activities and anomalies.
 
-### Deckhouse Platform Benefits
-- **Simplified Deployment**: One-click installation through Deckhouse module system
-- **Automated Updates**: Managed updates and lifecycle through Deckhouse
-- **Monitoring Integration**: Native integration with Deckhouse monitoring stack
-- **Unified Management**: Consistent experience with other Deckhouse modules
+- **Vulnerability Management:**
+  - Continuous scanning of container images for known vulnerabilities.
+  - Registry scanning integration with popular container registries.
+  - CVE database updates and vulnerability prioritization.
+  - Compliance reporting and risk assessment.
+
+- **Network Security:**
+  - Automatic discovery and visualization of application connectivity.
+  - Microsegmentation with automated network policy generation.
+  - East-west traffic inspection and monitoring.
+  - DLP (Data Loss Prevention) for sensitive data protection.
+
+- **Compliance and Governance:**
+  - CIS benchmark compliance checking.
+  - PCI DSS, HIPAA, and other regulatory compliance reporting.
+  - Security event audit trails and forensics.
+  - Risk scoring and security posture assessment.
+
+- **DevSecOps Integration:**
+  - CI/CD pipeline integration for security scanning.
+  - Admission control to prevent vulnerable containers from running.
+  - Security policy as code with version control.
+  - Automated response and remediation capabilities.
 
 ## Architecture
 
-The `neuvector` module deploys the following components:
+The `neuvector` module consists of several key components that work together to provide comprehensive container security:
 
-- **Controller**: Central management and policy engine
-- **Enforcer**: DaemonSet for runtime protection on each node
-- **Manager**: Web-based management console
-- **Scanner**: Vulnerability scanning engine
-- **Updater**: Security feed and CVE database updates
+### Control Plane Components
 
-## Deployment modes
+- **Controller** — the central management component that:
+  - Coordinates security policies across the cluster.
+  - Manages the REST API for configuration and monitoring.
+  - Handles vulnerability database updates and scanning orchestration.
+  - Provides centralized logging and event management.
+  - Manages user authentication and role-based access control.
+
+- **Manager** — the web-based management console that:
+  - Provides a comprehensive security dashboard and visualization.
+  - Offers policy management and configuration interfaces.
+  - Displays security events, alerts, and compliance reports.
+  - Enables security analytics and threat investigation tools.
+
+### Data Plane Components
+
+- **Enforcer** — deployed as a DaemonSet on each node to:
+  - Monitor container runtime behavior and network traffic.
+  - Enforce security policies in real-time.
+  - Perform deep packet inspection and protocol analysis.
+  - Collect security telemetry and behavioral data.
+  - Integrate with container runtimes (Docker, containerd, CRI-O).
+
+- **Scanner** — provides vulnerability assessment services:
+  - Scans container images for known vulnerabilities.
+  - Performs continuous monitoring of running containers.
+  - Integrates with container registries for automated scanning.
+  - Maintains up-to-date CVE databases and security feeds.
+
+### Additional Components
+
+- **Registry Adapter** — optional component for:
+  - Harbor registry integration and webhook scanning.
+  - Custom registry integration capabilities.
+  - Automated vulnerability scanning workflows.
+
+- **CVE Updater** — maintains security intelligence:
+  - Regular updates of vulnerability databases.
+  - Security feed synchronization and management.
+  - Threat intelligence integration and correlation.
+
+## Deployment Modes
 
 NeuVector supports flexible deployment configurations:
 
-### High availability mode
-
+### High Availability Mode
 - Multiple controller replicas for redundancy.
-- Load balancing between scanner instances.
-- Persistent storage for security and configuration data.
+- Load balancing across scanner instances.
+- Persistent storage for security data and configurations.
 
-### Resource optimization mode
-
-- Single controller deployment for small clusters.
+### Resource-Optimized Mode
+- Single controller deployment for smaller clusters.
 - Reduced resource allocation for development environments.
-- Disabling additional components for specific use cases.
+- Optional component disable for specific use cases.
 
 ## Prerequisites
 
 - Deckhouse Kubernetes Platform v1.30+.
 - Kubernetes cluster with at least 3 nodes.
 - Sufficient resources: 4 CPU cores and 8GB RAM minimum.
-
-## Working with the module
-
-### Installation
-
-1. Enable the NeuVector module in your Deckhouse configuration:
-  
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: neuvector
-    spec:
-      enabled: true
-      settings:
-        controller:
-          ingress:
-            enabled: true
-            host: neuvector.example.com
-        manager:
-          ingress:
-            enabled: true
-            host: neuvector-ui.example.com
-    ```
-
-1. Apply the configuration:
-
-    ```bash
-    kubectl apply -f neuvector-config.yaml
-    ```
-
-   Example of basic configuration (use your own data in the `name`, `bootstrapPassword`, `host` fields):
-
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: neuvector
-    spec:
-      enabled: true
-      settings:
-        controller:
-          ingress:
-            enabled: true
-            host: neuvector.example.com
-        manager:
-          ingress:
-            enabled: true
-            host: neuvector-ui.example.com
-    ```
-
-1. Access the NeuVector console at your configured ingress host.
-- Navigate to the configured hostname ingress.
-- Log in with the username `admin` and your configured password.
-- Start configuring security and monitoring policies.
-
-### Configure Vulnerability Scanning
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: neuvector
-spec:
-  settings:
-    scanner:
-      enabled: true
-      replicas: 2
-      resources:
-        requests:
-          cpu: 500m
-          memory: 1Gi
-```
