@@ -14,16 +14,14 @@
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- if not .registry.registryModuleEnable }}
-	{{- if eq .runType "Normal" }}
-		{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-			{{- if $ca }}
+{{- if eq .runType "Normal" }}
+	{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+		{{- if $ca }}
 
 bb-log-info "Sync moduleSource CA for {{ $registryAddr }}"
 bb-sync-file "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt" - << "EOF"
 {{ $ca }}
 EOF
-			{{- end }}
 		{{- end }}
 	{{- end }}
 {{- end }}
