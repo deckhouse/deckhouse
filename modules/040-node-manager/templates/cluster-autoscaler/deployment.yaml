@@ -113,6 +113,7 @@ spec:
         - --expendable-pods-priority-cutoff=-10
         - --scale-down-unneeded-time=5m
         - --scale-down-unready-time=4m
+        - --max-node-provision-time=5m
         - --scale-down-delay-after-failure=1m
         - --scale-down-utilization-threshold=0.6
         - --unremovable-node-recheck-timeout=30s
