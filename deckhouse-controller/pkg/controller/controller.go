@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -210,7 +211,12 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return module.GetVersion(), nil
 	})
 
-	exts := extenders.NewExtendersStack(version, logger.Named("extenders"))
+	edition, err := d8edition.Parse(version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	exts := extenders.NewExtendersStack(edition, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {

@@ -207,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Accessibility, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -336,10 +336,11 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
-						Weight:       def.Weight,
-						Stage:        def.Stage,
-						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.Requirements,
+						Weight:        def.Weight,
+						Stage:         def.Stage,
+						Source:        v1alpha1.ModuleSourceEmbedded,
+						Requirements:  def.Requirements,
+						Accessibility: def.Accessibility,
 					},
 				}
 				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
@@ -357,6 +358,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
+			module.Properties.Accessibility = def.Accessibility
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())

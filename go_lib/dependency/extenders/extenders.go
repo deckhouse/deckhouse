@@ -20,11 +20,14 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -35,14 +38,18 @@ type ExtendersStack struct {
 	KubernetesVersion *kubernetesversion.Extender
 	Bootstrapped      *bootstrapped.Extender
 	ModuleDependency  *moduledependency.Extender
+	EditionAvailable  *editionavailable.Extender
+	EditionEnabled    *editionenabled.Extender
 }
 
-func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersStack {
+func NewExtendersStack(edition *d8edition.Edition, logger *log.Logger) *ExtendersStack {
 	return &ExtendersStack{
-		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
+		DeckhouseVersion:  deckhouseversion.NewExtender(edition.Version, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		Bootstrapped:      bootstrapped.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
+		EditionAvailable:  editionavailable.New(edition.Name, logger.Named("edition-available-extender")),
+		EditionEnabled:    editionenabled.New(edition.Name, edition.Bundle, logger.Named("edition-enabled-extender")),
 	}
 }
 
@@ -52,10 +59,12 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 		b.KubernetesVersion,
 		b.Bootstrapped,
 		b.ModuleDependency,
+		b.EditionAvailable,
+		b.EditionEnabled,
 	}
 }
 
-func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
+func (b *ExtendersStack) AddConstraints(module string, access *v1alpha1.ModuleAccessibility, requirements *v1alpha1.ModuleRequirements) error {
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -83,6 +92,11 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return err
 		}
+	}
+
+	if access != nil {
+		b.EditionEnabled.AddModule(module, access)
+		b.EditionAvailable.AddModule(module, access)
 	}
 
 	return nil
