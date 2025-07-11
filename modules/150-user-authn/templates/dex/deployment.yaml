@@ -142,14 +142,16 @@ spec:
           name: whitelabel-logo-title
           subPath: deckhouse-logo-title.svg
         {{- end }}
-        {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_resources" . | nindent 12 }}
+            {{- end }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "dex_limits" . | nindent 12 }}
-        {{- end }}
+          {{- end }}
 
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -187,9 +189,13 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+            {{- end }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz/live

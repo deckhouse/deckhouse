@@ -225,14 +225,16 @@ spec:
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
-        {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" $context | nindent 12 }}
+            {{- end }}
+          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "dex_authenticator_limits" $context | nindent 12 }}
-        {{- end }}
+          {{- end }}
         ports:
         - name: dex-https
           containerPort: 8443
@@ -250,11 +252,11 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "redis_resources" $context | nindent 12 }}
-  {{- end }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- end }}
+          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           limits:
             {{- include "redis_limits" $context | nindent 12 }}
-  {{- end }}
+          {{- end }}
 {{- end }}
