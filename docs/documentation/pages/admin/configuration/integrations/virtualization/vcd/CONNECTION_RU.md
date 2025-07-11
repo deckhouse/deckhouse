@@ -149,15 +149,15 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Создайте следующий набор IP (подразумевается, что адрес MetalLB будет `.10` а адрес узла с control plane — `.2`):
 
-   ![Настройка firewall на edge gateway, шаг 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
+   ![Настройка firewall на edge gateway, шаг 2-1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
 
-   ![Настройка firewall на edge gateway, шаг 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
+   ![Настройка firewall на edge gateway, шаг 2-2](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
 
-   ![Настройка firewall на edge gateway, шаг 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot4.png)
+   ![Настройка firewall на edge gateway, шаг 2-3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot4.png)
 
 1. Добавьте следующие правила firewall:
 
-   ![Настройка firewall на edge gateway, шаг 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot5.png)
+   ![Настройка firewall на edge gateway, шаг 3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot5.png)
 
 ## Шаблон виртуальной машины
 

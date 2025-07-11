@@ -1,61 +1,68 @@
-## Схемы размещения
+## Layouts
 
-Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
+This section describes the possible node placement layouts in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} infrastructure and the related configuration options.
+The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
+and how nodes are accessed.
 
 ### Standard
 
-Создается внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
+In this scheme, an internal cluster network is created with a gateway to the public network;
+the nodes do not have public IP addresses.
+The floating IP is assigned to the master node.
 
 {% alert level="warning" %}
-Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
-Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
+If the provider does not support SecurityGroups,
+all applications running on nodes with Floating IPs assigned will be available at a public IP.
+For example, `kube-apiserver` on master nodes will be available on port `6443`.
+To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) or [Standard](#standard) layout
+with a bastion host.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+![Standard layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standard.png)
+<!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
-Пример конфигурации схемы размещения:
+Example layout configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
-  internalNetworkCIDR: 192.168.199.0/24         # Обязательный параметр.
-  internalNetworkDNSServers:                    # Обязательный параметр.
+  internalNetworkCIDR: 192.168.199.0/24         # Required.
+  internalNetworkDNSServers:                    # Required.
   - 8.8.8.8
   - 4.2.2.2
-  internalNetworkSecurity: true|false           # Необязательный параметр, по умолчанию true.
-  externalNetworkName: shared                   # Обязательный параметр.
+  internalNetworkSecurity: true|false           # Optional, true by default.
+  externalNetworkName: shared                   # Required.
   bastion:
-    zone: ru2-b                                 # Необязательный параметр.
-    volumeType: fast-ru-2b                      # Необязательный параметр.
+    zone: ru2-b                                 # Optional.
+    volumeType: fast-ru-2b                      # Optional.
     instanceClass:
-      flavorName: m1.large                      # Обязательный параметр.
-      imageName: ubuntu-20-04-cloud-amd64       # Обязательный параметр.
-      rootDiskSize: 50                          # Обязательный параметр, по умолчанию 50 гигабайт.
+      flavorName: m1.large                      # Required.
+      imageName: ubuntu-20-04-cloud-amd64       # Required.
+      rootDiskSize: 50                          # Optional, 50 GB by default.
       additionalTags:
-        severity: critical                      # Необязательный параметр.
-        environment: production                 # Необязательный параметр.
+        severity: critical                      # Optional.
+        environment: production                 # Optional.
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 50
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
     additionalTags:
       severity: critical
       environment: production
-  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
-  # (всегда используйте самый быстрый диск, предоставленный поставщиком).
+  # Required, volume type map for etcd and Kubernetes certificates
+  # (always use the fastest disk supplied by the provider).
   volumeTypeMap:
-    # Если указан rootDiskSize, этот тип тома также будет
-    # использоваться для главного корневого тома.
+    # If rootDiskSize is specified, this volume type will
+    # be also used for master root volume.
     ru-1a: fast-ru-1a
     ru-1b: fast-ru-1b
     ru-1c: fast-ru-1c
@@ -63,31 +70,29 @@ nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required
+    # Optional, local disk is used if not specified.
     rootDiskSize: 20
-    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
-    # конфигурационный диск во время процесса начальной загрузки виртуальной
-    # машины. Это необходимо, если в сети нет DHCP, который используется в
-    # качестве шлюза по умолчанию.
+    # Optional, false by default. Determines if configuration drive is
+    # required during vm bootstrap process. It's needed if there
+    # is no DHCP in the network that is used as a default gateway.
     configDrive: false
-    # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Required, the gateway of this network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
-    additionalNetworks:                         # Необязательный параметр.
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    # Необязательный параметр, если существуют сети с отключенной защитой
-    # портов, необходимо указать их имена.
+    # Optional, if there are networks with disabled port
+    # security their names must be specified.
     networksWithSecurityDisabled:
     - office
-    # Необязательный параметр, список сетевых пулов, в которых можно заказать
-    # плавающие IP-адреса.
+    # Optional, a list of network pools where to order floating IPs.
     floatingIPPools:
     - public
     - shared
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -104,87 +109,85 @@ provider:
 
 ### StandardWithNoRouter
 
-Создается внутренняя сеть кластера без доступа в публичную сеть. Все узлы, включая master-узел, создаются с двумя интерфейсами:
-один — в публичную сеть, другой — во внутреннюю сеть. Данная схема размещения должна использоваться, если необходимо, чтобы
-все узлы кластера были доступны напрямую.
+An internal cluster network is created that does not have access to the public network.
+All nodes (including master ones) have two interfaces: the first one to the public network, the second one to the internal network.
+This layout should be used if you want all nodes in the cluster to be directly accessible.
 
 {% alert level="warning" %}
-В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
-сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
-virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
+
+- This strategy does not support a LoadBalancer since a Floating IP is not available for the router-less network.
+  Thus, you cannot provision a LoadBalancer with the Floating IP.
+  An internal LoadBalancer with the virtual IP in the public network is only accessible from cluster nodes.
+- Using this strategy, make sure to explicitly specify the name of the internal network in `additionalNetworks`
+  when creating an OpenStackInstanceClass in the cluster.
+
 {% endalert %}
 
-{% alert level="warning" %}
-В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
-{% endalert %}
+![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
+<!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
-
-Пример конфигурации схемы размещения:
+Example layout configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: StandardWithNoRouter
 standardWithNoRouter:
-  internalNetworkCIDR: 192.168.199.0/24         # Обязательный параметр.
-  externalNetworkName: ext-net                  # Обязательный параметр.
-  # Необязательный параметр, указывает, включен ли DHCP в указанной внешней сети
-  # (по умолчанию true).
+  internalNetworkCIDR: 192.168.199.0/24          # Required.
+  externalNetworkName: ext-net                   # Required.
+  # Optional, defines whether DHCP is enabled in specified external
+  # network (true by default).
   externalNetworkDHCP: false
-  # Необязательный параметр, по умолчанию true.
-  internalNetworkSecurity: true|false
+  internalNetworkSecurity: true|false            # Optional, true by default.
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.large                         # Required.
+    imageName: ubuntu-18-04-cloud-amd64          # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 50
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
-  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  # Required, volume type map for etcd and Kubernetes certificates
+  # (always use the fastest disk supplied by the provider).
   volumeTypeMap:
-    # Если указан rootDiskSize, этот тип тома также будет
-    # использоваться для главного корневого тома.
+    # If rootDiskSize is specified, this volume type will
+    # be also used for master root volume.
     nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                         # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64          # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.small                         # Required.
+    imageName: ubuntu-18-04-cloud-amd64          # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 20
-    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
-    # конфигурационный диск во время процесса начальной загрузки виртуальной
-    # машины. Это необходимо, если в сети нет DHCP, который используется в
-    # качестве шлюза по умолчанию.
+    # Optional, false by default, determines if configuration drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no DHCP in the network that is used as a default
+    # gateway.
     configDrive: false
-    # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
-    additionalNetworks:                           # Необязательный параметр.
+    additionalNetworks:                          # Optional.
     - office
     - shared
-    # Необязательный параметр. Если существуют сети с отключенной защитой
-    # портов, необходимо указать их имена.
+    # Optional, if there are networks with disabled port
+    # security, their names must be specified.
     networksWithSecurityDisabled:
     - office
-    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
-    # плавающие IP-адреса.
+    # Optional, a list of network pools where to order floating IPs.
     floatingIPPools:
     - public
     - shared
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  # Требуется, если указан параметр rootDiskSize. Карта типов томов для главного корневого тома узла.
+  # Required if rootDiskSize is specified. Volume type map for node's root volume.
   volumeTypeMap:
     nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
@@ -194,77 +197,75 @@ provider:
 
 ### Simple
 
-Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
-объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
+The master node and cluster nodes are connected to the existing network.
+This placement strategy can be useful if you need to merge a Kubernetes cluster with existing VMs.
 
 {% alert level="warning" %}
-В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
-сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
-virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
+This strategy does not support a LoadBalancer since a Floating IP is not available for the router-less network.
+Thus, you cannot provision a LoadBalancer with the Floating IP.
+An internal LoadBalancer with the virtual IP in the public network is only accessible from cluster nodes.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
+![Simple layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simple.png)
+<!--- Source: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-Пример конфигурации схемы размещения:
+Example layout configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Simple
 simple:
-  externalNetworkName: ext-net                  # Обязательный параметр.
-  # Необязательный параметр, по умолчанию true.
-  externalNetworkDHCP: false
-  # Необязательный параметр, по умолчанию VXLAN, также может быть DirectRouting
-  # или DirectRoutingWithPortSecurityEnabled.
+  externalNetworkName: ext-net                  # Required.
+  externalNetworkDHCP: false                    # Optional, true by default.
+  # Optional, VXLAN by default, may also be DirectRouting
+  # or DirectRoutingWithPortSecurityEnabled.
   podNetworkMode: VXLAN
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 50
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
-  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  # Required, volume type map for etcd and Kubernetes certificates
+  # (always use the fastest disk supplied by the provider).
   volumeTypeMap:
-    # Если указан rootDiskSize, этот тип тома также будет
-    # использоваться для главного корневого тома.
+    # If rootDiskSize is specified, this volume type will
+    # be also used for master root volume.
     nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 20
-    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
-    # конфигурационный диск во время процесса начальной загрузки виртуальной
-    # машины. Это необходимо, если в сети нет DHCP, который используется в
-    # качестве шлюза по умолчанию.
+    # Optional, false by default, determines if configuration drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no DHCP in network that is used as a default
+    # gateway.
     configDrive: false
-    # Обязательный параметр, сеть будет использована как шлюз по умолчанию.
-    # Совпадает с названием заранее созданной сети.
+    # Required, the network will be used as a default gateway.
+    # Matches the name of the pre-created network.
     mainNetwork: kube
-    additionalNetworks:                         # Необязательный параметр.
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    # Необязательный параметр. Если существуют сети с отключенной защитой
-    # портов, необходимо указать их имена.
+    # Optional, if there are networks with disabled port
+    # security, their names must be specified.
     networksWithSecurityDisabled:
     - office
-    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
-    # плавающие IP-адреса.
+    # Optional, list of network pools where to order floating IPs.
     floatingIPPools:
     - public
     - shared
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -275,80 +276,81 @@ provider:
 
 ### SimpleWithInternalNetwork
 
-Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
-объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
+The master node and cluster nodes are connected to the existing network.
+This layout can be useful if you need to merge a Kubernetes cluster with existing VMs.
 
 {% alert level="warning" %}
-В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
-Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании OpenStackInstanceClass в кластере.
+This layout does not involve the management of SecurityGroups (it is assumed they were created beforehand).
+To configure security policies, you must explicitly specify both
+`additionalSecurityGroups` in the OpenStackClusterConfiguration for the masterNodeGroup and other nodeGroups,
+and `additionalSecurityGroups` when creating OpenStackInstanceClass in the cluster.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+![SimpleWithInternalNetwork layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
+<!--- Source: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
 
-Пример конфигурации схемы размещения:
+Example of the layout configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
-  # Обязательный параметр, все узлы кластера должны находиться в одной подсети.
+  # Required, all cluster nodes have to be in the same subnet.
   internalSubnetName: pivot-standard
-  # Необязательный параметр, по умолчанию DirectRoutingWithPortSecurityEnabled,
-  # также может быть DirectRouting или VXLAN.
+  # Optional, DirectRoutingWithPortSecurityEnabled by default,
+  # may also be DirectRouting or VXLAN.
   podNetworkMode: DirectRoutingWithPortSecurityEnabled
-  # Необязательный параметр. Если задан, будет использоваться для конфигурации
-  # балансировщика нагрузки по умолчанию и для главного плавающего IP-адреса.
+  # Optional. If set, it will be used for the load balancer default
+  # configuration and ordering the master floating IP.
   externalNetworkName: ext-net
-  # Необязательный параметр, по умолчанию true.
+  # Optional, true by default.
   masterWithExternalFloatingIP: false
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 50
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
-  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  # Required, volume type map for etcd and Kubernetes certificates
+  # (always use the fastest disk supplied by the provider).
   volumeTypeMap:
-    # Если указан rootDiskSize, этот тип тома также будет
-    # использоваться для главного корневого тома.
+    # If rootDiskSize is specified, this volume type will
+    # be also used for master root volume.
     nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                        # Обязательный параметр.
-    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр
-    # Необязательный параметр. Если не указан — используется локальный диск.
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
     rootDiskSize: 20
-    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
-    # конфигурационный диск во время процесса начальной загрузки виртуальной
-    # машины. Это необходимо, если в сети нет DHCP, который используется в
-    # качестве шлюза по умолчанию.
+    # Optional, false by default, determines if configuration drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no DHCP in the network that is used as a default
+    # gateway.
     configDrive: false
-    # Обязательный параметр. Сеть будет использована как шлюз по умолчанию.
-    # Совпадает с названием заранее созданной сети.
+    # Required, the network will be used as a default gateway.
+    # Matches the name of the pre-created network.
     mainNetwork: kube
-    additionalNetworks:                         # Необязательный параметр.
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    # Необязательный параметр. Если существуют сети с отключенной защитой
-    # портов, необходимо указать их имена.
+    # Optional, if there are networks with disabled port
+    # security, their names must be specified.
     networksWithSecurityDisabled:
     - office
-    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
-    # плавающие IP-адреса.
+    # Optional, a list of network pools where to order floating IPs.
     floatingIPPools:
     - public
     - shared
-    # Необязательный параметр, дополнительные группы безопасности.
+    # Optional, additional security groups.
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -357,32 +359,41 @@ provider:
   ...
 ```
 
-## Конфигурация
+## Configuration
 
-Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью ресурса OpenStackClusterConfiguration, который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Integration with {{ site.data.admin.cloud-types.types[page.cloud_type].name }} is performed
+using the OpenStackClusterConfiguration resource.
+It defines the configuration of the cloud cluster in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
+and is used by the cloud provider when the cluster control plane is hosted in the cloud.
+The DKP module responsible for the integration is automatically configured based on the selected layout.
 
-Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+To modify the configuration in a running cluster, run the following command:
 
 ```shell
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}
-После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+After changing node-related parameters, run the `dhctl converge` command to apply the changes.
 {% endalert %}
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресусре [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).
-Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [`OpenStackInstanceClass`](../../../../reference/cr/openstackinstanceclass), в котором указываются конкретные параметры самих машин.
+The number of nodes to be provisioned and their parameters are defined in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource,
+where you also specify the name of the instance class used for that group (the `cloudInstances.classReference` parameter).
+For the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} cloud provider,
+the instance class is a custom resource called [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass),
+which contains the specific configuration of the VMs.
 
 {% alert level="warning" %}
-При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`.
+When the module settings are changed, **existing Machine objects in the cluster are NOT recreated**
+(new Machine objects will use the updated parameters).
+The recreation only occurs if you modify the NodeGroup or the OpenStackInstanceClass parameters.
 {% endalert %}
 
-### Примеры конфигурации
+### Configuration examples
 
-Ниже представлены два простых примера конфигурации облачного провайдера OpenStack.
+The following are two simple configuration examples for the OpenStack cloud provider.
 
-#### Пример 1
+#### Example 1
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -393,7 +404,7 @@ spec:
   flavorName: m1.large
 ```
 
-#### Пример 2
+#### Example 2
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -428,11 +439,11 @@ spec:
       owner: default
 ```
 
-### Список необходимых сервисов
+### List of required services
 
-Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+Below is the list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services required for DKP to operate in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
-| Сервис                           | Версия API |
+| Service                           | API version |
 |:---------------------------------|:----------:|
 | Identity (Keystone)              | v3         |
 | Compute (Nova)                   | v2         |
@@ -440,21 +451,21 @@ spec:
 | Block Storage (Cinder)           | v3         |
 | Load Balancing (Octavia) &#8432; | v2         |
 
-&#8432;  Если нужно заказывать Load Balancer.
+&#8432;  If you need to provision a LoadBalancer.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+For the API endpoints and ports, refer to the [official documentation](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints).
 {% endif %}
 
-### Настройка LoadBalancer
+### LoadBalancer configuration
 
 {% alert level="warning" %}
-Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+To correctly detect client IP addresses, you must use a LoadBalancer that supports Proxy Protocol.
 {% endalert %}
 
-#### Пример IngressNginxController
+#### Example: IngressNginxController
 
-Ниже представлен простой пример конфигурации `IngressNginxController`:
+The following is a simple configuration example for an IngressNginxController:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -477,64 +488,70 @@ spec:
     value: frontend
 ```
 
-### Настройка и политики безопасности на узлах кластера
+### Node security policies and configuration
 
-Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных
-машинах кластера, может быть множество. Например:
+There are many reasons why you might want to restrict or allow incoming or outgoing traffic on cluster VMs.
+For example:
 
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
-* Разрешить подключение к портам статического узла для работы приложения.
-* Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
+- Allow connections to cluster nodes from VMs in a different subnet.
+- Allow access to specific ports on a static node for application traffic.
+- Restrict access to external resources or other VMs in the cloud per security team requirements.
 
-Для всего этого следует применять дополнительные группы безопасности (security groups). Можно использовать только группы безопасности, предварительно
-созданные в облаке.
+To manage this, you should use additional security groups.
+Only security groups that were pre-created in the cloud can be used.
 
-#### Установка дополнительных групп безопасности (security groups) на статических и master-узлах
+#### Assigning additional security groups to static and master nodes
 
-Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-группы безопасности указываются в OpenStackClusterConfiguration:
+You can specify additional security groups either during cluster creation or in an existing cluster.
+In both cases, specify them in the OpenStackClusterConfiguration resource:
 
-* для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
-* для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
+- **For master nodes**: Under the `masterNodeGroup` section using the `additionalSecurityGroups` field.
+- **For static nodes**: Under the `nodeGroups` section of the corresponding node group configuration and also in the `additionalSecurityGroups` field.
 
-Поле `additionalSecurityGroups` представляет собой массив строк с именами групп безопасности.
+The `additionalSecurityGroups` field is an array of strings representing the names of the security groups.
 
-#### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
+#### Assigning additional security groups to ephemeral nodes
 
-Необходимо прописать параметр `additionalSecurityGroups` для всех `OpenStackInstanceClass` в кластере, которым нужны дополнительные
-групп безопасности.
+To assign additional security groups to ephemeral nodes,
+specify the `additionalSecurityGroups` parameter in all relevant OpenStackInstanceClass resources used by these nodes.
 
-### Как загрузить образ в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
+### Uploading an image to {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 
-1. Скачайте последний стабильный образ Ubuntu 18.04:
+1. Download the latest stable Ubuntu 18.04 image:
 
    ```shell
    curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
    ```
 
-2. Подготовьте openrc-файл, который содержит credentials для обращения к API {{ site.data.admin.cloud-types.types[page.cloud_type].name }}.
+1. Prepare an openrc file that contains credentials for accessing the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
-   > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }}. Если провайдер предоставляет
-   > стандартный интерфейс для {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, скачать openrc-файл можно [по инструкции](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
+   > The method of obtaining the openrc file may vary depending on the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} provider.
+   > If your provider offers the standard interface for {{ site.data.admin.cloud-types.types[page.cloud_type].name }},
+   > follow [this guide](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file) to download the file.
 
-3. Либо установите OpenStack-клиента [по инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
+1. Alternatively, install the OpenStack CLI tools following the [instructions](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
-   Также можно запустить контейнер, смонтировать в него openrc-файл и скачанный локально образ Ubuntu:
+   You can also run a container, mounting both the openrc file and the downloaded Ubuntu image:
 
    ```shell
    docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.openrc:/openrc jmcvea/openstack-client
    ```
 
-4. Инициализируйте переменные окружения из openrc-файла:
+1. Initialize environment variables from the openrc file:
 
    ```shell
    source /openrc
    ```
 
-5. Получите список доступных типов дисков:
+1. List the available volume types:
 
    ```shell
-   / # openstack volume type list
+   openstack volume type list
+   ```
+
+   Example output:
+
+   ```console
    +--------------------------------------+---------------+-----------+
    | ID                                   | Name          | Is Public |
    +--------------------------------------+---------------+-----------+
@@ -549,17 +566,22 @@ spec:
    +--------------------------------------+---------------+-----------+
    ```
 
-6. Создайте образ и передайте в него в качестве свойств тип диска, который будет использоваться (если {{ site.data.admin.cloud-types.types[page.cloud_type].name }} не поддерживает локальные диски или если эти диски не подходят для работы):
+1. Create an image and assign the volume type as a property (this is necessary if {{ site.data.admin.cloud-types.types[page.cloud_type].name }} does not support local disks or they are unsuitable for workloads):
 
    ```shell
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
 
-7. Проверьте, что образ успешно создан:
+1. Ensure the image has been created:
 
-   ```text
-   / # openstack image show ubuntu-18-04-cloud-amd64
+   ```shell
+   openstack image show ubuntu-18-04-cloud-amd64
+   ```
+
+   Example output:
+
+   ```console
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Field            | Value                                                                                                                                                                                                                                                                                     |
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -585,15 +607,18 @@ spec:
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    ```
 
-### Проверка поддержки провайдером группы безопасности (security groups)
+### Verifying security group support by the cloud provider
 
-Выполните команду `openstack security group list`. Если в ответ вы не получите ошибок, это значит, что [группы безопасности](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
+Run the `openstack security group list` command.
+If you don’t receive any errors, it means that [security groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
-### Настройка работы онлайн-изменений размера дисков
+### Configuring online volume resize
 
-При успешном изменении размера диска с помощью VK Cloud API, Cinder не передает информацию об этом изменении в Nova, в результате чего диск внутри гостевой операционной системы остается прежнего размера.
+When resizing a disk via the VK Cloud API, Cinder does not pass updated size information to Nova.
+As a result, the disk size inside the guest OS remains unchanged.
 
-Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
+To fix this, you must configure access to the Nova API in the `cinder.conf` file.
+For example:
 
 {% raw %}
 
@@ -613,56 +638,79 @@ username = {{ nova_service_user_name }}
 
 {% endraw %}
 
-Более подробная информация в [документации OpenStack-Ansible](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
+For more details, see the [OpenStack-Ansible bug report](https://bugs.launchpad.net/openstack-ansible/+bug/1902914).
 
-### Использование `rootDiskSize`
+### Using rootDiskSize
 
-#### Диски в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
+#### Disks in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 
-Диск узла может быть локальным или сетевым. В терминологии {{ site.data.admin.cloud-types.types[page.cloud_type].name }} локальный диск — это ephemeral disk, а сетевой — persistent disk (cinder storage). Первый удаляется вместе с ВМ, а второй остается в облаке, когда ВМ удаляется.
+A node's disk can be either local or network-attached.
+In {{ site.data.admin.cloud-types.types[page.cloud_type].name }} terminology:
 
-* Для master-узла предпочтительнее сетевой диск, чтобы узел мог мигрировать между гипервизорами.
-* Для ephemeral-узла предпочтительнее локальный диск, чтобы сэкономить на стоимости. Не все облачные провайдеры поддерживают использование локальных дисков. Если локальные диски не поддерживаются, для ephemeral-узлов придется использовать сетевые диски.
+- A local disk is called an ephemeral disk.
+- A network-attached disk is called a persistent disk (Cinder storage).
 
-| Локальный диск (ephemeral)    | Сетевой диск (persistent)                    |
+The ephemeral disk is deleted along with the VM,
+while the persistent disk remains in the cloud even after the VM is deleted.
+
+- For master nodes, network-attached disks are preferred so the nodes could migrate between hypervisors.
+- For ephemeral nodes, local disks are preferred for cost efficiency.
+  However, not all cloud providers support local disks.
+  If not supported, you have to use network-attached disks for ephemeral nodes.
+
+| Local disk (ephemeral)    | Network-attached disk (persistent)                    |
 | ----------------------------- | -------------------------------------------- |
-| Удаляется вместе с ВМ         | Остается в облаке и может переиспользоваться |
-| Дешевле                       | Дороже                                       |
-| Подходит для ephemeral-узлов  | Подходит для master-узлов                    |
+| Deleted with the VM         | Remains in cloud and can be reused |
+| Less expensive                       | More expensive                                       |
+| Suitable for ephemeral nodes  | Suitable for master nodes                    |
 
-#### Параметр `rootDiskSize`
+#### rootDiskSize parameter
 
-В `OpenStackInstanceClass` есть параметр `rootDiskSize`, и в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} flavor есть параметр размера диска.
+The OpenStackInstanceClass resource includes a `rootDiskSize` parameter.
+In {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, flavors may also define a disk size.
 
-Какой диск закажется в зависимости от комбинации параметров, указано в таблице:
+The resulting disk type depends on the combination of the following parameters:
 
 |                              | flavor disk size = 0                 | flavor disk size > 0                              |
 | ---------------------------- | ------------------------------------ | ------------------------------------------------- |
-| **`rootDiskSize` не указан** | ❗️*Необходимо задать размер*. Без указания размера будет ошибка создания ВМ. | Локальный диск с размером из flavor               |
-| **`rootDiskSize` указан**    | Сетевой диск размером `rootDiskSize`                                         | ❗ Сетевой (rootDiskSize) и локальный (из flavor). Избегайте использования этого варианта, так как облачный провайдер будет взимать плату за оба диска. |
+| **`rootDiskSize` not set** | ❗️*Disk size must be specified*. VM creation will fail without it. | Local disk with size from the flavor.               |
+| **`rootDiskSize` set**    | Network-attached disk with size that equals `rootDiskSize`. | ❗ Both network-attached (`rootDiskSize`) and local (from flavor). Avoid this setup, as the cloud provider may charge for both. |
 
 {% if page.cloud_type != 'selectel' %}
 
-> При создании узлов с типом `CloudEphemeral` в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [rootDiskSize](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+> In Selectel Cloud, when creating nodes with CloudEphemeral type outside zone A,
+> you must pre-create a flavor with the target disk size.
+> In this case, you do not need to set the [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter.
 
 {% endif %}
 
-##### Рекомендация для master-узлов и бастиона — сетевой диск
+##### Recommendations for master nodes and bastion with network-attached disks
 
-- Используйте flavor с нулевым размером диска.
-- Задайте `rootDiskSize` в `OpenStackInstanceClass`.
-- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, тип диска будет взят из [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+- Use a flavor with zero disk size.
+- Set `rootDiskSize` in the OpenStackInstanceClass resource.
+- Ensure the disk type is correct:
+  - If specified in the OS image, it will be used.
+  - If not specified, the type will be taken from [`volumeTypeMap`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
-##### Рекомендация для ephemeral-узлов — локальный диск
+##### Recommendations for ephemeral nodes with local disks
 
-- Используйте flavor с заданным размером диска.
-- Не используйте параметр `rootDiskSize` в OpenStackInstanceClass.
-- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, будет использоваться тип диска по умолчанию облачного провайдера.
+- Use a flavor with a defined disk size.
+- Do not use the `rootDiskSize` parameter in OpenStackInstanceClass.
+- Ensure the disk type is correct:
+  - If specified in the OS image, it will be used.
+  - If not specified, the cloud provider's default disk type will be used.
 
-#### Как проверить объем диска в flavor
+#### Checking the disk size in a flavor
+
+Run the following command:
 
 ```shell
-# openstack flavor show m1.medium-50g -c disk
+openstack flavor show m1.medium-50g -c disk
+```
+
+Example output:
+
+```console
 +-------+-------+
 | Field | Value |
 +-------+-------+
@@ -670,13 +718,15 @@ username = {{ nova_service_user_name }}
 +-------+-------+
 ```
 
-### Как переопределить тип диска по умолчанию облачного провайдера
+### Overriding the cloud provider's default disk type
 
-Если у облачного провайдера доступно несколько типов, вы можете указать тип диска по умолчанию для образа. Для этого необходимо указать название типа диска в метаданных образа. Тогда все ВМ, создаваемые из этого образа, будут использовать указанный тип сетевого диска.
+If your cloud provider offers multiple volume types,
+you can specify the default type for an image by setting the `cinder_img_volume_type` property in the image metadata.
+Any VM created from that image will use the specified volume type.
 
-Также вы можете создать новый образ {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и загрузить его.
+You can also create a new {{ site.data.admin.cloud-types.types[page.cloud_type].name }} image and upload it.
 
-Пример:
+Example:
 
 ```shell
 openstack volume type list
@@ -685,10 +735,11 @@ openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=V
 
 {% if page.cloud_type != 'vk-private' and page.cloud_type != 'vk' %}
 
-### Оффлайн-изменение размера диска
+### Offline disk resizing
 
-Если при изменении размера диска вы получаете следующую ошибку, необходимо уменьшить количество реплик StatefulSet до 0, подождать изменения размера дисков
-и вернуть обратно количество реплик, которое было до начала операции.
+If you encounter the following error during volume resizing,
+reduce the number of replicas in the affected StatefulSet to 0, wait for the volume size to update,
+and then scale the replicas back to the original value.
 
 ```text
 Warning  VolumeResizeFailed     5s (x11 over 41s)  external-resizer cinder.csi.openstack.org                                   
@@ -698,4 +749,5 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
 {% endif %}

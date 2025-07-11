@@ -139,13 +139,13 @@ kind: AWSClusterConfiguration
 
 Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
 
-```console
+```shell
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 После внесения изменений их необходимо применить с помощью команды:
 
-```console
+```shell
 dhctl converge
 ```
 
@@ -176,9 +176,9 @@ DKP не создаёт группы безопасности автоматич
 
 | Тип узлов              | Где указывать                                                                 |
 |------------------------|-------------------------------------------------------------------------------|
-| Master-узлы            | В поле `masterNodeGroup.instanceClass.additionalSecurityGroups` ресурса `AWSClusterConfiguration` |
+| Master-узлы            | В поле `masterNodeGroup.instanceClass.additionalSecurityGroups` ресурса AWSClusterConfiguration |
 | Статические worker-узлы| В поле `nodeGroups[].instanceClass.additionalSecurityGroups` того же ресурса |
-| Эфемерные узлы         | В объекте `AWSInstanceClass`, в поле `spec.additionalSecurityGroups`         |
+| Эфемерные узлы         | В объекте AWSInstanceClass, в поле `spec.additionalSecurityGroups`         |
 
 Во всех случаях параметр `additionalSecurityGroups` принимает массив строк — имен (ID) групп безопасности в AWS.
 

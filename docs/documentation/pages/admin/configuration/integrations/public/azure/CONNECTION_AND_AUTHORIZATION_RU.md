@@ -21,13 +21,13 @@ lang: ru
 
 1. Установите Azure CLI и авторизуйтесь:
 
-   ```console
+   ```shell
    export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
    ```
 
 1. Создайте сервисный аккаунт:
 
-   ```console
+   ```shell
    az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
    ```
 
@@ -52,7 +52,7 @@ lang: ru
 
 1. Авторизуйтесь в Azure CLI под созданным сервисным аккаунтом:
 
-   ```console
+   ```shell
    az login --service-principal -u <CLIENT_ID> -p <CLIENT_SECRET> --tenant <TENANT_ID>
    ```
 

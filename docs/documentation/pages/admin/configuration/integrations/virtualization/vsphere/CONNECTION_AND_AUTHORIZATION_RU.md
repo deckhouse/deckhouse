@@ -18,7 +18,7 @@ lang: ru
 
 Для настройки окружения используется CLI-инструмент [`govc`](https://github.com/vmware/govmomi/tree/main/govc). После установки задайте переменные окружения:
 
-```console
+```shell
 export GOVC_URL=example.com
 export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
@@ -31,14 +31,14 @@ export GOVC_INSECURE=1
 
 Создайте категории тегов:
 
-```console
+```shell
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
 
 Создайте теги:
 
-```console
+```shell
 govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
@@ -46,7 +46,7 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 
 Назначьте теги:
 
-```console
+```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
@@ -58,7 +58,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 
 Назначьте теги:
 
-```console
+```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 
@@ -70,7 +70,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 
 Создайте роль с необходимыми правами:
 
-```console
+```shell
 govc role.create deckhouse \
   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
@@ -79,7 +79,7 @@ govc role.create deckhouse \
 
 Назначьте роль пользователю:
 
-```console
+```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 

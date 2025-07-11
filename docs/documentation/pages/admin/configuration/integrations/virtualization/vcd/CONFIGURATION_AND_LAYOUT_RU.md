@@ -8,7 +8,7 @@ lang: ru
 
 Deckhouse Kubernetes Platform поддерживает одну схему размещения ресурсов в VCD.
 
-## Standard
+### Standard
 
 ![Схема размещения Standard](../../../../images/cloud-provider-vcd/vcd-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11247&t=IvETjbByf1MSQzcm-0 --->
@@ -43,7 +43,7 @@ masterNodeGroup:
 
 ## Конфигурация
 
-Интеграция осуществляется с помощью ресурса VCDClusterConfiguration, который описывает конфигурацию облачного кластера в VCD и используется системой виртаулизации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграция осуществляется с помощью ресурса VCDClusterConfiguration, который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
@@ -52,7 +52,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ```
 
 {% alert level="info" %}
-После изменения параметров узлов необходимо выполнить команду [dhctl converge](./admin/integrations/deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+После изменения параметров узлов необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
 {% endalert %}
 
 Пример конфигурации:
@@ -89,9 +89,9 @@ provider:
   insecure: true
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это кастомный ресурс [VsphereInstanceClass](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference`). Инстанс-класс для cloud-провайдера VCD — это кастомный ресурс [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), в котором указываются конкретные параметры самих машин.
 
-Ниже представлен пример конфигурации [VCDInstanceClass](cr.html#vcdinstanceclass) для эфемерных узлов cloud-провайдера VMware Cloud Director.
+Ниже представлен пример конфигурации VCDInstanceClass для эфемерных узлов cloud-провайдера VMware Cloud Director.
 
 ### Пример конфигурации кастомного ресурса VCDInstanceClass
 

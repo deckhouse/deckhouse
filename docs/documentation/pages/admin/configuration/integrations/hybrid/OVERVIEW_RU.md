@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/hybrid/overview.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. Поддерживаемые интеграция с облаками на базе [OpenStack](../public/openstack/сonnection-and-authorization.html) и [vSphere](../public/vsphere/vsphere-authorization.html).
+Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/сonnection-and-authorization.html) и [vSphere](../public/vsphere/vsphere-authorization.html).
 
 Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы vSphere или OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
@@ -12,29 +12,43 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 
 Выполните следующие шаги:
 
-1. Удалите flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Удалите `flannel` из `kube-system`:
+
+   ```shell
+   kubectl -n kube-system delete ds flannel-ds
+   ```
+
 2. Настройте интеграцию и пропишите необходимые для работы параметры.
 
 {% alert level="warning" %}
-Cloud-controller-manager синхронизирует состояние между vSphere и Kubernetes, удаляя из Kubernetes те узлы, которых нет в vSphere. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а cloud-controller-manager такие узлы игнорирует).
+`Cloud-controller-manager` синхронизирует состояние между vSphere и Kubernetes, удаляя из Kubernetes те узлы, которых нет в vSphere. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а `cloud-controller-manager` такие узлы игнорирует).
 {% endalert %}
 
 ## Гибридный кластер с OpenStack
 
 Выполните следующие шаги:
 
-1. Удалите flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Удалите `flannel` из `kube-system`:
+
+   ```shell
+   kubectl -n kube-system delete ds flannel-ds
+   ```
+
 2. Настройте интеграцию и пропишите необходимые для работы параметры.
-3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
-4. Создайте один или несколько custom resource [NodeManager](../../modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
+3. Создайте один или несколько кастомных ресурсов [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+4. Создайте один или несколько кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
 
 {% alert level="warning" %}
-Cloud-controller-manager синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а cloud-controller-manager такие узлы игнорирует).
+`Cloud-controller-manager` синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а `cloud-controller-manager` такие узлы игнорирует).
 {% endalert %}
 
 ### Подключение storage
 
-Если вам требуются PersistentVolumes на узлах, подключаемых к кластеру из OpenStack, необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно с помощью команды `openstack volume type list`.
+Если вам требуются PersistentVolumes на узлах, подключаемых к кластеру из OpenStack, необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно с помощью следующей команды:
+
+```shell
+openstack volume type list
+```
 
 Например, для volume type `ceph-ssd`:
 
