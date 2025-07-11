@@ -3,9 +3,9 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: d8-neuvector-webhook
-  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-webhook")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "neuvector-webhook")) | nindent 2 }}
 webhooks:
-  - name: projects.multitenancy-webhook.deckhouse.io
+  - name: projects.neuvector-webhook.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io
@@ -22,13 +22,13 @@ webhooks:
     matchPolicy: Equivalent
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.neuvectorManager.internal.admissionWebhookCert.ca | b64enc }}
       service:
         name: neuvector
         namespace: d8-neuvector
         port: 9443
         path: /validate/v1alpha2/projects
-  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+  - name: projecttemplates.neuvector-webhook.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io
@@ -46,14 +46,14 @@ webhooks:
     matchPolicy: Equivalent
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.neuvectorManager.internal.admissionWebhookCert.ca | b64enc }}
       service:
         name: neuvector
         namespace: d8-neuvector
         port: 9443
         path: /validate/v1alpha1/templates
-  {{ if not .Values.multitenancyManager.allowNamespacesWithoutProjects }}
-  - name: namespaces.multitenancy-webhook.deckhouse.io
+  {{ if not .Values.neuvectorManager.allowNamespacesWithoutProjects }}
+  - name: namespaces.neuvector-webhook.deckhouse.io
     rules:
       - apiGroups:
           - ""
@@ -69,7 +69,7 @@ webhooks:
     matchPolicy: Equivalent
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.neuvectorManager.internal.admissionWebhookCert.ca | b64enc }}
       service:
         name: neuvector
         namespace: d8-neuvector

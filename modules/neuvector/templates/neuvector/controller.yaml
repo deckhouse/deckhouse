@@ -63,11 +63,11 @@ spec:
             secretName: admission-webhook-certs
       containers:
         - name: neuvector
-          image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
+          image: {{ include "helm_lib_module_image" (list . "neuvectorManager") }}
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           imagePullPolicy: 'IfNotPresent'
           args:
-            - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
+            - --allow-orphan-namespaces={{ .Values.neuvectorManager.allowNamespacesWithoutProjects }}
           env:
             - name: HA_MODE
 {{- if (include "helm_lib_ha_enabled" .) }}

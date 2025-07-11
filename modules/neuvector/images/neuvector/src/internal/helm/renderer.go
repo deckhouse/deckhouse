@@ -81,7 +81,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 		}
 
 		// inject neuvector
-		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageNeuvector
 		labels[v1alpha2.ResourceLabelProject] = r.project.Name
 		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
@@ -131,7 +131,7 @@ func (r *postRenderer) newNamespace(name string) []byte {
 		},
 	}
 
-	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageNeuvector
 	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
 	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 

@@ -43,7 +43,7 @@ const (
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
 
 	ResourceLabelHeritage        = "heritage"
-	ResourceHeritageMultitenancy = "neuvector"
+	ResourceHeritageNeuvector = "neuvector"
 	ResourceHeritageDeckhouse    = "deckhouse"
 
 	NamespaceAnnotationAdopt = "projects.deckhouse.io/adopt"

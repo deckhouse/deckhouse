@@ -110,3 +110,19 @@ NeuVector supports flexible deployment configurations:
 - Deckhouse Kubernetes Platform v1.30+.
 - Kubernetes cluster with at least 3 nodes.
 - Sufficient resources: 4 CPU cores and 8GB RAM minimum.
+
+## Enabling NeuVector
+
+1. To enable the module, use the web interface or the following command:
+
+    ```bash
+    d8 platform module enable neuvector
+    ```
+
+## Getting the password
+
+If you need to get the admin password stored in the Kubernetes secret in the d8-neuvector namespace, use the following command:
+
+```txt
+d8 k -n d8-neuvector get secret admin -o jsonpath='{.data.password}' | base64 -d
+```
