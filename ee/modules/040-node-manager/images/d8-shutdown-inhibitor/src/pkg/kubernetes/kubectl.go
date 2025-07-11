@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 const KubectlPath = "/opt/deckhouse/bin/kubectl"
@@ -67,7 +68,7 @@ func (k *Kubectl) GetAnnotationCordonedBy(nodeName string) (string, error) {
 }
 
 func (k *Kubectl) getAnnotationCordonedBy(nodeName string) ([]byte, error) {
-	jsonPath := fmt.Sprintf("jsonpath='{.metadata.annotations.%s}'", CordonAnnotationKey)
+	jsonPath := fmt.Sprintf("jsonpath='{.metadata.annotations.%s}'", strings.ReplaceAll(CordonAnnotationKey, ".", `\.`))
 	cmd := k.cmd("get", "node", nodeName, "-o", jsonPath)
 	return cmd.Output()
 }
