@@ -62,7 +62,7 @@ func uncordonOnStart(nodeName string) error {
 
 	condition, err := k.GetCondition(nodeName, ReasonPodsArePresent)
 	if err != nil {
-		return err
+		return reformatExitError(err)
 	}
 
 	if condition.Status == "True" &&
