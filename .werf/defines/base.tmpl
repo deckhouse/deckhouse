@@ -279,6 +279,7 @@ imageSpec:
 
 image: base-for-go
 fromImage: builder/golang-alpine
+final: false
 import:
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap) }}
 shell:
