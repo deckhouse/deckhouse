@@ -47,3 +47,38 @@ bb-ctrd-v1-has-registry-fields() {
   fi
   echo "$has_registry" | grep -q "true"
 }
+
+# bb-ctrd-v2-has-registry-fields:
+# Check if a containerd TOML configuration contains the
+# registry section under: plugins."io.containerd.cri.v1.images".registry
+#
+# Arguments:
+#   $1 — Path to the containerd configuration file (in TOML format)
+#
+# Returns:
+#   0 — Registry configuration section found
+#   1 — Registry section not found
+#   >1 — Error parsing the TOML file
+#
+# Example containerd configuration (TOML format):
+#
+#   [plugins."io.containerd.cri.v1.images".registry]
+#     [plugins."io.containerd.cri.v1.images".registry.mirrors]
+#       [plugins."io.containerd.cri.v1.images".registry.mirrors."docker.io"]
+#         endpoint = ["https://registry-1.docker.io"]
+#       [plugins."io.containerd.cri.v1.images".registry.mirrors."gcr.io"]
+#         endpoint = ["https://gcr.io"]
+#     [plugins."io.containerd.cri.v1.images".registry.configs]
+#       [plugins."io.containerd.cri.v1.images".registry.configs."gcr.io".auth]
+#         username = "_json_key"
+#         password = "..."
+bb-ctrd-v2-has-registry-fields() {
+  local path="$1"
+  local has_registry
+  if ! has_registry=$(/opt/deckhouse/bin/yq -ptoml -oy \
+    '.plugins["io.containerd.cri.v1.images"] | has("registry")' "$path" 2>/dev/null); then
+    >&2 echo "ERROR: Failed to parse TOML config: $path"
+    exit 1
+  fi
+  echo "$has_registry" | grep -q "true"
+}

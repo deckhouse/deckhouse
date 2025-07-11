@@ -33,15 +33,21 @@ set_containerd_registry_label() {
   local ctrd_version="$2"
   local label_value="default"
 
-  if [ "$ctrd_version" = "v1" ]; then
-    if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
-      for path in ${full_conf_path}/*.toml; do
-        if bb-ctrd-v1-has-registry-fields "$path"; then
+  if ls ${full_conf_path}/*.toml >/dev/null 2>&1; then
+    for path in ${full_conf_path}/*.toml; do
+      if [ "$ctrd_version" = "v1" ]; then
+        if bb-ctrd-v1-has-registry-fields "${path}"; then
           label_value="custom"
           break
         fi
-      done
-    fi
+      fi
+      if [ "$ctrd_version" = "v2" ]; then
+        if bb-ctrd-v2-has-registry-fields "${path}"; then
+          label_value="custom"
+          break
+        fi
+      fi
+    done
   fi
 
   mkdir -p /var/lib/node_labels/
