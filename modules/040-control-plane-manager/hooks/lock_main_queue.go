@@ -144,7 +144,6 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	}
 
 	dsGeneration := dsSnaps[0]
-	dsGenerationStr := strconv.FormatInt(dsGeneration, 10)
 
 	podsSnaps := input.NewSnapshots.Get("cpm_pods")
 	if len(podsSnaps) == 0 {
@@ -158,7 +157,7 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to iterate over 'cpm_pods' snapshots: %v", err)
 		}
 
-		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
+		if pod.NodeName == "" {
 			continue
 		}
 
