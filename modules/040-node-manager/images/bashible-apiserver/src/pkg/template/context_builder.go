@@ -481,7 +481,6 @@ type bundleNGContext struct {
 
 	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 	CRI               string      `json:"cri" yaml:"cri"`
-	GPU               string      `json:"gpu,omitempty" yaml:"gpu,omitempty"`
 	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
 	CloudProvider     interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 
