@@ -316,7 +316,7 @@ apiVersions:
                   type: string
                   description: |
                     External network name for build DNAT rule for master node.
-                    The external network is the one connected to the Edge Gateway via an interface of type "uplink" or "external" and has an external (public) IP address.
+                    The external network is the one connected to the Edge Gateway via an interface of type "uplink" or "external" and has an external IP address.
                   minLength: 1
                   maxLength: 128
                 externalNetworkType:
@@ -333,7 +333,7 @@ apiVersions:
               - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
               - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
 
-            **Attention!** Using this option together with an Edge Gateway of type NSX-T implies that only one cluster should be deployed per VDC, because in this case all existing firewall rules will be overwritten.
+            **Attention!** Using this option together with an Edge Gateway of type NSX-T implies that only one cluster should be deployed per Edge Gateway, because in this case all existing firewall rules will be overwritten.
           x-doc-default: false
         mainNetwork:
           description: |
