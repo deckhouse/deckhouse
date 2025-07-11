@@ -1,0 +1,6 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test
+spec:
+  description: This is an example from the Deckhouse documentation.

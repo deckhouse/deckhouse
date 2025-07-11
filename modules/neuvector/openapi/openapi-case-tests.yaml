@@ -1,0 +1,10 @@
+positive:
+  values:
+    - {}
+  configValues:
+    - {}
+negative:
+  configValues:
+    - { somethingInConfig: yes }
+  values:
+    - { somethingInConfig: yes }

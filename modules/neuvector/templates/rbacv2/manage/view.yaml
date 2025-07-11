@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: neuvector
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-neuvector
+  name: d8:manage:permission:module:neuvector:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projects
+  - projecttemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - neuvector
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

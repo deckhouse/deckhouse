@@ -1,0 +1,18 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test
+spec:
+  description: This is an example from the Deckhouse documentation.
+  projectTemplateName: default
+  parameters:
+    extendedMonitoringEnabled: true
+    podSecurityProfile: Baseline
+    resourceQuota:
+      requests:
+        cpu: 1
+      limits:
+        memory: 15Gi
+    administrators:
+      - subject: User
+        name: user@gmail.com

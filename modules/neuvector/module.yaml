@@ -1,0 +1,8 @@
+name: neuvector
+weight: 820
+stage: "Preview"
+subsystems:
+  - deckhouse
+namespace: d8-neuvector
+requirements:
+  bootstrapped: true

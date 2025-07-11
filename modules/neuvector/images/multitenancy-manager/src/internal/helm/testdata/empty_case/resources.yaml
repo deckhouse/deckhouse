@@ -1,0 +1,13 @@
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: neuvector
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: ""
+  name: test
+spec: {}
+status: {}

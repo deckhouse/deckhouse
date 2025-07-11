@@ -1,0 +1,62 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-neuvector-artifact
+    add: /src/neuvector
+    to: /neuvector
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-neuvector-src-artifact
+    add: /src/templates
+    to: /templates
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-neuvector-src-artifact
+    add: /src/helmlib
+    to: /helmlib
+    before: setup
+imageSpec:
+  config:
+    entrypoint: [ "/neuvector" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-neuvector-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - '**/helmlib/*.yaml'
+      - '**/helmlib/*.tpl'
+      - '**/templates/*.yaml'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+        - '**/helmlib/*.yaml'
+        - '**/helmlib/*.tpl'
+        - '**/templates/*.yaml'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-neuvector-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-neuvector-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o neuvector ./cmd/main.go
+    - chown 64535:64535 neuvector
+    - chmod 0700 neuvector

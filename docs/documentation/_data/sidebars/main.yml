@@ -1515,6 +1515,31 @@ entries:
                     ru: Custom Resources
                   url: /modules/multitenancy-manager/cr.html
         - title:
+            en: NeuVector
+            ru: NeuVector
+          moduleName: neuvector
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/neuvector/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/neuvector/usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/neuvector/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/neuvector/cr.html
+        - title:
             en: Admission Policy
             ru: Политики безопасности
           moduleName: admission-policy-engine
