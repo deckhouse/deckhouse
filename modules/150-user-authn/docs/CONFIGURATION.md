@@ -42,32 +42,32 @@ spec:
           memory: "256Mi"
       kubeconfigGenerator:
         requests:
-          cpu: "15m"
-          memory: "40Mi"
+          cpu: "10m"
+          memory: "25Mi"
         limits:
-          cpu: "30m"
-          memory: "80Mi"
+          cpu: "100m"
+          memory: "100Mi"
       basicAuthProxy:
         requests:
           cpu: "10m"
-          memory: "30Mi"
+          memory: "25Mi"
         limits:
-          cpu: "25m"
-          memory: "60Mi"
+          cpu: "100m"
+          memory: "100Mi"
       dexAuthenticator:
         requests:
-          cpu: "15m"
-          memory: "40Mi"
+          cpu: "10m"
+          memory: "25Mi"
         limits:
-          cpu: "40m"
-          memory: "80Mi"
+          cpu: "100m"
+          memory: "100Mi"
       redis:
         requests:
           cpu: "10m"
-          memory: "30Mi"
+          memory: "25Mi"
         limits:
-          cpu: "20m"
-          memory: "50Mi"
+          cpu: "100m"
+          memory: "100Mi"
 ```
 
 **Note:** When Vertical Pod Autoscaler (VPA) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
