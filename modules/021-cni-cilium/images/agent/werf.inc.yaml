@@ -29,14 +29,6 @@
 {{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }}
 # shell-scripts dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }}
-# kmod and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
-# iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/ctstat /usr/sbin/rtstat" }}
-# ipset and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
 # clang dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
@@ -71,6 +63,14 @@
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
+# ipset and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ipset" }} ### test
+# kmod and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }} ### test
+# iproute2 and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ctstat /usr/sbin/rtstat" }} ### test
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
@@ -319,6 +319,54 @@ import:
   before: install
   add: /bin/mount
   to: /usr/bin/mount
+- image: tools/ipset
+  before: install
+  add: /usr/sbin/ipset
+  to: /sbin/ipset
+- image: tools/kmod
+  before: install
+  add: /bin/
+  to: /bin/
+  includePaths:
+  - kmod
+  - lsmod
+- image: tools/kmod
+  before: install
+  add: /bin/
+  to: /sbin/
+  includePaths:
+  - depmod
+  - insmod
+  - lsmod
+  - modinfo
+  - modprobe
+  - rmmod
+- image: tools/iproute2
+  before: install
+  add: /sbin/
+  to: /sbin/
+  includePaths:
+  - dcb
+  - devlink
+  - ip
+  - rdma
+  - rtmon
+  - tc
+  - vdpa
+- image: tools/iproute2
+  before: install
+  add: /sbin/
+  to: /usr/sbin/
+  includePaths:
+  - bridge
+  - genl
+  - lnstat
+  - nstat
+  - rtacct
+  - ss
+  - tipc
+  - ctstat
+  - rtstat
 git:
 {{- include "image mount points" . }}
 imageSpec:
