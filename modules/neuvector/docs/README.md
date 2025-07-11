@@ -1,8 +1,9 @@
 ---
 title: "Module neuvector"
-search: multitenancy
-description: Multitenancy and Projects in Kubernetes. The neuvector module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.
+search: neuvector
+description: The neuvector module in Deckhouse offers runtime protection, vulnerability management, and compliance monitoring for Kubernetes clusters.
 ---
+
 ## Description
 
 The `neuvector` module provides comprehensive container security throughout the DevOps lifecycle. It offers runtime protection, vulnerability management, and compliance monitoring for Kubernetes clusters.

@@ -1,7 +1,7 @@
 ---
 title: "Модуль neuvector"
-search: multitenancy
-description: Мультитенантность и проекты в Kubernetes. Модуль neuvector Deckhouse позволяет создавать проекты для различных команд разработки с возможностью последующего развертывания в них приложений.
+search: neuvector
+description: Модуль neuvector Deckhouse предлагает защиту времени выполнения, управление уязвимостями и мониторинг соответствия для кластеров Kubernetes.
 ---
 
 ## Описание
