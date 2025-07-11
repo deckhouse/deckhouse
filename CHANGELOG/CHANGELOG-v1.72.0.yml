@@ -1,0 +1,15 @@
+deckhouse-controller:
+  features:
+    - summary: Deckhouse deployment upgrades now use Patch instead of Update
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14311
+docs:
+  fixes:
+    - summary: Fix the documentation header.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14391
+testing:
+  features:
+    - summary: >-
+        Added a validation test to ensure all Go hook ScheduleConfigs have a non-empty crontab
+        value.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14318
+
