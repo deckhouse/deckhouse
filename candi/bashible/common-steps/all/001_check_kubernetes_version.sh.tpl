@@ -19,7 +19,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   currentVersion=$(kubelet --version |egrep -o "1.[0-9]+")
   desiredVersion={{ $kubernetesVersion }}
 
-  if [[ "${desiredVersion}" = "1.31" && [ -n "$currentVersion" ] && ("${currentVersion}" != "${desiredVersion}") ]]
+  if [[ "${desiredVersion}" = "1.31" && -n "$currentVersion" && ("${currentVersion}" != "${desiredVersion}") ]]
     then
       bb-deckhouse-get-disruptive-update-approval
   fi
