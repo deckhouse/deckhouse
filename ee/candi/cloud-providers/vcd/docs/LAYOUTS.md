@@ -37,6 +37,34 @@ masterNodeGroup:
 
 ## StandardWithNetwork
 
+When choosing this deployment scheme, you must ask your administrator for the type of network virtualization platform and specify it in the `edgeGateway.type` property. The deployment scheme supports `NSX-T` and `NSX-V`.
+
+If the Edge Gateway is provided by `NSX-V`, you must manually configure DHCP for the planned node network. Otherwise, nodes that are expected to obtain an address dynamically will not be able to do so.
+
+The deployment scheme assumes automated creation of NAT rules:
+- An SNAT rule for translating the addresses of the internal node network to the external address specified in the `edgeGateway.externalIP` property.
+- A DNAT rule for translating the external address and port, specified in the `edgeGateway.externalIP` and `edgeGateway.externalPort` properties, respectively, to the internal address of the first master node on port 22 using the `TCP` protocol for administrative access to the nodes via SSH.
+
+{% alert level="warning" %}
+The DNAT rule will only be created if the IP address of the first master node is set statically. Otherwise, you will need to create this rule manually.
+{% endalert %}
+
+{% alert level="warning" %}
+If the Edge Gateway is provided by `NSX-V`, you must specify the name and type of the network to which the rule will be bound in the `edgeGateway.NSX-V.externalNetworkName` and `edgeGateway.NSX-V.externalNetworkType` properties, respectively. Typically, this is a network connected to the Edge Gateway via an interface of type "uplink" or "external" and having an external IP address.
+{% endalert %}
+
+Additionally, you can enable the creation of default firewall rules using the `createDefaultFirewallRules` property.
+
+{% alert level="warning" %}
+If the Edge Gateway is provided by `NSX-T`, existing rules on the Edge Gateway will be overwritten. It is assumed that using this option implies that only one cluster will be deployed per Edge Gateway.
+{% endalert %}
+
+The following rules will be created:
+- Allow any outgoing traffic
+- Allow incoming traffic over the `TCP` protocol on port 22 to enable SSH access to the cluster nodes
+- Allow any incoming traffic over the `ICMP` protocol
+- Allow incoming traffic over the `TCP` and `UDP` protocols on ports 30000–32767 for NodePort usage
+
 Example of the layout configuration:
 
 ```yaml
