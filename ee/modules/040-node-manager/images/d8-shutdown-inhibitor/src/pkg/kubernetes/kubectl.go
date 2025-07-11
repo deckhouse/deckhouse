@@ -13,7 +13,7 @@ import (
 
 const KubectlPath = "/opt/deckhouse/bin/kubectl"
 const KubeConfigPath = "/etc/kubernetes/kubelet.conf"
-const CordonAnnotationKey = "cordoned-by"
+const CordonAnnotationKey = "node.deckhouse.io/cordoned-by"
 const CordonAnnotationValue = "shutdown-inhibitor"
 
 type Kubectl struct {
