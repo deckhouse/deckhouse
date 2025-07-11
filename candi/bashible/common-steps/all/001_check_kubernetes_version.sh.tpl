@@ -13,14 +13,10 @@
 # limitations under the License.
 
 {{- if eq .runType "Normal" }}
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 {{ $kubernetesVersion := .kubernetesVersion | toString }}
 
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-  currentVersion=$(kubectl_exec get no "$(D8_NODE_HOSTNAME)" -o json |jq -r '.status.nodeInfo.kubeletVersion' |sed -E "s/v([0-9]+[.][0-9]+)[.].+/\1/")
+  currentVersion=$(kubelet --version |egrep -o "1.[0-9]+")
   desiredVersion={{ $kubernetesVersion }}
 
   if [[ "${desiredVersion}" = "1.31" && [ -n "$currentVersion" ] && ("${currentVersion}" != "${desiredVersion}") ]]
