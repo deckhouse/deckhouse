@@ -94,10 +94,12 @@ spec:
         - name: config
           subPath: config.yaml
           mountPath: /app/config.yaml
+        {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
             {{- include "kubeconfig_generator_resources" . | nindent 12 }}
           limits:
             {{- include "kubeconfig_generator_limits" . | nindent 12 }}
+        {{- end }}
 {{- end }}

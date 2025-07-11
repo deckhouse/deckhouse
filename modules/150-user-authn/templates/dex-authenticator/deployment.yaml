@@ -225,12 +225,14 @@ spec:
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
+        {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
             {{- include "dex_authenticator_resources" $context | nindent 12 }}
           limits:
             {{- include "dex_authenticator_limits" $context | nindent 12 }}
+        {{- end }}
         ports:
         - name: dex-https
           containerPort: 8443
