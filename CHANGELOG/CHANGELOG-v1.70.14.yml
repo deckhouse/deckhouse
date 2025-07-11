@@ -1,0 +1,5 @@
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix virtualMachineClassName in terraform
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14251
+
