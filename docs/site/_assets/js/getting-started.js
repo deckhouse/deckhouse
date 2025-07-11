@@ -1,4 +1,4 @@
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
     var $parent = $(this).closest('[data-features-tabs]');
