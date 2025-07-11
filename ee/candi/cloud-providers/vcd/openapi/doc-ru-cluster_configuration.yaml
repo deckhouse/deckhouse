@@ -165,7 +165,7 @@ apiVersions:
                 externalNetworkName:
                   description: |
                     Имя внешней сети для создания правила DNAT для мастер-узла.
-                    Внешняя сеть — это сеть, подключённая к Edge Gateway через интерфейс с типом "uplink" или "external" и имеющая внешний IP-адрес.
+                    Внешняя сеть — это сеть, подключённая к Edge Gateway в разделе `Gateway Interface` и имеющая внешний IP-адрес.
                 externalNetworkType:
                   description: |
                     Тип внешней сети для создания правила DNAT для мастер-узла (один из "org" или "ext").
