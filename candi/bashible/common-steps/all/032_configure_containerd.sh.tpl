@@ -459,13 +459,13 @@ check_additional_configs() {
     for path in ${full_conf_path}/*.toml; do
       if [ "$ctrd_version" = "v1" ]; then
         if bb-ctrd-v1-has-registry-fields "${path}"; then
-          >&2 echo "Failed to merge $path: config contains custom registry fields"
+          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
           exit 1
         fi
       fi
       if [ "$ctrd_version" = "v2" ]; then
         if bb-ctrd-v2-has-registry-fields "${path}"; then
-          >&2 echo "Failed to merge $path: config contains custom registry fields"
+          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
           exit 1
         fi
       fi
