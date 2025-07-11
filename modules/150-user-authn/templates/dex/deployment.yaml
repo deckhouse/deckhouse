@@ -8,6 +8,11 @@ cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "250m" }}
 memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "256Mi" }}
 {{- end }}
 
+{{- define "dex_vpa_min_resources" }}
+cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "10m" }}
+memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "25Mi" }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -26,8 +31,9 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: dex
+      controlledValues: RequestsOnly
       minAllowed:
-        {{- include "dex_resources" . | nindent 8 }}
+        {{- include "dex_vpa_min_resources" . | nindent 8 }}
       maxAllowed:
         {{- include "dex_limits" . | nindent 8 }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
@@ -112,11 +118,17 @@ spec:
             path: /healthz/live
             port: 5559
             scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex/config
@@ -181,8 +193,14 @@ spec:
             path: /healthz/live
             port: 5559
             scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
