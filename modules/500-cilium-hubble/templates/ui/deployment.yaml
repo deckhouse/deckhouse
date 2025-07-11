@@ -87,7 +87,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
+              command: ["/usr/sbin/nginx", "-s", "quit"]
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -96,7 +96,7 @@ spec:
 {{- end }}
         volumeMounts:
         - name: hubble-ui-nginx-conf
-          mountPath: /opt/nginx-static/conf/nginx.conf
+          mountPath: /usr/conf/nginx.conf
           subPath: nginx.conf
         - name: tmp
           mountPath: /tmp
