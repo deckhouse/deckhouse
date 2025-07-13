@@ -230,7 +230,7 @@ apiVersions:
 
               For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
 
-              > **Caution.** You must fill in the parameter with a list of subnets that are used in the cluster.
+              > **Caution.** Specify the list of subnets that are used on the nodes..
             type: array
             items:
               type: string
