@@ -125,14 +125,23 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
 
+	fmt.Fprintln(os.Stderr, "Locked debug log writer. Send signal to finish monitor")
+
 	ch <- struct{}{}
+
+	fmt.Fprintln(os.Stderr, "Locked debug log writer. Close channel to finish monitor")
+
 	close(ch)
+
+	fmt.Fprintln(os.Stderr, "Locked debug log writer. Closed channel to finish monitor. Defer to unlock")
 
 	defer func() {
 		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
 		w.m.Unlock()
 		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
 	}()
+
+	fmt.Fprintln(os.Stderr, "Locked debug log writer. Declare lines variable")
 
 	var lines []string
 
