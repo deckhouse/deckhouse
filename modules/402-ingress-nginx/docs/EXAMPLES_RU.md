@@ -183,7 +183,7 @@ metallb:
        annotations:
          # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-     # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же нодах, что и поды MetalLB speaker.
+     # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же узлах, что и поды MetalLB speaker.
      nodeSelector:
         node-role.kubernetes.io/loadbalancer: ""
      tolerations:
