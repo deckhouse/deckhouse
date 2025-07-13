@@ -1,0 +1,355 @@
+Subject: [PATCH] ++
+---
+Index: cluster-autoscaler/expander/expander.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/expander.go b/cluster-autoscaler/expander/expander.go
+--- a/cluster-autoscaler/expander/expander.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/expander.go	(date 1752428962364)
+@@ -54,9 +54,11 @@
+ // Strategy describes an interface for selecting the best option when scaling up
+ type Strategy interface {
+ 	BestOption(options []Option, nodeInfo map[string]*schedulerframework.NodeInfo) *Option
++	Name() string
+ }
+
+ // Filter describes an interface for filtering to equally good options according to some criteria
+ type Filter interface {
+ 	BestOptions(options []Option, nodeInfo map[string]*schedulerframework.NodeInfo) []Option
++	Name() string
+ }
+Index: cluster-autoscaler/expander/leastnodes/leastnodes.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/leastnodes/leastnodes.go b/cluster-autoscaler/expander/leastnodes/leastnodes.go
+--- a/cluster-autoscaler/expander/leastnodes/leastnodes.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/leastnodes/leastnodes.go	(date 1752428507483)
+@@ -31,6 +31,10 @@
+ 	return &leastnodes{}
+ }
+
++func (m *leastnodes) Name() string {
++	return "leastnodes"
++}
++
+ // BestOptions selects the expansion option that uses the least number of nodes
+ func (m *leastnodes) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	leastNodes := math.MaxInt
+Index: cluster-autoscaler/expander/factory/chain.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/factory/chain.go b/cluster-autoscaler/expander/factory/chain.go
+--- a/cluster-autoscaler/expander/factory/chain.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/factory/chain.go	(date 1752429115380)
+@@ -18,6 +18,7 @@
+
+ import (
+ 	"k8s.io/autoscaler/cluster-autoscaler/expander"
++	"k8s.io/klog/v2"
+
+ 	schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
+ )
+@@ -34,13 +35,30 @@
+ 	}
+ }
+
++func (c *chainStrategy) Name() string {
++	return "chain"
++}
++
+ func (c *chainStrategy) BestOption(options []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) *expander.Option {
++	klog.V(1).Infof("BestOption for chain strategy call with options: %v", options)
++	defer klog.V(1).Info("BestOption for chain strategy called")
++
+ 	filteredOptions := options
+ 	for _, filter := range c.filters {
++		klog.V(1).Infof("try to BestOption filter: %s", filter.Name())
+ 		filteredOptions = filter.BestOptions(filteredOptions, nodeInfo)
+ 		if len(filteredOptions) == 1 {
++			klog.V(1).Infof("filtered options for filter %s is %v", filter.Name(), filteredOptions)
+ 			return &filteredOptions[0]
+ 		}
++		klog.V(1).Infof("BestOption for filter %s not found. try to next", filter.Name())
+ 	}
+-	return c.fallback.BestOption(filteredOptions, nodeInfo)
++
++	klog.V(1).Infof("filtered options for filters not found. try to fallback to filter %s with options %v", c.fallback.Name(), filteredOptions)
++
++	res := c.fallback.BestOption(filteredOptions, nodeInfo)
++
++	klog.V(1).Infof("fallback filter %s returns options %v", c.fallback.Name(), res)
++
++	return res
+ }
+Index: cluster-autoscaler/expander/factory/chain_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/factory/chain_test.go b/cluster-autoscaler/expander/factory/chain_test.go
+--- a/cluster-autoscaler/expander/factory/chain_test.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/factory/chain_test.go	(date 1752428709208)
+@@ -35,6 +35,10 @@
+ 	}
+ }
+
++func (s *substringTestFilterStrategy) Name() string {
++	return "substringTestFilterStrategy"
++}
++
+ func (s *substringTestFilterStrategy) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	var ret []expander.Option
+ 	for _, option := range expansionOptions {
+Index: cluster-autoscaler/expander/waste/waste.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/waste/waste.go b/cluster-autoscaler/expander/waste/waste.go
+--- a/cluster-autoscaler/expander/waste/waste.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/waste/waste.go	(date 1752428532996)
+@@ -32,6 +32,10 @@
+ 	return &leastwaste{}
+ }
+
++func (l *leastwaste) Name() string {
++	return "leastwaste"
++}
++
+ // BestOption Finds the option that wastes the least fraction of CPU and Memory
+ func (l *leastwaste) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	var leastWastedScore float64
+Index: cluster-autoscaler/expander/grpcplugin/grpc_client.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/grpcplugin/grpc_client.go b/cluster-autoscaler/expander/grpcplugin/grpc_client.go
+--- a/cluster-autoscaler/expander/grpcplugin/grpc_client.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/grpcplugin/grpc_client.go	(date 1752428507470)
+@@ -72,6 +72,10 @@
+ 	return protos.NewExpanderClient(conn)
+ }
+
++func (g *grpcclientstrategy) Name() string {
++	return "grpcplugin"
++}
++
+ func (g *grpcclientstrategy) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	if g.grpcClient == nil {
+ 		klog.Errorf("Incorrect gRPC client config, filtering no options")
+Index: cluster-autoscaler/expander/price/price.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/price/price.go b/cluster-autoscaler/expander/price/price.go
+--- a/cluster-autoscaler/expander/price/price.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/price/price.go	(date 1752428595520)
+@@ -86,6 +86,10 @@
+ 	}
+ }
+
++func (p *priceBased) Name() string {
++	return "priceBased"
++}
++
+ // BestOption selects option based on cost and preferred node type.
+ func (p *priceBased) BestOptions(expansionOptions []expander.Option, nodeInfos map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	var bestOptions []expander.Option
+Index: cluster-autoscaler/loop/run.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/loop/run.go b/cluster-autoscaler/loop/run.go
+--- a/cluster-autoscaler/loop/run.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/loop/run.go	(date 1752429972231)
+@@ -17,6 +17,7 @@
+ package loop
+
+ import (
++	"k8s.io/klog/v2"
+ 	"time"
+
+ 	"k8s.io/autoscaler/cluster-autoscaler/metrics"
+@@ -33,6 +34,8 @@
+ 	metrics.UpdateLastTime(metrics.Main, loopStart)
+ 	healthCheck.UpdateLastActivity(loopStart)
+
++	klog.V(1).Infof("autoscaler.RunOnce call")
++
+ 	err := autoscaler.RunOnce(loopStart)
+ 	if err != nil && err.Type() != errors.TransientError {
+ 		metrics.RegisterError(err)
+Index: cluster-autoscaler/expander/mostpods/mostpods.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/mostpods/mostpods.go b/cluster-autoscaler/expander/mostpods/mostpods.go
+--- a/cluster-autoscaler/expander/mostpods/mostpods.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/mostpods/mostpods.go	(date 1752428560529)
+@@ -29,6 +29,10 @@
+ 	return &mostpods{}
+ }
+
++func (m *mostpods) Name() string {
++	return "mostpods"
++}
++
+ // BestOptions selects the expansion option that schedules the most pods
+ func (m *mostpods) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	var maxPods int
+Index: cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go b/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go
+--- a/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go	(date 1752429207960)
+@@ -177,6 +177,7 @@
+ 	// Pick some expansion option.
+ 	bestOption := o.autoscalingContext.ExpanderStrategy.BestOption(options, nodeInfos)
+ 	if bestOption == nil || bestOption.NodeCount <= 0 {
++		klog.V(1).Infof("ExpanderStrategy besttoption is nil or NodeCount <=0 %v", bestOption)
+ 		return &status.ScaleUpStatus{
+ 			Result:                  status.ScaleUpNoOptionsAvailable,
+ 			PodsRemainUnschedulable: GetRemainingPods(podEquivalenceGroups, skippedNodeGroups),
+Index: cluster-autoscaler/expander/factory/expander_factory.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/factory/expander_factory.go b/cluster-autoscaler/expander/factory/expander_factory.go
+--- a/cluster-autoscaler/expander/factory/expander_factory.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/factory/expander_factory.go	(date 1752428178293)
+@@ -57,6 +57,8 @@
+ 	seenExpanders := map[string]struct{}{}
+ 	strategySeen := false
+ 	for i, name := range names {
++		klog.V(1).Infof("Expander strategy name for build %s", name)
++
+ 		if _, ok := seenExpanders[name]; ok {
+ 			return nil, errors.NewAutoscalerError(errors.InternalError, "Expander %s was specified multiple times, each expander must not be specified more than once", name)
+ 		}
+Index: cluster-autoscaler/expander/random/random.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/random/random.go b/cluster-autoscaler/expander/random/random.go
+--- a/cluster-autoscaler/expander/random/random.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/random/random.go	(date 1752428662810)
+@@ -36,6 +36,10 @@
+ 	return &random{}
+ }
+
++func (r *random) Name() string {
++	return "random"
++}
++
+ // BestOptions selects from the expansion options at random
+ func (r *random) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+ 	best := r.BestOption(expansionOptions, nodeInfo)
+Index: cluster-autoscaler/core/static_autoscaler.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/static_autoscaler.go b/cluster-autoscaler/core/static_autoscaler.go
+--- a/cluster-autoscaler/core/static_autoscaler.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/core/static_autoscaler.go	(date 1752430098074)
+@@ -294,6 +294,8 @@
+
+ // RunOnce iterates over node groups and scales them up/down if necessary
+ func (a *StaticAutoscaler) RunOnce(currentTime time.Time) caerrors.AutoscalerError {
++	klog.V(1).Infof("StaticAutoscaler RunOnce call...")
++
+ 	a.cleanUpIfRequired()
+ 	a.processorCallbacks.reset()
+ 	a.clusterStateRegistry.PeriodicCleanup()
+@@ -528,6 +530,8 @@
+ 	// finally, filter out pods that are too "young" to safely be considered for a scale-up (delay is configurable)
+ 	unschedulablePodsToHelp = a.filterOutYoungPods(unschedulablePodsToHelp, currentTime)
+ 	preScaleUp := func() time.Time {
++		klog.V(1).Infof("Pre scale up run")
++		defer klog.V(1).Infof("Pre scale up ran")
+ 		scaleUpStart := time.Now()
+ 		metrics.UpdateLastTime(metrics.ScaleUp, scaleUpStart)
+ 		return scaleUpStart
+Index: cluster-autoscaler/main.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/main.go b/cluster-autoscaler/main.go
+--- a/cluster-autoscaler/main.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/main.go	(date 1752429913549)
+@@ -469,6 +469,8 @@
+ 	// Create basic config from flags.
+ 	autoscalingOptions := createAutoscalingOptions()
+
++	klog.V(1).Infof("Expanders: %s", autoscalingOptions.ExpanderNames)
++
+ 	autoscalingOptions.KubeClientOpts.KubeClientBurst = int(*kubeClientBurst)
+ 	autoscalingOptions.KubeClientOpts.KubeClientQPS = float32(*kubeClientQPS)
+ 	kubeClient := kube_util.CreateKubeClient(autoscalingOptions.KubeClientOpts)
+@@ -609,6 +611,7 @@
+ }
+
+ func run(healthCheck *metrics.HealthCheck, debuggingSnapshotter debuggingsnapshot.DebuggingSnapshotter) {
++	klog.V(1).Info("Run autoscaler")
+ 	metrics.RegisterAll(*emitPerNodeGroupMetrics)
+
+ 	autoscaler, err := buildAutoscaler(debuggingSnapshotter)
+@@ -631,17 +634,23 @@
+ 	context, cancel := ctx.WithCancel(ctx.Background())
+ 	defer cancel()
+ 	if *frequentLoopsEnabled {
++		klog.V(1).Infof("Starting frequent loops on autoscaler")
+ 		podObserver := loop.StartPodObserver(context, kube_util.CreateKubeClient(createAutoscalingOptions().KubeClientOpts))
+ 		trigger := loop.NewLoopTrigger(podObserver, autoscaler, *scanInterval)
+ 		lastRun := time.Now()
+ 		for {
++			klog.V(1).Infof("trigger.Wait call with %v", lastRun)
+ 			trigger.Wait(lastRun)
+ 			lastRun = time.Now()
++			klog.V(1).Infof("loop.RunAutoscalerOnce call with %v", lastRun)
+ 			loop.RunAutoscalerOnce(autoscaler, healthCheck, lastRun)
+ 		}
+ 	} else {
++		klog.V(1).Infof("Starting simple loops on autoscaler")
+ 		for {
++			klog.V(1).Infof("Sleep before next run %v", *scanInterval)
+ 			time.Sleep(*scanInterval)
++			klog.V(1).Infof("loop.RunAutoscalerOnce call")
+ 			loop.RunAutoscalerOnce(autoscaler, healthCheck, time.Now())
+ 		}
+ 	}
+Index: cluster-autoscaler/expander/priority/priority.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/expander/priority/priority.go b/cluster-autoscaler/expander/priority/priority.go
+--- a/cluster-autoscaler/expander/priority/priority.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/expander/priority/priority.go	(date 1752428631285)
+@@ -58,6 +58,10 @@
+ 	return res
+ }
+
++func (p *priority) Name() string {
++	return "priority"
++}
++
+ func (p *priority) reloadConfigMap() (priorities, *apiv1.ConfigMap, error) {
+ 	cm, err := p.configMapLister.Get(PriorityConfigMapName)
+ 	if err != nil {
