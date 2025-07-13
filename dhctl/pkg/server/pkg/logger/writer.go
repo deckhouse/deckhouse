@@ -20,6 +20,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/linkdata/deadlock"
 )
@@ -84,6 +85,12 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	if deadlock.Enabled {
+		fmt.Fprintf(os.Stderr, "Deadlock detect enabled\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "Deadlock detect disabled\n")
+	}
+
 	fmt.Fprintln(os.Stderr, "---Gorutines in running---")
 	// 10 mb
 	buf := make([]byte, 10485760)  // Allocate a buffer for the stack trace
@@ -93,8 +100,34 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 
 	buf = nil
 
+	ch := make(chan struct{})
+
+	go func() {
+		fmt.Fprintln(os.Stderr, "Starting profiling mutexes")
+		ticker := time.NewTicker(1 * time.Second)
+		select {
+		case <-ticker.C:
+			fmt.Fprintln(os.Stderr, "Next tick for profiling mutexes")
+			r := make([]runtime.BlockProfileRecord, 1000)
+			l, ok := runtime.MutexProfile(r)
+			fmt.Fprintf(os.Stderr, "MutexProfile got is = %v; len = %d\n", ok, l)
+			for i := 0; i < l; i++ {
+				r[i].Stack()
+				fmt.Fprintf(os.Stderr, "MutexProfile %d: count: %d; cycles: %d", i, r[i].Count, r[i].Cycles)
+			}
+			r = nil
+		case <-ch:
+			fmt.Fprintln(os.Stderr, "Finish profiling mutexes")
+			return
+		}
+	}()
+
 	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
+
+	ch <- struct{}{}
+	close(ch)
+
 	defer func() {
 		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
 		w.m.Unlock()

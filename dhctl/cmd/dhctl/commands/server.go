@@ -31,6 +31,7 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		runtime.SetMutexProfileFraction(5)
 
 		if deadlock.Enabled {
 			fmt.Fprintf(os.Stderr, "Deadlock detect enabled\n")
