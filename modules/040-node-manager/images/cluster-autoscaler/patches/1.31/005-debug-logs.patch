@@ -360,7 +360,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go b/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go
 --- a/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
-+++ b/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go	(date 1752436567729)
++++ b/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go	(date 1752437915516)
 @@ -73,6 +73,8 @@
 
  // Process returns the nodeInfos set for this cluster
@@ -491,7 +491,7 @@ diff --git a/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_pro
 
  func isNodeGoodTemplateCandidate(node *apiv1.Node, now time.Time) bool {
  	ready, lastTransitionTime, _ := kube_util.GetReadinessState(node)
-+	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s ready = %v; lastTransitionTime = %V; now = %v", node.Name, lastTransitionTime, now)
++	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s ready = %v; lastTransitionTime = %v; now = %v", node.Name, ready, lastTransitionTime, now)
  	stable := lastTransitionTime.Add(stabilizationDelay).Before(now)
 +	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s stable = %v", node.Name, stable)
  	schedulable := !node.Spec.Unschedulable
