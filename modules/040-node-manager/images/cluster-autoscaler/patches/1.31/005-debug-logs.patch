@@ -353,3 +353,148 @@ diff --git a/cluster-autoscaler/expander/priority/priority.go b/cluster-autoscal
  func (p *priority) reloadConfigMap() (priorities, *apiv1.ConfigMap, error) {
  	cm, err := p.configMapLister.Get(PriorityConfigMapName)
  	if err != nil {
+Index: cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go b/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go
+--- a/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
++++ b/cluster-autoscaler/processors/nodeinfosprovider/mixed_nodeinfos_processor.go	(date 1752436567729)
+@@ -73,6 +73,8 @@
+
+ // Process returns the nodeInfos set for this cluster
+ func (p *MixedTemplateNodeInfoProvider) Process(ctx *context.AutoscalingContext, nodes []*apiv1.Node, daemonsets []*appsv1.DaemonSet, taintConfig taints.TaintConfig, now time.Time) (map[string]*schedulerframework.NodeInfo, errors.AutoscalerError) {
++	klog.V(1).Info("Starting rocessing Mixed Template NodeInfos Provider")
++	defer klog.V(1).Info("Finish rocessing Mixed Template NodeInfos Provider")
+ 	// TODO(mwielgus): This returns map keyed by url, while most code (including scheduler) uses node.Name for a key.
+ 	// TODO(mwielgus): Review error policy - sometimes we may continue with partial errors.
+ 	result := make(map[string]*schedulerframework.NodeInfo)
+@@ -93,12 +95,15 @@
+ 			return false, "", nil
+ 		}
+ 		id := nodeGroup.Id()
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s got node group %s", node.Name, id)
+ 		if _, found := result[id]; !found {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s not found in results", id)
+ 			// Build nodeInfo.
+ 			sanitizedNode, err := utils.SanitizeNode(node, id, taintConfig)
+ 			if err != nil {
+ 				return false, "", err
+ 			}
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s sanitized node name %s", node.Name, sanitizedNode.Name)
+ 			nodeInfo, err := simulator.BuildNodeInfoForNode(sanitizedNode, podsForNodes[node.Name], daemonsets, p.forceDaemonSets)
+ 			if err != nil {
+ 				return false, "", err
+@@ -109,17 +114,27 @@
+ 				pods = append(pods, podInfo.Pod)
+ 			}
+
++			podNames := make([]string, len(pods))
++			for _, pod := range pods {
++				podNames = append(podNames, pod.Name)
++			}
++
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s/%s nodeInfo pods %v", node.Name, sanitizedNode.Name, podNames)
++
+ 			sanitizedNodeInfo := schedulerframework.NewNodeInfo(utils.SanitizePods(pods, sanitizedNode)...)
+ 			sanitizedNodeInfo.SetNode(sanitizedNode)
+ 			result[id] = sanitizedNodeInfo
+ 			return true, id, nil
+ 		}
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s found in results", id)
+ 		return false, "", nil
+ 	}
+
+ 	for _, node := range nodes {
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: Processing node %s", node.Name)
+ 		// Broken nodes might have some stuff missing. Skipping.
+ 		if !isNodeGoodTemplateCandidate(node, now) {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: node %s is no good template candidate", node.Name)
+ 			continue
+ 		}
+ 		added, id, typedErr := processNode(node)
+@@ -129,22 +144,29 @@
+ 		if added && p.nodeInfoCache != nil {
+ 			nodeInfoCopy := utils.DeepCopyNodeInfo(result[id])
+ 			p.nodeInfoCache[id] = cacheItem{NodeInfo: nodeInfoCopy, added: time.Now()}
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: node %s added in cache", node.Name)
+ 		}
+ 	}
+ 	for _, nodeGroup := range ctx.CloudProvider.NodeGroups() {
+ 		id := nodeGroup.Id()
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s", id)
+ 		seenGroups[id] = true
+ 		if _, found := result[id]; found {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s found in result", id)
+ 			continue
+ 		}
+
+ 		// FORK-CHANGE: No good template, check cache of previously running nodes(only when nodeGrp min size is not zero. This is to avoid scenarios where nodeGrp instanceType is updated,
+ 		// but still cached old nodeTemplate is used)
+ 		if p.nodeInfoCache != nil && nodeGroup.MinSize() != 0 {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s. nodegroupCache is and minSize %d", id, nodeGroup.MinSize())
+ 			if cacheItem, found := p.nodeInfoCache[id]; found {
++				klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s. nodegroup found in cache", id)
+ 				if p.isCacheItemExpired(cacheItem.added) {
++					klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s. nodegroup found in cache and cache is expired, delete from cache", id)
+ 					delete(p.nodeInfoCache, id)
+ 				} else {
++					klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s. nodegroup found in cache and cache is not expired, add in results", id)
+ 					result[id] = utils.DeepCopyNodeInfo(cacheItem.NodeInfo)
+ 					continue
+ 				}
+@@ -162,20 +184,25 @@
+ 				return map[string]*schedulerframework.NodeInfo{}, errors.ToAutoscalerError(errors.CloudProviderError, err)
+ 			}
+ 		}
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: process nodegroup %s. nodegroup add in result", id)
+ 		result[id] = nodeInfo
+ 	}
+
+ 	// Remove invalid node groups from cache
+ 	for id := range p.nodeInfoCache {
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: probe cache for %s", id)
+ 		if _, ok := seenGroups[id]; !ok {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: delete from cache %s", id)
+ 			delete(p.nodeInfoCache, id)
+ 		}
+ 	}
+
+ 	// Last resort - unready/unschedulable nodes.
+ 	for _, node := range nodes {
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: last report %s", node.Name)
+ 		// Allowing broken nodes
+ 		if isNodeGoodTemplateCandidate(node, now) {
++			klog.V(1).Infof("MixedTemplateNodeInfoProvider: last report %s is not good template", node.Name)
+ 			continue
+ 		}
+ 		added, _, typedErr := processNode(node)
+@@ -190,6 +217,16 @@
+ 		if added {
+ 			klog.Warningf("Built template for %s based on unready/unschedulable node %s", nodeGroup.Id(), node.Name)
+ 		}
++
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: last report %s not added", node.Name)
++	}
++
++	for id, info := range result {
++		podNames := make([]string, len(info.Pods))
++		for _, pod := range info.Pods {
++			podNames = append(podNames, pod.Pod.Name)
++		}
++		klog.V(1).Infof("MixedTemplateNodeInfoProvider: result for ng %s, node = %s, pods = %v", id, info.Node().Name, podNames)
+ 	}
+
+ 	return result, nil
+@@ -210,7 +247,10 @@
+
+ func isNodeGoodTemplateCandidate(node *apiv1.Node, now time.Time) bool {
+ 	ready, lastTransitionTime, _ := kube_util.GetReadinessState(node)
++	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s ready = %v; lastTransitionTime = %V; now = %v", node.Name, lastTransitionTime, now)
+ 	stable := lastTransitionTime.Add(stabilizationDelay).Before(now)
++	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s stable = %v", node.Name, stable)
+ 	schedulable := !node.Spec.Unschedulable
++	klog.V(1).Infof("isNodeGoodTemplateCandidate: node %s schedulable = %v", node.Name, schedulable)
+ 	return ready && stable && schedulable
+ }
