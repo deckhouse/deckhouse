@@ -118,7 +118,7 @@ internalNetworkCIDR: 192.168.199.0/24
 mainNetwork: internal
 edgeGateway:
   name: "edge-gateway-01"
-  type: "NSX-T"
+  type: "NSX-V"
   externalIP: 10.0.0.1
   externalPort: 10022
   NSX-V:
