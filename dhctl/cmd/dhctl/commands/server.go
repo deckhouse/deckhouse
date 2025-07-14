@@ -16,14 +16,16 @@ package commands
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 
-	"github.com/linkdata/deadlock"
+	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
 func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -33,25 +35,13 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		runtime.SetMutexProfileFraction(5)
 
-		if deadlock.Enabled {
-			fmt.Fprintf(os.Stderr, "Deadlock detect enabled\n")
-		} else {
-			fmt.Fprintf(os.Stderr, "Deadlock detect disabled\n")
-		}
-
-		deadlock.Opts.OnPotentialDeadlock = func() {
-			fmt.Fprintf(os.Stderr, "Deadlock detected\n")
-			fmt.Fprintln(os.Stderr, "---Potential gorutines deadlock---")
-			// 10 mb
-			buf := make([]byte, 10485760)  // Allocate a buffer for the stack trace
-			nn := runtime.Stack(buf, true) // Pass 'true' to get all goroutine stack traces
-			fmt.Fprintf(os.Stderr, "%s\n", string(buf[:nn]))
-			fmt.Fprintln(os.Stderr, "---")
-
-			buf = nil
-		}
-
-		deadlock.Opts.LogBuf = os.Stderr
+		go func() {
+			fmt.Println("booting on localhost:7550")
+			err := http.ListenAndServe(":7550", nil)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+			}
+		}()
 
 		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
 	})

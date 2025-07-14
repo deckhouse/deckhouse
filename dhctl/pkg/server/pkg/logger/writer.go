@@ -21,8 +21,6 @@ import (
 	"runtime"
 	"sync"
 	"time"
-
-	"github.com/linkdata/deadlock"
 )
 
 type LogWriter[T any] struct {
@@ -74,7 +72,7 @@ func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
 type DebugLogWriter struct {
 	l *slog.Logger
 
-	m    deadlock.Mutex
+	m    sync.Mutex
 	prev []byte
 }
 
@@ -85,12 +83,6 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
-	if deadlock.Enabled {
-		fmt.Fprintf(os.Stderr, "Deadlock detect enabled\n")
-	} else {
-		fmt.Fprintf(os.Stderr, "Deadlock detect disabled\n")
-	}
-
 	fmt.Fprintln(os.Stderr, "---Gorutines in running---")
 	// 10 mb
 	buf := make([]byte, 10485760)  // Allocate a buffer for the stack trace
