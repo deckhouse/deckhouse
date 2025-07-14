@@ -303,7 +303,7 @@ properties:
         description: |
           Registry mode
         enum: [Unmanaged, Direct]
-        x-doc-default: Direct
+        x-doc-default: Unmanaged
         default: Unmanaged
       direct:
         type: object
