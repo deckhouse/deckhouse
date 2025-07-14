@@ -176,7 +176,7 @@ apiVersions:
 
           The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` for all cluster nodes and Deckhouse components. This will result in HTTP(S) requests (curl, git, registry, etc.) to all resources not listed in the `noProxy` parameter being made through a proxy. Note that the `podSubnetCIDR` and `serviceSubnetCIDR` subnets, as well as the `clusterDomain` domain are added to `noProxy` automatically.
 
-          > **Caution!** To avoid interfering with internal requests, make sure you list all the host subnets in the `noProxy` parameter.
+          > **Caution!** To avoid using proxies in requests between pods and services located in the cluster node network, make sure you list all the host subnets in the `noProxy` parameter.
         additionalProperties: false
         properties:
           httpProxy:
@@ -230,7 +230,7 @@ apiVersions:
 
               For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
 
-              > **Caution.** Specify the list of subnets that are used on the nodes.
+              > **Caution.** If the cluster is supposed to have pods interacting with services located in the cluster node network, then specify the list of subnets that are used on the nodes.
             type: array
             items:
               type: string
