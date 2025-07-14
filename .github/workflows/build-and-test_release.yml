@@ -588,7 +588,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -912,7 +912,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1236,7 +1236,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1548,7 +1548,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1860,7 +1860,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -2172,7 +2172,7 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=5 --verbose \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
