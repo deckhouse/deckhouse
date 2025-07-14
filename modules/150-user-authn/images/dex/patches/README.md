@@ -20,3 +20,10 @@ To avoid this, this patch makes refresh requests to declare and utilize their ow
 ### 004-static-user-groups.patch
 
 Adding group entity to kubernetes authentication.
+
+### 005-2fa.patch
+
+This patch adds support for two-factor authentication (2FA) in Dex. 
+It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
+
+Upstream PR: https://github.com/dexidp/dex/pull/3712

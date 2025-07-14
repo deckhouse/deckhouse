@@ -352,6 +352,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 		"nodeFeatureDiscovery":     "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nvidiaDcgm":               "imageHash-nodeManager-nvidiaDcgm",
+		"nvidiaDcgmExporter":       "imageHash-nodeManager-nvidiaDcgmExporter",
 		"nvidiaDevicePlugin":       "imageHash-nodeManager-nvidiaDevicePlugin",
 		"nvidiaMigManager129":      "imageHash-nodeManager-nvidiaMigManager129",
 		"nvidiaMigManager130":      "imageHash-nodeManager-nvidiaMigManager130",
@@ -403,6 +405,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
 		"containerd1727":                  "imageHash-registrypackages-containerd1727",
+		"containerd213":                   "imageHash-registrypackages-containerd213",
 		"crictl129":                       "imageHash-registrypackages-crictl129",
 		"crictl130":                       "imageHash-registrypackages-crictl130",
 		"crictl131":                       "imageHash-registrypackages-crictl131",
@@ -419,6 +422,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ecrCredentialProvider131":        "imageHash-registrypackages-ecrCredentialProvider131",
 		"ecrCredentialProvider132":        "imageHash-registrypackages-ecrCredentialProvider132",
 		"ecrCredentialProvider133":        "imageHash-registrypackages-ecrCredentialProvider133",
+		"erofs":                           "imageHash-registrypackages-erofs",
 		"growpart033":                     "imageHash-registrypackages-growpart033",
 		"iptables189":                     "imageHash-registrypackages-iptables189",
 		"jq171":                           "imageHash-registrypackages-jq171",
@@ -449,6 +453,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
+		"yq4451":                          "imageHash-registrypackages-yq4451",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":            "imageHash-runtimeAuditEngine-falco",
