@@ -30,7 +30,7 @@ DKP запускает регулярное сканирование всех к
 Чтобы снова включить сканирование для пространства имён `default`, добавьте для него лейбл следующей командой:
 
 ```shell
-kubectl label namespace default security-scanning.deckhouse.io/enabled=""
+d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 ```
 
 ## Повторное сканирование
@@ -51,7 +51,7 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
   Пример команды:
 
   ```shell
-  kubectl annotate VulnerabilityReport -n <NAMESPACE> <REPORT_NAME> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
+  d8 k annotate VulnerabilityReport -n <NAMESPACE> <REPORT_NAME> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
   ```
 
 - Удалите объект VulnerabilityReport из пространства имён, где находится просканированный ресурс.
@@ -59,7 +59,7 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
   Пример команды:
 
   ```shell
-  kubectl delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
+  d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
 
 ## Просмотр результатов CIS compliance-проверки
@@ -67,7 +67,7 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 - Чтобы вывести все ресурсы, которые не прошли проверку:
 
   ```shell
-  kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
     jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
   ```
 
@@ -75,7 +75,7 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 
   ```shell
   check_id="5.7.3"
-  kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
     jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
   ```
 
@@ -83,6 +83,6 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 
   ```shell
   check_desc="Apply Security Context to Your Pods and Containers"
-  kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
     jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
   ```

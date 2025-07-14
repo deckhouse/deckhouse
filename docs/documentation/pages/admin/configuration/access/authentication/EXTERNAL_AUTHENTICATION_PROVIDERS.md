@@ -7,12 +7,16 @@ Connecting an external authentication provider allows you to use a single set of
 
 DKP supports integration with the following external authentication providers and protocols:
 
-- [LDAP (e.g., Active Directory)](#ldap-integration)
-- [OIDC (e.g., Okta, Keycloak, Gluu, Blitz Identity Provider)](#oidc-openid-connect-integration)
-- [GitHub](#github-integration)
-- [GitLab](#gitlab-integration)
-- [Atlassian Crowd](#atlassiancrowd-integration)
-- [Bitbucket Cloud](#bitbucketcloud-integration)
+- [General integration workflow](#general-integration-workflow)
+  - [OIDC (OpenID Connect) integration](#oidc-openid-connect-integration)
+    - [Keycloak](#keycloak)
+    - [Blitz Identity Provider](#blitz-identity-provider)
+    - [Okta](#okta)
+  - [LDAP integration](#ldap-integration)
+  - [GitHub integration](#github-integration)
+  - [GitLab integration](#gitlab-integration)
+  - [Atlassian Crowd integration](#atlassiancrowd-integration)
+  - [Bitbucket Cloud Integration](#bitbucketcloud-integration)
 
 {% alert level="info" %}
 Password policies (such as complexity requirements, expiration, history, two-factor authentication, etc.) are fully controlled by the external authentication provider.  
@@ -32,7 +36,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    > To retrieve the Dex address (URI), run:
    >
    > ```console
-   > kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+   > d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    > ```
 
 1. Create a DexProvider resource tailored to the specifics of your selected identity provider.
@@ -45,7 +49,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    Check the module status:
 
    ```shell
-   kubectl get module user-authn
+   d8 k get module user-authn
    ```
 
    Example output:
@@ -58,7 +62,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    Enable the module via CL:
 
    ```shell
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
    ```
 
 1. Configure the `user-authn` module.
@@ -66,7 +70,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    - Open the `user-authn` module settings (create a ModuleConfig resource named `user-authn` if it doesn't exist):
 
      ```shell
-     kubectl edit mc user-authn
+     d8 k edit mc user-authn
      ```
 
    - Specify the required module parameters in the `spec.settings` section.
@@ -116,7 +120,7 @@ To configure fine-grained access control for users in applications:
 
 During Keycloak configuration, select the appropriate `realm`, add a user in the [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) section, and create a client in the [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) section with [authentication](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config) enabled, which is required to generate a `clientSecret`. Then follow these steps:
 
-1. In the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section, create a `scope` named `groups` and assign it the predefined `groups` mapper ("Client scopes" → "Client scope details" → "Mappers" → "Add predefined mappers").
+1. In the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section, create a `scope` named `groups` and assign it a mapper `Group Membership` ("Client scopes" → "Client scope details" → "Mappers" → "Configure a new mapper"). Set values of "Name" and "Token Claim Name" as `groups` and turn off "Full group path".
 1. In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
 1. In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields in the [client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is the [cluster DNS name template](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) defined in the `global` module.
 

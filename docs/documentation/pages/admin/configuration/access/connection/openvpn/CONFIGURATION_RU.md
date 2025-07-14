@@ -74,13 +74,13 @@ spec:
 Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, удалите секрет:
 
 ```shell
-kubectl -n d8-openvpn delete secret/basic-auth
+d8 k -n d8-openvpn delete secret/basic-auth
 ```
 
 {% alert level="info" %}
@@ -150,13 +150,13 @@ kubectl -n d8-openvpn delete secret/basic-auth
 1. Удалите текущий секрет, содержащий сертификат и ключ сервера:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-server
    ```
 
 1. Перезапустите под OpenVPN, чтобы инициировать генерацию нового сертификата:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 ## Как ротировать корневой сертификат (CA)
@@ -171,13 +171,13 @@ kubectl -n d8-openvpn delete secret/basic-auth
 1. Удалите секреты `openvpn-pki-ca` и `openvpn-pki-server`  в пространстве имён `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
    ```
 
 1. Перезапустите поды OpenVPN:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 1. Выполните [ротацию сертификатов](#как-отозвать-ротировать-или-удалить-сертификат-клиента) для отозванных клиентов или создайте новых клиентов с новыми сертификатами.
@@ -185,5 +185,5 @@ kubectl -n d8-openvpn delete secret/basic-auth
 1. Удалите все отозванные сертификаты:
 
    ```shell
-   kubectl  -n d8-openvpn delete secrets -l revokedForever=true
+   d8 k  -n d8-openvpn delete secrets -l revokedForever=true
    ```

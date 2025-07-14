@@ -15,7 +15,7 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 1. Удалите `flannel` из `kube-system`:
 
    ```shell
-   kubectl -n kube-system delete ds flannel-ds
+   d8 k -n kube-system delete ds flannel-ds
    ```
 
 2. Настройте интеграцию и пропишите необходимые для работы параметры.
@@ -31,7 +31,7 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 1. Удалите `flannel` из `kube-system`:
 
    ```shell
-   kubectl -n kube-system delete ds flannel-ds
+   d8 k -n kube-system delete ds flannel-ds
    ```
 
 2. Настройте интеграцию и пропишите необходимые для работы параметры.

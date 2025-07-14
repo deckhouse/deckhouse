@@ -30,7 +30,7 @@ Below is an instruction on how you can restore the master node.
 1. Execute the following command to restore the master node in any cluster running under DKP:
 
    ```shell
-   kubectl -n d8-system get secrets deckhouse-registry -o json |
+   d8 k -n d8-system get secrets deckhouse-registry -o json |
    jq -r '.data.".dockerconfigjson"' | base64 -d |
    jq -r '.auths."registry.deckhouse.io".auth'
    ```
@@ -56,7 +56,7 @@ Below are the steps to view the list of nodes that are part of the etcd cluster:
 1. Find the etcd pod:
 
    ```shell
-   kubectl -n kube-system get pods -l component=etcd,tier=control-plane
+   d8 k -n kube-system get pods -l component=etcd,tier=control-plane
    ```
 
    Typically, pod name has the `etcd-` prefix.
@@ -64,13 +64,13 @@ Below are the steps to view the list of nodes that are part of the etcd cluster:
 1. Run the following command on any available etcd Pod (assuming it is running in the `kube-system` namespace):
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
      etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
      --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-   This command uses substitution: `$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`.
+   This command uses substitution: `$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`.
    It automatically inserts the name of the first Pod matching the specified labels.  
 
 ### Restoring the etcd cluster in case of complete unavailability
@@ -97,7 +97,7 @@ In some cases, manual restoration via `etcdutl snapshot restore` can help:
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -109,7 +109,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm

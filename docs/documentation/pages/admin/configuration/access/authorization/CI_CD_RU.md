@@ -11,7 +11,7 @@ lang: ru
 1. Создайте ServiceAccount в пространстве имён `d8-service-accounts`:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: v1
    kind: ServiceAccount
    metadata:
@@ -80,14 +80,14 @@ lang: ru
      - Получите сертификат CA-кластера Kubernetes:
 
        ```shell
-       kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
+       d8 k get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
        ```
 
      - Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
        ```shell
-       kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-         --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+       d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+         --server=https://$(d8 k get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
          --certificate-authority=/tmp/ca.crt \
          --kubeconfig=$FILE_NAME
        ```
@@ -101,8 +101,8 @@ lang: ru
      - Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
        ```shell
-       kubectl -n d8-user-authn get secrets -o json \
-         $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+       d8 k -n d8-user-authn get secrets -o json \
+         $(d8 k -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
          | jq -rc '.data."ca.crt" // .data."tls.crt"' \
          | base64 -d > /tmp/ca.crt
        ```
@@ -110,8 +110,8 @@ lang: ru
      - Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
        ```shell
-       kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+         --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
          --certificate-authority=/tmp/ca.crt \
          --kubeconfig=$FILE_NAME
        ```
@@ -119,23 +119,23 @@ lang: ru
    - **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
-     kubectl config set-cluster $CLUSTER_NAME \
-       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+     d8 k config set-cluster $CLUSTER_NAME \
+       --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
        --kubeconfig=$FILE_NAME
      ```
 
 1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации `kubectl`:
 
    ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+   d8 k config set-credentials $USER_NAME \
+     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 
 1. Сгенерируйте контекст в файле конфигурации `kubectl`:
 
    ```shell
-   kubectl config set-context $CONTEXT_NAME \
+   d8 k config set-context $CONTEXT_NAME \
      --cluster=$CLUSTER_NAME --user=$USER_NAME \
      --kubeconfig=$FILE_NAME
    ```
@@ -143,7 +143,7 @@ lang: ru
 1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации `kubectl`:
 
    ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
 Далее можно использовать сгенерированный файл `$FILE_NAME` конфигурации kubeconfig для подключения к API-кластера Kubernetes из CI/CD-системы, такой как GitLab Runner или Jenkins.

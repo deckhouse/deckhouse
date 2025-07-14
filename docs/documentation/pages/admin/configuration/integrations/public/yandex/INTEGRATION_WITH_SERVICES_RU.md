@@ -67,7 +67,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -89,7 +89,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 1. Проверьте статус External Secrets Operator:
 
    ```shell
-   kubectl -n external-secrets get po
+   d8 k -n external-secrets get po
    ```
 
    Пример вывода:
@@ -104,7 +104,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
    Проверьте статус созданного хранилища секретов:
 
    ```shell
-   kubectl -n external-secrets get secretstores.external-secrets.io 
+   d8 k -n external-secrets get secretstores.external-secrets.io 
    ```
 
    Пример вывода:
@@ -123,7 +123,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -152,7 +152,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
 
    ```shell
-   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   d8 k -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
    В выводе команды будет содержаться значение ключа `password` секрета `lockbox-secret`, созданного ранее:
@@ -172,7 +172,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 1. Создайте ресурс PrometheusRemoteWrite:
 
    ```shell
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite

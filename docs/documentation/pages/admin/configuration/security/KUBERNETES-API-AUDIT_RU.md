@@ -117,7 +117,7 @@ spec:
 1. После перезапуска исправьте Secret или удалите его с помощью следующей команды:
 
    ```shell
-   kubectl -n kube-system delete secret audit-policy
+   d8 k -n kube-system delete secret audit-policy
    ```
 
 ## Перенаправление лог-файла аудита в stdout

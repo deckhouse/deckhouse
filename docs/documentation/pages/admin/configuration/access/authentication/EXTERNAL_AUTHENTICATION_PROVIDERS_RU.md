@@ -30,7 +30,7 @@ DKP поддерживает подключение следующих внеш�
     > Для того, чтобы узнать адрес Dex (URI), выполните команду:
     >
     > ```console
-    > kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+    > d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
     > ```
 
 1. Создайте ресурс DexProvider с учётом специфики выбранного провайдера.
@@ -41,7 +41,7 @@ DKP поддерживает подключение следующих внеш�
    Проверьте статус модуля:
 
    ```shell
-   kubectl get module user-authn
+   d8 k get module user-authn
    ```
 
    Пример вывода:
@@ -54,7 +54,7 @@ DKP поддерживает подключение следующих внеш�
    Включите модуль через CLI:
 
    ```shell
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
    ```
 
 1. Настройте модуль `user-authn`.
@@ -62,7 +62,7 @@ DKP поддерживает подключение следующих внеш�
    - Откройте настройки модуля `user-authn` (создайте ресурс ModuleConfig `user-authn`, если его нет):
 
      ```shell
-     kubectl edit mc user-authn
+     d8 k edit mc user-authn
      ```
 
    - Укажите необходимые параметры модуля в секции `spec.settings`. Подробнее о настройках модуля `user-authn` можно узнать в разделе [справки модуля](/modules/user-authn/).
@@ -109,7 +109,7 @@ DKP поддерживает подключение следующих внеш�
 
 В процессе настройки Keycloak выберите подходящий `realm`, добавьте пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создайте клиент в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включённой [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), необходимой для генерации `clientSecret`. Затем выполните следующие шаги:
 
-1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
+1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `Group Membership` («Client scopes» → «Client scope details» → «Mappers» → «Configure a new mapper»). В Поля «Name» и «Token Claim Name» впишите `groups`, параметр «Full group path» задайте `off`.
 1. В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
 1. В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 

@@ -25,13 +25,13 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 - Чтобы вывести список всех сертификатов в кластере, используйте следующую команду:
 
   ```shell
-  kubectl get certificate --all-namespaces
+  d8 k get certificate --all-namespaces
   ```
 
 - Чтобы проверить статус конкретного сертификата, воспользуйтесь следующей командой:
 
   ```shell
-  kubectl -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
+  d8 k -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
   ```
 
 ### Заказ сертификата
@@ -247,7 +247,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 1. Создайте Secret с ключом доступа:
 
    ```yaml
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: v1
    kind: Secret
    type: Opaque
@@ -262,7 +262,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 1. Создайте ресурс ClusterIssuer со ссылкой на этот Secret:
 
    ```yaml
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: ClusterIssuer
    metadata:
@@ -287,7 +287,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 1. Закажите сертификаты как обычно, используя созданный ClusterIssuer:
 
    ```yaml
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:

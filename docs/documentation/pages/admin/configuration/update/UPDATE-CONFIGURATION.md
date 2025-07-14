@@ -19,7 +19,7 @@ Up-to-date information about DKP versions available on different release channel
 To check which release channel is used in your cluster, run the following command:
 
 ```shell
-sudo -i d8 k get mc deckhouse -o yaml | grep releaseChannel
+d8 k get mc deckhouse -o yaml | grep releaseChannel
 ```
 
 Example output:
@@ -61,7 +61,7 @@ To determine the current update mode used in the cluster,
 inspect the configuration of the `deckhouse` module with the following command:
 
 ```shell
-sudo -i d8 k get mc deckhouse -o yaml
+d8 k get mc deckhouse -o yaml
 ```
 
 Example output:
@@ -95,7 +95,7 @@ When this condition is met:
 To view the list and status of all releases in the cluster, run the following command:
 
 ```shell
-sudo -i d8 k get deckhousereleases
+d8 k get deckhousereleases
 ```
 
 {% alert level="warning" %}
@@ -117,13 +117,13 @@ There are three ways to restrict automatic updates in Deckhouse:
   set the [`settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) parameter to `Manual` in the `deckhouse` module configuration using the following command:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
 
   To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Enable automatic updates for patch versions only.
@@ -141,14 +141,14 @@ There are three ways to restrict automatic updates in Deckhouse:
   set the [`settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) parameter to `AutoPatch` in the `deckhouse` module configuration using the following command:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
   ```
 
   To approve a minor version update,
   run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Manually set the target DKP version tag for the `deckhouse` Deployment
@@ -164,8 +164,8 @@ There are three ways to restrict automatic updates in Deckhouse:
   and removing the `releaseChannel` parameter from the `deckhouse` module configuration:
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
-  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+  d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
 
 ### Manual update approval
@@ -181,7 +181,7 @@ Manual approval of DKP updates is required in the following cases:
   To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target version:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Automatic update approval is disabled for a NodeGroup,
@@ -194,7 +194,7 @@ Manual approval of DKP updates is required in the following cases:
   Example command:
 
   ```shell
-  sudo -i d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
 ## Update windows

@@ -41,14 +41,14 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
 1. Using the command:
 
    ```bash
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
      deckhouse-controller module enable control-plane-manager
    ```
 
    or to disable:
 
    ```bash
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
      deckhouse-controller module disable control-plane-manager
    ```  
   
@@ -88,13 +88,13 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 1. Make sure the module is enabled:
 
    ```shell
-   kubectl get modules control-plane-manager
+   d8 k get modules control-plane-manager
    ```
 
 1. Check the status of `control-plane-manager` pods (they run in the `kube-system` namespace and have the label `app=d8-control-plane-manager`):
 
    ```shell
-   kubectl -n kube-system get pods -l app=d8-control-plane-manager -o wide
+   d8 k -n kube-system get pods -l app=d8-control-plane-manager -o wide
    ```
 
    Ensure that all pods are in the `Running` or `Completed` state.
@@ -102,19 +102,19 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 1. Verify that master nodes are in the `Ready` state:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane
+   d8 k get nodes -l node-role.kubernetes.io/control-plane
    ```
 
    To view detailed information:
 
    ```shell
-   kubectl describe node <node-name>
+   d8 k describe node <node-name>
    ```
 
 1. Get the list of queues and active tasks:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
     deckhouse-controller queue list
    ```
 
