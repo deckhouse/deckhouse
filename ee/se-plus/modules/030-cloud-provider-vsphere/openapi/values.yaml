@@ -393,6 +393,12 @@ properties:
             type: string
           resourcePoolPath:
             type: string
+          instances:
+            type: object
+            additionalProperties: false
+            properties:
+              mainNetwork:
+                type: string
           zones:
             type: array
             items:

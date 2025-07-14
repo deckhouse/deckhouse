@@ -126,6 +126,8 @@ const moduleValuesB = `
         internalNetworkNames: ["ccc", "ddd"]
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
+        instances:
+          mainNetwork: k8s-msk
         zones:
         - default
 `
