@@ -928,6 +928,10 @@ entries:
                 ru: Настройка Retry для запросов с Istio
               url: /user/network/retry_istio.html
             - title:
+                en: Customizing istio-proxy sidecar resource management
+                ru: Настройка для ресурсов istio-proxy сайдкаров
+              url: /user/network/istio-sidecar-resource-management.html
+            - title:
                 en: Circuit Breaker
                 ru: Circuit Breaker
               url: /user/network/circuit-breaker.html
