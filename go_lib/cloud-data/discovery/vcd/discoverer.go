@@ -366,23 +366,35 @@ func (d *Discoverer) getVApps(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, erro
 }
 
 func (d *Discoverer) getVAppTemplates(client *govcd.VCDClient) ([]string, error) {
-	templatesRecord, err := client.QueryWithNotEncodedParams(nil, map[string]string{
-		"type": "vAppTemplate",
+	catalogsRecord, err := client.QueryWithNotEncodedParams(nil, map[string]string{
+		"type": types.QtCatalog,
+		//"filter": fmt.Sprintf("type==%s", types.QtVappTemplate),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error getting vAppTemplates: %w", err)
 	}
 
-	templates := make([]string, 0, len(templatesRecord.Results.VappTemplateRecord))
+	templates := []string{}
+	for _, c := range catalogsRecord.Results.CatalogRecord {
+		if c.NumberOfVAppTemplates > 0 {
+			catalog := govcd.NewCatalog(&client.Client)
+			catalog.Catalog.Name = c.Name
 
-	for _, t := range templatesRecord.Results.VappTemplateRecord {
-		if t.Name == "" || t.CatalogName == "" {
-			d.logger.Debug("got unusable template with empty name or catalog name, skipping", "template_id", t.ID)
-			continue
+			templatesRecord, err := catalog.QueryVappTemplateList()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, t := range templatesRecord {
+				if t.Name == "" || t.CatalogName == "" {
+					d.logger.Debug("got unusable template with empty name or catalog name, skipping", "template_id", t.ID)
+					continue
+				}
+
+				templates = append(templates, fmt.Sprintf("%s/%s/%s", c.OrgName, t.CatalogName, t.Name))
+			}
 		}
-		templates = append(templates, fmt.Sprintf("%s/%s/%s", t.Org, t.CatalogName, t.Name))
 	}
-
 	return templates, nil
 }
 
