@@ -71,7 +71,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: falco
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
@@ -169,7 +169,7 @@ spec:
           {{- end }}
 
       - name: rules-loader
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "rulesLoader") }}
         env:
         - name: SHELL_OPERATOR_NAMESPACE
