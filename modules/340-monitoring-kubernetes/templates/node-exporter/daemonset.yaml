@@ -73,7 +73,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "nodeExporter") }}
         name: node-exporter
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "caps" (list "SYS_TIME" )) | nindent 8 }}
         args:
         - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
