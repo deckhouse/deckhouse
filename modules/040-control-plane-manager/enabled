@@ -21,6 +21,7 @@ function __main__() {
     echo "true" > "$MODULE_ENABLED_RESULT"
   else
     echo "false" > "$MODULE_ENABLED_RESULT"
+    echo "Module disabled: required value global.clusterConfiguration is not set" > "$MODULE_ENABLED_REASON"
   fi
 }
 
