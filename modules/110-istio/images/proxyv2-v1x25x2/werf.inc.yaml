@@ -142,9 +142,6 @@ secrets:
   value: {{ .GOPROXY }}
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
