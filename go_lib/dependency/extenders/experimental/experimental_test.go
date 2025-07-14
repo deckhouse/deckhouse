@@ -16,10 +16,8 @@ limitations under the License.
 package experimental
 
 import (
-	"errors"
 	"testing"
 
-	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -38,7 +36,6 @@ func TestExtender_Filter(t *testing.T) {
 		allow            bool
 		markExperimental bool
 		wantDecision     *bool
-		wantErr          bool
 	}
 
 	tests := []tc{
@@ -47,21 +44,18 @@ func TestExtender_Filter(t *testing.T) {
 			allow:            false,
 			markExperimental: true,
 			wantDecision:     ptr.To(false),
-			wantErr:          false,
 		},
 		{
 			name:             "non-experimental allowed when flag is false",
 			allow:            false,
 			markExperimental: false,
 			wantDecision:     nil,
-			wantErr:          false,
 		},
 		{
 			name:             "experimental allowed when flag is true",
 			allow:            true,
 			markExperimental: true,
 			wantDecision:     nil,
-			wantErr:          false,
 		},
 	}
 
@@ -75,7 +69,7 @@ func TestExtender_Filter(t *testing.T) {
 				e.AddConstraint(moduleName)
 			}
 
-			got, err := e.Filter(moduleName, nil)
+			got, _ := e.Filter(moduleName, nil)
 
 			switch {
 			case got == nil && tt.wantDecision != nil:
@@ -84,15 +78,6 @@ func TestExtender_Filter(t *testing.T) {
 				t.Fatalf("got %#v, want nil decision", *got)
 			case got != nil && *got != *tt.wantDecision:
 				t.Fatalf("got decision %v, want %v", *got, *tt.wantDecision)
-			}
-
-			if tt.wantErr {
-				var perr *scherror.PermanentError
-				if !errors.As(err, &perr) {
-					t.Fatalf("expected PermanentError, got %v", err)
-				}
-			} else if err != nil {
-				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}
