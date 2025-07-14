@@ -362,7 +362,11 @@ echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | ba
 ```
 
 {% alert level="info" %}
-Если команда `htpasswd` не найдена установите пакет `apache2-utils` для Debian-основанных дистрибутивов и `httpd-utils` для CentOS-основанных дистрибутивов.
+Если команда `htpasswd` недоступна, установите соответствующий пакет:
+
+* `apache2-utils` — для дистрибутивов, основанных на Debian;
+* `httpd-tools` — для дистрибутивов, основанных на CentOS;
+* `apache2-htpasswd` — для ALT Linux.
 {% endalert %}
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).

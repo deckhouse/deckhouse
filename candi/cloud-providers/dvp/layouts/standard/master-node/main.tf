@@ -41,26 +41,27 @@ module "ipv4-address" {
 }
 
 module "master" {
-  source                 = "../../../terraform-modules/master"
-  prefix                 = local.prefix
-  node_group             = local.node_group
-  namespace              = local.namespace
-  node_index             = local.node_index
-  root_disk              = module.root-disk
-  kubernetes_data_disk   = module.kubernetes-data-disk
-  ipv4_address           = module.ipv4-address
-  memory_size            = local.memory_size
-  bootloader             = local.bootloader
-  cpu                    = local.cpu
-  ssh_public_key         = local.ssh_public_key
-  hostname               = local.hostname
-  cluster_uuid           = local.cluster_uuid
-  additional_labels      = local.additional_labels
-  additional_annotations = local.additional_annotations
-  priority_class_name    = local.priority_class_name
-  node_selector          = local.node_selector
-  tolerations            = local.tolerations
-  region                 = local.region
-  zone                   = local.zone
-  cloud_config           = local.user_data
+  source                     = "../../../terraform-modules/master"
+  prefix                     = local.prefix
+  node_group                 = local.node_group
+  namespace                  = local.namespace
+  node_index                 = local.node_index
+  root_disk                  = module.root-disk
+  kubernetes_data_disk       = module.kubernetes-data-disk
+  ipv4_address               = module.ipv4-address
+  memory_size                = local.memory_size
+  virtual_machine_class_name = local.virtual_machine_class_name
+  bootloader                 = local.bootloader
+  cpu                        = local.cpu
+  ssh_public_key             = local.ssh_public_key
+  hostname                   = local.hostname
+  cluster_uuid               = local.cluster_uuid
+  additional_labels          = local.additional_labels
+  additional_annotations     = local.additional_annotations
+  priority_class_name        = local.priority_class_name
+  node_selector              = local.node_selector
+  tolerations                = local.tolerations
+  region                     = local.region
+  zone                       = local.zone
+  cloud_config               = local.user_data
 }

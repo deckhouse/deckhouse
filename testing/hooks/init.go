@@ -245,7 +245,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hec := new(HookExecutionConfig)
-	hec.logger = log.NewLogger(log.Options{})
+	hec.logger = log.NewLogger()
 
 	fakeClusterVersion := k8s.DefaultFakeClusterVersion
 	if len(k8sVersion) > 0 {
