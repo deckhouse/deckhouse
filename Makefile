@@ -146,7 +146,7 @@ bin/yq: bin ## Install yq deps for update-patchversion script.
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -158,7 +158,7 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
@@ -429,6 +429,25 @@ build: set-build-envs ## Build Deckhouse images.
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
+GO=$(shell which go)
+GIT=$(shell which git)
+GOLANGCI_LINT=$(shell which golangci-lint)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
+
 .PHONY: go-module-version
-go-module-version:
+go-module-version: go-check
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
+.PHONY: all-mod
+all-mod: go-check
+	@for dir in $$(find . -mindepth 2 -name go.mod | sed -r 's/(.*)(go.mod)/\1/g'); do \
+		echo "Running go mod tidy in $${dir}"; \
+		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
+	done
+
+define error-if-empty
+@if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi
+endef

@@ -12,7 +12,7 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 * Модуль может учитывать класс приоритета пода (параметр [spec.priorityClassThreshold](cr.html#descheduler-v1alpha2-spec-priorityclassthreshold)), ограничивая работу только подами, у которых класс приоритета ниже заданного порога;
 * Модуль не вытесняет под в следующих случаях:
   * под находится в пространстве имен `d8-*` или `kube-system`;
-  * под имеет [priorityClassName](../priority-class/) `system-cluster-critical` или `system-node-critical`;
+  * под имеет `priorityClassName` `system-cluster-critical` или `system-node-critical`;
   * под связан с локальным хранилищем;
   * под связан с [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
   * вытеснение пода нарушит [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);

@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -30,8 +31,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+func metaConfigForTesting(provider, prefix, layout string) *config.MetaConfig {
+	cfg := config.MetaConfig{}
+	cfg.ProviderName = provider
+	cfg.ClusterPrefix = prefix
+	cfg.Layout = layout
+
+	return &cfg
+}
+
 func newTestRunner(provider ExecutorProvider) *Runner {
-	return NewRunner("test-provider", "test-prefix", "test-layout", "test-step", &cache.DummyCache{}, provider)
+	return NewRunner(metaConfigForTesting("test-provider", "test-prefix", "test-layout"), "test-step", &cache.DummyCache{}, provider)
 }
 
 func TestCheckPlanDestructiveChanges(t *testing.T) {
@@ -80,7 +90,7 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 }
 
 func newTestRunnerWithChanges() *Runner {
-	r := NewRunner("a", "b", "c", "d", &cache.DummyCache{}, func(_ string, _ log.Logger) Executor {
+	r := NewRunner(metaConfigForTesting("a", "b", "c"), "d", &cache.DummyCache{}, func(_ string, _ log.Logger) Executor {
 		return &fakeExecutor{data: map[string]fakeResponse{}}
 	})
 	r.changesInPlan = PlanHasChanges
@@ -114,7 +124,7 @@ func TestRunnerCreatesStateSaver(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := NewRunner("a", "b", "c", "d", tc.cache, func(_ string, _ log.Logger) Executor {
+			runner := NewRunner(metaConfigForTesting("a", "b", "c"), "d", tc.cache, func(_ string, _ log.Logger) Executor {
 				return &fakeExecutor{data: map[string]fakeResponse{}}
 			})
 			require.NotNil(t, runner)

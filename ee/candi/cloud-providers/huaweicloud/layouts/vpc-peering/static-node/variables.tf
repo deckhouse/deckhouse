@@ -52,4 +52,5 @@ locals {
   root_disk_size        = lookup(local.instance_class, "rootDiskSize", 50) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
   additional_tags       = lookup(local.instance_class, "additionalTags", {})
   subnet                = var.providerClusterConfiguration.vpcPeering.subnet
+  enterprise_project_id = lookup(var.providerClusterConfiguration.provider, "enterpriseProjectID", "")
 }

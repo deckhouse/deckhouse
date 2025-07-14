@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -328,8 +327,4 @@ func InitGlobalVars(pwd string) {
 	versionMap = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
 	InfrastructureVersions = candiDir + "/terraform_versions.yml"
-}
-
-func getInfrastructureModulesDir(provider string) string {
-	return filepath.Join(candiDir, "cloud-providers", provider, "terraform-modules")
 }

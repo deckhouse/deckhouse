@@ -107,7 +107,18 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 - правила, размещённые в формате custom resource [FalcoAuditRules](cr.html#falcoauditrules), `fstec` — правила аудита удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022г. (Требования по безопасности информации к средствам контейнеризации).
 
-Настроить список встроенных правил можно с помощью параметра [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
+Чтобы вывести список всех правил аудита `falco`, выполните:
+
+```shell
+kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+```
+
+{% alert level="info" %}
+- При использовании [текущей ролевой модели](../user-authz/#текущая-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имён `d8-runtime-audit-engine`.
+- При использовании [экспериментальной ролевой модели](../user-authz/#экспериментальная-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `d8:manage:security:manager`.
+{% endalert %}
+
+Настроить список встроенных правил можно с помощью параметра [settings.builtInRulesList](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
 ### Пользовательские правила
 

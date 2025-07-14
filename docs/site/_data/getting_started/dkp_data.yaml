@@ -30,7 +30,7 @@ presets:
       ru: |
         - Кластер состоит из одного master-узла и одного worker-узла.
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
-        - Deckhouse запускает не системные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
+        - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
@@ -713,6 +713,44 @@ installTypes:
     name:
       en: Huawei Cloud
       ru: Huawei Cloud
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  dvp-provider:
+    iconPath: images/icons/platforms/dvp.png
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
+      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
+    type: cloud
+    name:
+      en: DVP
+      ru: DVP
     steps:
       step2:
         name:

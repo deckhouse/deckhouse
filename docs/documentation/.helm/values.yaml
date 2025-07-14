@@ -10,5 +10,9 @@ resources:
   requests:
     memory:
       _default: 30M
-      web-production: 150M
+      web-production: 250M
+  limits:
+    memory:
+      _default: 100M
+      web-production: 500M
 

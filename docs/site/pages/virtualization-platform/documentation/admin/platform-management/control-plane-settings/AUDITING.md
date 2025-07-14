@@ -119,8 +119,9 @@ It is assumed that the master nodes have a log collector *(for example, [log-shi
 ```
 
 The log file rotation parameters are preset and cannot be changed:
+
 - Maximum disk space is `1000 MB`.
-- Maximum write depth is `7 days`.
+- Maximum write depth is `30 days`.
 
 Please note that "maximum write depth" does not mean "guaranteed". The intensity of writing to the log depends on the settings of additional policies and the number of requests to **apiserver**, so the actual storage depth can be much less than 7 days, for example, 30 minutes. This should be taken into account when configuring the log collector and when writing audit policies.
 

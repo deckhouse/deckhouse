@@ -119,6 +119,9 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
+	// Set spec.validationEnabled = false to resolve high resource utilization issue
+	spec["validationEnabled"] = false
+
 	return Controller{Name: name, Spec: spec}, nil
 }
 

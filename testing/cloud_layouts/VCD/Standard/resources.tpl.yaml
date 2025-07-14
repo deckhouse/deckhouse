@@ -2,6 +2,39 @@
 apiVersion: deckhouse.io/v1
 kind: VCDInstanceClass
 metadata:
+  name: autoscaler
+spec:
+  rootDiskSizeGb: 30
+  sizingPolicy: ${VCD_ORG}-MSK
+  storageProfile: Fast vHDD
+  template: private-templates/debian-12
+
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: autoscaler
+spec:
+  cloudInstances:
+    classReference:
+      kind: VCDInstanceClass
+      name: autoscaler
+    maxPerZone: 1
+    minPerZone: 0
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role/autoscaler: ""
+    taints:
+      - effect: NoExecute
+        key: node
+        value: autoscaler
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
   name: system
 spec:
   rootDiskSizeGb: 30

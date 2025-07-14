@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -30,6 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -81,30 +84,39 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		nodeGroups: make(map[string]updateNodeGroup),
 	}
 
-	snap := input.Snapshots["configuration_checksums_secret"]
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get("configuration_checksums_secret")
+	if len(snaps) == 0 {
 		input.Logger.Warn("no configuration_checksums_secret snapshot found. Skipping run")
 		return nil
 	}
-	approver.ngChecksums = snap[0].(shared.ConfigurationChecksum)
+	err := snaps[0].UnmarshalTo(&approver.ngChecksums)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal start 'configuration_checksums_secret' snapshot: %w", err)
+	}
 
-	snap = input.Snapshots["ngs"]
-	for _, s := range snap {
-		ng := s.(updateNodeGroup)
+	snaps = input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[updateNodeGroup](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		approver.nodeGroups[ng.Name] = ng
 	}
 
-	snap = input.Snapshots["nodes"]
-	for _, s := range snap {
-		n := s.(updateApprovalNode)
-		approver.nodes[n.Name] = n
+	snaps = input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[updateApprovalNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
 
-		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
+		approver.nodes[node.Name] = node
+
+		setNodeMetric(input, node, approver.nodeGroups[node.NodeGroup], approver.ngChecksums[node.NodeGroup])
 	}
 
 	approver.deckhouseNodeName = os.Getenv("DECKHOUSE_NODE_NAME")
 
-	err := approver.processUpdatedNodes(input)
+	err = approver.processUpdatedNodes(input)
 	if err != nil {
 		return err
 	}
@@ -162,6 +174,10 @@ func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
 // Approve updates
 //   - Only one node from node group can be approved for update
 //   - If there are not ready nodes in the group, they'll be updated first
+//
+// TODO (core): fix linter
+//
+//nolint:unparam
 func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 	for _, ng := range ar.nodeGroups {
 		nodeGroupNodes := make([]updateApprovalNode, 0)
@@ -241,7 +257,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for approvedNodeName := range approvedNodeNames {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
 			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		}
 
@@ -282,6 +298,10 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
 // We don't limit number of Nodes here, because it's already limited
+//
+// TODO (core): fix linter
+//
+//nolint:unparam
 func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	now := time.Now()
 
@@ -319,7 +339,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.Logger.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
+			input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name))
 			input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
 			continue
 		}
@@ -366,7 +386,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			metricStatus = "DisruptionApproved"
 		}
 
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
 
@@ -376,6 +396,10 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 // Process updated nodes: remove approved and disruption-approved annotations, if:
 //   - Node is ready
 //   - Node checksum is equal to NodeGroup checksum
+//
+// TODO (core): fix linter
+//
+//nolint:unparam
 func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 	for _, node := range ar.nodes {
 		if !node.IsApproved {
@@ -415,7 +439,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
 	}

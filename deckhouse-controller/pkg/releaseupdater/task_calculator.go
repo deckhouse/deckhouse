@@ -114,7 +114,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
 	defer span.End()
 
-	logger := p.log.With(slog.String("release", release.GetName()))
+	logger := p.log.With(slog.String("release_name", release.GetName()))
 
 	if release.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
@@ -145,6 +145,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 		// if forced version is greater than the pending one, this pending release should be skipped
 		if forcedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
+			logger.Debug("release must be skipped because force release is greater")
+
 			return &Task{
 				TaskType: Skip,
 			}, nil
@@ -155,12 +157,14 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
-		logger = logger.With(logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original())))
+		logger = logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original()))
 
 		logger.Debug("deployed release found")
 
 		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
+			logger.Debug("release must be skipped, because deployed release is greater")
+
 			return &Task{
 				TaskType: Skip,
 			}, nil
@@ -168,6 +172,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 		// if we patch between reconcile start and calculating
 		if deployedReleaseInfo.Version.Equal(release.GetVersion()) {
+			logger.Debug("release version are equal deployed version")
+
 			return nil, ErrReleaseIsAlreadyDeployed
 		}
 	}

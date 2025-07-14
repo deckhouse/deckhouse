@@ -1,5 +1,8 @@
 ## Patches
 
+Warning! Some required patches that extend kubernetes functionally located in `ee/modules/000-common/images/kubernetes/patches/`
+directory.
+
 ### pdb-daemonset.patch
 
 Supports DaemonSets in disruption controller by adding /scale subresource to daemonsets API. It allows to control the eviction rate of DaemonSet pods.

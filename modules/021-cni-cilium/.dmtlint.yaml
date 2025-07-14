@@ -28,9 +28,6 @@ linters-settings:
           container: mount-cgroup
       liveness-probe:
         - kind: DaemonSet
-          name: agent
-          container: kube-rbac-proxy
-        - kind: DaemonSet
           name: safe-agent-updater
           container: pause-check-linux-kernel
         - kind: DaemonSet
@@ -39,14 +36,8 @@ linters-settings:
         - kind: DaemonSet
           name: safe-agent-updater
           container: pause-kube-rbac-proxy
-        - kind: Deployment
-          name: operator
-          container: kube-rbac-proxy
       readiness-probe:
         - kind: DaemonSet
-          name: agent
-          container: kube-rbac-proxy
-        - kind: DaemonSet
           name: safe-agent-updater
           container: pause-check-linux-kernel
         - kind: DaemonSet
@@ -55,9 +46,6 @@ linters-settings:
         - kind: DaemonSet
           name: safe-agent-updater
           container: pause-kube-rbac-proxy
-        - kind: Deployment
-          name: operator
-          container: kube-rbac-proxy
         - kind: Deployment
           name: operator
           container: operator

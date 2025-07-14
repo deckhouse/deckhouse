@@ -21,3 +21,4 @@ apiVersions:
         enum: [SSHHost]
       host:
         type: string
+        description: Host.

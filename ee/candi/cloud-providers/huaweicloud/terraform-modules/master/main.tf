@@ -23,6 +23,7 @@ resource "huaweicloud_compute_instance" "master" {
   user_data          = var.cloud_config == "" ? null : base64decode(var.cloud_config)
   availability_zone  = var.zone
   security_group_ids = var.security_group_ids
+  enterprise_project_id = var.enterprise_project_id
 
   network {
     uuid = data.huaweicloud_vpc_subnet.subnet.id
@@ -64,6 +65,8 @@ resource "huaweicloud_vpc_eip" "master" {
     size       = 100
     share_type = "PER"
   }
+
+  enterprise_project_id = var.enterprise_project_id
 }
 
 resource "huaweicloud_compute_eip_associate" "master" {

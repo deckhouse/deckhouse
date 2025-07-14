@@ -77,7 +77,7 @@ spec:
         - --secure-port=6443
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
-        - --prometheus-url=http://127.0.0.1:8000/trickster/main/
+        - --prometheus-url=http://127.0.0.1:8000
         - --metrics-relist-interval={{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
@@ -110,7 +110,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
         env:
         - name: PROMETHEUS_URL
-          value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+          value: "https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
         volumeMounts:
         - mountPath: /etc/prometheus-reverse-proxy/
           name: prometheus-metrics-adapter-config

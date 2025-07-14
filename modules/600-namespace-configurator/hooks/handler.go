@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"regexp"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -69,14 +72,16 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-	snap := input.Snapshots["namespaces"]
-	if len(snap) == 0 {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
+	}
+	if len(namespaces) == 0 {
 		input.Logger.Debug("Namespaces not found. Skip")
 		return nil
 	}
 
 	configurations := input.Values.Get("namespaceConfigurator.configurations").Array()
-	var err error
 
 	for _, configuration := range configurations {
 		var configItem namespaceConfigurationItem
@@ -90,6 +95,7 @@ func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -145,19 +151,23 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 }
 
 func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
-	for _, s := range input.Snapshots["namespaces"] {
-		ns := s.(Namespace)
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
+	}
+
+	for _, ns := range namespaces {
 		input.Logger.Debug("Processing namespace:", ns.Name)
 
-		mergePatch := makePatch(input, &ns, configItem)
+		mergePatch := makePatch(input, ns, configItem)
 		if mergePatch != nil {
-			input.PatchCollector.MergePatch(mergePatch, "v1", "Namespace", "", ns.Name)
+			input.PatchCollector.PatchWithMerge(mergePatch, "v1", "Namespace", "", ns.Name)
 		}
 	}
 	return nil
 }
 
-func makePatch(input *go_hook.HookInput, ns *Namespace, configItem *namespaceConfigurationItem) interface{} {
+func makePatch(input *go_hook.HookInput, ns Namespace, configItem *namespaceConfigurationItem) interface{} {
 	var newAnnotations = make(map[string]interface{})
 	var newLabels = make(map[string]interface{})
 	var mergePatch interface{}

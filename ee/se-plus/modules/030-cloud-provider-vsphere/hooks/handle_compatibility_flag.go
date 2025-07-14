@@ -7,12 +7,15 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -69,24 +72,25 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 	}
 	input.Values.Set("cloudProviderVsphere.internal.compatibilityFlag", compatibilityFlag)
 
-	snap, ok := input.Snapshots["module_storageclasses"]
-	if !ok {
-		return nil
+	storageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal module_storageclasses snapshot: %w", err)
 	}
-	for _, s := range snap {
-		sc := s.(StorageClass)
+
+	for _, sc := range storageClasses {
 		switch compatibilityFlag {
 		case "Legacy":
 			if sc.Provisioner != modernProvisioner {
 				continue
 			}
-			input.Logger.Infof("Deleting storageclass/%s because legacy one will be rolled out", sc.Name)
+			input.Logger.Info("Deleting storageclass because legacy one will be rolled out", slog.String("storage_class", sc.Name))
 		default:
 			if sc.Provisioner != legacyProvisioner {
 				continue
 			}
-			input.Logger.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)
+			input.Logger.Info("Deleting storageclass because modern one will be rolled out", slog.String("storage_class", sc.Name))
 		}
+
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}
 

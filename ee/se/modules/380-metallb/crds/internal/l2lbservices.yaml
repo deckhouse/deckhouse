@@ -5,6 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
   name: sdninternall2lbservices.internal.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: metallb
 spec:
   group: internal.network.deckhouse.io
   names:

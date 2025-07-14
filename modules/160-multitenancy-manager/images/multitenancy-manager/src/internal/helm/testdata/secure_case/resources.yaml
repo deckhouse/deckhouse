@@ -3,7 +3,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  annotations: {}
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
@@ -17,7 +16,6 @@ metadata:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -64,7 +62,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -87,7 +84,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -112,7 +108,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -129,7 +124,6 @@ spec:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test

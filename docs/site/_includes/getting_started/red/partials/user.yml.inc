@@ -29,10 +29,10 @@ spec:
   email: admin@deckhouse.io
   # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
   # [<en>] generate your own or use it at your own risk (for testing purposes)
-  # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+  # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<ru>] это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас
   # [<ru>] сгенерируйте свой или используйте этот, но только для тестирования
-  # [<ru>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

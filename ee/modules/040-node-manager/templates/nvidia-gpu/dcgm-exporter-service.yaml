@@ -1,0 +1,18 @@
+{{- if include "nvidia_gpu_enabled" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nvidia-dcgm-exporter
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+spec:
+  internalTrafficPolicy: Local
+  ports:
+  - name: "metrics"
+    port: 9400
+    protocol: TCP
+  selector:
+    app: nvidia-dcgm-exporter
+  type: ClusterIP
+{{- end }}

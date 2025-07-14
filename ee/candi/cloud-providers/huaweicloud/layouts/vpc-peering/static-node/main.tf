@@ -33,6 +33,7 @@ module "node" {
   server_group          = local.server_group
   node_group_name       = var.nodeGroupName
   subnet                = local.subnet
+  enterprise_project_id = local.enterprise_project_id
 }
 
 module "security_groups" {
@@ -40,6 +41,7 @@ module "security_groups" {
   security_group_names        = local.security_group_names
   layout_security_group_ids   = module.network_security_info.security_group_ids
   layout_security_group_names = module.network_security_info.security_group_names
+  enterprise_project_id = local.enterprise_project_id
 }
 
 data "huaweicloud_availability_zones" "zones" {}

@@ -81,13 +81,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, ensureEncryptionSecretKey)
 
 func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
-	keys, ok := input.Snapshots["secret_encryption_key"]
+	keys := input.NewSnapshots.Get("secret_encryption_key")
 
-	var secretKey []byte
-	if ok && len(keys) > 0 {
-		secretKey, ok = keys[0].([]byte)
-		if !ok {
-			return fmt.Errorf("cannot convert Kubernetes Secret to SecretEncryptionKey")
+	secretKey := make([]byte, 0)
+	if len(keys) > 0 {
+		err := keys[0].UnmarshalTo(&secretKey)
+
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'secret_encryption_key' snapshot: %w", err)
 		}
 	}
 

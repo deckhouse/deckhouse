@@ -1,4 +1,5 @@
 name: ingress-nginx
+stage: "General Availability"
 weight: 402
 subsystems:
   - networking

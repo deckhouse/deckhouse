@@ -3,3 +3,4 @@ weight: 40
 subsystems:
   - infrastructure
 namespace: d8-system
+stage: General Availability

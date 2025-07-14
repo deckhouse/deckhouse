@@ -1,0 +1,32 @@
+{{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if ($ng).gpu -}}
+    {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
+    {{ $timeSlicingReplicas := ((($ng).gpu).timeSlicing).partitionCount | default 4 }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $devicePluginName }}
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu")) | nindent 2 }}
+data:
+  Exclusive: |-
+    version: v1
+    flags:
+      migStrategy: none
+  MIG: |-
+    version: v1
+    flags:
+      migStrategy: mixed
+  TimeSlicing: |-
+    version: v1
+    flags:
+      migStrategy: none
+    sharing:
+      timeSlicing:
+        renameByDefault: false
+        failRequestsGreaterThanOne: true
+        resources:
+          - name: nvidia.com/gpu
+            replicas: {{ $timeSlicingReplicas }}
+  {{- end }}
+{{- end }}

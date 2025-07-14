@@ -93,13 +93,12 @@ https://github.com/deckhouse/deckhouse/issues/9933
 
 TODO: update readme with patch description
 
-### 015-fix-validating-webhook-cve.patch
+### 015-protect-validation-port.patch
 
-Backports several security fixes for the following CVE:
-CVE-2025-1097
-CVE-2025-1098
-CVE-2025-1974
-CVE-2025-24513
-CVE-2025-24514
+Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
+which the validator server trusts (CA and Common Name verification).  
+Without a valid client certificate, access to the validation service will be denied.
 
-Sourced from https://github.com/kubernetes/ingress-nginx/commit/cfe3923bd657a82226eb58d3307204a8a8802db4
+### 016-verbose-maxmind-logs.patch
+
+Added additional logging for downloading GeoIP databases from the MaxMind service.

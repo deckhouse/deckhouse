@@ -1,4 +1,5 @@
 name: istio
+stage: "General Availability"
 weight: 110
 subsystems:
   - infrastructure
