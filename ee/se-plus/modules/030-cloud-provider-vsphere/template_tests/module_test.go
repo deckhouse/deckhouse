@@ -167,6 +167,10 @@ const moduleValuesC = `
           user: user
           password: password
           host: 1.2.3.4
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+        instances:
+          mainNetwork: k8s-msk
 `
 
 const moduleValuesD = `
