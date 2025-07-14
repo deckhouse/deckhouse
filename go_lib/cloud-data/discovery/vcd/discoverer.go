@@ -354,9 +354,9 @@ func (d *Discoverer) getVApps(client *govcd.VCDClient) ([]v1alpha1.VCDvApp, erro
 
 	vApps := make([]v1alpha1.VCDvApp, 0, len(vAppAll))
 	for _, v := range vAppAll {
-		if v.Status == "MIXED" {
-			continue
-		}
+		// if v.Status == "MIXED" {
+		// 	continue
+		// }
 		vApps = append(vApps, v1alpha1.VCDvApp{
 			Name:    v.Name,
 			VDCName: v.VdcName,
