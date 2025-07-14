@@ -125,6 +125,12 @@ const moduleValuesB = `
         vmFolderPath: dev/test
         externalNetworkNames: ["aaa", "bbb"]
         internalNetworkNames: ["ccc", "ddd"]
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+        instances:
+          mainNetwork: k8s-msk
+        zones:
+        - default
 `
 
 const moduleValuesC = `

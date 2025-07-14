@@ -394,6 +394,12 @@ properties:
             minLength: 1
           resourcePoolPath:
             type: string
+          instances:
+            type: object
+            additionalProperties: false
+            properties:
+              mainNetwork:
+                type: string
           zones:
             type: array
             items:
