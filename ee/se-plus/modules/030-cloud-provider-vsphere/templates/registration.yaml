@@ -1,6 +1,7 @@
 {{- $providerClusterConfiguration := .Values.cloudProviderVsphere.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- $providerDiscoveryData := .Values.cloudProviderVsphere.internal.providerDiscoveryData | default dict }}
 {{- $masterNodeGroup := $providerClusterConfiguration.masterNodeGroup | default dict }}
+{{- $ic := default dict $masterNodeGroup.instanceClass }}
 ---
 apiVersion: v1
 kind: Secret
@@ -26,9 +27,7 @@ data:
   {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}
   {{- $_ := set $vsphereValues "sshKey" $providerClusterConfiguration.sshPublicKey }}
   {{- $_ := set $vsphereValues "vmFolderPath" $providerClusterConfiguration.vmFolderPath }}
-  {{- if and (hasKey $providerDiscoveryData "instances" ) (hasKey $providerDiscoveryData.instances "mainNetwork") }}
-    {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $providerDiscoveryData.instances.mainNetwork) }}
-  {{- end }}
+  {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $providerDiscoveryData.instances.mainNetwork) }}
   {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
   {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
     {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}
