@@ -217,3 +217,5 @@ metadata:
   - **Смешанный подход** — вручную добавленный узел можно передать под управление CAPS, используя аннотацию `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию `staticInstances`. Это позволяет DKP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
+
+> В [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типами Static и CloudStatic можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DKP использует это значение для контроля состояния и автоматизации.

@@ -216,3 +216,5 @@ Configuration specifics:
   - **Hybrid approach**: A manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
+
+> In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DKP uses this value for state monitoring and automation.
