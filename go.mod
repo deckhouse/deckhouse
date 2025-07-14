@@ -221,6 +221,7 @@ require (
 	github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/ohler55/ojg v1.26.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -256,10 +257,10 @@ require (
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
 	github.com/werf/3p-helm v0.0.0-20250609150428-130783e0dc18 // indirect
 	github.com/werf/common-go v0.0.0-20250520111308-b0eda28dde0d // indirect
-	github.com/werf/kubedog v0.13.1-0.20250625141056-654a0802b36e // indirect
+	github.com/werf/kubedog v0.13.1-0.20250710181210-b4a5a7f76b11 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.7.1-0.20250701122607-a272d6527da9 // indirect
+	github.com/werf/nelm v1.8.1-0.20250714125920-00f0192de0f4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
