@@ -57,6 +57,9 @@
   {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
     {{- include "verify_image_signatures" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    {{- include "verify_service_type" (list $context $cr) }}
+  {{- end }}
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -483,5 +486,29 @@ spec:
     references:
     {{- range $policy := $cr.spec.policies.verifyImageSignatures }}
     - {{ printf "^%s$" ($policy.reference | replace "*" ".*") }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_service_type" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedServiceTypes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Service"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    allowedServiceTypes:
+      {{- $cr.spec.policies.allowedServiceTypes | toYaml | nindent 6 }}
     {{- end }}
 {{- end }}
