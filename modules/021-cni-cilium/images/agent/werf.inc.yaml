@@ -322,18 +322,18 @@ import:
 - image: tools/ipset
   before: install
   add: /usr/sbin/ipset
-  to: /sbin/ipset
+  to: /usr/sbin/ipset
 - image: tools/kmod
   before: install
   add: /bin/
-  to: /bin/
+  to: /usr/bin/
   includePaths:
   - kmod
   - lsmod
 - image: tools/kmod
   before: install
   add: /bin/
-  to: /sbin/
+  to: /usr/sbin/
   includePaths:
   - depmod
   - insmod
@@ -344,7 +344,7 @@ import:
 - image: tools/iproute2
   before: install
   add: /sbin/
-  to: /sbin/
+  to: /usr/sbin/
   includePaths:
   - dcb
   - devlink
