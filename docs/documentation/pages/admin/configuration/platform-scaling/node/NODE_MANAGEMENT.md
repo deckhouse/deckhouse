@@ -112,7 +112,7 @@ The application mode for such updates is configured via the `disruptions.approva
   To approve the update, add the annotation `update.node.deckhouse.io/disruption-approved=` to each node in the group. Example:
 
   ```shell
-  sudo -i d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
   > **Important**: In this mode, the node is not drained automatically.  

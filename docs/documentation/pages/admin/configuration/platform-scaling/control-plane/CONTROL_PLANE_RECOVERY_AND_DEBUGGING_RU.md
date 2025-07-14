@@ -32,7 +32,7 @@ lang: ru
 1. Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением DKP выполнить команду:
 
    ```shell
-   kubectl -n d8-system get secrets deckhouse-registry -o json |
+   d8 k -n d8-system get secrets deckhouse-registry -o json |
    jq -r '.data.".dockerconfigjson"' | base64 -d |
    jq -r '.auths."registry.deckhouse.io".auth'
    ```
@@ -58,7 +58,7 @@ lang: ru
 1. Найдите под etcd:
 
    ```shell
-   kubectl -n kube-system get pods -l component=etcd,tier=control-plane
+   d8 k -n kube-system get pods -l component=etcd,tier=control-plane
    ```
 
    Обычно имя пода содержит префикс `etcd-`.
@@ -66,13 +66,13 @@ lang: ru
 1. Выполните команду на любом доступном etcd-поде (предполагается, что он запущен в пространстве имён `kube-system`):
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
      etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
      --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-   В данной команде используется подстановка: `$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`. Она автоматически подставит имя первого пода, соответствующего нужным лейблам.
+   В данной команде используется подстановка: `$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`. Она автоматически подставит имя первого пода, соответствующего нужным лейблам.
 
 ### Восстановление кластера etcd при полной недоступности
 
@@ -98,7 +98,7 @@ lang: ru
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится read-only. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -110,7 +110,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm

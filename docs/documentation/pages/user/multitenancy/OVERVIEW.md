@@ -74,7 +74,7 @@ it could lead to a data leak and a security model breach.
 1. To check the project status, run the following command:
 
    ```shell
-   kubectl get projects my-project
+   d8 k get projects my-project
    ```
 
    A successfully created project will have a `Deployed` status.
@@ -82,7 +82,7 @@ it could lead to a data leak and a security model breach.
    run the same command with the `-o yaml` flag to get details about the cause:
 
    ```shell
-   kubectl get projects my-project -o yaml
+   d8 k get projects my-project -o yaml
    ```
 
 ### Automatically creating a project from a namespace
@@ -93,19 +93,19 @@ For example:
 1. Create a new namespace:
 
    ```shell
-   kubectl create ns test
+   d8 k create ns test
    ```
 
 1. Annotate it:
 
    ```shell
-   kubectl annotate ns test projects.deckhouse.io/adopt=""
+   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Check that the project was created:
 
    ```shell
-   kubectl get projects
+   d8 k get projects
    ```
 
    In the output list of projects, you should see the newly created project corresponding to the namespace:

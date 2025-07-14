@@ -285,15 +285,15 @@ spec:
   backoffLimit: 1
 EOF
 
-kubectl create -f migrate-job.yaml
-kubectl -n $ns get jobs -o wide
+d8 k create -f migrate-job.yaml
+d8 k -n $ns get jobs -o wide
 kubectl_completed_check=0
 
 echo "Waiting for data migration to be completed"
 while [[ $kubectl_completed_check -eq 0 ]]; do
-   kubectl -n $ns get pods | grep migrate-pv-$src
+   d8 k -n $ns get pods | grep migrate-pv-$src
    sleep 5
-   kubectl_completed_check=`kubectl -n $ns get pods | grep migrate-pv-$src | grep "Completed" | wc -l`
+   kubectl_completed_check=`d8 k -n $ns get pods | grep migrate-pv-$src | grep "Completed" | wc -l`
 done
 echo "Data migration completed"
 ```

@@ -36,13 +36,13 @@ spec:
 Проверить состояние синхронизации можно с помощью следующей команды:
 
 ```shell
-kubectl get ms
+d8 k get ms
 ```
 
 Пример вывода в случае успешной синхронизации:
 
 ```shell
-$ kubectl get ms
+$ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Ready
 ```
@@ -50,7 +50,7 @@ example     2       16s    Ready
 В случае ошибок синхронизации в столбце `MSG` будет указано общее описание ошибки. Пример:
 
 ```console
-$ kubectl get ms
+$ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
@@ -60,7 +60,7 @@ example     2       16s    Some errors occurred. Inspect status for details
 Пример получения подробной информации об ошибках из источника модулей `example`:
 
 ```console
-$ kubectl get ms example -o jsonpath='{range .status.modules[*]}{.name}{" module error:\n\t"}{.pullError}{"\n"}{end}'
+$ d8 k get ms example -o jsonpath='{range .status.modules[*]}{.name}{" module error:\n\t"}{.pullError}{"\n"}{end}'
 module-1 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-1/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 module-2 module error:
@@ -72,27 +72,27 @@ module-2 module error:
 Пример получения списка модулей, доступных из источника модулей `example`:
 
 ```console
-$ kubectl get ms example -o jsonpath='{.status.modules[*].name}'
+$ d8 k get ms example -o jsonpath='{.status.modules[*].name}'
 module-1 module-2
 ```
 
 Полный список модулей, доступных из всех созданных в кластере источников модулей, можно получить с помощью следующей команды:
 
 ```shell
-kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
+d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
 После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
-kubectl get module
+d8 k get module
 ```
 
 Пример получения списка модулей:
 
 ```console
-$ kubectl get module
+$ d8 k get module
 NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
@@ -101,7 +101,7 @@ module-two                   Available   False     False
 Чтобы получить дополнительную информацию о модуле, выполните следующую команду:
 
 ```shell
-kubectl get module module-one -oyaml
+d8 k get module module-one -oyaml
 ```
 
 Пример вывода:
@@ -165,7 +165,7 @@ spec:
 Для получения подробной информации используйте команду:
 
 ```shell
-kubectl get mr -l module=<MODULE_NAME>
+d8 k get mr -l module=<MODULE_NAME>
 ```
 
 Убедитесь, что вы указываете необходимые параметры конфигурации в `ModuleConfig` согласно документации модуля.
@@ -174,7 +174,7 @@ kubectl get mr -l module=<MODULE_NAME>
 После включения модуля, он должен перейти в фазу скачивания (`Downloading`):
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
@@ -186,7 +186,7 @@ module-one           example  Downloading   False     False
 После успешного скачивания модуль перейдет в фазу установки (`Installing`):
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
 module-one  900      example  Installing    False     False
 ```
@@ -194,7 +194,7 @@ module-one  900      example  Installing    False     False
 Если модуль успешно установился, то он перейдет в фазу готовности (`Ready`):
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  900      example  Ready  True     True
 ```
@@ -247,7 +247,7 @@ status:
 При возникновении каких либо ошибок, модуль перейдет в фазу ошибки (`Error`):
 
 ```console
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  910      example  Error  True     Error
 ```
@@ -255,7 +255,7 @@ module-one  910      example  Error  True     Error
 Если у включенного модуля есть несколько доступных источников, и в его ModuleConfig явно не выбран источник модуля, модуль перейдет в фазу конфликта (`Conflict`):
 
 ```console
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
@@ -267,13 +267,13 @@ module-one                    Conflict  False    False
 Посмотреть список релизов можно с помощью следующей команды:
 
 ```shell
-kubectl get mr
+d8 k get mr
 ```
 
 Пример получения списка релизов модулей:
 
 ```console
-$ kubectl get mr
+$ d8 k get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
 module-one-v0.7.23         Superseded   deckhouse       33h              
 module-one-v0.7.24         Deployed     deckhouse       33h              
@@ -290,7 +290,7 @@ module-two-v1.2.5          Pending      deckhouse       44d              Waiting
 Если релиз модуля находится в статусе `Pending`, то это значит что он требует ручного подтверждения для установки (смотри далее [про политику обновления модуля](#политика-обновления-модуля)). Подтвердить релиз модуля можно следующей командой (укажите имя moduleRelease):
 
 ```shell
-kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
+d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
 {% endalert %}
@@ -306,7 +306,7 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 1. Проверьте, что новые релизы модуля (объекты ModuleRelease) создаются из нового источника модулей в соответствии с политикой обновления:
 
    ```shell
-   kubectl get mr
+   d8 k get mr
    ```
 
 ### Политика обновления модуля
@@ -344,7 +344,7 @@ spec:
 Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DKP:
 
 ```shell
-kubectl get modules
+d8 k get modules
 ```
 
 Модуль должен быть в списке.
@@ -352,7 +352,7 @@ kubectl get modules
 Пример вывода:
 
 ```console
-$ kubectl get module
+$ d8 k get module
 NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 ...
 module-one                   Available   False     False                      
@@ -368,7 +368,7 @@ module-two                   Available   False     False
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
@@ -393,13 +393,13 @@ module-two                   Available   False     False
 - Посмотреть журнал Deckhouse:
 
   ```shell
-  kubectl -n d8-system logs -l app=deckhouse
+  d8 k -n d8-system logs -l app=deckhouse
   ```
 
 - Посмотреть объект Module подробнее:
 
   ```console
-  kubectl get module module-one -oyaml
+  d8 k get module module-one -oyaml
   ```
   
 - Посмотреть объект ModuleConfig модуля:
@@ -407,7 +407,7 @@ module-two                   Available   False     False
   Пример вывода информации об ошибке модуля `module-one`:
 
   ```console
-  $ kubectl get moduleconfig module-one
+  $ d8 k get moduleconfig module-one
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
@@ -417,7 +417,7 @@ module-two                   Available   False     False
   Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
   ```console
-  $ kubectl get ms
+  $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
@@ -426,13 +426,13 @@ module-two                   Available   False     False
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell
-kubectl get mr
+d8 k get mr
 ```
 
 Пример вывода:
 
 ```console
-$ kubectl get mr
+$ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
@@ -440,7 +440,7 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
 
 ```shell
-kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
 ## Подключение Deckhouse Module Tools для проверки модуля

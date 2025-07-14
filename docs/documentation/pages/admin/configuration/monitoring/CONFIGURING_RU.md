@@ -244,8 +244,8 @@ Prometheus, находящийся в основе системы монитор
 - Укажите названия шлюзов в параметре `instances` модуля `prometheus-pushgateway` через веб-интерфейс, или с помощью следующей команды:
 
   ```shell
-  kubectl edit mc prometheus-pushgateway
-  ``` 
+  d8 k edit mc prometheus-pushgateway
+  ```
 
   Пример конфигурации модуля:
 

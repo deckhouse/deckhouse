@@ -17,7 +17,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает гибкий мех
 Чтобы узнать, какой канал обновлений используется в кластере, выполните следующую команду:
 
 ```shell
-sudo -i d8 k get mc deckhouse -o yaml | grep releaseChannel
+d8 k get mc deckhouse -o yaml | grep releaseChannel
 ```
 
 Пример вывода:
@@ -59,7 +59,7 @@ DKP поддерживает три режима обновления, кото�
 проверьте конфигурацию модуля `deckhouse` с помощью следующей команды:
 
 ```shell
-sudo -i d8 k get mc deckhouse -o yaml
+d8 k get mc deckhouse -o yaml
 ```
 
 Пример вывода:
@@ -90,7 +90,7 @@ spec:
 Чтобы посмотреть список и состояние всех релизов в кластере, воспользуйтесь командой:
 
 ```shell
-sudo -i d8 k get deckhousereleases
+d8 k get deckhousereleases
 ```
 
 {% alert level="warning" %}
@@ -112,13 +112,13 @@ sudo -i d8 k get deckhousereleases
   задайте значение `Manual` для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
 
   Чтобы подтвердить обновление, выполните следующую команду, указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Установить режим автоматического обновления для патч-версий.
@@ -136,14 +136,14 @@ sudo -i d8 k get deckhousereleases
   задайте значение `AutoPatch` для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
   ```
 
   Чтобы подтвердить обновление для минорной версии, выполните следующую команду,
   указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Установить тег необходимой версии DKP для Deployment `deckhouse`
@@ -158,8 +158,8 @@ sudo -i d8 k get deckhousereleases
   Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
-  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+  d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
 
 ### Ручное подтверждение обновлений
@@ -174,7 +174,7 @@ sudo -i d8 k get deckhousereleases
   Для подтверждения обновления выполните следующую команду, указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
 
   ```shell
-  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Если для какой-либо группы узлов отключено автоматическое применение обновлений,
@@ -188,7 +188,7 @@ sudo -i d8 k get deckhousereleases
   Пример:
 
   ```shell
-  sudo -i d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
 ## Окна обновлений

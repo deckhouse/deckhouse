@@ -45,13 +45,13 @@ Frontend-узлы балансируют входящий трафик, на н�
 * Проверка состояние priority level'ов:
 
   ```shell
-  kubectl get --raw /debug/api_priority_and_fairness/dump_priority_levels
+  d8 k get --raw /debug/api_priority_and_fairness/dump_priority_levels
   ```
 
 * Проверка состояния очередей priority level'ов:
 
   ```shell
-  kubectl get --raw /debug/api_priority_and_fairness/dump_queues
+  d8 k get --raw /debug/api_priority_and_fairness/dump_queues
   ```
 
 Также он передаёт в Grafana следующие метрики:

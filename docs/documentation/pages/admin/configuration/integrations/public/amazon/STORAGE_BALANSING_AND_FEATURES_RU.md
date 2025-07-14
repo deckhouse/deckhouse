@@ -53,7 +53,7 @@ settings:
 1. Измените параметр `spec.resources.requests.storage` в соответствующем объекте `PersistentVolumeClaim`. Операция выполняется автоматически и обычно занимает не более одной минуты. За ходом процесса можно наблюдать с помощью команды:
 
    ```shell
-   kubectl describe pvc <имя-claim>
+   d8 k describe pvc <имя-claim>
    ```
 
 1. После изменения объема подождите не менее 6 часов и убедитесь, что статус volume — `in-use` или `available`. Только после этого возможны повторные изменения. Подробнее [в официальной документации AWS](https://docs.aws.amazon.com/ebs/latest/userguide/modify-volume-requirements.html).
@@ -99,7 +99,7 @@ metadata:
 Чтобы получить список текущих подсетей, используемых в установке DKP, выполните команду:
 
 ```console
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse \
   -- deckhouse-controller module values cloud-provider-aws -o json | \
   jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```
@@ -120,12 +120,12 @@ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
 Узнать `cluster_uuid` можно с помощью команды:
 
 ```console
-kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+d8 k -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
 ```
 
 Узнать `prefix` можно с помощью команды:
 
 ```console
-kubectl -n kube-system get secret d8-cluster-configuration -o json | \
+d8 k -n kube-system get secret d8-cluster-configuration -o json | \
   jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
 ```

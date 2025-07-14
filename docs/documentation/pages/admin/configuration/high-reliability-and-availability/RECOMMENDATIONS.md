@@ -82,13 +82,13 @@ This component does not have settings, but the following commands are available:
 - Check the state of priority levels:
 
   ```shell
-  kubectl get --raw /debug/api_priority_and_fairness/dump_priority_levels
+  d8 k get --raw /debug/api_priority_and_fairness/dump_priority_levels
   ```
 
 - Check the state of priority level queues:
 
   ```shell
-  kubectl get --raw /debug/api_priority_and_fairness/dump_queues
+  d8 k get --raw /debug/api_priority_and_fairness/dump_queues
   ```
 
 The component also provides the following metrics to Grafana:

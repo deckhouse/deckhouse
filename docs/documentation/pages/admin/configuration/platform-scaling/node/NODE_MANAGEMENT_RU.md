@@ -115,7 +115,7 @@ DKP может работать как с bare-metal, так и с облачн�
   установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел в группе, следуя примеру:
 
   ```shell
-  sudo -i d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
   > **Важно**. В этом режиме не выполняется автоматический drain узла.

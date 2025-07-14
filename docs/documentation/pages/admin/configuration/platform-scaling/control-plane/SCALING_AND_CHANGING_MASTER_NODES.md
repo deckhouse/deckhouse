@@ -58,7 +58,7 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
    - Remove the labels `node-role.kubernetes.io/control-plane=""` and `node-role.kubernetes.io/master=""` from the extra master nodes.
    - For **bare-metal clusters**:
      - To correctly remove the nodes from `etcd`:
-       - Run `kubectl delete node <node-name>`;
+       - Run `d8 k delete node <node-name>`;
        - Power off the corresponding VMs or servers.
 
 {% alert level="warning" %}
@@ -80,9 +80,9 @@ If you need to remove a node from the set of master nodes but keep it in the clu
 1. Remove the labels so the node is no longer treated as a master:
 
    ```bash
-   kubectl label node <node-name> node-role.kubernetes.io/control-plane-
-   kubectl label node <node-name> node-role.kubernetes.io/master-
-   kubectl label node <node-name> node.deckhouse.io/group-
+   d8 k label node <node-name> node-role.kubernetes.io/control-plane-
+   d8 k label node <node-name> node-role.kubernetes.io/master-
+   d8 k label node <node-name> node.deckhouse.io/group-
    ```
 
 1. Delete the static manifests of the control plane components so they no longer start on the node, and remove unnecessary PKI files:
@@ -102,8 +102,8 @@ If you need to remove a node from the set of master nodes but keep it in the clu
    Example:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -120,8 +120,8 @@ After completing these steps, the node will no longer be considered a master nod
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -166,8 +166,8 @@ After completing these steps, the node will no longer be considered a master nod
 1. Verify that the etcd node appears in the cluster node list:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -176,7 +176,7 @@ After completing these steps, the node will no longer be considered a master nod
 1. Make sure that [`control-plane-manager`](/modules/control-plane-manager/) is running on the node:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
 
@@ -203,14 +203,14 @@ It's important to have an odd number of master nodes to maintain etcd quorum.
 1. Make sure the Deckhouse queue is empty:
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -250,7 +250,7 @@ It's important to have an odd number of master nodes to maintain etcd quorum.
 1. Wait until the required number of master nodes reaches the `Ready` status and all [`control-plane-manager`](/modules/control-plane-manager/) pods become ready:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
 ## Reducing the number of master nodes in a cloud cluster
@@ -267,14 +267,14 @@ The following steps must be performed starting from the first master node (`mast
 1. Make sure the DKP queue is empty:
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -303,13 +303,13 @@ The following steps must be performed starting from the first master node (`mast
    Command to remove the labels:
 
    ```bash
-   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
 1. Make sure the nodes to be removed are no longer part of the etcd cluster:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -318,7 +318,7 @@ The following steps must be performed starting from the first master node (`mast
 1. Drain the nodes to be removed:
 
    ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
    ```
 
 1. Power off the corresponding VMs, delete their instances from the cloud, and detach any associated disks (e.g., `kubernetes-data-master-<N>`).
@@ -326,13 +326,13 @@ The following steps must be performed starting from the first master node (`mast
 1. Delete any remaining pods on the removed nodes:
 
    ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
 1. Delete the `Node` objects for the removed nodes:
 
    ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
+   d8 k delete node <MASTER-NODE-N-NAME>
    ```
 
 1. **In the installer container**, run the following command to trigger the scaling operation:

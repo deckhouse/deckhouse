@@ -148,7 +148,7 @@ journalctl -u bashible.service
 Проверить контрольную сумму можно следующей командой:  
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```  
 
 Сравнение контрольных сумм сервис совершает каждую минуту.  
@@ -341,7 +341,7 @@ spec:
 Проверьте логи командой:
 
 ```shell
-kubectl logs job/nvidia-cuda-test
+d8 k logs job/nvidia-cuda-test
 ```
 
 Пример вывода:
@@ -393,7 +393,7 @@ spec:
 Проверьте логи командой:
 
 ```shell
-kubectl logs job/gpu-operator-test
+d8 k logs job/gpu-operator-test
 ```
 
 Пример вывода:

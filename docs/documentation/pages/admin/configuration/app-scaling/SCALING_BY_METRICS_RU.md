@@ -144,25 +144,25 @@ spec:
 Для получения списка метрик используйте команду:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
 
 Для получения значений метрик, привязанных к объектам используйте команду:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
 ```
 
 Для получения значений метрик, созданных через `NamespaceMetric` используйте команду:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
 
 Для получения внешних метрик используйте команду:
 
 ```console
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
 ```
 
 ### Настройка автомасштабирования в веб-интерфейсе Deckhouse

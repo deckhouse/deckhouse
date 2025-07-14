@@ -59,7 +59,7 @@ spec:
 Пример отсутствия конфликтов при применении ModulePullOverride:
 
 ```console
-$ kubectl get modulepulloverrides.deckhouse.io 
+$ d8 k get modulepulloverrides.deckhouse.io 
 NAME      UPDATED   MESSAGE   ROLLBACK
 example1  10s       Ready     false
 ```
@@ -70,7 +70,7 @@ example1  10s       Ready     false
   Пример:
 
   ```console
-  $ kubectl get modulepulloverrides.deckhouse.io 
+  $ d8 k get modulepulloverrides.deckhouse.io 
   NAME      UPDATED   MESSAGE                ROLLBACK
   example1  10s       The module not found   false
   ```
@@ -80,7 +80,7 @@ example1  10s       Ready     false
   Пример:
 
   ```console
-  $ kubectl get modulepulloverrides.deckhouse.io 
+  $ d8 k get modulepulloverrides.deckhouse.io 
   NAME           UPDATED  MESSAGE                  ROLLBACK
   ingress-nginx  10s      The module is embedded   false
   ```
@@ -90,7 +90,7 @@ example1  10s       Ready     false
   Пример:
 
   ```console
-  $ kubectl get modulepulloverrides.deckhouse.io 
+  $ d8 k get modulepulloverrides.deckhouse.io 
   NAME     UPDATED   MESSAGE               ROLLBACK
   example  7s        The module disabled   false
   ```
@@ -100,7 +100,7 @@ example1  10s       Ready     false
   Пример:
 
   ```console
-  $ kubectl get modulepulloverrides.deckhouse.io 
+  $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                                     ROLLBACK
   example    12s       The module does not have an active source   false
   ```
@@ -110,7 +110,7 @@ example1  10s       Ready     false
   Пример:
 
   ```console
-  $ kubectl get modulepulloverrides.deckhouse.io 
+  $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                 ROLLBACK
   example    12s       The source not found    false
   ```
@@ -118,7 +118,7 @@ example1  10s       Ready     false
 Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
 
 ```sh
-kubectl annotate mpo <name> renew=""
+d8 k annotate mpo <name> renew=""
 ```
 
 ## Принцип действия
