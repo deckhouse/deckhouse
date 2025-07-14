@@ -95,7 +95,7 @@ spec:
     }
   },
   "underscoresInHeaders": false,
-  "validationEnabled": true
+  "validationEnabled": false
 }
 }]`))
 			})
@@ -203,7 +203,7 @@ spec:
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": false
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
@@ -244,7 +244,7 @@ spec:
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true,
+"validationEnabled": false,
 "controllerLogLevel": "Info"
 }`))
 
@@ -276,7 +276,7 @@ spec:
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true,
+"validationEnabled": false,
 "controllerLogLevel": "Info"
 }`))
 		})

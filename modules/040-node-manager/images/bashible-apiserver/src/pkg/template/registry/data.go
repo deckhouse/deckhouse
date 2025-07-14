@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 

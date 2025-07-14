@@ -30,20 +30,17 @@ resources:
 {{- end }}
 
 {{- define "readiness_probe" }}
-failureThreshold: 3
-periodSeconds: 5
-initialDelaySeconds: 5
-timeoutSeconds: 2
+failureThreshold: 5
+periodSeconds: 10
+timeoutSeconds: 5
 {{- end }}
 {{- define "liveness_probe" }}
-failureThreshold: 3
-periodSeconds: 5
-initialDelaySeconds: 5
-timeoutSeconds: 2
+failureThreshold: 10
+periodSeconds: 10
+timeoutSeconds: 5
 {{- end }}
 {{- define "startup_probe" }}
-failureThreshold: 6
+failureThreshold: 10
 periodSeconds: 10
-initialDelaySeconds: 5
-timeoutSeconds: 2
+timeoutSeconds: 5
 {{- end }}

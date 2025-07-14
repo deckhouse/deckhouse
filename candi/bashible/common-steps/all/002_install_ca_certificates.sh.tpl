@@ -16,16 +16,14 @@ bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- if not .registry.registryModuleEnable }}
-  {{- range $_, $host_values := .registry.hosts }}
-    {{- range $mirror := $host_values.mirrors }}
-      {{- if $mirror.ca }}
+{{- range $_, $host_values := .registry.hosts }}
+  {{- range $mirror := $host_values.mirrors }}
+    {{- if $mirror.ca }}
 
 bb-log-info "Sync registry CA for {{ $mirror.host }}"
 bb-sync-file "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt" - << "EOF"
 {{ $mirror.ca }}
 EOF
-      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
