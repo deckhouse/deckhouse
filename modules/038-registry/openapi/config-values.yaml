@@ -1,0 +1,92 @@
+type: object
+properties:
+  whitelistSourceRanges:
+    type: array
+    items:
+      type: string
+      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))?$'
+    x-examples:
+      - [ "10.0.0.0/10", "192.168.0.0/16" ]
+    description: 'A list of CIDR-formatted addresses allowed to connect to the registry. If not specified, connections from any address are allowed.'
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for the registry.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
+  https:
+    type: object
+    x-examples:
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — the registry ingress is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — the registry ingress is accessed over HTTPS using a certificate from the `d8-system` namespace.
+          - `Disabled` — in this mode, the registry ingress can only be accessed over HTTP.
+          - `OnlyInURI` — the registry ingress will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). Load balancer should provide a redirect from HTTP to HTTPS.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        description: |
+          Parameters for certmanager.
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            x-examples: ["letsencrypt"]
+            description: |
+              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+      customCertificate:
+        type: object
+        default: {}
+        description: |
+          Parameters for custom certificate usage.
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with the registry ingress.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+
+  # TODO (nabokihms): remove (only for testing purposes)
+  imagesOverride:
+    type: object
+    default: {}
+    description: |
+      Images override
+    properties:
+      registryManager:
+        type: string
+        description: |
+          Registry manager img full path
+        x-example:
+          - dev-registry.deckhouse.io/registryManager:latest
+        x-dmt-default: ""
+      mirrorer:
+        type: string
+        description: |
+          Mirrorer img full path
+        x-example:
+          - dev-registry.deckhouse.io/mirrorer:latest
+        x-dmt-default: ""
