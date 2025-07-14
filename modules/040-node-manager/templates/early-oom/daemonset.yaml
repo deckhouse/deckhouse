@@ -52,16 +52,15 @@ spec:
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      automountServiceAccountToken: true
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: early-oom
+      automountServiceAccountToken: true
       containers:
       - name: psi-monitor
         image: {{ include "helm_lib_module_image" (list . "earlyOom") }}
         args:
         - --memory-threshold=30
-        securityContext:
-          privileged: true
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         volumeMounts:
           - mountPath: /host_proc
             name: proc

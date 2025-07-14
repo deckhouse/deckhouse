@@ -76,6 +76,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: caps-controller-manager
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible"  (dict "ro" false) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
         imagePullPolicy: IfNotPresent
         ports:
