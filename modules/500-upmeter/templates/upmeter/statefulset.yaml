@@ -84,7 +84,7 @@ spec:
             readOnly: false
           - mountPath: /tmp
             name: tmp
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         resources:
           requests:
 {{- if $storageClass }}
@@ -97,7 +97,7 @@ spec:
 {{- end }}
       containers:
       - name: upmeter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "upmeter") }}
         command:
           - /upmeter
