@@ -63,12 +63,15 @@ memory: 50Mi
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
   {{- $additionalControllerVPA := $config.additionalControllerVPA }}
+  {{- $additionalControllerPorts := $config.additionalControllerPorts }}
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
+  {{- $csiControllerHostPID := $config.csiControllerHostPID | default "false" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
+  {{- $forceCsiControllerPrivilegedContainer := $config.forceCsiControllerPrivilegedContainer | default false }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -203,6 +206,7 @@ spec:
       {{- end }}
     spec:
       hostNetwork: {{ $csiControllerHostNetwork }}
+      hostPID: {{ $csiControllerHostPID }}
       {{- if eq $csiControllerHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
@@ -435,7 +439,7 @@ spec:
             {{- include "livenessprobe_resources" $context | nindent 12 }}
   {{- end }}
       - name: controller
-{{- if $context.Values.global.enabledModules | has "csi-nfs" }}
+{{- if $forceCsiControllerPrivilegedContainer }}
         {{- include "helm_lib_module_container_security_context_escalated_sys_admin_privileged" . | nindent 8 }}
 {{- else }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -453,6 +457,10 @@ spec:
           httpGet:
             path: /healthz
             port: {{ $livenessProbePort }}
+    {{- if $additionalControllerPorts }}
+        ports:
+        {{- $additionalControllerPorts | toYaml | nindent 8 }}
+    {{- end }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
