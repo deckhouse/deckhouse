@@ -404,6 +404,12 @@ properties:
         x-examples:
           - datacenter: test
         properties:
+          instances:
+            type: object
+            additionalProperties: false
+            properties:
+              mainNetwork:
+                type: string
           datacenter:
             type: string
           zones:
