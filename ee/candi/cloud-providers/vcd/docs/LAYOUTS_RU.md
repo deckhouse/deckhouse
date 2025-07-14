@@ -68,7 +68,7 @@ masterNodeGroup:
 - Разрешение любого входящего трафика по протоколу `ICMP`
 - Разрешение входящего трафика по протоколам `TCP` и `UDP` и портам 30000–32767 для использования `NodePort`
 
-Пример конфигурации схемы размещения:
+Пример конфигурации схемы размещения с использованием NSX-T:
 
 ```yaml
 ---
@@ -91,6 +91,42 @@ edgeGateway:
   type: "NSX-T"
   externalIP: 10.0.0.1
   externalPort: 10022
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
+Пример конфигурации схемы размещения с использованием NSX-V:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-T"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+  NSX-V:
+    externalNetworkName: external
+    externalNetworkType: ext
 masterNodeGroup:
   replicas: 1
   instanceClass:
