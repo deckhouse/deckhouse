@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 deckhouseVer=${D8_VERSION:-"dev"}
 defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
