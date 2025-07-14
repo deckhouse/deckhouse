@@ -28,7 +28,7 @@ require (
 	k8s.io/client-go v0.26.10
 	k8s.io/code-generator v0.26.10
 	k8s.io/component-base v0.26.10
-	k8s.io/klog/v2 v2.110.1
+	k8s.io/klog/v2 v2.100.1
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
 	sigs.k8s.io/controller-runtime v0.14.7
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
