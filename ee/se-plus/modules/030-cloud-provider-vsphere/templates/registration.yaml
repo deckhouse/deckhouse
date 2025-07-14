@@ -26,7 +26,7 @@ data:
   {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}
   {{- $_ := set $vsphereValues "sshKey" $providerClusterConfiguration.sshPublicKey }}
   {{- $_ := set $vsphereValues "vmFolderPath" $providerClusterConfiguration.vmFolderPath }}
-  {{- with $providerDiscoveryData.instances.mainNetwork }}
+  {{- if and (hasKey $providerDiscoveryData "instances" ) (hasKey $providerDiscoveryData.instances "mainNetwork") }}
     {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $providerDiscoveryData.instances.mainNetwork) }}
   {{- end }}
   {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
