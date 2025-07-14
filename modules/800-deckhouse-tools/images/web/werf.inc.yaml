@@ -111,3 +111,4 @@ shell:
   - cd /app
   - npm install
   - npm run build
+  - chown 64535:64535 /app
