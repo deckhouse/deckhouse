@@ -244,11 +244,11 @@ properties:
     x-examples:
     - dex:
         requests:
-          cpu: "100m"
-          memory: "128Mi"
+          cpu: "10m"
+          memory: "25Mi"
         limits:
-          cpu: "250m"
-          memory: "256Mi"
+          cpu: "100m"
+          memory: "100Mi"
       kubeconfigGenerator:
         requests:
           cpu: "10m"
@@ -290,11 +290,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '100m'
+                default: '10m'
                 description: 'CPU request for Dex container.'
               memory:
                 type: string
-                default: '128Mi'
+                default: '25Mi'
                 description: 'Memory request for Dex container.'
           limits:
             type: object
@@ -303,11 +303,11 @@ properties:
             properties:
               cpu:
                 type: string
-                default: '250m'
+                default: '100m'
                 description: 'CPU limit for Dex container.'
               memory:
                 type: string
-                default: '256Mi'
+                default: '100Mi'
                 description: 'Memory limit for Dex container.'
       kubeconfigGenerator:
         type: object
