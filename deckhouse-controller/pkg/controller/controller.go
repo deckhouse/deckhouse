@@ -272,7 +272,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		operator.ModuleManager,
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
-		operator.MetricStorage)
+		operator.MetricStorage,
+		exts,
+		logger)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
