@@ -64,8 +64,8 @@ properties:
 
   ingressClassHttp01:
     type: string
-    x-examples: ["ingress-nginx"]
+    x-examples: ["nginx"]
     description: |
-      ingressClass используемы для подтверждения сертификата методом http01.
+      Имя ingressClass используемого для подтверждения владения доменом ACME методом http01.
   
       

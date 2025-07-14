@@ -133,7 +133,6 @@ properties:
 
   ingressClassHttp01:
     type: string
-    x-examples: ["ingress-nginx"]
+    x-examples: ["nginx"]
     description: |
-      The ingress class for http01 challenge
-      
+      The name of the ingressClass used to confirm ownership of domain using the ACME http01 method.
