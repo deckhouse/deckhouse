@@ -838,14 +838,16 @@ data:
       -l app=gpu-feature-discovery
 
     echo "Waiting for dcgm-exporter to shutdown"
-    kubectl wait --for=delete pod \
+    kubectl delete pod \
+      --wait=true \
       --timeout=5m \
       --field-selector "spec.nodeName=${NODE_NAME}" \
       -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
       -l app=nvidia-dcgm-exporter
 
     echo "Waiting for dcgm to shutdown"
-    kubectl wait --for=delete pod \
+    kubectl delete pod \
+      --wait=true \
       --timeout=5m \
       --field-selector "spec.nodeName=${NODE_NAME}" \
       -n "${DEFAULT_GPU_CLIENTS_NAMESPACE}" \
