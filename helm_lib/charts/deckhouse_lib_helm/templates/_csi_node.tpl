@@ -27,11 +27,13 @@ memory: 25Mi
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
+  {{- $setSysAdminCapability := $config.setSysAdminCapability | default false }}
   {{- $additionalContainers := $config.additionalContainers }} 
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
+  {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
@@ -128,6 +130,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: {{ $csiNodeHostNetwork }}
+      hostPID: {{ $csiNodeHostPID }}
       {{- if eq $csiNodeHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
@@ -173,6 +176,11 @@ spec:
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
+        {{- if $setSysAdminCapability }}
+          capabilities:
+            add:
+            - SYS_ADMIN
+        {{- end }}
         image: {{ $nodeImage }}
         args:
       {{- if $additionalNodeArgs }}
