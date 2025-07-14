@@ -58,7 +58,7 @@ spec:
       automountServiceAccountToken: true
       initContainers:
       - name: nodeport-bind-address
-        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         env:
         - name: CLOUD_PROVIDER
