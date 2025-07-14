@@ -135,7 +135,7 @@ import:
   before: install
 - image: libs/glibc
   add: /
-  to: /tmp/glibc/
+  to: /tmp/glibc
   includePaths:
   - usr/*
   - lib64/*
