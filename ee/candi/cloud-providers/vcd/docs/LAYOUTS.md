@@ -39,7 +39,7 @@ masterNodeGroup:
 
 When choosing this deployment scheme, you must ask your administrator for the type of network virtualization platform and specify it in the `edgeGateway.type` property. The deployment scheme supports `NSX-T` and `NSX-V`.
 
-If the Edge Gateway is based on NSX-T, a DHCP server will be automatically enabled in the created network for the nodes, providing IP addresses starting from the 30th address in the network up to the penultimate address (just before the broadcast address). If the Edge Gateway is provided by `NSX-V`, you must manually configure DHCP for the planned node network. Otherwise, nodes that are expected to obtain an address dynamically will not be able to do so.
+If the Edge Gateway is based on NSX-T, a DHCP server will be automatically enabled in the created network for the nodes, providing IP addresses starting from the 30th address in the network up to the penultimate address (just before the broadcast address). The starting address for the IP address pool range can be configured via the `internalNetworkDHCPPoolStartAddress` property. If the Edge Gateway is provided by `NSX-V`, you must manually configure DHCP for the planned node network. Otherwise, nodes that are expected to obtain an address dynamically will not be able to do so.
 
 The deployment scheme assumes automated creation of NAT rules:
 - An SNAT rule for translating the addresses of the internal node network to the external address specified in the `edgeGateway.externalIP` property.
