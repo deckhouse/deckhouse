@@ -22,10 +22,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- if .DistroPackagesProxy }}
-  - sed -i 's|http://dl-cdn.alpinelinux.org|http://{{ .DistroPackagesProxy }}/repository|g' /etc/apk/repositories
-  {{- end }}
-  - apk update
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache python3 python2 vips make build-base
   install:
   - cd /src
