@@ -51,6 +51,10 @@ masterNodeGroup:
 Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
 {% endalert %}
 
+{% alert level="warning" %}
+Не рекомендуется совместно с `NSX-V` использовать динамическую адресацию для первого мастер-узла.
+{% endalert %}
+
 Дополнительно возможно создание правил брандмауэра отдельным свойством `createDefaultFirewallRules`.
 
 {% alert level="warning" %}
