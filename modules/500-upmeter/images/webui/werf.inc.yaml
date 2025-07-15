@@ -26,6 +26,12 @@ shell:
   - apk add --no-cache python3 python2 vips make build-base
   install:
   - cd /src
+  {{- include "node packages proxy" . | nindent 2 }}
+  {{- if .DistroPackagesProxy }}
+  - yarn config set disable-self-update-check true
+  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  {{- end }}
   - yarn install
   - yarn run build
   - chown -R 64535:64535 /src/dist
