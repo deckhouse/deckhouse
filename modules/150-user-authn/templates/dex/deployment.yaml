@@ -1,11 +1,11 @@
 {{- define "dex_resources" }}
-cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "10m" }}
-memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "25Mi" }}
+cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "50m" }}
+memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "64Mi" }}
 {{- end }}
 
 {{- define "dex_limits" }}
-cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "100m" }}
-memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "100Mi" }}
+cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "200m" }}
+memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "128Mi" }}
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -36,8 +36,8 @@ spec:
       minAllowed:
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 64Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -119,17 +119,19 @@ spec:
             path: /healthz/live
             port: 5559
             scheme: HTTPS
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          timeoutSeconds: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex/config
@@ -198,14 +200,16 @@ spec:
             path: /healthz/live
             port: 5559
             scheme: HTTPS
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
