@@ -36,15 +36,20 @@
     {{ if eq .code "rock-solid"  }}{{ continue }}{{ end }}
     {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
     {{ $code := .code }}
+    {{ if .Params.tags }}{{ $moduleTags = $moduleTags | append .Params.tags }}{{ end }}
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
       {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
       {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
       {{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
       {{ if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
-      {{ if not $moduleTags }}{{ $moduleTags = .Params.tags }}{{ end }}
+      {{ if .Params.tags }}{{ $moduleTags = $moduleTags | append .Params.tags }}{{ end }}
     {{ end}}
   {{ end}}
+  {{ if gt ($moduleTags | len) 1}}
+    {{ $moduleTags = $moduleTags | uniq | sort "asc" }}
+  {{ end}}
+
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
   {{ if (not $moduleChannel ) }}{{ continue }}{{ end }}
   {{ $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
@@ -62,7 +67,7 @@
 
 {{/* hugo.Store.SetInMap "modulesList" (sort (hugo.Store.Get "modulesList") "title" "asc") */}}
 
-<p><strong>{{ T "found" | humanize }} {{ T "modules2" }}: {{ hugo.Store.Get "modulesList" | len }}</strong></p>
+<!--<p><strong>{{ T "found" | humanize }} {{ T "modules2" }}: {{ hugo.Store.Get "modulesList" | len }}</strong></p>-->
 <hr />
 
       <div class="block__tile">

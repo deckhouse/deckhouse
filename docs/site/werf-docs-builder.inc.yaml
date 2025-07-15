@@ -35,14 +35,31 @@ final: false
 shell:
   setup:
   - |
+    # Run to generate the embedded modules JSON file for developing:
+    # for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do       moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##');       DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' );       awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" 'select(. != null) | .module=$module | .embedded="true"| .tags += ["embedded"] | .url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end ';     done | jq -s 'unique_by(.module) | {entries: .}' | jq --slurpfile tags docs/documentation/_data/modules/embedded_modules_tags.json '
+    #   .entries |= map(
+    #   . as $mod
+    #   | if $tags[0][$mod.module] != null then
+    #       $mod + {tags: (($mod.tags // []) + $tags[0][$mod.module] | unique)}
+    #     else
+    #       $mod
+    #     end
+    #   )' > docs/site/backends/docs-builder-template/data/dkp/embedded_modules.json
     mkdir -p /export
-    #for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
-    for name in $(find /rawdata/embedded-modules/ -regex '^.\+/modules/[^/]\+/docs/README.md$'); do
+    for name in $(find ./ -regex '.+/modules/[^/]+/docs/\(README\|readme\).md'); do
       moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
       DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' )
-      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" 'select(. != null) | .module=$module | .embedded="true" | .url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end '
-    done | jq -s  'unique_by(.module) | {entries: .}' | jq '(.entries[] | select(.module == "cert-manager")).tags = ["embedded", "security", "policy"]'  > /export/embedded_modules.json
-    # TODO ^^^ Have to fix this.
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" 'select(. != null) | .module=$module | .embedded="true"| .tags += ["embedded"] | .url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end '
+    done | jq -s 'unique_by(.module) | {entries: .}' | jq --slurpfile tags docs/documentation/_data/modules/embedded_modules_tags.json '
+      .entries |= map(
+      . as $mod
+      | if $tags[0][$mod.module] != null then
+          $mod + {tags: (($mod.tags // []) + $tags[0][$mod.module] | unique)}
+        else
+          $mod
+        end
+      )' > /export/embedded_modules.json
+
     MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
     if [ "$MODULES_COUNT" -le 10 ]; then
       echo "Got only $MODULES_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
@@ -69,6 +86,10 @@ git:
   includePaths:
   - modules/**/docs/{README,readme}*.md
   - ee/**/docs/{README,readme}*.md
+- add: /docs/documentation/_data/modules/embedded_modules_tags.json
+  to: /rawdata/embedded_modules_tags.json
+  stageDependencies:
+    setup: ['**/*']
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
