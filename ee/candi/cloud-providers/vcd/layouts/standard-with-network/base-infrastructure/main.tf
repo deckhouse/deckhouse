@@ -39,8 +39,8 @@ resource "vcd_vapp_org_network" "vapp_network" {
   reboot_vapp_on_removal = true
 }
 
-module "nat" {
-  source                       = "../../../terraform-modules/nat"
+module "snat" {
+  source                       = "../../../terraform-modules/snat"
   providerClusterConfiguration = var.providerClusterConfiguration
   edgeGatewayId                = local.edgeGatewayId
   useNSXV                      = local.useNSXV
