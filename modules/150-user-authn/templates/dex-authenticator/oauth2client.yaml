@@ -4,11 +4,10 @@
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ $crd.encodedName }}
+  name: {{ printf "%s-dex-authenticator-%s" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
   id: {{ printf "%s-dex-authenticator-%s" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
-  name: {{ printf "%s-dex-authenticator-%s" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
 secret: {{ $crd.credentials.appDexSecret }}
     {{- if $crd.spec.allowedEmails }}
 allowedEmails:
