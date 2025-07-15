@@ -30,7 +30,6 @@ shell:
   {{- if .DistroPackagesProxy }}
   # build in the closed env
   - |
-    set -e
     mkdir -p /etc/nginx/ssl/ca /etc/nginx/ssl/certs /etc/nginx/ssl/private
     openssl genrsa -out /etc/nginx/ssl/ca/rootCA.key 4096
     openssl req -x509 -new -nodes -key /etc/nginx/ssl/ca/rootCA.key -sha256 -days 3650 \
@@ -54,6 +53,7 @@ shell:
     subjectAltName = @alt_names
     [alt_names]
     DNS.1 = unofficial-builds.nodejs.org
+    DNS.2 = github.com
     EOF
     openssl genrsa -out /etc/nginx/ssl/private/nginx.key 2048
     openssl req -new -key /etc/nginx/ssl/private/nginx.key -out /etc/nginx/ssl/certs/nginx.csr \
@@ -67,6 +67,15 @@ shell:
     events {}
     http {
         server {
+          listen 443 ssl;
+          server_name github.com;
+          ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
+          ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
+          location / {
+              proxy_pass http://{{ .DistroPackagesProxy }}/repository/github-com/;
+          }
+        }
+        server {
             listen 443 ssl;
             server_name unofficial-builds.nodejs.org;
             ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
@@ -77,9 +86,10 @@ shell:
         }
     }
     EOF
-    echo "127.0.1.1 unofficial-builds.nodejs.org" >> /etc/hosts
+    echo "127.0.1.1 github.com unofficial-builds.nodejs.org" >> /etc/hosts
     nginx
     sleep 2
+  - export NODE_EXTRA_CA_CERTS=/etc/nginx/ssl/ca/rootCA.crt
   - yarn config set disable-self-update-check true
   - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
   - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock

@@ -89,6 +89,71 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  {{- if .DistroPackagesProxy }}
+  # build in the closed env
+  - |
+    mkdir -p /etc/nginx/ssl/ca /etc/nginx/ssl/certs /etc/nginx/ssl/private
+    openssl genrsa -out /etc/nginx/ssl/ca/rootCA.key 4096
+    openssl req -x509 -new -nodes -key /etc/nginx/ssl/ca/rootCA.key -sha256 -days 3650 \
+      -subj "/C=RU/ST=Test/L=Test/O=ExampleCA/OU=IT/CN=Example Root CA" \
+      -out /etc/nginx/ssl/ca/rootCA.crt
+    cat >/etc/nginx/ssl/openssl.cnf <<EOF
+    [req]
+    default_bits       = 2048
+    prompt             = no
+    default_md         = sha256
+    req_extensions     = req_ext
+    distinguished_name = req_distinguished_name
+    [req_distinguished_name]
+    C = RU
+    ST = Test
+    L = Test
+    O = ExampleOrg
+    OU = IT
+    CN = github.com
+    [req_ext]
+    subjectAltName = @alt_names
+    [alt_names]
+    DNS.1 = github.com
+    DNS.2 = download.falco.org
+    EOF
+    openssl genrsa -out /etc/nginx/ssl/private/nginx.key 2048
+    openssl req -new -key /etc/nginx/ssl/private/nginx.key -out /etc/nginx/ssl/certs/nginx.csr \
+      -config /etc/nginx/ssl/openssl.cnf
+    openssl x509 -req -in /etc/nginx/ssl/certs/nginx.csr -CA /etc/nginx/ssl/ca/rootCA.crt -CAkey /etc/nginx/ssl/ca/rootCA.key \
+      -CAcreateserial -out /etc/nginx/ssl/certs/nginx.crt -days 365 -sha256 \
+      -extensions req_ext -extfile /etc/nginx/ssl/openssl.cnf
+    cp /etc/nginx/ssl/ca/rootCA.crt /etc/pki/ca-trust/source/anchors/example-root-ca.crt
+    update-ca-trust extract
+    cat >/etc/nginx/sites-enabled.d/proxy.conf <<EOF
+    server {
+        listen 443 ssl;
+        server_name github.com;
+
+        ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
+        ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
+
+        location / {
+            proxy_pass http://{{ .DistroPackagesProxy }}/repository/github-com/;
+        }
+    }
+
+    server {
+        listen 443 ssl;
+        server_name download.falco.org;
+
+        ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
+        ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
+
+        location / {
+            proxy_pass http://{{ .DistroPackagesProxy }}/repository/download-falco-org/;
+        }
+    }
+    EOF
+    echo "127.0.1.1 github.com download.falco.org" >> /etc/hosts
+    nginx
+    sleep 2
+  {{- end }}
   - export ALTWRAP_LLVM_VERSION=18.1
   - export GCC_VERSION=12
   - cd /src
