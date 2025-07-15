@@ -60,6 +60,11 @@
   {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
     {{- include "verify_service_type" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+  {{- if $cr.spec.policies.blockWildcardDomains }}
+    {{- include "verify_ingresses" (list $context $cr) }}
+  {{- end }}
+  {{- end }}  
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -512,3 +517,27 @@ spec:
       {{- $cr.spec.policies.allowedServiceTypes | toYaml | nindent 6 }}
     {{- end }}
 {{- end }}
+
+{{- define "verify_ingresses" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedIngresses
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: ["networking.k8s.io"]
+      kinds: ["Ingress"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+    blockWildcardDomains: {{ $cr.spec.policies.blockWildcardDomains }}
+    {{- end }}
+{{- end }}
+
