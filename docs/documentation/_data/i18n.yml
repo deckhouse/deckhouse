@@ -299,6 +299,9 @@ common:
   d8_cli_reference_title:
     en: Deckhouse CLI command reference
     ru: Справка по командам Deckhouse CLI
+  d8_cli_reference_description:
+    en: List of commands and parameters for Deckhouse CLI (d8)
+    ru: Список команд и параметров Deckhouse CLI (d8)
   crd_has_no_parameters:
     en: The CRD has no fields for configuration.
     ru: У CRD нет полей для настройки.
