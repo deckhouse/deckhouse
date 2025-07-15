@@ -49,6 +49,10 @@ The deployment scheme assumes automated creation of NAT rules:
 If the Edge Gateway is provided by `NSX-V`, you must specify the name and type of the network to which the rule will be bound in the `edgeGateway.NSX-V.externalNetworkName` and `edgeGateway.NSX-V.externalNetworkType` properties, respectively. Typically, this is a network connected to the Edge Gateway in `Gateway Interface` and having an external IP address.
 {% endalert %}
 
+{% alert level="warning" %}
+It is not recommended to use dynamic addressing for the first master node in combination with `NSX-V`.
+{% endalert %}
+
 Additionally, you can enable the creation of default firewall rules using the `createDefaultFirewallRules` property.
 
 {% alert level="warning" %}
