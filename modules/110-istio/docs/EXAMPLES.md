@@ -674,6 +674,7 @@ You can override the global istio-proxy sidecar resource limits for specific wor
 ### Supported annotations
 
 Use these Pod annotations to customize sidecar resources:
+
 | Annotation                          | Description                 | Example Value |
 |-------------------------------------|-----------------------------|---------------|
 | `sidecar.istio.io/proxyCPU`         | CPU request for sidecar     | `200m`        |
@@ -685,11 +686,11 @@ Use these Pod annotations to customize sidecar resources:
 
 For Deployments:
 
-```shell
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  ...
+# ...
 spec:
   template:
     metadata:
@@ -703,11 +704,11 @@ spec:
 
 For ReplicaSets:
 
-```shell
+```yaml
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  ...
+# ...
 spec:
   template:
     metadata:
@@ -721,7 +722,7 @@ spec:
 
 For Pod:
 
-```shell
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
