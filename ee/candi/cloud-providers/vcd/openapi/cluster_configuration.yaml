@@ -357,6 +357,7 @@ apiVersions:
             pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
         internalNetworkDHCPPoolStartAddress:
           type: integer
+          minimum: 2
           description: |
             Specifies the starting address number in the internal network from which the DHCP address pool will begin.
             Addresses below this number will not be assigned automatically by DHCP and are available for manual allocation.
@@ -413,6 +414,8 @@ apiVersions:
               enum: [Standard]
               type: string
             internalNetworkDNSServers:
+              not: {}
+            internalNetworkDHCPPoolStartAddress:
               not: {}
             edgeGateway:
               not: {}
