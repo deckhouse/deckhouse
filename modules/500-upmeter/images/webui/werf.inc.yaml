@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/node-alpine
+from: registry.deckhouse.ru/base_images/node:14-alpine3.12@sha256:53194ebc731c2439dea9b7ed13567740e5dca61cfddb62dddddfcad95ffab332
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -23,7 +23,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache python3 vips make build-base
+  - apk add --no-cache python3 python2 vips make build-base
   install:
   - cd /src
   - yarn install
