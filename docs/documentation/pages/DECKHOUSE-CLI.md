@@ -1,6 +1,6 @@
 ---
 title: Deckhouse CLI
-permalink: en/deckhouse-cli/
+permalink: en/cli/d8/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 

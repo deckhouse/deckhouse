@@ -1656,9 +1656,21 @@ entries:
                         ru: Custom Resources
                       url: /modules/cloud-provider-dynamix/cr.html
     - title:
-        en: Deckhouse CLI
-        ru: Deckhouse CLI
-      url: /deckhouse-cli/
+        en: Console utilities
+        ru: Консольные утилиты
+      folders:
+      - title:
+          en: Deckhouse CLI (d8)
+          ru: Deckhouse CLI (d8)
+        folders:
+        - title:
+            en: Overview and installation
+            ru: Описание и установка
+          url: /cli/d8/
+        - title:
+            en: Reference
+            ru: Справка
+          url: /cli/d8/reference/
     - title:
         en: Release notes
         ru: История изменений
