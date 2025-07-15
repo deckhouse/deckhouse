@@ -1,6 +1,6 @@
 ---
 title: "Переключение редакций"
-permalink: ru/editions.html
+permalink: ru/admin/editions.html
 lang: ru
 ---
 
