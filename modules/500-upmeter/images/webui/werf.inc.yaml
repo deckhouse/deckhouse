@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_NODE_14_ALPINE }}
+fromImage: builder/node-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -23,7 +23,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache python3 python2 vips make build-base
+  - apk add --no-cache python3 vips make build-base
   install:
   - cd /src
   - yarn install
