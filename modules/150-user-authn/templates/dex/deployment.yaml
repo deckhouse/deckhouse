@@ -115,18 +115,14 @@ spec:
           containerPort: 5556
           protocol: TCP
         livenessProbe:
-          httpGet:
-            path: /healthz/live
-            port: 5559
-            scheme: HTTPS
-          initialDelaySeconds: 60
-          periodSeconds: 15
-          timeoutSeconds: 10
-          failureThreshold: 3
+          exec:
+            command:
+            - /usr/local/bin/dex
+            - version
         readinessProbe:
           httpGet:
             path: /healthz/ready
-            port: 5559
+            port: 5556
             scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -174,7 +170,7 @@ spec:
             - /healthz/live
             - /healthz/ready
             upstreams:
-            - upstream: http://127.0.0.1:5558/
+            - upstream: http://127.0.0.1:5556/
               path: /
               authorization:
                 resourceAttributes:
