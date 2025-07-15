@@ -13,8 +13,8 @@ data:
         consolidate 10s ".* write: operation not permitted$"
       }
       cache {
-        success 39936 30 5
-        denial 9984 5 5
+        success 39936 30 5 # <cache size> <TTL max> <TTL min>
+        denial 9984 5 5    # <cache size> <TTL max> <TTL min>
         prefetch 10 1m 25%
         serve_stale 1h immediate
       }
