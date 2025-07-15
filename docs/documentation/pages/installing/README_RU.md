@@ -366,7 +366,7 @@ dhctl bootstrap \
 ### Проверки перед началом установки
 
 {% offtopic title="Схема выполнения проверок перед началом установки Deckhouse..." %}
-![Схема выполнения проверок перед началом установки Deckhouse](../images/installing/preflight-checks.png)
+![Схема выполнения проверок перед началом установки Deckhouse](./images/installing/preflight-checks.png)
 {% endofftopic %}
 
 Список проверок, выполняемых инсталлятором перед началом установки Deckhouse:
@@ -531,7 +531,7 @@ echo "$MYRESULTSTRING"
 **Настройка**:
 
 1. Создайте **проксирующий** репозиторий Docker («Administration» → «Repository» → «Repositories»), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
-   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
+   ![Создание проксирующего репозитория Docker](./images/registry/nexus/nexus-repository.png)
 
 1. Заполните поля страницы создания репозитория следующим образом:
    * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
@@ -544,18 +544,18 @@ echo "$MYRESULTSTRING"
      * `Username` должно иметь значение `license-token`.
      * `Password` должно содержать ключ лицензии Deckhouse Kubernetes Platform.
 
-    ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
-    ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
-    ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
+    ![Пример настроек репозитория 1](./images/registry/nexus/nexus-repo-example-1.png)
+    ![Пример настроек репозитория 2](./images/registry/nexus/nexus-repo-example-2.png)
+    ![Пример настроек репозитория 3](./images/registry/nexus/nexus-repo-example-3.png)
 
 1. Настройте контроль доступа Nexus для доступа DKP к созданному репозиторию:
    * Создайте роль **Nexus** («Administration» → «Security» → «Roles») с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
 
-     ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
+     ![Создание роли Nexus](./images/registry/nexus/nexus-role.png)
 
    * Создайте пользователя («Administration» → «Security» → «Users») с ролью, созданной выше.
 
-     ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
+     ![Создание пользователя Nexus](./images/registry/nexus/nexus-user.png)
 
 В результате образы DKP будут доступны, например, по следующему адресу: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
@@ -570,7 +570,7 @@ echo "$MYRESULTSTRING"
   * «Endpoint URL: `https://registry.deckhouse.ru`».
   * Укажите «Access ID» и «Access Secret» (лицензионный ключ для Deckhouse Kubernetes Platform).
 
-    ![Настройка Registry](images/registry/harbor/harbor1.png)
+    ![Настройка Registry](./images/registry/harbor/harbor1.png)
 
 * Создайте новый проект:
   * «Projects → New Project».
@@ -578,7 +578,7 @@ echo "$MYRESULTSTRING"
   * «Access Level: `Public`».
   * «Proxy Cache» — включите и выберите в списке реестр, созданный на предыдущем шаге.
 
-    ![Создание нового проекта](images/registry/harbor/harbor2.png)
+    ![Создание нового проекта](./images/registry/harbor/harbor2.png)
 
 В результате настройки, образы DKP станут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
