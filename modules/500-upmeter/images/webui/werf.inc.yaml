@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: registry.deckhouse.ru/base_images/node:14-alpine3.12@sha256:53194ebc731c2439dea9b7ed13567740e5dca61cfddb62dddddfcad95ffab332
+from: {{ .Images.BASE_NODE_14_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
