@@ -8,11 +8,6 @@ cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "100m" }}
 memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "100Mi" }}
 {{- end }}
 
-{{- define "dex_vpa_min_resources" }}
-cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "10m" }}
-memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "25Mi" }}
-{{- end }}
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -33,7 +28,7 @@ spec:
     - containerName: dex
       controlledValues: RequestsAndLimits
       minAllowed:
-        {{- include "dex_vpa_min_resources" . | nindent 8 }}
+        {{- include "dex_resources" . | nindent 8 }}
       maxAllowed:
         {{- include "dex_limits" . | nindent 8 }}
     - containerName: kube-rbac-proxy
