@@ -1090,11 +1090,6 @@ entries:
             en: Alerts
             ru: Алерты
           url: /alerts.html
-        #- title:
-        #    en: Network security settings
-        #    ru: Настройка сетевых политик
-        #  url: /network_security_setup.html
-
         - title:
             en: Module development
             ru: Разработка модуля
@@ -1131,7 +1126,6 @@ entries:
                 en: Development and debugging
                 ru: Разработка и отладка
               url: /architecture/module-development/development/
-          draft: true
         - title:
             en: Disaster resilience
             ru: Катастрофоустойчивость

@@ -114,7 +114,7 @@ kubectl annotate mpo <name> renew=""
 
 ## Логика автообновления модулей
 
-![Логика автообновления модулей](../../images/module-development/module_update_flow_ru.svg)
+![Логика автообновления модулей](../../../images/architecture/module-development/module_update_flow_ru.svg)
 
 > Версии ModuleRelease `v1.0.0` и `v1.1.1` приведены в качестве примера.
 
