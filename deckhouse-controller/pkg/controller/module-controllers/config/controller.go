@@ -261,6 +261,32 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return ctrl.Result{}, err
 		}
 
+		// delete all pending releases for EnabledByModuleConfig disabled modules
+		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			releases := new(v1alpha1.ModuleReleaseList)
+			selector := client.MatchingFields{"spec.moduleName": module.Name}
+			if err := r.client.List(ctx, releases, selector); err != nil {
+				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
+			}
+
+			pendingReleases := make([]*v1alpha1.ModuleRelease, 0)
+			for _, release := range releases.Items {
+				if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
+					pendingReleases = append(pendingReleases, &release)
+				}
+			}
+
+			if len(pendingReleases) > 0 {
+				for _, release := range pendingReleases {
+					err := r.client.Delete(ctx, release)
+					if err != nil && !apierrors.IsNotFound(err) {
+						r.logger.Error("failed to delete pending release", slog.String("pending_release", release.Name), log.Err(err))
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
+
 		// skip disabled modules
 		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
@@ -454,6 +480,14 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
+
+	// delete pending ModuleReleases on disabled modules
+	// releases := new(v1alpha1.ModuleReleaseList)
+	// err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, releases)
+	// if err != nil {
+	// 	// return err
+	// }
+
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			return false

@@ -1444,26 +1444,26 @@ func (r *reconciler) deleteOutdatedModuleReleases(ctx context.Context, moduleSou
 				version: release.GetVersion(),
 			})
 		}
-		if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
-			mod := new(v1alpha1.Module)
-			err := r.client.Get(ctx, client.ObjectKey{Name: module}, mod)
-			if err != nil {
-				r.log.Error("get module", slog.String("module", module), log.Err(err))
-				continue
-			}
-			mc := new(v1alpha1.ModuleConfig)
-			err = r.client.Get(ctx, client.ObjectKey{Name: module}, mc)
-			if err != nil {
-				r.log.Error("get moduleConfig", slog.String("module", module), log.Err(err))
-				continue
-			}
-			if mod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && !*mc.Spec.Enabled {
-				outdatedReleases[release.Spec.ModuleName] = append(outdatedReleases[release.Spec.ModuleName], outdatedRelease{
-					name:    release.GetName(),
-					version: release.GetVersion(),
-				})
-			}
-		}
+		// if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
+		// 	mod := new(v1alpha1.Module)
+		// 	err := r.client.Get(ctx, client.ObjectKey{Name: module}, mod)
+		// 	if err != nil {
+		// 		r.log.Error("get module", slog.String("module", module), log.Err(err))
+		// 		continue
+		// 	}
+		// 	mc := new(v1alpha1.ModuleConfig)
+		// 	err = r.client.Get(ctx, client.ObjectKey{Name: module}, mc)
+		// 	if err != nil {
+		// 		r.log.Error("get moduleConfig", slog.String("module", module), log.Err(err))
+		// 		continue
+		// 	}
+		// 	if mod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && !*mc.Spec.Enabled {
+		// 		outdatedReleases[release.Spec.ModuleName] = append(outdatedReleases[release.Spec.ModuleName], outdatedRelease{
+		// 			name:    release.GetName(),
+		// 			version: release.GetVersion(),
+		// 		})
+		// 	}
+		// }
 	}
 
 	// sort and delete all outdated releases except for <outdatedReleasesKeepCount> last releases per a module
