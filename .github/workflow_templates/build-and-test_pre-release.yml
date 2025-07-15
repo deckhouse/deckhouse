@@ -53,7 +53,6 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - go_generate
       - workflow_render
     env:
       WERF_ENV: "FE"
@@ -65,7 +64,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -78,7 +76,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -91,7 +88,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -104,7 +100,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -117,7 +112,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
       - workflow_render
       - build_fe
     env:

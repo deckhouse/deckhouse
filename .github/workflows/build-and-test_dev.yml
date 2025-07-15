@@ -510,7 +510,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
     env:
       WERF_ENV: "FE"
@@ -816,7 +815,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -1120,7 +1118,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -1424,7 +1421,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -1728,7 +1724,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
@@ -2032,7 +2027,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
       - workflow_render
       - build_fe
     env:
