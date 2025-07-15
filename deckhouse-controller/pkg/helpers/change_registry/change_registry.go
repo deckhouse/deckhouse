@@ -67,6 +67,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	}
 
 	// Perform the check at the very beginning.
+	logEntry.Info("Checking cluster registry mode...")
 	if err := checkRegistryModuleMode(ctx, kubeCl); err != nil {
 		return err
 	}
