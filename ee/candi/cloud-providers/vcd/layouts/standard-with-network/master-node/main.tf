@@ -13,8 +13,8 @@ module "master_node" {
 }
 
 locals {
-  useNSXV        = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
-  edgeGatewayId  = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
+  useNSXV       = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+  edgeGatewayId = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -36,5 +36,5 @@ module "dnat" {
   edgeGatewayId                = local.edgeGatewayId
   useNSXV                      = local.useNSXV
   nodeIndex                    = var.nodeIndex
-  master_node_ip               = module.master_node.master_ip_address_for_ssh
+  node_ip                      = module.master_node.master_ip_address_for_ssh
 }
