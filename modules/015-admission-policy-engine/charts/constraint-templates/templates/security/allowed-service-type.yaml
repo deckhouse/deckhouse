@@ -34,7 +34,6 @@ spec:
         package d8.security_policies
 
         violation[{"msg": msg, "details": {}}] {
-          input.review.object.kind == "Service"
           allowed_types := input.parameters.allowedServiceTypes
           actual_type := input.review.object.spec.type        
           service_name := input.review.object.metadata.name
