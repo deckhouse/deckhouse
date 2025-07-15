@@ -58,6 +58,7 @@ const (
 	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
 	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
 	ModuleReasonModuleDependencyExtender    = "ModuleDependencyExtender"
+	ModuleReasonExperimentalExtender        = "ExperimentalExtender"
 	ModuleReasonNotInstalled                = "NotInstalled"
 	ModuleReasonDisabled                    = "Disabled"
 	ModuleReasonConflict                    = "Conflict"
@@ -67,7 +68,6 @@ const (
 	ModuleReasonReconciling                 = "Reconciling"
 	ModuleReasonInstalling                  = "Installing"
 	ModuleReasonError                       = "Error"
-	ModuleReasonExperimentalExtender        = "ExperimentalExtender"
 
 	ModuleMessageBundle                      = "turned off by bundle"
 	ModuleMessageModuleConfig                = "turned off by module config"
@@ -145,10 +145,9 @@ type ModuleRequirements struct {
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse                string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
-	Kubernetes               string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped             string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
-	AllowExperimentalModules string `json:"allowExperimentalModules,omitempty" yaml:"allowExperimentalModules,omitempty"`
+	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
 }
 
 type ModuleProperties struct {
