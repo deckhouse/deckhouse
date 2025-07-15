@@ -191,6 +191,13 @@ spec:
                     encoding:
                       description: |
                         В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
                     keyField:
                       description: |
                         Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
@@ -284,7 +291,15 @@ spec:
                     address:
                       description: "Адрес сокета."
                     encoding:
-                      description: "В каком формате закодировать сообщение."
+                      description: |
+                        В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
                     mode:
                       descriptions: "Тип сокета, который будет использован."
                     tcp:
@@ -415,6 +430,103 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                transformations:
+                  description: |
+                    Список трансформаций, которые могут применяться к логам перед отправкой.
+                    
+                    Возможные варианты:
+
+                      - `ReplaceKeys` — заменяет `source` на `target` в заданных ключах лейблов.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage` — преобразует поле `message` из формата, заданного в `sourceFormat`, в объект.
+                         Если это невозможно, поле `message` остается без изменений.
+
+                        Примеры:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels` — удаляет указанные лейблы.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    properties:
+                      action:
+                        description: Тип трансформации.
+                      replaceKeys:
+                        description: Рекурсивная замена всех совпадений шаблона `source` на значение `target` в заданных ключах.
+                        properties:
+                          source:
+                            description: |
+                              Шаблон для поиска совпадений.
+                              Может быть статической строкой или регулярным выражением.
+                          target:
+                            description: Значение, на которое будут заменены все совпадения шаблона.
+                          labels:
+                            description: Список лейблов, в которых будет выполняться рекурсивная замена.
+                      parseMessage:
+                        description: Преобразует поле `message` в объект.
+                        properties:
+                          sourceFormat:
+                            description: Формат сообщения для преобразования в объект.
+                          string:
+                            properties:
+                              targetField:
+                                description: Имя поля, в которое помещается структурированное сообщение.
+                          json:
+                            properties:
+                              depth:
+                                description: Глубина парсинга JSON.
+                      dropLabels:
+                        description: Удаление заданных лейблов.
+                        properties:
+                          labels:
+                            description: Список лейблов, которые необходимо удалить.
                 buffer:
                   description: Параметры буфера.
                   properties:

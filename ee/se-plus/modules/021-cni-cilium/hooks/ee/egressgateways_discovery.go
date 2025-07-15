@@ -21,6 +21,8 @@ import (
 	k8type "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/strings/slices"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 	eeInternal "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
@@ -131,6 +133,10 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 		return nil, err
 	}
 
+	for i := range egi.Status.Conditions {
+		egi.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+	}
+
 	return EgressGatewayInstanceInfo{
 		Name:            egi.GetName(),
 		NodeName:        egi.Spec.NodeName,
@@ -225,12 +231,20 @@ func applyEgressAgentPodFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func handleEgressGateways(input *go_hook.HookInput) error {
-	EgressGatewayStates := egressGatewayStatesFromSnapshots(input.Snapshots["egressgateways"])
+	EgressGatewayStates, err := egressGatewayStatesFromSnapshots(input)
+	if err != nil {
+		return err
+	}
+
 	nodesToLabel := make(map[string][]string)
 	nodesToUnlabel := make(map[string][]string)
 
-	for _, nodeSnapshot := range input.Snapshots["nodes"] {
-		node := nodeSnapshot.(NodeInfo)
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
+	}
+
+	for _, node := range nodes {
 		// Node is NotReady or cordoned
 		if !node.IsReady || node.IsCordoned {
 			if node.IsMemberLabeled {
@@ -260,7 +274,6 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 				EgressGatewayStates[egName] = egState
 			}
 		}
-
 		// Node doesn't match any EG NodeSelector
 		if !nodeMatchedAnyEG {
 			if node.IsMemberLabeled {
@@ -272,46 +285,54 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 	}
 
+	ciliumPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.NewSnapshots, "cilium_agent_pods")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cilium_agent_pods snapshot: %w", err)
+	}
 	// Collect info about nodes with healthy cilium agent pod
-	for _, podSnapshot := range input.Snapshots["cilium_agent_pods"] {
-		pod := podSnapshot.(PodInfo)
+	for _, pod := range ciliumPods {
 		// Pod is NotReady or deleted
 		if !pod.IsReady || pod.IsDeleted {
 			continue
 		}
-
 		// Check if pod's Node is in AllNodes of any EG
 		for egName, egState := range EgressGatewayStates {
-			for _, oneOfAllNodes := range egState.AllNodes {
-				if pod.Node == oneOfAllNodes {
-					egState.HealthyNodes = appendToSliceUniqString(egState.HealthyNodes, pod.Node)
-					EgressGatewayStates[egName] = egState
-				}
+			if slices.Contains(egState.AllNodes, pod.Node) {
+				egState.HealthyNodes = appendToSliceUniqString(egState.HealthyNodes, pod.Node)
+				EgressGatewayStates[egName] = egState
 			}
 		}
 	}
 
+	egressAgentPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.NewSnapshots, "egress_agent_pods")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal egress_agent_pods snapshot: %w", err)
+	}
 	// Collect info about nodes with healthy egress gateway agent pod
-	for _, podSnapshot := range input.Snapshots["egress_agent_pods"] {
-		pod := podSnapshot.(PodInfo)
+	for _, pod := range egressAgentPods {
 		// Pod is NotReady or deleted
 		if !pod.IsReady || pod.IsDeleted {
 			continue
 		}
-
 		// Check if pod's Node is in AllNodes of any EG and in HealthyNode
 		for egName, egState := range EgressGatewayStates {
-			for _, oneOfHealthyNodes := range egState.HealthyNodes {
-				if pod.Node == oneOfHealthyNodes {
-					egState.HealthyNodesWithEgressAgent = appendToSliceUniqString(egState.HealthyNodesWithEgressAgent, pod.Node)
-					EgressGatewayStates[egName] = egState
-				}
+			if slices.Contains(egState.HealthyNodes, pod.Node) {
+				egState.HealthyNodesWithEgressAgent = appendToSliceUniqString(egState.HealthyNodesWithEgressAgent, pod.Node)
+				EgressGatewayStates[egName] = egState
 			}
 		}
 	}
-
 	// Evaluate desired nodes
-	egressInternalMap := egressGatewayMapFromSnapshots(input.Snapshots["egressgateways"])
+	egressInternalMap, err := egressGatewayMapFromSnapshots(input)
+	if err != nil {
+		return err
+	}
+
+	egressGatewayInstances, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInstanceInfo](input.NewSnapshots, "egressgatewayinstances")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal egressgatewayinstances snapshot: %w", err)
+	}
+
 	for egName, egState := range EgressGatewayStates {
 		if egState.Mode == string(eeCommon.VirtualIPAddress) {
 			// for VirtualIP ready node is one with cilium agent and egress gateway agent
@@ -322,6 +343,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 
 		egState.DesiredActiveNode = egState.electDesiredActiveNode()
+
 		var isNodeFoundInCurrentActiveNodes bool
 		for _, currentActiveNode := range egState.CurrentActiveNodes {
 			if currentActiveNode == egState.DesiredActiveNode {
@@ -339,13 +361,8 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		eg.InstanceName = egName + "-" + generateShortHash(egName+"#"+eg.DesiredNode)
 		egressInternalMap[egName] = eg
 
-		egressGatewayInstanceInfos := make([]EgressGatewayInstanceInfo, len(input.Snapshots["egressgatewayinstances"]))
-		for i, egiSnapshot := range input.Snapshots["egressgatewayinstances"] {
-			egressGatewayInstanceInfos[i] = egiSnapshot.(EgressGatewayInstanceInfo)
-		}
-
-		patchStatus := makeEGStatusPatchForState(egState, egressGatewayInstanceInfos)
-		input.PatchCollector.MergePatch(
+		patchStatus := makeEGStatusPatchForState(egState, egressGatewayInstances)
+		input.PatchCollector.PatchWithMerge(
 			patchStatus,
 			"network.deckhouse.io/v1alpha1",
 			"EgressGateway",
@@ -356,28 +373,22 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		EgressGatewayStates[egName] = egState
 	}
 
-	input.Values.Set(
-		"cniCilium.internal.egressGatewaysMap",
-		egressInternalMap,
-	)
+	input.Values.Set("cniCilium.internal.egressGatewaysMap", egressInternalMap)
 
 	processAddingLabels(input, nodesToLabel)
 	processRemovingLabels(input, nodesToUnlabel)
-
 	// clean finalizer for orphaned EGI
 	egNodes := loadAllNodesFromEgressGatewayStates(EgressGatewayStates)
-	for _, egiSnapshot := range input.Snapshots["egressgatewayinstances"] {
-		egi := egiSnapshot.(EgressGatewayInstanceInfo)
-		// Check if pod's Node is in AllNodes of any EG
+	// Check if pod's Node is in AllNodes of any EG
+	for _, egi := range egressGatewayInstances {
 		if !egi.IsDeleted {
 			continue
 		}
-
 		if slices.Contains(egNodes, egi.NodeName) {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(deleteFinalizersPatch,
+		input.PatchCollector.PatchWithMerge(deleteFinalizersPatch,
 			"internal.network.deckhouse.io/v1alpha1",
 			"SDNInternalEgressGatewayInstance",
 			"",
@@ -496,11 +507,15 @@ func appendLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 	}
 }
 
-func egressGatewayStatesFromSnapshots(snapshots []go_hook.FilterResult) map[string]egressGatewayState {
-	// map[<eg name>]egressGatewayState
+// map[<eg name>]egressGatewayState
+func egressGatewayStatesFromSnapshots(input *go_hook.HookInput) (map[string]egressGatewayState, error) {
+	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
+	}
+
 	result := make(map[string]egressGatewayState)
-	for _, snapshot := range snapshots {
-		eg := snapshot.(EgressGatewayInfo)
+	for _, eg := range egressGateways {
 		result[eg.Name] = egressGatewayState{
 			Generation:                  eg.Generation,
 			Name:                        eg.Name,
@@ -516,16 +531,21 @@ func egressGatewayStatesFromSnapshots(snapshots []go_hook.FilterResult) map[stri
 			CurrentActiveNodes:          make([]string, 0, 4),
 		}
 	}
-	return result
+
+	return result, nil
 }
 
-func egressGatewayMapFromSnapshots(snapshots []go_hook.FilterResult) map[string]EgressGatewayInfo {
+func egressGatewayMapFromSnapshots(input *go_hook.HookInput) (map[string]EgressGatewayInfo, error) {
+	objs, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
+	}
+
 	result := make(map[string]EgressGatewayInfo)
-	for _, snapshot := range snapshots {
-		eg := snapshot.(EgressGatewayInfo)
+	for _, eg := range objs {
 		result[eg.Name] = eg
 	}
-	return result
+	return result, nil
 }
 
 func appendToSliceUniqString(slice []string, value string) []string {

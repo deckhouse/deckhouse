@@ -138,10 +138,10 @@ properties:
                           coreFraction:
                             type: string
                             default: "100%"
-                            enum: ["5%", "10%", "25%", "50%", "100%"]
+                            pattern: ^100%$|^[1-9][0-9]?%$
                             description: |
                               Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
-                              Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
+                              Supported values: `1% - 100%`.
                             example: "100%"
                       memory:
                         type: object
@@ -156,6 +156,11 @@ properties:
                             description: |
                               Amount of memory resources allowed for VM.
                             example: 4Gi
+                      virtualMachineClassName:
+                        type: string
+                        description: |
+                          The VirtualMachineClass resource is intended for centralized configuration of preferred virtual machine parameters.
+                          It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                       bootloader:
                         type: string
                         enum:
@@ -460,6 +465,12 @@ properties:
               properties:
                 name:
                   type: string
+                volumeBindingMode:
+                  type: string
+                reclaimPolicy:
+                  type: string
+                allowVolumeExpansion:
+                  type: boolean
                 isEnabled:
                   type: boolean
                 IsDefault:
@@ -471,5 +482,11 @@ properties:
           properties:
             name:
               type: string
+            volumeBindingMode:
+              type: string
+            reclaimPolicy:
+              type: string
+            allowVolumeExpansion:
+              type: boolean
             dvpStorageClass:
               type: string

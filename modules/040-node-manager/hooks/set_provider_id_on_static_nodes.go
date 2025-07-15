@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -71,15 +75,17 @@ type providerIDNode struct {
 }
 
 func handleSetProviderID(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes"]
+	snaps := input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[providerIDNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node' snapshots: %w", err)
+		}
 
-	for _, sn := range snap {
-		node := sn.(providerIDNode)
 		if !node.NeedPatch {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(staticPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(staticPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil

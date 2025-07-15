@@ -76,11 +76,13 @@ spec:
 
 Each `ingress-nginx-controller` has certificates that can be used to connect to Prometheus. All you need is to create an additional `Ingress` resource.
 
+{% endraw -%}
 {% alert level="info" %}
 For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
 
 Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
 {% endalert %}
+{% raw -%}
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -129,9 +131,11 @@ data:
 
 Next, you only need to add the data source to Grafana:
 
+{% endraw -%}
 {% alert level="info" %}
 Specify `https://prometheus-api.<cluster-domain>` as the URL.
 {% endalert %}
+{% raw -%}
 
 <img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
 

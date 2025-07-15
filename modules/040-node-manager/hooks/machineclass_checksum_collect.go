@@ -26,6 +26,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -109,7 +112,7 @@ func saveMachineClassChecksum(input *go_hook.HookInput) error {
 		input.Values.Set(machineDeploymentsInternalValuesPath, map[string]interface{}{})
 	}
 
-	rawMDs := input.Snapshots["machine_deployments"]
+	rawMDs := input.NewSnapshots.Get("machine_deployments")
 	if len(rawMDs) == 0 {
 		return nil
 	}
@@ -118,10 +121,8 @@ func saveMachineClassChecksum(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse nodeGroup values: %v", err)
 	}
-
-	for _, mdRaw := range rawMDs {
-		md, ok := mdRaw.(machineDeployment)
-		if !ok {
+	for md, err := range sdkobjectpatch.SnapshotIter[machineDeployment](rawMDs) {
+		if err != nil {
 			return fmt.Errorf("cannot parse machineDeployment filter result")
 		}
 
@@ -146,7 +147,7 @@ type nodeGroupValue struct {
 	Raw  interface{}   `json:"-"`
 }
 
-func parseNodeGroupValues(values go_hook.PatchableValuesCollector) ([]*nodeGroupValue, error) {
+func parseNodeGroupValues(values sdkpkg.PatchableValuesCollector) ([]*nodeGroupValue, error) {
 	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
 	var ng []*nodeGroupValue
 

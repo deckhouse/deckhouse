@@ -187,6 +187,11 @@ func (mr *ModuleRelease) GetApplyNow() bool {
 	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
 }
 
+func (mr *ModuleRelease) GetIsUpdating() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationIsUpdating]
+	return ok && v == "true"
+}
+
 func (mr *ModuleRelease) GetNotified() bool {
 	v, ok := mr.Annotations[ModuleReleaseAnnotationNotified]
 	return ok && v == "true"

@@ -46,12 +46,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleKubeadmConfig)
 
 func handleKubeadmConfig(input *go_hook.HookInput) error {
-	snap, ok := input.Snapshots["cm_kubeadm_config"]
-	if !ok {
-		return nil
-	}
+	snaps := input.NewSnapshots.Get("cm_kubeadm_config")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
+		input.Logger.Debug("No kubeadm-config found or snapshot not configured")
 		return nil
 	}
 	input.Logger.Info("Deleting CM kubeadm-config")

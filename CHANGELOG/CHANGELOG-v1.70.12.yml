@@ -1,0 +1,9 @@
+cloud-provider-huaweicloud:
+  features:
+    - summary: add enterprise_project_id
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14042
+dhctl:
+  fixes:
+    - summary: TLS support on dhctl edition checking step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14233
+

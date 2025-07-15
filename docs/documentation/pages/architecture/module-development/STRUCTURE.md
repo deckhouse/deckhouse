@@ -39,10 +39,11 @@ Example module folder structure containing build and publish rules using GitHub 
 │  │  └─ 📝 deploy_prod.yaml
 ├─ 📁 .werf/
 │  ├─ 📁 workflows/
+│  │  ├─ 📝 base-images.yaml
 │  │  ├─ 📝 bundle.yaml
 │  │  ├─ 📝 images.yaml
 │  │  ├─ 📝 images-digest.yaml
-│  │  ├─ 📝 python-deps.yaml
+│  │  ├─ 📝 batch-go.yaml
 │  │  └─ 📝 release.yaml
 ├─ 📁 charts/
 │  └─ 📁 helm_lib/
@@ -65,8 +66,13 @@ Example module folder structure containing build and publish rules using GitHub 
 │  ├─ 📝 ADVANCED_USAGE.md
 │  └─ 📝 ADVANCED_USAGE.ru.md
 ├─ 📁 hooks/
-│  ├─ 📝 hook1.py
-│  └─ 📝 hook2.py
+│  ├─ 📁 batch/
+│  │  ├─ 📁 my-hooks/
+│  │  │  ├─ 📝 my-hook1.go
+│  │  │  └─ 📝 my-hook2.go
+│  │  ├─ 📝 go.mod
+│  │  ├─ 📝 go.sum
+│  │  ├─ 📝 main.go
 ├─ 📁 images/
 │  ├─ 📁 nginx
 │  │  └─ 📝 Dockerfile
@@ -228,18 +234,19 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 
 ## hooks
 
-The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
+The `/hooks/batch` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 
-[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
+[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Go library](https://github.com/deckhouse/module-sdk) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
-- When run with the `--config` parameter, the hook must output its configuration in YAML format.
-- When run without parameters, the hook must perform its intended action.
+- When run with the `hook config` arguments, it should output its hook configuration in JSON format.
+- When run with the `hook list` arguments, it should output a run of all hooks with their sequence number.
+- When run with the `hook run 0` arguments, the logic of the hook with number 0 should be executed.
 
 The hook files must be executable. Add the appropriate permissions using the `chmod +x <path to the hook file>` command.
 
-You can find Python hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
+You can find Go hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can also be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
 
 ## images
 

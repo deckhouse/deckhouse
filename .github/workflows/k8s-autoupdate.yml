@@ -84,9 +84,12 @@ jobs:
             console.log('No milestones found with patch version 0.');
           }
     - name: Update k8s patch version
+      id: update
       run: |
         make update-k8s-patch-versions
         make generate
+        echo "Updated versions: $(cat /tmp/updated-versions)"
+        echo "::set-output name=k8sVersions::$(cat /tmp/updated-versions)" && rm -f /tmp/updated-versions
     - name: Create Pull Request
       id: create-pull-request
       uses: peter-evans/create-pull-request@v7.0.8
@@ -98,20 +101,18 @@ jobs:
         branch: chore/k8s-autoupdate
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
-        labels: |
-          e2e/run/yandex-cloud
-          security/cve
+        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}security/cve
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
-      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
+      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' && github.repository == 'deckhouse/deckhouse' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
-      if: failure()
+      if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |

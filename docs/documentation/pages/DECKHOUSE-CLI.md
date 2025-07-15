@@ -1,5 +1,5 @@
 ---
-title: Deckhouse CLI
+title: "Deckhouse CLI overview and installation"
 permalink: en/cli/d8/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---

@@ -32,6 +32,9 @@ spec:
                     ID клиентов, которым позволена cross-аутентификация.
 
                     [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth)
+                secretMetadata:
+                    description: |
+                        Список лейблов и аннотаций, которые будут перенесены в метаданные секретов ресурса DexClient.
     - name: v1
       served: true
       storage: false

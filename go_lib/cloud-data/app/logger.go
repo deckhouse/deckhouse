@@ -22,9 +22,7 @@ import (
 
 func InitLogger() *log.Logger {
 	// json is default formatter for our slog implementation
-	l := log.NewLogger(log.Options{
-		Level: slog.Level(LoggerLevel),
-	})
+	l := log.NewLogger(log.WithLevel(slog.Level(LoggerLevel)))
 
 	return l
 }

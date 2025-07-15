@@ -22,11 +22,15 @@ TODO: remove after deckhouse 1.68
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,16 +54,17 @@ func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func handleClusterConfigurationLabel(input *go_hook.HookInput) error {
-	snap := input.Snapshots["clusterConfiguration"]
+	snap, err := sdkobjectpatch.UnmarshalToStruct[map[string]string](input.NewSnapshots, "clusterConfiguration")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
+	}
 	if len(snap) == 0 {
 		return nil
 	}
-	labels := snap[0].(map[string]string)
+	labels := snap[0]
 
-	if len(labels) > 0 {
-		if _, ok := labels["name"]; ok {
-			return nil
-		}
+	if _, ok := labels["name"]; ok {
+		return nil
 	}
 
 	m := map[string]interface{}{
@@ -70,6 +75,6 @@ func handleClusterConfigurationLabel(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(m, "v1", "Secret", "kube-system", "d8-cluster-configuration")
+	input.PatchCollector.PatchWithMerge(m, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 	return nil
 }

@@ -32,9 +32,9 @@ metadata:
     modules.deckhouse.io/update-policy: parca
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
-    status: deployed
+    status: superseded
   name: parca-1.2.1
-  resourceVersion: "1001"
+  resourceVersion: "1002"
 spec:
   moduleName: parca
   version: 1.2.1
@@ -63,7 +63,7 @@ metadata:
     source: test
     status: deployed
   name: parca-1.5.2
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.5.2
@@ -75,3 +75,17 @@ status:
   pullDuration: 9m15s
   size: 0
   transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed

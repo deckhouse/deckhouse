@@ -65,7 +65,7 @@ metadata:
   name: gitlab
 spec:
   type: Gitlab
-  displayName: Dedicated Gitlab
+  displayName: Dedicated GitLab
   gitlab:
     baseURL: https://gitlab.example.com
     clientID: plainstring
@@ -80,7 +80,7 @@ Create a new application in the GitLab project.
 To do this, you need to:
 * **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)` and set scopes `read_user`, `openid`;
 * **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)`; also, don't forget to set scopes `read_user`, `openid`;
-* (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` checkbox  when creating an application.
+* (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` checkbox when creating an application.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
@@ -169,6 +169,7 @@ spec:
     issuer: https://keycloak.my-company.com/realms/myrealm # Use the name of your realm
     clientID: plainstring
     clientSecret: plainstring
+    insecureSkipEmailVerified: true    
     getUserInfo: true
     scopes:
       - openid
@@ -176,6 +177,10 @@ spec:
       - email
       - groups
 ```
+
+{% alert level="warning" %}
+When using Keycloak as an Identity Provider, remove the `Email verified` mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for correct processing of `true` value of [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field  and to grant permissions to unverified users.
+{% endalert %}
 
 #### Okta
 
@@ -343,13 +348,21 @@ data:
 
 ## An example of creating a static user
 
-Create a password and enter its hash in the `password` field.
+Create a password and enter its hash encoded in base64 in the `password` field.
 
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
+
+{% alert level="info" %}
+If the `htpasswd` command is not available, install the appropriate package:
+
+* `apache2-utils` — for Debian-based distributions.
+* `httpd-tools` — for CentOS-based distributions.
+* `apache2-htpasswd` — for ALT Linux.
+{% endalert %}
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
@@ -364,7 +377,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 

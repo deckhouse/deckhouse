@@ -1,6 +1,6 @@
 ---
 image: install-standalone-builder-content
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 final: false
 git:
 - add: /

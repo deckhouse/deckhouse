@@ -47,3 +47,16 @@ While we were previously satisfied with the older behavior, the agent is now una
 
 Please remove this change after `CES` becomes Stable. <https://github.com/cilium/cilium/issues/31904#issuecomment-2647858564>
 
+## 009-wireguard-port.patch
+
+Changing the hardcoded wireguard port from `51871` to `4287` (a port within our range).
+
+## 010-fix-cilium-local-redirect-policy.patch
+
+When the `bpf-lb-algorithm-annotation` option is enabled, the `CiliumLocalRedirectPolicy` in Cilium version 1.17.4 stops working. This patch solves the problem with the way the LoadBalancerAlgorithm processes.
+
+Upstream PR <https://github.com/cilium/cilium/pull/40246>.
+
+## 011-add-least-conn-lb-algorithm.patch
+
+Added an implementation of the Least Connections load balancing algorithm.

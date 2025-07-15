@@ -170,7 +170,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
-	meta downloader.ModuleDownloadResult,
+	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	// check the active source
 	if module.Properties.Source != source.Name {
@@ -188,7 +188,7 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 		return false
 	}
 
-	return sourceModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !releaseExists)
+	return sourceModule.Checksum != meta.Checksum || !releaseExists
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {

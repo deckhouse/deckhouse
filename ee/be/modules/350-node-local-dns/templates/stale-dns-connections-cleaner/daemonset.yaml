@@ -59,6 +59,8 @@ spec:
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "staleDnsConnectionsCleaner") }}
         command: ["/stale-dns-connections-cleaner"]
+        args:
+          - "--health-probe-bind-address=127.0.0.1:8768"
         env:
         - name: NODE_NAME
           valueFrom:
@@ -69,7 +71,7 @@ spec:
           httpGet:
             path: /healthz
             host: 127.0.0.1
-            port: 8001
+            port: 8768
             scheme: HTTP
         resources:
           requests:

@@ -302,6 +302,9 @@ properties:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
+            gpu:
+              type: object
+              additionalProperties: true
             cri:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object

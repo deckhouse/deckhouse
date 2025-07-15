@@ -412,7 +412,7 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
     core.endGroup();
   }
 };
-
+exports.removeLabel = removeLabel;
 /**
  * Set outputs to enable e2e jobs from workflow_dispatch inputs.
  *
@@ -481,6 +481,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   let multimaster = e2eDefaults.multimaster;
   let edition = '';
   let cis = e2eDefaults.cis;
+  let autoscaler = false
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -507,6 +508,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use operator-trivy to get CIS Benchmark report`);
       cis = true;
     }
+    if (info.autoscaler) {
+      core.info(`Detect '${label.name}': enable autoscaler tests`);
+      autoscaler = true;
+    };
   }
 
   if (ver.length === 0) {
@@ -526,6 +531,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
   core.setOutput(`cis`, `${cis}`);
+  core.setOutput(`autoscaler`, `${autoscaler}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -1045,6 +1051,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       if (labelInfo.security === 'rootless' && event.action === 'labeled') {
         command.workflows = ['build-and-test_dev.yml'];
         command.rerunWorkflow = true;
+      }
+      if (labelInfo.security == 'cve' && event.action === 'labeled') {
+        command.workflows = ['cve-pr.yml'];
+        command.triggerWorkflowDispatch = true;
       }
     }
   } finally {

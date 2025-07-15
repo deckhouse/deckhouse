@@ -19,6 +19,8 @@ package hooks
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -33,10 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -131,12 +136,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
-	snap := input.Snapshots["nodes_for_draining"]
-	for _, s := range snap {
-		if s == nil {
-			continue
+	dNodes := input.NewSnapshots.Get("nodes_for_draining")
+	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_for_draining' snapshots: %w", err)
 		}
-		dNode := s.(drainingNode)
 
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
 		if !exists {
@@ -149,14 +153,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		if !dNode.isDraining() {
 			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
 			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
-				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+				input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 			}
 			continue
 		}
 
 		// If the node is marked for draining while is has been drained, remove the 'drained' annotation
 		if dNode.DrainedSource == "user" {
-			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+			input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 		}
 
 		cordonNode := &corev1.Node{
@@ -171,7 +175,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		err := drain.RunCordonOrUncordon(drainHelper, cordonNode, true)
 		if err != nil {
-			input.Logger.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
+			input.Logger.Error("Cordon node failed", slog.String("name", dNode.Name), log.Err(err))
 			continue
 		}
 
@@ -204,18 +208,18 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			input.Logger.Error("node drain failed", slog.String("name", drainedNode.NodeName), log.Err(drainedNode.Err))
 			shouldIgnoreErr = errors.Is(drainedNode.Err, drain.ErrDrainTimeout)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.CreateOrUpdate(event)
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
 			if shouldIgnoreErr {
-				input.Logger.Errorf("node %q drain error skipped: %s", drainedNode.NodeName, drainedNode.Err)
+				input.Logger.Error("node drain error skipped", slog.String("name", drainedNode.NodeName), log.Err(drainedNode.Err))
 			} else {
 				continue
 			}
 		}
-		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
+		input.PatchCollector.PatchWithMerge(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
 	return nil

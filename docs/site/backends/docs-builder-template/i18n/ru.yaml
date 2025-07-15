@@ -8,8 +8,8 @@ documentation: документация
 modules_documentation: Документация модулей
 core: ядро
 conversions_title: Конверсии
-conversion_action_message: При необходимости преобразования данных из одной версии схемы параметров модуля в другую, выполните следующие действия
-conversion_from_version: Из версии
+conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+conversion_from_version: Обновление из версии
 conversion_to: в
 conversion_expressions: Преобразования, выполняемые конверсией (синтаксис jq)
 conversion_missing_description: Описание конверсии отсутствует

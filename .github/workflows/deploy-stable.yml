@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.0"
+  WERF_VERSION: "v2.38.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -51,6 +51,7 @@ env:
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_FINAL_IMAGES_ONLY: true
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
 
@@ -1330,7 +1331,7 @@ jobs:
           git push --force origin "${RELEASE_BRANCH_NAME}"
 
       - name: Send failure report
-        if: failure()
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         run: |

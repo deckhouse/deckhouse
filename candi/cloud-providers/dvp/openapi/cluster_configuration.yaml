@@ -40,6 +40,7 @@ apiVersions:
                   coreFraction: 100%
                 memory:
                   size: 4Gi
+                virtualMachineClassName: generic
                 ipAddresses:
                   - 10.66.30.100
                   - 10.66.30.101
@@ -77,6 +78,7 @@ apiVersions:
                     coreFraction: 100%
                   memory:
                     size: 8Gi
+                  virtualMachineClassName: generic
                 rootDisk:
                   size: 10Gi
                   image:
@@ -112,7 +114,7 @@ apiVersions:
             replicas:
               description: |
                 The number of master nodes to create.
-                
+
                 It is important to have an odd number of masters to ensure a quorum.
               type: integer
               minimum: 1
@@ -123,7 +125,7 @@ apiVersions:
                 A set of zones in which nodes can be created.
 
                 To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-                [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                 > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               items:
@@ -140,7 +142,7 @@ apiVersions:
                   type: object
                   description: |
                     Virtual machine settings for the created master node.
-                  required: [cpu, memory]
+                  required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
                       description: |
@@ -158,7 +160,7 @@ apiVersions:
                         coreFraction:
                           type: string
                           default: "100%"
-                          enum: ["5%", "10%", "25%", "50%", "100%"]
+                          pattern: ^100%$|^[1-9][0-9]?%$
                           description: |
                             Guaranteed share of CPU that will be allocated to the virtual machine.
                           example: "100%"
@@ -175,6 +177,12 @@ apiVersions:
                           description: |
                             Amount of memory resources allowed for the virtual machine.
                           example: 4Gi
+                    virtualMachineClassName:
+                      type: string
+                      description: |
+                        The name of the VirtualMachineClass.
+
+                        Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
                     bootloader:
                       type: string
                       enum:
@@ -182,7 +190,7 @@ apiVersions:
                         - EFI
                         - EFIWithSecureBoot
                       default: EFI
-                      description: >
+                      description: |
                         Defines a bootloader for the virtual machine.
 
                         * `BIOS`: Use BIOS.
@@ -296,7 +304,6 @@ apiVersions:
                           type: string
                           description: |
                             The name of the image that will be used to create the root disk.
-                            
                             > The installation requires Linux OS images with cloud-init pre-installed.
                 etcdDisk:
                   type: object
@@ -350,7 +357,7 @@ apiVersions:
                   A set of zones in which nodes can be created.
 
                   To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-                  [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                  [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                   > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
                 items:
@@ -392,7 +399,7 @@ apiVersions:
                     type: array
                     description: |
                       The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
-                      
+
                       > Only the `effect`, `key`, and `values` fields are available.
                     x-doc-example: |
                       ```yaml
@@ -425,7 +432,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts...](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html)
+            [Read more about possible provider layouts.](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html)
           enum: [Standard]
 
         region:
@@ -434,7 +441,7 @@ apiVersions:
             Region name.
 
             To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
-            [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
+            [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
 
             > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
@@ -443,7 +450,7 @@ apiVersions:
             A set of zones in which nodes can be created.
 
             To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-            [Read more about topological labels...](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
             > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
           items:

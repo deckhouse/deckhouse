@@ -1,0 +1,49 @@
+{{- $istioVersion := "1.25.2" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/alt-p11
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/ztunnel/bin/ztunnel
+    to: /usr/local/bin/ztunnel
+    before: install
+imageSpec:
+  config:
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    entrypoint: ["/usr/local/bin/ztunnel"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/ztunnel
+  to: /src/ztunnel
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
+  install:
+  - export CARGO_NET_GIT_FETCH_WITH_CLI=true
+  - cd /src/ztunnel
+  - |
+    cargo build \
+    --release 
+  - strip /src/ztunnel/out/rust/release/ztunnel
+  - mkdir -p /src/ztunnel/bin
+  - mv /src/ztunnel/out/rust/release/ztunnel /src/ztunnel/bin/ztunnel
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/ztunnel.git /src/ztunnel
+  - rm -rf /src/ztunnel/.git
+---

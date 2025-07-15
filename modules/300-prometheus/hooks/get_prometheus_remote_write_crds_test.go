@@ -40,6 +40,8 @@ spec:
     - sourceLabels: [__name__]
       regex: prometheus_build_.*
       action: keep
+  headers:
+    X-Scope-OrgID: "org1"
 `
 		secondPrometheusRomteWrite = `
 ---
@@ -52,6 +54,8 @@ spec:
   basicAuth:
     username: user1
     password: pass1
+  headers:
+    X-Scope-OrgID: "org1"
 `
 	)
 
@@ -75,6 +79,9 @@ spec:
       "basicAuth": {
         "password": "password",
         "username": "username"
+      },
+      "headers": {
+          "X-Scope-OrgID": "org1"
       },
       "url": "https://test-victoriametrics.domain.com/api/v1/write",
       "writeRelabelConfigs": [
@@ -119,6 +126,9 @@ spec:
         "password": "password",
         "username": "username"
       },
+      "headers": {
+          "X-Scope-OrgID": "org1"
+      },
       "url": "https://test-victoriametrics.domain.com/api/v1/write",
       "writeRelabelConfigs": [
         {
@@ -155,6 +165,9 @@ spec:
 		"password": "password",
 		"username": "username"
 	  },
+      "headers": {
+          "X-Scope-OrgID": "org1"
+      },
 	  "url": "https://test-victoriametrics.domain.com/api/v1/write",
 	  "writeRelabelConfigs": [
 		{
@@ -174,6 +187,9 @@ spec:
 		"password": "pass1",
 		"username": "user1"
 	  },
+      "headers": {
+          "X-Scope-OrgID": "org1"
+      },
 	  "url": "https://test-second-victoriametrics.domain.com/api/v1/write"
 	}
   }

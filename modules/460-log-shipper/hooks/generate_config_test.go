@@ -113,7 +113,6 @@ spec:
 				err := os.WriteFile(filepath.Join(folder, "result.json"), d, 0600)
 				Expect(err).To(BeNil())
 			}
-
 			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
 
 			f.BindingContexts.Set(f.KubeStateSet(namespaceManifest))
@@ -144,5 +143,6 @@ spec:
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),
+		Entry("Transform mods to kafka", "transform-mods"),
 	)
 })
