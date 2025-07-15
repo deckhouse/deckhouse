@@ -210,7 +210,7 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/neuvector/stable/"
-},
+  },
   "observability": {
     "editions": [
       "be",

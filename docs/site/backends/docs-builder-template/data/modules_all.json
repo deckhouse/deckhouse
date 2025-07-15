@@ -19,9 +19,9 @@
       }
     },
     "commercialBadgeMessage": {
-        "en": "A separate license may be required",
-        "ru": "Может потребоваться отдельная лицензия"
-      },
+      "en": "A separate license may be required",
+      "ru": "Может потребоваться отдельная лицензия"
+    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/"
   },
