@@ -374,8 +374,8 @@ List of checks performed by the installer before starting Deckhouse installation
      - The length does not exceed 63 characters;
      - It consists only of lowercase letters;
      - It does not contain special characters (hyphens `-` and periods `.` are allowed, but they cannot be at the beginning or end of the name).
-   - There is no container runtime (e.g., `containerd`, `docker`, etc.) installed on the server (VM).
-   - The host name must be unique within the cluster.
+   - There is no container runtime (`containerd`) installed on the server (VM).
+   - The host name is unique within the cluster.
    - The server's system time is correct.
    - The address spaces for Pods (`podSubnetCIDR`) and services (`serviceSubnetCIDR`) do not intersect.
 
