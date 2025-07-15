@@ -30,6 +30,8 @@ import (
 
 const (
 	DefinitionFile = "module.yaml"
+
+	ExperimentalModuleStage = "Experimental"
 )
 
 // Definition of module.yaml file struct
@@ -132,5 +134,5 @@ func (d *Definition) Labels() map[string]string {
 }
 
 func (d *Definition) IsExperimental() bool {
-	return d.Stage == "Experimental"
+	return d.Stage == ExperimentalModuleStage
 }
