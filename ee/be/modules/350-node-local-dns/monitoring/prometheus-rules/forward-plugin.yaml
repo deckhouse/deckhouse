@@ -7,10 +7,10 @@
         severity_level: "5"
         tier: cluster
       annotations:
-        summary: "Too many complete healthcheck failures in 'forward' plugin"
+        summary: "Too many upstream healthcheck failures in 'forward' plugin"
         description: |
           The 'forward' plugin healthcheck system failed completely >10 times in 5 minutes on node `{{$labels.node}}`.
-          This means all upstreams were considered unhealthy repeatedly.
+          This means all upstreams were considered unhealthy.
 
     - alert: D8NodeLocalDNSForwardMaxConcurrentRejects
       expr: increase(coredns_forward_max_concurrent_rejects_total{job="node-local-dns"}[5m]) > 20
