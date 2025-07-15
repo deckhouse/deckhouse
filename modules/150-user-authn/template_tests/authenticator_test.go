@@ -115,14 +115,16 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			// Check that all main resources for DexAuthenticator are rendered
 			Expect(hec.KubernetesResource("service", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("poddisruptionbudget", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("verticalpodautoscaler", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
+
+			vpa := hec.KubernetesResource("verticalpodautoscaler", "d8-test", "test-dex-authenticator")
+			Expect(vpa.Exists()).To(BeTrue())
 			// Check secret data
 			secret := hec.KubernetesResource("secret", "d8-test", "dex-authenticator-test-dex-authenticator")
 			Expect(secret.Exists()).To(BeTrue())
 			Expect(secret.Field("data.client-secret").String()).To(Equal("ZGV4U2VjcmV0"))
 			Expect(secret.Field("data.cookie-secret").String()).To(Equal("Y29va2llU2VjcmV0"))
 			// Check OAuth2Client
-			oauth2clientTest := hec.KubernetesResource("oauth2client", "d8-user-authn", "justForTest")
+			oauth2clientTest := hec.KubernetesResource("oauth2client", "d8-user-authn", "test-dex-authenticator-d8-test")
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
 			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
