@@ -67,6 +67,4 @@ properties:
     x-examples: ["nginx"]
     description: |
       Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).  
-      Если параметр не указан, то используется `ingressClass` по умолчанию.
-  
-      
+      Если параметр не указан, то используется `ingressClass` по умолчанию.      
