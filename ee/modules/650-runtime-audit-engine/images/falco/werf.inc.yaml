@@ -96,7 +96,6 @@ shell:
   {{- if .DistroPackagesProxy }}
   # build in the closed env
   - |
-    set -e
     mkdir -p /etc/nginx/ssl/ca /etc/nginx/ssl/certs /etc/nginx/ssl/private
     openssl genrsa -out /etc/nginx/ssl/ca/rootCA.key 4096
     openssl req -x509 -new -nodes -key /etc/nginx/ssl/ca/rootCA.key -sha256 -days 3650 \
