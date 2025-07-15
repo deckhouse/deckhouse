@@ -139,5 +139,47 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(ingressTest.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.example.com"]`))
 			Expect(ingressTest.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 		})
+
+		It("Should create resources for test-2 DexAuthenticator", func() {
+			// Check resources for test-2
+			Expect(hec.KubernetesResource("service", "d8-test", "test-2-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("poddisruptionbudget", "d8-test", "test-2-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("verticalpodautoscaler", "d8-test", "test-2-dex-authenticator").Exists()).To(BeTrue())
+
+			// Check OAuth2Client for test-2
+			oauth2clientTest2 := hec.KubernetesResource("oauth2client", "d8-user-authn", "test-2-dex-authenticator-d8-test")
+			Expect(oauth2clientTest2.Exists()).To(BeTrue())
+			Expect(oauth2clientTest2.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.com/dex-authenticator/callback","https://authenticator-two.com/dex-authenticator/callback"]`))
+			Expect(oauth2clientTest2.Field("secret").String()).To(Equal("dexSecret"))
+
+			// Check Ingress for test-2
+			ingressTest2 := hec.KubernetesResource("ingress", "d8-test", "test-2-dex-authenticator")
+			Expect(ingressTest2.Exists()).To(BeTrue())
+			Expect(ingressTest2.Field("spec.ingressClassName").String()).To(Equal("test"))
+		})
+
+		It("Should create resources for test-3 DexAuthenticator", func() {
+			// Check resources for test-3
+			Expect(hec.KubernetesResource("service", "d8-test", "test-3-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("poddisruptionbudget", "d8-test", "test-3-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("verticalpodautoscaler", "d8-test", "test-3-dex-authenticator").Exists()).To(BeTrue())
+
+			// Check OAuth2Client for test-3
+			oauth2clientTest3 := hec.KubernetesResource("oauth2client", "d8-user-authn", "test-3-dex-authenticator-d8-test")
+			Expect(oauth2clientTest3.Exists()).To(BeTrue())
+			Expect(oauth2clientTest3.Field("secret").String()).To(Equal("dexSecret"))
+		})
+
+		It("Should create resources for test-4 DexAuthenticator", func() {
+			// Check resources for test-4
+			Expect(hec.KubernetesResource("service", "d8-test", "test-4-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("poddisruptionbudget", "d8-test", "test-4-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("verticalpodautoscaler", "d8-test", "test-4-dex-authenticator").Exists()).To(BeTrue())
+
+			// Check OAuth2Client for test-4
+			oauth2clientTest4 := hec.KubernetesResource("oauth2client", "d8-user-authn", "test-4-dex-authenticator-d8-test")
+			Expect(oauth2clientTest4.Exists()).To(BeTrue())
+			Expect(oauth2clientTest4.Field("secret").String()).To(Equal("dexSecret"))
+		})
 	})
 })
