@@ -25,6 +25,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"bashible-apiserver/pkg/cmd/server"
+	_ "net/http/pprof"
 )
 
 func main() {
