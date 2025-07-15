@@ -126,7 +126,7 @@
         {{- if $provider.ldap.insecureNoSSL }}
         insecureNoSSL: true
         {{- end }}
-        {{- if $provider.ldap.rootCAData }}Ï
+        {{- if $provider.ldap.rootCAData }}
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
         {{- if $provider.ldap.bindDN  }}
