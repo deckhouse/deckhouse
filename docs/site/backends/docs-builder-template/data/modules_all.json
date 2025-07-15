@@ -133,6 +133,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
   },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
+  },
   "observability": {
     "editions": [
       "be",
