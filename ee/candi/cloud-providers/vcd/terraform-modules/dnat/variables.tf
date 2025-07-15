@@ -22,6 +22,6 @@ variable "nodeIndex" {
   type = number
 }
 
-variable "master_node_ip" {
+variable "node_ip" {
   type = string
 }
