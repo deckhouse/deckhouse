@@ -23,7 +23,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache python3 python2 vips make build-base nginx
+  - apk add --no-cache python3 python2 vips make build-base nginx openssl
   install:
   - cd /src
   {{- include "node packages proxy" . | nindent 2 }}
@@ -61,18 +61,19 @@ shell:
     openssl x509 -req -in /etc/nginx/ssl/certs/nginx.csr -CA /etc/nginx/ssl/ca/rootCA.crt -CAkey /etc/nginx/ssl/ca/rootCA.key \
       -CAcreateserial -out /etc/nginx/ssl/certs/nginx.crt -days 365 -sha256 \
       -extensions req_ext -extfile /etc/nginx/ssl/openssl.cnf
-    cp /etc/nginx/ssl/ca/rootCA.crt /etc/pki/ca-trust/source/anchors/example-root-ca.crt
-    update-ca-trust extract
-    cat >/etc/nginx/sites-enabled.d/proxy.conf <<EOF
-    server {
-        listen 443 ssl;
-        server_name unofficial-builds.nodejs.org;
-
-        ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
-        ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
-
-        location / {
-            proxy_pass http://{{ .DistroPackagesProxy }}/repository/unofficial-builds.nodejs.org/;
+    cp /etc/nginx/ssl/ca/rootCA.crt /usr/local/share/ca-certificates/example-root-ca.crt
+    update-ca-certificates
+    cat >/etc/nginx/nginx.conf <<EOF
+    events {}
+    http {
+        server {
+            listen 443 ssl;
+            server_name unofficial-builds.nodejs.org;
+            ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
+            ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
+            location / {
+                proxy_pass http://{{ .DistroPackagesProxy }}/repository/unofficial-builds.nodejs.org/;
+            }
         }
     }
     EOF
