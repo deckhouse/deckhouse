@@ -878,7 +878,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Ensure the [Deckhouse queue](#how-to-check-the-job-queue-in-deckhouse) is empty and error-free.
 
-1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
+1.  Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
     > Skip this step if switching to Deckhouse CE.
 
@@ -939,14 +939,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
     ```
 
-1. Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
+1.  Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
 
     ```shell
     DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
     kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
     ```
 
-1. Once the pod is in `Running` state, execute the following commands:
+1.  Once the pod is in `Running` state, execute the following commands:
 
     ```shell
     NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
@@ -954,7 +954,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
     ```
 
-1. Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
+1.  Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
 
     ```shell
     echo $MODULES_WILL_DISABLE
@@ -970,7 +970,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
     Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
 
-1. Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
+1.  Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
 
     To switch to BE/SE/SE+/EE editions:
 
@@ -984,13 +984,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
     ```
 
-1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
+1.  Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
     ```shell
     kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
     ```
 
-1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
+1.  Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
     > Skip this step if switching to Deckhouse CE.
 

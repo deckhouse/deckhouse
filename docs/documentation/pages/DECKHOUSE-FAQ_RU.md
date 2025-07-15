@@ -683,10 +683,10 @@ echo "$MYRESULTSTRING"
 1. Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
 1. Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
 
-  ```shell
-  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-    | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-  ```
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
 
 ### Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 
@@ -864,7 +864,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Ниже описаны шаги для переключения кластера с любой редакцию на одну из поддерживаемых: Community Edition, Basic Edition, Standard Edition, Standard Edition+, Enterprise Edition.
 
-1. Подготовьте переменные с токеном лицензии и названием новой редакции:
+1.  Подготовьте переменные с токеном лицензии и названием новой редакции:
 
     > Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию Deckhouse CE не требуется.
     > Значение переменной `NEW_EDITION` должно быть равно желаемой редакции Deckhouse, например для переключения на редакцию:
@@ -882,7 +882,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Проверьте, чтобы [очередь Deckhouse](#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок.
 
-1. Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
+1.  Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
     > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
@@ -943,14 +943,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
     ```
 
-1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
+1.  Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
 
     ```shell
     DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
     kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
     ```
 
-1. После перехода пода в статус `Running` выполните следующие команды:
+1.  После перехода пода в статус `Running` выполните следующие команды:
 
     ```shell
     NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
@@ -958,7 +958,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
     ```
 
-1. Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
+1.  Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
     Посмотреть список модулей, которые не поддерживаются в новой редакции и будут отключены:
 
     ```shell
@@ -977,25 +977,25 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами новой редакции:
 
-    Для переключения на BE/SE/SE+/EE издания:
+   Для переключения на BE/SE/SE+/EE издания:
 
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
-    Для переключения на CE издание:
+   Для переключения на CE издание:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
-    ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
+   ```
 
-1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
+1.  Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
 
     ```shell
     kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
     ```
 
-1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
+1.  Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
     > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
@@ -1333,12 +1333,12 @@ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration), выполнив следующие шаги:
 
-1. Выполните команду:
+1.  Выполните команду:
 
-   ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader \
-     -c deckhouse -- deckhouse-controller edit cluster-configuration
-   ```
+    ```shell
+    kubectl -n d8-system exec -ti svc/deckhouse-leader \
+      -c deckhouse -- deckhouse-controller edit cluster-configuration
+    ```
 
 1. Измените параметр `kubernetesVersion`.
 1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
