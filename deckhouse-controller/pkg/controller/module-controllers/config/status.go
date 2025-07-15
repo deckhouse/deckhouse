@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimental"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimentalextender"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
@@ -232,7 +232,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
 		}
-	case experimental.Name:
+	case experimentalextender.Name:
 		reason = v1alpha1.ModuleReasonExperimentalExtender
 		message = v1alpha1.ModuleMessageExperimentalExtender
 	}

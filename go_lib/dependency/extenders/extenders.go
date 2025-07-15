@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimental"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimentalextender"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -36,7 +36,7 @@ type ExtendersStack struct {
 	KubernetesVersion *kubernetesversion.Extender
 	Bootstrapped      *bootstrapped.Extender
 	ModuleDependency  *moduledependency.Extender
-	Experimental      *experimental.Extender
+	Experimental      *experimentalextender.Extender
 }
 
 func NewExtendersStack(deckhouseVersion string, allowExperimental bool, logger *log.Logger) *ExtendersStack {
@@ -45,7 +45,7 @@ func NewExtendersStack(deckhouseVersion string, allowExperimental bool, logger *
 		KubernetesVersion: kubernetesversion.Instance(),
 		Bootstrapped:      bootstrapped.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
-		Experimental:      experimental.NewExtender(allowExperimental, logger.Named("experimental-extender")),
+		Experimental:      experimentalextender.NewExtender(allowExperimental, logger.Named("experimental-extender")),
 	}
 }
 
