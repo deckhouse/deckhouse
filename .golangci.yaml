@@ -29,8 +29,6 @@ linters:
       exclude-functions:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose
         - io:Copy
-    # errchkjson:
-      # check-error-free-encoding: true
     nonamedreturns:
       report-error-in-defer: false
     sloglint:
