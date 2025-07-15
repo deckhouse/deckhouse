@@ -170,7 +170,6 @@ pull_request_info:
   outputs:
     ref: ${{ steps.pr_props.outputs.ref }}
     ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
-    edition: ${{ steps.pr_props.outputs.edition }}
     pr_title: ${{ steps.pr_props.outputs.pr_title }}
     pr_description: ${{ steps.pr_props.outputs.pr_description }}
     diff_url: ${{ steps.pr_props.outputs.diff_url }}
@@ -178,6 +177,11 @@ pull_request_info:
     security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+    build_ce: ${{ steps.pr_props.outputs.build_ce }}
+    build_be: ${{ steps.pr_props.outputs.build_be }}
+    build_se: ${{ steps.pr_props.outputs.build_se }}
+    build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
+    build_ee: ${{ steps.pr_props.outputs.build_ee }}
 
   # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
   if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
@@ -309,27 +313,9 @@ pull_request_info:
             core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
           }
 
-          // Set edition from current labels.
-          const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
-          const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
-          const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-          const hasBE = pr.labels.some((l) => l.name === 'edition/be');
-          const hasSE = pr.labels.some((l) => l.name === 'edition/se');
-          const hasSE_plus = pr.labels.some((l) => l.name === 'edition/se+');
-          let edition = defaultEdition;
-          if (hasCE) {
-            edition = 'CE';
-          } else if (hasEE) {
-            edition = 'EE';
-          } else if (hasBE) {
-            edition = 'BE';
-          } else if (hasSE) {
-            edition = 'SE';
-          } else if (hasSE_plus) {
-            edition = 'SE-plus';
-          }
-          core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
-          core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
+          // Set editions from current labels to build_ce, build_ee and so on.
+          const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
           // Set security rootless scan from labels.
           const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
           // Construct head commit ref using pr number.
@@ -349,12 +335,17 @@ pull_request_info:
           core.setOutput('should_check', shouldCheckFiles.toString());
           core.setOutput('ref', ref);
           core.setOutput('ref_slug', `pr${pr.number}`);
-          core.setOutput('edition', edition);
           core.setOutput('pr_title', pr.title);
           core.setOutput('pr_description', pr.body);
           core.setOutput('diff_url', diff_url);
           core.setOutput('labels', JSON.stringify(pr.labels));
           core.setOutput('security_rootless_scan', security_rootless_scan);
+          core.startGroup('Set build editions based on pr labels')
+          for (build_edition of build_editions) {
+            core.setOutput(`${build_edition}`, 'true');
+            core.info(`${build_edition}`)
+          }
+          core.endGroup()
           core.setCommandEcho(false);
 
     # Checkhout the head commit of the PR branch.
