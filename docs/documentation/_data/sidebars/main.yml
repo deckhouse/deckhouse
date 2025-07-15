@@ -1297,19 +1297,6 @@ entries:
         ru: Масштабирование и управление ресурсами
       folders:
         - title:
-            en: Priority classes
-            ru: Priority classes
-          moduleName: priority-class
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/priority-class/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/priority-class/configuration.html
-        - title:
             en: Scaling by any metric
             ru: Масштабирование по метрикам
           moduleName: prometheus-metrics-adapter
