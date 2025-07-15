@@ -126,7 +126,6 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - workflow_render
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -140,7 +139,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -153,7 +151,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -165,7 +162,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -177,7 +173,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -189,7 +184,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
       - detect_editions
     env:

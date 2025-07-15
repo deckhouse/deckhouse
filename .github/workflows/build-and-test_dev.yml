@@ -510,7 +510,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -815,7 +814,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -1118,7 +1116,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -1421,7 +1418,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -1724,7 +1720,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -2027,7 +2022,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"

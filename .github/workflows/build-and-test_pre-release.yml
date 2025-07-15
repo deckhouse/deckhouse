@@ -279,7 +279,6 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - workflow_render
     env:
       WERF_ENV: "FE"
     # <template: build_template>
@@ -591,7 +590,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -904,7 +902,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -1217,7 +1214,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -1530,7 +1526,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -1843,7 +1838,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"
