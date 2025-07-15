@@ -48,10 +48,6 @@ masterNodeGroup:
 - Правило DNAT для трансляции внешних адреса и порта, указанных в свойствах `edgeGateway.externalIP` и `edgeGateway.externalPort` соответственно, во внутренний адрес первого master-узла на порт 22 по протоколу `TCP` для административного доступа к узлам по SSH.
 
 {% alert level="warning" %}
-Правило DNAT будет создано только в том случае, если IP-адрес первого master-узла задан статически. В противном случае потребуется ручное создание правила.
-{% endalert %}
-
-{% alert level="warning" %}
 Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
 {% endalert %}
 

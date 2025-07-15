@@ -2,7 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  isFirstNode   = var.nodeIndex == 0
+  isFirstNode = var.nodeIndex == 0
 }
 
 # NSX-T DNAT rule only for the first master node
@@ -26,7 +26,7 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
   external_address    = var.providerClusterConfiguration.edgeGateway.externalIP
   dnat_external_port  = var.providerClusterConfiguration.edgeGateway.externalPort
-  internal_address    = module.master_node.master_ip_address_for_ssh
+  internal_address    = var.node_ip
   logging             = false
   app_port_profile_id = data.vcd_nsxt_app_port_profile.ssh[0].id
 }
@@ -52,7 +52,7 @@ resource "vcd_nsxv_dnat" "master-dnat" {
 
   original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
-  translated_address = module.master_node.master_ip_address_for_ssh
+  translated_address = var.node_ip
   protocol           = "tcp"
   translated_port    = 22
 }
