@@ -44,10 +44,14 @@ spec:
       capabilities:
         drop:
         - ALL
-      readOnlyRootFilesystem: true
-      runAsGroup: 64535
-      runAsNonRoot: true
-      runAsUser: 64535
+        add:
+        - DAC_OVERRIDE
+        - SETGID
+        - SETUID
+      readOnlyRootFilesystem: false
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
       seccompProfile:
         type: RuntimeDefault
     image: {{ $kubernetes_api_proxy_image }}
@@ -71,10 +75,14 @@ spec:
       capabilities:
         drop:
         - ALL
-      readOnlyRootFilesystem: true
-      runAsGroup: 64535
-      runAsNonRoot: true
-      runAsUser: 64535
+        add:
+        - DAC_OVERRIDE
+        - SETGID
+        - SETUID
+      readOnlyRootFilesystem: false
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
       seccompProfile:
         type: RuntimeDefault
     env:
