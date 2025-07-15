@@ -16,7 +16,16 @@ data:
   instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
   machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
   {{- $vsphereValues := dict }}
-  {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $masterNodeGroup.instanceClass.mainNetwork) -}}
+   {{- $mainNetwork := "" }}
+  {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}
+    {{- $mainNetwork = $providerDiscoveryData.instances.mainNetwork | default "" }}
+  {{- end }}
+  {{- if and (not $mainNetwork) $masterNodeGroup.instanceClass }}
+    {{- $mainNetwork = $masterNodeGroup.instanceClass.mainNetwork | default "" }}
+  {{- end }}
+  {{- if $mainNetwork }}
+    {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $mainNetwork) -}}
+  {{- end }}
   {{- $_ := set $vsphereValues "server" $providerClusterConfiguration.provider.server }}
   {{- $_ := set $vsphereValues "username" $providerClusterConfiguration.provider.username }}
   {{- $_ := set $vsphereValues "password" $providerClusterConfiguration.provider.password  }}
