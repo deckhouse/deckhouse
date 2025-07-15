@@ -1098,10 +1098,8 @@ func buildSuspendAnnotation(suspend bool) []byte {
 		}
 	}
 
-	patch, err := json.Marshal(p)
-	if err != nil {
-		return nil
-	}
+	// nolint:errchkjson
+	patch, _ := json.Marshal(p)
 	return patch
 }
 

@@ -828,8 +828,7 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 		return nil, &ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	// nolint
-	marshalledPatch, _ := json.Marshal(map[string]any{
+	marshalledPatch, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"labels": map[string]any{
 				v1alpha1.ModuleReleaseLabelUpdatePolicy: policy.GetName(),
@@ -839,6 +838,9 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 			"message": "",
 		},
 	})
+	if err != nil {
+		r.log.Warn("patch marshal", log.Err(err))
+	}
 
 	patch := client.RawPatch(types.MergePatchType, marshalledPatch)
 	if err = r.client.Patch(ctx, release, patch); err != nil {

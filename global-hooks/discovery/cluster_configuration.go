@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type ClusterConfigurationYaml struct {
@@ -97,8 +98,10 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		}
 
 		if kubernetesVersionFromMetaConfig == "Automatic" {
-			// nolint
-			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
+			b, err := json.Marshal(hooks.DefaultKubernetesVersion)
+			if err != nil {
+				input.Logger.Warn("patch marshal", log.Err(err))
+			}
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}
 

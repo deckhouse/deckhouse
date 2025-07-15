@@ -44,7 +44,7 @@ func getCheckSum(bytes []byte) string {
 }
 
 func SetObservedStatus(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	// nolint
+	// nolint:errchkjson
 	snBytes, _ := json.Marshal(snapshot)
 	checkSum := getCheckSum(snBytes)
 

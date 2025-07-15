@@ -224,7 +224,7 @@ func (kr KubeResult) DropFields(fields ...string) KubeResult {
 		resMap[keyStr] = json.RawMessage(KubeResult{Result: value}.DropFields(newFields...).Raw)
 		return true
 	})
-	// nolint
+	// nolint:errchkjson
 	mapBytes, _ := json.Marshal(resMap)
 
 	return KubeResult{Result: gjson.ParseBytes(mapBytes)}

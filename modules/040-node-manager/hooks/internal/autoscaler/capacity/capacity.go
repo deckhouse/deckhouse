@@ -396,7 +396,7 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	// unless we don't have structs for InstanceClasses this is the easiest way to get fields from abstract spec
 	// trying to use type assertion is much uglier, don't try to use it
-	// nolint
+	// nolint:errchkjson
 	data, _ := json.Marshal(instanceClassSpec)
 	err := json.Unmarshal(data, extractor)
 	if err != nil {
