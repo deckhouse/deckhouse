@@ -374,8 +374,9 @@ List of checks performed by the installer before starting Deckhouse installation
      - The length does not exceed 63 characters;
      - It consists only of lowercase letters;
      - It does not contain special characters (hyphens `-` and periods `.` are allowed, but they cannot be at the beginning or end of the name).
-   - The server (VM) does not have a CRI (containerd) installed.
+   - There is no container runtime (e.g., `containerd`, `docker`, etc.) installed on the server (VM).
    - The host name must be unique within the cluster.
+   - The server's system time is correct.
    - The address spaces for Pods (`podSubnetCIDR`) and services (`serviceSubnetCIDR`) do not intersect.
 
 
@@ -383,12 +384,21 @@ List of checks performed by the installer before starting Deckhouse installation
    - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
-   - The server (VM) meets the minimum requirements for setting up the master node.
+   - The server (VM) selected for the master node installation must meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html):
+     - at least 4 CPU cores;
+     - at least 8 GB of RAM;
+     - at least 60 GB of disk space with 400+ IOPS performance;
+     - Linux kernel version 5.7 or newer;
+     - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
+     - access to standard OS package repositories.
    - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.
    - DNS must resolve `localhost` to IP address 127.0.0.1.
    - The user has `sudo` privileges on the server (VM).
+   - Required ports for the installation must be open:
+     - port 22322/TCP between the install host and the server;
+     - no port conflicts with those used by the installation process.
    - The server (VM) has the correct time.
    - The user `deckhouse` must not exist on the server (VM).
    - The address spaces for Pods (`podSubnetCIDR`) services (`serviceSubnetCIDR`) and internal network (`internalNetworkCIDRs`) do not intersect.
