@@ -20,7 +20,7 @@ metadata:
   {{- end }}
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
-  name: {{ include "truncate_name_with_hash" $crd.name }}{{ $nameSuffix }}
+  name: {{ printf "%s-dex-authenticator%s" (include "dex_authenticator_short_name" $crd.name) $nameSuffix }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -31,7 +31,7 @@ spec:
       paths:
       - backend:
           service:
-            name: {{ include "truncate_name_with_hash" $crd.name }}
+            name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
             port:
               number: 443
         path: /dex-authenticator
@@ -55,7 +55,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
-  name: {{ include "truncate_name_with_hash" $crd.name }}{{ $nameSuffix }}-sign-out
+  name: {{ printf "%s-dex-authenticator%s-sign-out" (include "dex_authenticator_short_name" $crd.name) $nameSuffix }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -66,7 +66,7 @@ spec:
       paths:
       - backend:
           service:
-            name: {{ include "truncate_name_with_hash" $crd.name }}
+            name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
             port:
               number: 443
         path: {{ $app.signOutURL }}

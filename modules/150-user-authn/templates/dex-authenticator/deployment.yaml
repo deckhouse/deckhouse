@@ -15,14 +15,14 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ include "truncate_name_with_hash" $crd.name }}
+  name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: {{ include "truncate_name_with_hash" $crd.name }}
+    name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -44,7 +44,7 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "truncate_name_with_hash" $crd.name }}
+  name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -57,7 +57,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "truncate_name_with_hash" $crd.name }}
+  name: {{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -105,8 +105,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ include "truncate_name_with_hash_full" (dict "name" $crd.name "namespace" $crd.namespace) }}
-        - {{ include "truncate_name_with_hash_full" (dict "name" $crd.name "namespace" $crd.namespace) }}.svc
+        - {{ printf "%s-dex-authenticator.%s" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
+        - {{ printf "%s-dex-authenticator.%s.svc" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -126,7 +126,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - --client-id={{ include "truncate_name_with_hash" $crd.name }}-{{ $crd.namespace }}
+        - --client-id={{ printf "%s-dex-authenticator-%s" (include "dex_authenticator_short_name" $crd.name) $crd.namespace }}
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
@@ -172,12 +172,12 @@ spec:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ include "truncate_name_with_hash" $crd.name }}
+              name: dex-authenticator-{{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
               key: client-secret
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ include "truncate_name_with_hash" $crd.name }}
+              name: dex-authenticator-{{ printf "%s-dex-authenticator" (include "dex_authenticator_short_name" $crd.name) }}
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt
