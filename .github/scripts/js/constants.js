@@ -64,8 +64,8 @@ const labels = {
   'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
 
   // E2E: cri
-  'e2e/use/cri/containerd': { type: 'e2e-use', containerd: true },
-  'e2e/use/cri/containerdv2': { type: 'e2e-use', containerdv2: true },
+  'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'containerd' },
+  'e2e/use/cri/containerdv2': { type: 'e2e-use', cri: 'containerdv2' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
