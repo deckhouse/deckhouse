@@ -2,35 +2,20 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  main_ip_addresses = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "mainNetworkIPAddresses", [])
+  isFirstNode   = var.nodeIndex == 0
 }
 
-# NSX-T resources
-
-resource "vcd_nsxt_nat_rule" "snat" {
-  count = var.useNSXV ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
-
-  edge_gateway_id = var.edgeGatewayId
-
-  name        = format("%s-snat", var.providerClusterConfiguration.mainNetwork)
-  rule_type   = "SNAT"
-  description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
-
-  external_address = var.providerClusterConfiguration.edgeGateway.externalIP
-  internal_address = var.providerClusterConfiguration.internalNetworkCIDR
-  logging          = false
-}
+# NSX-T DNAT rule only for the first master node
 
 data "vcd_nsxt_app_port_profile" "ssh" {
-  count = var.useNSXV ? 0 : 1
+  count = local.isFirstNode ? (var.useNSXV ? 0 : 1) : 0
   org   = var.providerClusterConfiguration.organization
   name  = "SSH"
   scope = "SYSTEM"
 }
 
 resource "vcd_nsxt_nat_rule" "master-dnat" {
-  count = (!var.useNSXV && length(local.main_ip_addresses) > 0) ? 1 : 0
+  count = local.isFirstNode && var.useNSXV ? 0 : 1
   org   = var.providerClusterConfiguration.organization
 
   edge_gateway_id = var.edgeGatewayId
@@ -41,31 +26,21 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
   external_address    = var.providerClusterConfiguration.edgeGateway.externalIP
   dnat_external_port  = var.providerClusterConfiguration.edgeGateway.externalPort
-  internal_address    = local.main_ip_addresses[count.index]
+  internal_address    = module.master_node.master_ip_address_for_ssh
   logging             = false
   app_port_profile_id = data.vcd_nsxt_app_port_profile.ssh[0].id
 }
 
-# NSX-V resources
+# NSX-V DNAT rule only for the first master node
 
-resource "vcd_nsxv_snat" "snat" {
-  count = var.useNSXV ? 1 : 0
-
-  enabled     = true
-  description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
-  org         = var.providerClusterConfiguration.organization
-
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
-  network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
-
-  original_address   = var.providerClusterConfiguration.internalNetworkCIDR
-  translated_address = var.providerClusterConfiguration.edgeGateway.externalIP
+data "vcd_edgegateway" "gateway" {
+  count = local.isFirstNode ? (var.useNSXV ? 1 : 0) : 0
+  org   = var.providerClusterConfiguration.organization
+  name  = var.providerClusterConfiguration.edgeGateway.name
 }
 
-
 resource "vcd_nsxv_dnat" "master-dnat" {
-  count = var.useNSXV ? 1 : 0
+  count = local.isFirstNode && var.useNSXV ? 1 : 0
 
   enabled     = true
   description = format("SSH DNAT rule for first master of %s", var.providerClusterConfiguration.virtualApplicationName)
@@ -77,7 +52,7 @@ resource "vcd_nsxv_dnat" "master-dnat" {
 
   original_address   = var.providerClusterConfiguration.edgeGateway.externalIP
   original_port      = var.providerClusterConfiguration.edgeGateway.externalPort
-  translated_address = local.main_ip_addresses[0]
+  translated_address = module.master_node.master_ip_address_for_ssh
   protocol           = "tcp"
   translated_port    = 22
 }
