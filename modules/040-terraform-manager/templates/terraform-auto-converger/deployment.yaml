@@ -59,8 +59,6 @@ spec:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: terraform-auto-converger
-      securityContext:
-        fsGroup: 64535
       initContainers:
       {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex" "Zvirt") }}
       - name: to-tofu-migrator
@@ -87,6 +85,9 @@ spec:
             {{- include "converger_resources" . | nindent 12 }}
       {{- end }}
       - name: prepare-converger
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         image: {{ include "terraform_manager_image" . }}
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         command:
