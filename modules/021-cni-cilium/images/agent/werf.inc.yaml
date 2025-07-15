@@ -319,7 +319,7 @@ import:
   before: install
   add: /bin/mount
   to: /usr/bin/mount
-- image: tools/ipset
+- image: tools/ipset-v7.22
   before: install
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
