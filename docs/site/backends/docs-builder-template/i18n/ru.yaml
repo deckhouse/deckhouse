@@ -6,6 +6,7 @@ module: модуль
 deckhouse: deckhouse
 documentation: документация
 modules_documentation: Документация модулей
+category: категория
 core: ядро
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
@@ -46,6 +47,7 @@ module_alert_experimental_long: Экспериментальная версия.
 module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
 module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
 module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
+reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива
