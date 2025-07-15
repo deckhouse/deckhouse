@@ -23,11 +23,72 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache python3 python2 vips make build-base
+  - apk add --no-cache python3 python2 vips make build-base nginx
   install:
   - cd /src
+  {{- include "node packages proxy" . | nindent 2 }}
+  {{- if .DistroPackagesProxy }}
+  # build in the closed env
+  - |
+    set -e
+    mkdir -p /etc/nginx/ssl/ca /etc/nginx/ssl/certs /etc/nginx/ssl/private
+    openssl genrsa -out /etc/nginx/ssl/ca/rootCA.key 4096
+    openssl req -x509 -new -nodes -key /etc/nginx/ssl/ca/rootCA.key -sha256 -days 3650 \
+      -subj "/C=RU/ST=Test/L=Test/O=ExampleCA/OU=IT/CN=Example Root CA" \
+      -out /etc/nginx/ssl/ca/rootCA.crt
+    cat >/etc/nginx/ssl/openssl.cnf <<EOF
+    [req]
+    default_bits       = 2048
+    prompt             = no
+    default_md         = sha256
+    req_extensions     = req_ext
+    distinguished_name = req_distinguished_name
+    [req_distinguished_name]
+    C = RU
+    ST = Test
+    L = Test
+    O = ExampleOrg
+    OU = IT
+    CN = unofficial-builds.nodejs.org
+    [req_ext]
+    subjectAltName = @alt_names
+    [alt_names]
+    DNS.1 = unofficial-builds.nodejs.org
+    EOF
+    openssl genrsa -out /etc/nginx/ssl/private/nginx.key 2048
+    openssl req -new -key /etc/nginx/ssl/private/nginx.key -out /etc/nginx/ssl/certs/nginx.csr \
+      -config /etc/nginx/ssl/openssl.cnf
+    openssl x509 -req -in /etc/nginx/ssl/certs/nginx.csr -CA /etc/nginx/ssl/ca/rootCA.crt -CAkey /etc/nginx/ssl/ca/rootCA.key \
+      -CAcreateserial -out /etc/nginx/ssl/certs/nginx.crt -days 365 -sha256 \
+      -extensions req_ext -extfile /etc/nginx/ssl/openssl.cnf
+    cp /etc/nginx/ssl/ca/rootCA.crt /etc/pki/ca-trust/source/anchors/example-root-ca.crt
+    update-ca-trust extract
+    cat >/etc/nginx/sites-enabled.d/proxy.conf <<EOF
+    server {
+        listen 443 ssl;
+        server_name unofficial-builds.nodejs.org;
+
+        ssl_certificate /etc/nginx/ssl/certs/nginx.crt;
+        ssl_certificate_key /etc/nginx/ssl/private/nginx.key;
+
+        location / {
+            proxy_pass http://{{ .DistroPackagesProxy }}/repository/unofficial-builds.nodejs.org/;
+        }
+    }
+    EOF
+    echo "127.0.1.1 unofficial-builds.nodejs.org" >> /etc/hosts
+    nginx
+    sleep 2
+  - yarn config set disable-self-update-check true
+  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  {{- end }}
   - yarn install
   - yarn run build
+  {{- if .DistroPackagesProxy }}
+  # build in the closed env
+  - nginx -s stop
+  {{- end }}
   - chown -R 64535:64535 /src/dist
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
