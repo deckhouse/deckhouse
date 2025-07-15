@@ -471,7 +471,7 @@ func checkRegistryModuleMode(ctx context.Context, kubeCl *kclient.KubernetesClie
 
 	// If we are here, the cluster is in a managed mode or transitioning to one. Block the helper.
 	errMsg := fmt.Sprintf(
-		"cannot change registry: registry is managed by the registry module. To use this command, please switch the module to '%s' mode.",
+		"registry is currently managed by the \"registry\" module. This command may be used only in '%s' registry mode.",
 		registry_const.ModeUnmanaged,
 	)
 

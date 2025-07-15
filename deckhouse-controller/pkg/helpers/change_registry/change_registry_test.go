@@ -433,7 +433,7 @@ func Test_getCAContent(t *testing.T) {
 }
 
 func Test_checkRegistryModuleMode(t *testing.T) {
-	const expectedErr = "cannot change registry: registry is managed by the system-registry module. To use this command, please switch the module to 'Unmanaged' mode."
+	const expectedErr = "registry is currently managed by the \"registry\" module. This command may be used only in 'Unmanaged' registry mode."
 
 	tests := []struct {
 		name      string
