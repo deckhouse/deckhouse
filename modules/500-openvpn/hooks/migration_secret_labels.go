@@ -29,12 +29,14 @@ import (
 const (
 	serverCertSecretName = "openvpn-pki-server"
 	serverCertNameLabel  = "name"
+	serverCertIndexLabel = "index.txt"
 	serverCertLabelValue = "server"
 	namespace            = "d8-openvpn"
 )
 
 type serverCert struct {
-	NameLabelExists bool
+	NameLabelExists  bool
+	IndexLabelExists bool
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -64,8 +66,10 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, fmt.Errorf("cannot convert secret to structured object: %v", err)
 	}
 	_, labelExist := secret.Labels[serverCertNameLabel]
+	_, indexExist := secret.Labels[serverCertIndexLabel]
 	return serverCert{
-		NameLabelExists: labelExist,
+		NameLabelExists:  labelExist,
+		IndexLabelExists: indexExist,
 	}, err
 }
 
@@ -81,15 +85,21 @@ func addMissingLabels(input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot convert snapshot to structured object")
 	}
 
-	if sc.NameLabelExists {
+	if sc.NameLabelExists && sc.IndexLabelExists {
 		return nil
+	}
+
+	labels := map[string]interface{}{}
+	if !sc.NameLabelExists {
+		labels[serverCertNameLabel] = serverCertLabelValue
+	}
+	if !sc.IndexLabelExists {
+		labels[serverCertIndexLabel] = ""
 	}
 
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"labels": map[string]interface{}{
-				serverCertNameLabel: serverCertLabelValue,
-			},
+			"labels": labels,
 		},
 	}
 
