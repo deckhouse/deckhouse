@@ -147,14 +147,14 @@ updatePolicy:
   minAllowed:
     {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 4 }}
   maxAllowed:
-    cpu: 20m
-    memory: 25Mi
+    cpu: 50m
+    memory: 64Mi
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_container_kube_rbac_proxy_resources" . }} */ -}}
 {{- /* helper for container resources for kube_rbac_proxy */ -}}
 {{- define "helm_lib_container_kube_rbac_proxy_resources" }}
 {{- /* Template context with .Values, .Chart, etc */ -}}
-cpu: 10m
-memory: 25Mi
+cpu: 15m
+memory: 32Mi
 {{- end }}

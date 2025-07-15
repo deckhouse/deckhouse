@@ -1,11 +1,11 @@
 {{- define "dex_resources" }}
-cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "50m" }}
-memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "64Mi" }}
+cpu: {{ .Values.userAuthn.resources.dex.requests.cpu | default "20m" }}
+memory: {{ .Values.userAuthn.resources.dex.requests.memory | default "32Mi" }}
 {{- end }}
 
 {{- define "dex_limits" }}
-cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "200m" }}
-memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "128Mi" }}
+cpu: {{ .Values.userAuthn.resources.dex.limits.cpu | default "100m" }}
+memory: {{ .Values.userAuthn.resources.dex.limits.memory | default "100Mi" }}
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

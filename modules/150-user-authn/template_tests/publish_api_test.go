@@ -66,11 +66,11 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			hec.ValuesSetFromYaml("userAuthn.resources", `
 dex:
   requests:
-    cpu: "10m"
-    memory: "25Mi"
-  limits:
     cpu: "20m"
-    memory: "50Mi"
+    memory: "32Mi"
+  limits:
+    cpu: "100m"
+    memory: "100Mi"
 kubeconfigGenerator:
   requests:
     cpu: "10m"
