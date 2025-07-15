@@ -1,6 +1,10 @@
 # Copyright 2025 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
+locals {
+  dhcpPoolStartAddress = var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress != null ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
+}
+
 resource "vcd_network_routed_v2" "network" {
   org  = var.providerClusterConfiguration.organization
   name = var.providerClusterConfiguration.mainNetwork
@@ -21,7 +25,7 @@ resource "vcd_nsxt_network_dhcp" "pools" {
   dns_servers    = var.providerClusterConfiguration.internalNetworkDNSServers
 
   pool {
-    start_address = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, 30)
+    start_address = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, local.dhcpPoolStartAddress)
     end_address   = cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, -2)
   }
 
