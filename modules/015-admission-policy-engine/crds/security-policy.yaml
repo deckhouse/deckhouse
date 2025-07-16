@@ -242,7 +242,7 @@ spec:
                         type: string
                     allowedServiceTypes:
                       type: array
-                      description: The list of allowed service types.
+                      description: The list of allowed [service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
                       x-doc-examples: [["LoadBalancer", "ClusterIP"]]
                       items:
                         type: string
