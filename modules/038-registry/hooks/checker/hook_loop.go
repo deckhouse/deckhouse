@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/ettle/strcase"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -70,9 +69,7 @@ var _ = sdk.RegisterFunc(
 						return nil, nil
 					}
 
-					r := module.Properties.Requirements
-
-					if r != nil && strings.ToLower(r.Bootstrapped) == "true" {
+					if !module.Properties.Critical {
 						return nil, nil
 					}
 

@@ -1,4 +1,5 @@
 name: registry
+critical: true
 weight: 38
 stage: Experimental
 subsystems:
