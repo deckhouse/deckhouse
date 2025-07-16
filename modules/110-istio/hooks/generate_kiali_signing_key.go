@@ -65,6 +65,7 @@ func applyKialiSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 func generateKialiSigningKey(input *go_hook.HookInput) error {
 	kialiSigningKey := ""
+	//todo
 	if len(input.Snapshots["kiali_signing_key_secret"]) == 1 {
 		secret := input.Snapshots["kiali_signing_key_secret"][0].(kialiSecret)
 		kialiSigningKey = secret.SigningKey

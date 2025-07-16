@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type IstioIngressGatewayController struct {
@@ -54,11 +55,14 @@ func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) 
 }
 
 func setInternalIngressControllers(input *go_hook.HookInput) error {
-	controllersFilterResult := input.Snapshots["controller"]
+	controllersFilterResult := input.NewSnapshots.Get("controller")
 	controllers := make([]IstioIngressGatewayController, 0, len(controllersFilterResult))
 
-	for _, c := range controllersFilterResult {
-		controller := c.(IstioIngressGatewayController)
+	for controller, err := range sdkobjectpatch.SnapshotIter[IstioIngressGatewayController](controllersFilterResult) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshot: %w", err)
+		}
+
 		controllers = append(controllers, controller)
 	}
 

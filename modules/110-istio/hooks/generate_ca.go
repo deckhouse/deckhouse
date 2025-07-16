@@ -78,6 +78,7 @@ func generateCA(input *go_hook.HookInput) error {
 			istioCA.Root = istioCA.Cert
 		}
 	} else {
+		// todo
 		certs := input.Snapshots["secret_ca"]
 		if len(certs) == 1 {
 			var ok bool

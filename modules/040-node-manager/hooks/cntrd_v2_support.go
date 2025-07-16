@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -87,13 +88,15 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_cntrdv2_unsupported"]
+	snaps := input.NewSnapshots.Get("nodes_cntrdv2_unsupported")
 	input.MetricsCollector.Expire(cntrdV2GroupName)
 	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(cntrdV2GroupName),
 	}
-	for _, s := range snap {
-		nodeInfo := s.(cgroupV2SupportNode)
+	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[cgroupV2SupportNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_cntrdv2_unsupported snapshot': %w", err)
+		}
 
 		metricValue := 1.0
 		if nodeInfo.HasUnsupportedLabel {

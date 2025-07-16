@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -51,14 +54,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleExternalNameService(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_istio_service")
-	snapshot := input.Snapshots["services"]
+	snapshot := input.NewSnapshots.Get("services")
 
-	for _, snap := range snapshot {
-		if snap == nil {
-			continue
+	for service, err := range sdkobjectpatch.SnapshotIter[externalService](snapshot) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'services' snapshot: %w", err)
 		}
-
-		service := snap.(externalService)
 
 		input.MetricsCollector.Set("d8_istio_irrelevant_service", 1, map[string]string{"namespace": service.Namespace, "name": service.Name}, metrics.WithGroup("d8_istio_service"))
 	}
