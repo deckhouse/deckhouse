@@ -17,10 +17,9 @@ limitations under the License.
 package bootstrapped
 
 import (
-	"k8s.io/utils/ptr"
-
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	exterr "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
+	"k8s.io/utils/ptr"
 )
 
 const (
