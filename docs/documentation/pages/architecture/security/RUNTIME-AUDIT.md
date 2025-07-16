@@ -40,9 +40,6 @@ DKP provides the following types of built-in rules:
 
 - **Kubernetes audit rules**: Help detect security issues in DKP and in the audit mechanism itself.
   These rules are located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`.
-- **Compliance rules**: Designed to meet the requirements of the FSTEC of Russia Order No. 118 dated July 4, 2022,
-  "Information security requirements for containerization tools."
-  These `fstec` rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 ### Custom rules
 
