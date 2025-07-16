@@ -321,6 +321,7 @@ shell:
   - cp -a /usr/lib64/libc.so* /chroot/lib64
 
   - cp -a /usr/lib64/libbrotlienc.so* /chroot/lib64
+  - cp -a /usr/lib64/libbrotlicommon.so* /chroot/lib64
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
