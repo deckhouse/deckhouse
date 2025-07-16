@@ -1,0 +1,94 @@
+werf.yaml:{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
+Makefile:  ifeq ($(CLOUD_PROVIDERS_SOURCE_REPO),)
+Makefile: 		export CLOUD_PROVIDERS_SOURCE_REPO=https://github.com
+.github/ci_includes/werf_envs.yml:CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+.github/workflows/build-and-test_dev.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+.github/workflows/build-and-test_pre-release.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+.github/workflows/build-and-test_release.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/cloud-data-discoverer.git /src
+ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/caphc-controller-manager.git /src
+ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-controller-manager.git /src
+ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-data-discoverer.git /src
+ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
+ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/capd-controller-manager.git /src
+ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:    - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+werf-giterminism.yaml:      - CLOUD_PROVIDERS_SOURCE_REPO
+werf-giterminism.yaml:      - CLOUD_PROVIDERS_SOURCE_REPO
+log:werf.yaml:{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
+log:Makefile:  ifeq ($(CLOUD_PROVIDERS_SOURCE_REPO),)
+log:Makefile: 		export CLOUD_PROVIDERS_SOURCE_REPO=https://github.com
+log:.github/ci_includes/werf_envs.yml:CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+log:.github/workflows/build-and-test_dev.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+log:.github/workflows/build-and-test_pre-release.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+log:.github/workflows/build-and-test_release.yml:  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
+log:ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/cloud-data-discoverer.git /src
+log:ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+log:ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/caphc-controller-manager.git /src
+log:ee/modules/030-cloud-provider-huaweicloud/images/caphc-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-controller-manager.git /src
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-data-discoverer.git /src
+log:ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+log:ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
+log:ee/modules/030-cloud-provider-dynamix/images/dynamix-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+log:ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/capd-controller-manager.git /src
+log:ee/modules/030-cloud-provider-dynamix/images/capd-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/zvirt-csi-driver/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/werf.inc.yaml:    - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:- id: CLOUD_PROVIDERS_SOURCE_REPO
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/werf.inc.yaml:  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+log:werf-giterminism.yaml:      - CLOUD_PROVIDERS_SOURCE_REPO
+log:werf-giterminism.yaml:      - CLOUD_PROVIDERS_SOURCE_REPO
+log:.werf/defines/modules.tmpl:  CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+log:.werf/werf-modules.yaml:      {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
+.werf/defines/modules.tmpl:  CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+.werf/werf-modules.yaml:      {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
