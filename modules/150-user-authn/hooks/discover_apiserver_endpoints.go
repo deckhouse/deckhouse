@@ -121,13 +121,13 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 		return fmt.Errorf("kubernetes service endpoints was not discovered")
 	}
 
-	portData := make(map[string]interface{})
+	var portData int32
 	err := ports[0].UnmarshalTo(&portData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'port' snapshot: %w", err)
 	}
 
-	endPortData := make(map[string]interface{})
+	var endPortData kubernetesEndpoints
 	err = endpoints[0].UnmarshalTo(&endPortData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'endpoints' snapshot: %w", err)
