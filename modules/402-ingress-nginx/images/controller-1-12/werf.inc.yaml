@@ -149,9 +149,16 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-16.09"
 final: false
+mount:
+- from: build_dir
+  to: /tmp/apps
 import:
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /usr/local
   to: /usr/local
@@ -175,6 +182,10 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
   to: /src/rootfs/etc
+  before: install
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /chroot/usr/bin/curl
   before: install
 # - image: tools/openssl
 #   add: /
@@ -311,72 +322,14 @@ shell:
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-ingress-artifact
-fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-16.07"
-final: false
-mount:
-- from: build_dir
-  to: /tmp/apps
-import:
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-#   add: /chroot
-#   to: /chroot
-#   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/dbg
-  to: /dbg
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/nginx-ingress-controller
-  to: /nginx-ingress-controller
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/wait-shutdown
-  to: /wait-shutdown
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  # owner: "101"
-  # group: "101"
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/nginx-chroot-wrapper.sh
-  to: /usr/bin/nginx
-  # owner: "101"
-  # group: "101"
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
-  to: /usr/bin/dumb-init
-  before: setup
-- image: tools/libcap
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: setup
-shell:
-  setup:
-  # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - chown www-data:www-data /usr/bin/nginx
-  - chown www-data:www-data /usr/bin/curl
-  - chmod 1777 /tmp
-  - rm -rf /etc/pki
-  # - ln -sf /chroot/etc/pki /etc/pki
-  # - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  # - ln -sf /chroot/etc/nginx /etc/nginx
-  # - ln -sf /chroot/tmp/nginx /tmp/nginx
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  # - ln -sf /chroot/var/log/nginx /var/log/nginx
+
   # Utils for final image
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-# fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-16.07"
+fromImage: common/alt-p11-artifact
+# fromImage: common/distroless
+fromCacheVersion: "2025-07-16.09"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -384,42 +337,63 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
   to: /chroot
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-ingress-artifact
-  add: /
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+  add: /chroot
   to: /
   includePaths:
-  - dbg
-  - nginx-ingress-controller
-  - wait-shutdown
-  - usr/bin/curl
-  - usr/bin/nginx
-  - usr/bin/dumb-init
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-ingress-artifact
-  add: /
-  to: /
-  includePaths:
-  - tmp
   - etc/passwd
   - etc/group
-  # - etc/pki
-  # - usr/share/ca-certificates
-  # - etc/nginx
-  # - tmp/nginx
-  - etc/ingress-controller
-  # - var/log/nginx
-  before: setup
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/dbg
+  to: /dbg
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/nginx-ingress-controller
+  to: /nginx-ingress-controller
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/wait-shutdown
+  to: /wait-shutdown
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/curl-chroot-wrapper.sh
+  to: /usr/bin/curl
+  owner: "101"
+  group: "101"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/nginx-chroot-wrapper.sh
+  to: /usr/bin/nginx
+  owner: "101"
+  group: "101"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
+  add: /src/dumb-init
+  to: /usr/bin/dumb-init
+  before: install
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
-  before: setup
+  before: install
 - image: tools/util-linux
   add: /usr/bin/unshare
   to: /usr/bin/unshare
   before: install
 shell:
   setup:
+  # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
+  # - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+  - chmod 1777 /tmp
+  - rm -rf /etc/pki
+  - ln -sf /chroot/etc/pki /etc/pki
+  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+  - ln -sf /chroot/etc/nginx /etc/nginx
+  - ln -sf /chroot/tmp/nginx /tmp/nginx
+  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  - ln -sf /chroot/var/log/nginx /var/log/nginx
+
   - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
