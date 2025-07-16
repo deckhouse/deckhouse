@@ -59,7 +59,7 @@ type Vault struct {
 //   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
 //   - WithRegistry: Uses a provided Prometheus registry
 //   - WithLogger: Sets a custom logger for the metrics storage
-func NewVault(resolveMetricNameFunc func(name string) string, opts ...Option) *Vault {
+func NewVault(resolveMetricNameFunc func(name string) string, opts ...VaultOption) *Vault {
 	vault := &Vault{
 		collectors:            make(map[string]collectors.ConstCollector),
 		registerer:            prometheus.DefaultRegisterer,
@@ -68,7 +68,7 @@ func NewVault(resolveMetricNameFunc func(name string) string, opts ...Option) *V
 		logger: log.NewLogger().Named("vault"),
 	}
 
-	options := NewOptions(opts...)
+	options := NewVaultOptions(opts...)
 
 	if options.registry != nil {
 		vault.registry = options.registry
@@ -96,14 +96,25 @@ func (v *Vault) Collector() prometheus.Collector {
 	return v
 }
 
-func (v *Vault) RegisterCounter(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
+func (v *Vault) RegisterCounter(name string, labelNames []string, opts ...RegisterOption) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
+	options := NewRegisterOptions(opts...)
+
+	if options.Help == "" {
+		options.Help = metricName
+	}
+
 	collector, ok := v.collectors[metricName]
 	if !ok {
-		collector = collectors.NewConstCounterCollector(metricName, labelNames)
+		collector = collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:        metricName,
+			Help:        options.Help,
+			LabelNames:  labelNames,
+			ConstLabels: options.ConstantLabels,
+		})
 
 		if err := v.registerer.Register(collector); err != nil {
 			return nil, fmt.Errorf("counter '%s' %v registration: %w", metricName, labelNames, err)
@@ -125,14 +136,25 @@ func (v *Vault) RegisterCounter(name string, labelNames []string) (*collectors.C
 	return counter, nil
 }
 
-func (v *Vault) RegisterGauge(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
+func (v *Vault) RegisterGauge(name string, labelNames []string, opts ...RegisterOption) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
+	options := NewRegisterOptions(opts...)
+
+	if options.Help == "" {
+		options.Help = metricName
+	}
+
 	collector, ok := v.collectors[metricName]
 	if !ok {
-		collector = collectors.NewConstGaugeCollector(metricName, labelNames)
+		collector = collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:        metricName,
+			Help:        options.Help,
+			LabelNames:  labelNames,
+			ConstLabels: options.ConstantLabels,
+		})
 
 		if err := v.registerer.Register(collector); err != nil {
 			return nil, fmt.Errorf("gauge '%s' %v registration: %v", metricName, labelNames, err)
@@ -154,14 +176,25 @@ func (v *Vault) RegisterGauge(name string, labelNames []string) (*collectors.Con
 	return gauge, nil
 }
 
-func (v *Vault) RegisterHistogram(name string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
+func (v *Vault) RegisterHistogram(name string, labelNames []string, buckets []float64, opts ...RegisterOption) (*collectors.ConstHistogramCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
+	options := NewRegisterOptions(opts...)
+
+	if options.Help == "" {
+		options.Help = metricName
+	}
+
 	collector, ok := v.collectors[metricName]
 	if !ok {
-		collector = collectors.NewConstHistogramCollector(metricName, labelNames, buckets)
+		collector = collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+			Name:        metricName,
+			Help:        options.Help,
+			LabelNames:  labelNames,
+			ConstLabels: options.ConstantLabels,
+		}, buckets)
 
 		if err := v.registerer.Register(collector); err != nil {
 			return nil, fmt.Errorf("histogram '%s' %v registration: %v", metricName, labelNames, err)

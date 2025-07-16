@@ -42,12 +42,18 @@ type ConstCounterCollector struct {
 	labelNames []string
 }
 
-func NewConstCounterCollector(name string, labelNames []string) *ConstCounterCollector {
-	desc := prometheus.NewDesc(name, name, labelNames, nil)
+func NewConstCounterCollector(desc MetricDescription) *ConstCounterCollector {
+	d := prometheus.NewDesc(
+		desc.Name,
+		desc.Help,
+		desc.LabelNames,
+		prometheus.Labels(desc.ConstLabels),
+	)
+
 	return &ConstCounterCollector{
-		name:       name,
-		labelNames: labelNames,
-		desc:       desc,
+		name:       desc.Name,
+		labelNames: desc.LabelNames,
+		desc:       d,
 		collection: make(map[uint64]GroupedCounterMetric),
 	}
 }

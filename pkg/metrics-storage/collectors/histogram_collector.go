@@ -46,7 +46,7 @@ type ConstHistogramCollector struct {
 	bucketsMtx sync.RWMutex
 }
 
-func NewConstHistogramCollector(name string, labelNames []string, buckets []float64) *ConstHistogramCollector {
+func NewConstHistogramCollector(desc *MetricDescription, buckets []float64) *ConstHistogramCollector {
 	if len(buckets) == 0 {
 		buckets = prometheus.DefBuckets
 	}
@@ -56,11 +56,17 @@ func NewConstHistogramCollector(name string, labelNames []string, buckets []floa
 	copy(sortedBuckets, buckets)
 	sort.Float64s(sortedBuckets)
 
-	desc := prometheus.NewDesc(name, name, labelNames, nil)
+	d := prometheus.NewDesc(
+		desc.Name,
+		desc.Help,
+		desc.LabelNames,
+		prometheus.Labels(desc.ConstLabels),
+	)
+
 	return &ConstHistogramCollector{
-		name:       name,
-		labelNames: labelNames,
-		desc:       desc,
+		name:       desc.Name,
+		labelNames: desc.LabelNames,
+		desc:       d,
 		buckets:    sortedBuckets,
 		collection: make(map[uint64]GroupedHistogramMetric),
 	}

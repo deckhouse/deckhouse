@@ -34,7 +34,10 @@ func TestNewConstCounterCollector(t *testing.T) {
 		name := "test_counter"
 		labelNames := []string{"method", "status"}
 
-		collector := collectors.NewConstCounterCollector(name, labelNames)
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       name,
+			LabelNames: labelNames,
+		})
 
 		assert.Equal(t, name, collector.Name())
 		assert.Equal(t, labelNames, collector.LabelNames())
@@ -42,7 +45,10 @@ func TestNewConstCounterCollector(t *testing.T) {
 	})
 
 	t.Run("with empty label names", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
 		assert.Equal(t, "test_counter", collector.Name())
 		assert.Equal(t, []string{}, collector.LabelNames())
@@ -50,7 +56,10 @@ func TestNewConstCounterCollector(t *testing.T) {
 	})
 
 	t.Run("with nil label names", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", nil)
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: nil,
+		})
 
 		assert.Equal(t, "test_counter", collector.Name())
 		assert.Nil(t, collector.LabelNames())
@@ -58,7 +67,10 @@ func TestNewConstCounterCollector(t *testing.T) {
 	})
 
 	t.Run("with single label", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		assert.Equal(t, []string{"method"}, collector.LabelNames())
 	})
@@ -66,7 +78,10 @@ func TestNewConstCounterCollector(t *testing.T) {
 
 func TestConstCounterCollector_Add(t *testing.T) {
 	t.Run("basic add operation", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(1, map[string]string{"method": "GET"})
 
@@ -77,7 +92,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("multiple adds same metric", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(1, map[string]string{"method": "GET"})
 		collector.Add(2, map[string]string{"method": "GET"})
@@ -89,7 +107,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("multiple adds different metrics", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(1, map[string]string{"method": "GET"})
 		collector.Add(2, map[string]string{"method": "POST"})
@@ -108,7 +129,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add with multiple labels", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method", "status", "endpoint"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method", "status", "endpoint"},
+		})
 
 		labels := map[string]string{
 			"method":   "GET",
@@ -125,7 +149,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add with empty labels map", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
 		collector.Add(10, map[string]string{})
 		collector.Add(5, nil)
@@ -136,7 +163,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add with missing label values", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method", "status"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method", "status"},
+		})
 
 		// Only provide one label value
 		collector.Add(1, map[string]string{"method": "GET"})
@@ -150,7 +180,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add with extra label values", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		// Provide extra labels that aren't in labelNames
 		labels := map[string]string{
@@ -171,7 +204,10 @@ func TestConstCounterCollector_Add(t *testing.T) {
 
 func TestConstCounterCollector_AddEdgeCases(t *testing.T) {
 	t.Run("add zero value", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
 		collector.Add(0, nil)
 
@@ -181,30 +217,39 @@ func TestConstCounterCollector_AddEdgeCases(t *testing.T) {
 	})
 
 	t.Run("add fractional value", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
-		// Counter should truncate fractional values
+		// Counter should handle fractional values correctly
 		collector.Add(3.7, nil)
 		collector.Add(2.9, nil)
 
 		metrics := collectCounterMetrics(t, collector)
 		require.Len(t, metrics, 1)
-		verifyCounterValue(t, metrics[0], 5) // 3 + 2 (truncated)
+		verifyCounterValue(t, metrics[0], 5)
 	})
 
 	t.Run("add negative value", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
-		// This should not panic, but behavior depends on uint64 conversion
+		// This should not panic, but behavior depends on implementation
 		collector.Add(-1, nil)
 
 		metrics := collectCounterMetrics(t, collector)
 		require.Len(t, metrics, 1)
-		// The exact value depends on uint64(-1) conversion, which wraps around
+		// The exact value depends on how negative values are handled
 	})
 
 	t.Run("add special float values", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"type"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"type"},
+		})
 
 		testCases := []struct {
 			name  string
@@ -229,13 +274,16 @@ func TestConstCounterCollector_AddEdgeCases(t *testing.T) {
 }
 
 func TestConstCounterCollector_Concurrency(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"worker"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"worker"},
+	})
 
 	numWorkers := 10
 	incrementsPerWorker := 100
 	var wg sync.WaitGroup
 
-	// Start multiple goroutines adding to the same counter
+	// Start multiple goroutines adding to different metrics
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func(workerID int) {
@@ -262,7 +310,10 @@ func TestConstCounterCollector_Concurrency(t *testing.T) {
 }
 
 func TestConstCounterCollector_ConcurrentSameMetric(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"shared"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"shared"},
+	})
 
 	numWorkers := 10
 	incrementsPerWorker := 100
@@ -287,7 +338,10 @@ func TestConstCounterCollector_ConcurrentSameMetric(t *testing.T) {
 }
 
 func TestConstCounterCollector_ExpireGroupMetrics(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"method"},
+	})
 
 	// Add metrics for different groups
 	collector.Add(1, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -315,7 +369,10 @@ func TestConstCounterCollector_ExpireGroupMetrics(t *testing.T) {
 }
 
 func TestConstCounterCollector_ExpireNonExistentGroup(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"method"},
+	})
 
 	collector.Add(1, map[string]string{"method": "GET"})
 
@@ -328,7 +385,10 @@ func TestConstCounterCollector_ExpireNonExistentGroup(t *testing.T) {
 }
 
 func TestConstCounterCollector_ExpireEmptyCollection(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"method"},
+	})
 
 	// Expire from empty collection
 	collector.ExpireGroupMetrics("any_group")
@@ -340,7 +400,10 @@ func TestConstCounterCollector_ExpireEmptyCollection(t *testing.T) {
 
 func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 	t.Run("add new labels", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		// Add initial metric
 		collector.Add(1, map[string]string{"method": "GET"})
@@ -361,7 +424,10 @@ func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("add duplicate labels", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(1, map[string]string{"method": "GET"})
 
@@ -376,7 +442,10 @@ func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update with empty labels", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.UpdateLabels([]string{})
 
@@ -385,7 +454,10 @@ func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update preserves metric values", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(5, map[string]string{"method": "GET"})
 		collector.Add(3, map[string]string{"method": "POST"})
@@ -405,7 +477,10 @@ func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update with complex label reordering", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"a", "b", "c"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"a", "b", "c"},
+		})
 
 		labels := map[string]string{"a": "val_a", "b": "val_b", "c": "val_c"}
 		collector.Add(10, labels)
@@ -427,7 +502,10 @@ func TestConstCounterCollector_UpdateLabels(t *testing.T) {
 }
 
 func TestConstCounterCollector_Describe(t *testing.T) {
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"method"},
+	})
 
 	ch := make(chan *prometheus.Desc, 1)
 	collector.Describe(ch)
@@ -444,14 +522,20 @@ func TestConstCounterCollector_Describe(t *testing.T) {
 
 func TestConstCounterCollector_Collect(t *testing.T) {
 	t.Run("collect empty", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
 
 		metrics := collectCounterMetrics(t, collector)
 		assert.Len(t, metrics, 0)
 	})
 
 	t.Run("collect single metric", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(42, map[string]string{"method": "GET"})
 
@@ -461,7 +545,10 @@ func TestConstCounterCollector_Collect(t *testing.T) {
 	})
 
 	t.Run("collect multiple metrics", func(t *testing.T) {
-		collector := collectors.NewConstCounterCollector("test_counter", []string{"method"})
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(1, map[string]string{"method": "GET"})
 		collector.Add(2, map[string]string{"method": "POST"})
@@ -482,7 +569,10 @@ func TestConstCounterCollector_InterfaceCompliance(t *testing.T) {
 	// Test that ConstCounterCollector implements ConstCollector interface
 	var _ collectors.ConstCollector = (*collectors.ConstCounterCollector)(nil)
 
-	collector := collectors.NewConstCounterCollector("test_counter", []string{})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{},
+	})
 
 	// Test all interface methods
 	assert.Equal(t, "test_counter", collector.Name())
@@ -502,7 +592,10 @@ func TestConstCounterCollector_InterfaceCompliance(t *testing.T) {
 
 func TestConstCounterCollector_LabelOrdering(t *testing.T) {
 	// Test that label ordering is consistent
-	collector := collectors.NewConstCounterCollector("test_counter", []string{"z", "a", "m"})
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "test_counter",
+		LabelNames: []string{"z", "a", "m"},
+	})
 
 	collector.Add(1, map[string]string{"z": "val_z", "a": "val_a", "m": "val_m"})
 
@@ -514,6 +607,38 @@ func TestConstCounterCollector_LabelOrdering(t *testing.T) {
 	assert.Equal(t, "val_z", labels["z"])
 	assert.Equal(t, "val_a", labels["a"])
 	assert.Equal(t, "val_m", labels["m"])
+}
+
+func TestConstCounterCollector_MetricDescription(t *testing.T) {
+	t.Run("empty metric description", func(t *testing.T) {
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{})
+
+		assert.Equal(t, "", collector.Name())
+		assert.Nil(t, collector.LabelNames())
+		assert.Equal(t, "counter", collector.Type())
+	})
+
+	t.Run("metric description with help", func(t *testing.T) {
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			Help:       "Test counter help",
+			LabelNames: []string{"method"},
+		})
+
+		assert.Equal(t, "test_counter", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
+	})
+
+	t.Run("metric description with const labels", func(t *testing.T) {
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:        "test_counter",
+			LabelNames:  []string{"method"},
+			ConstLabels: map[string]string{"service": "api"},
+		})
+
+		assert.Equal(t, "test_counter", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
+	})
 }
 
 // Helper functions for blackbox testing

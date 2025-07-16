@@ -62,6 +62,13 @@ func (v *MetricValue[T]) Add(value T) T {
 	return v.Value
 }
 
+type MetricDescription struct {
+	Name        string
+	Help        string
+	LabelNames  []string
+	ConstLabels map[string]string
+}
+
 const labelsSeparator = byte(255)
 
 func HashMetric(group string, labelValues []string) uint64 {

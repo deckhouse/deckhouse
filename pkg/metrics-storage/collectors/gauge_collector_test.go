@@ -34,7 +34,10 @@ func TestNewConstGaugeCollector(t *testing.T) {
 		name := "test_gauge"
 		labelNames := []string{"method", "status"}
 
-		collector := collectors.NewConstGaugeCollector(name, labelNames)
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       name,
+			LabelNames: labelNames,
+		})
 
 		assert.Equal(t, name, collector.Name())
 		assert.Equal(t, labelNames, collector.LabelNames())
@@ -42,7 +45,10 @@ func TestNewConstGaugeCollector(t *testing.T) {
 	})
 
 	t.Run("with empty label names", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		assert.Equal(t, "test_gauge", collector.Name())
 		assert.Equal(t, []string{}, collector.LabelNames())
@@ -50,7 +56,10 @@ func TestNewConstGaugeCollector(t *testing.T) {
 	})
 
 	t.Run("with nil label names", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", nil)
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: nil,
+		})
 
 		assert.Equal(t, "test_gauge", collector.Name())
 		assert.Nil(t, collector.LabelNames())
@@ -58,14 +67,43 @@ func TestNewConstGaugeCollector(t *testing.T) {
 	})
 
 	t.Run("with single label", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		assert.Equal(t, []string{"method"}, collector.LabelNames())
 	})
+
+	t.Run("with help text", func(t *testing.T) {
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			Help:       "Test gauge help text",
+			LabelNames: []string{"method"},
+		})
+
+		assert.Equal(t, "test_gauge", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
+	})
+
+	t.Run("with const labels", func(t *testing.T) {
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:        "test_gauge",
+			LabelNames:  []string{"method"},
+			ConstLabels: map[string]string{"service": "api"},
+		})
+
+		assert.Equal(t, "test_gauge", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
+	})
 }
+
 func TestConstGaugeCollector_Set(t *testing.T) {
 	t.Run("basic set operation", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(42.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
@@ -76,7 +114,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set overwrites previous value", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Set(20.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -87,7 +128,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set multiple different metrics", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Set(20.0, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
@@ -107,7 +151,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set with multiple labels", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method", "status", "endpoint"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method", "status", "endpoint"},
+		})
 
 		labels := map[string]string{
 			"method":   "GET",
@@ -124,7 +171,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set with empty labels map", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		collector.Set(42.0, map[string]string{}, collectors.WithGroup("group1"))
 		collector.Set(24.0, nil, collectors.WithGroup("group1")) // Should overwrite
@@ -135,7 +185,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set with missing label values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method", "status"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method", "status"},
+		})
 
 		// Only provide one label value
 		collector.Set(50.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -149,7 +202,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 	})
 
 	t.Run("set with extra label values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		// Provide extra labels that aren't in labelNames
 		labels := map[string]string{
@@ -170,7 +226,10 @@ func TestConstGaugeCollector_Set(t *testing.T) {
 
 func TestConstGaugeCollector_Add(t *testing.T) {
 	t.Run("basic add operation", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
@@ -180,7 +239,10 @@ func TestConstGaugeCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add accumulates values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Add(5.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -192,7 +254,10 @@ func TestConstGaugeCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add to different metrics", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Add(20.0, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
@@ -211,7 +276,10 @@ func TestConstGaugeCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add with zero value", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		collector.Add(0.0, nil, collectors.WithGroup("group1"))
 
@@ -221,7 +289,10 @@ func TestConstGaugeCollector_Add(t *testing.T) {
 	})
 
 	t.Run("add negative values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		collector.Add(10.0, nil, collectors.WithGroup("group1"))
 		collector.Add(-15.0, nil, collectors.WithGroup("group1"))
@@ -234,7 +305,10 @@ func TestConstGaugeCollector_Add(t *testing.T) {
 
 func TestConstGaugeCollector_MixedOperations(t *testing.T) {
 	t.Run("set then add", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(100.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Add(50.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -245,7 +319,10 @@ func TestConstGaugeCollector_MixedOperations(t *testing.T) {
 	})
 
 	t.Run("add then set", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Add(100.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Set(50.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -256,7 +333,10 @@ func TestConstGaugeCollector_MixedOperations(t *testing.T) {
 	})
 
 	t.Run("complex sequence", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Add(5.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -272,7 +352,10 @@ func TestConstGaugeCollector_MixedOperations(t *testing.T) {
 
 func TestConstGaugeCollector_EdgeCases(t *testing.T) {
 	t.Run("very large values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		largeValue := math.MaxFloat64
 		collector.Set(largeValue, nil, collectors.WithGroup("group1"))
@@ -283,7 +366,10 @@ func TestConstGaugeCollector_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("very small values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		smallValue := math.SmallestNonzeroFloat64
 		collector.Set(smallValue, nil, collectors.WithGroup("group1"))
@@ -294,7 +380,10 @@ func TestConstGaugeCollector_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("precision preservation", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		preciseValue := 3.141592653589793238462643383279502884197
 		collector.Set(preciseValue, nil, collectors.WithGroup("group1"))
@@ -307,7 +396,10 @@ func TestConstGaugeCollector_EdgeCases(t *testing.T) {
 
 func TestConstGaugeCollector_Concurrency(t *testing.T) {
 	t.Run("concurrent sets on different metrics", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"worker"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"worker"},
+		})
 
 		numWorkers := 10
 		var wg sync.WaitGroup
@@ -342,7 +434,10 @@ func TestConstGaugeCollector_Concurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent adds on same metric", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"shared"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"shared"},
+		})
 
 		numWorkers := 10
 		incrementsPerWorker := 100
@@ -366,7 +461,10 @@ func TestConstGaugeCollector_Concurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent mixed operations", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"operation"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"operation"},
+		})
 
 		numWorkers := 5
 		var wg sync.WaitGroup
@@ -413,7 +511,10 @@ func TestConstGaugeCollector_Concurrency(t *testing.T) {
 }
 
 func TestConstGaugeCollector_ExpireGroupMetrics(t *testing.T) {
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{"method"},
+	})
 
 	// Add metrics for different groups
 	collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -441,7 +542,10 @@ func TestConstGaugeCollector_ExpireGroupMetrics(t *testing.T) {
 }
 
 func TestConstGaugeCollector_ExpireNonExistentGroup(t *testing.T) {
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{"method"},
+	})
 
 	collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
@@ -454,7 +558,10 @@ func TestConstGaugeCollector_ExpireNonExistentGroup(t *testing.T) {
 }
 
 func TestConstGaugeCollector_ExpireEmptyCollection(t *testing.T) {
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{"method"},
+	})
 
 	// Expire from empty collection
 	collector.ExpireGroupMetrics("any_group")
@@ -466,7 +573,10 @@ func TestConstGaugeCollector_ExpireEmptyCollection(t *testing.T) {
 
 func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 	t.Run("add new labels", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		// Add initial metric
 		collector.Set(42.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
@@ -487,7 +597,10 @@ func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("add duplicate labels", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(42.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
@@ -502,7 +615,10 @@ func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update with empty labels", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.UpdateLabels([]string{})
 
@@ -511,7 +627,10 @@ func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update preserves metric values", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(100.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Set(200.7, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
@@ -534,7 +653,10 @@ func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 	})
 
 	t.Run("update with complex label reordering", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"a", "b", "c"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"a", "b", "c"},
+		})
 
 		labels := map[string]string{"a": "val_a", "b": "val_b", "c": "val_c"}
 		collector.Set(987.65, labels, collectors.WithGroup("group1"))
@@ -556,7 +678,10 @@ func TestConstGaugeCollector_UpdateLabels(t *testing.T) {
 }
 
 func TestConstGaugeCollector_Describe(t *testing.T) {
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{"method"},
+	})
 
 	ch := make(chan *prometheus.Desc, 1)
 	collector.Describe(ch)
@@ -573,14 +698,20 @@ func TestConstGaugeCollector_Describe(t *testing.T) {
 
 func TestConstGaugeCollector_Collect(t *testing.T) {
 	t.Run("collect empty", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{},
+		})
 
 		metrics := collectGaugeMetrics(t, collector)
 		assert.Len(t, metrics, 0)
 	})
 
 	t.Run("collect single metric", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(123.456, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
@@ -590,7 +721,10 @@ func TestConstGaugeCollector_Collect(t *testing.T) {
 	})
 
 	t.Run("collect multiple metrics", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(10.1, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 		collector.Set(20.2, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
@@ -611,7 +745,10 @@ func TestConstGaugeCollector_InterfaceCompliance(t *testing.T) {
 	// Test that ConstGaugeCollector implements ConstCollector interface
 	var _ collectors.ConstCollector = (*collectors.ConstGaugeCollector)(nil)
 
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{},
+	})
 
 	// Test all interface methods
 	assert.Equal(t, "test_gauge", collector.Name())
@@ -631,7 +768,10 @@ func TestConstGaugeCollector_InterfaceCompliance(t *testing.T) {
 
 func TestConstGaugeCollector_LabelOrdering(t *testing.T) {
 	// Test that label ordering is consistent
-	collector := collectors.NewConstGaugeCollector("test_gauge", []string{"z", "a", "m"})
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "test_gauge",
+		LabelNames: []string{"z", "a", "m"},
+	})
 
 	collector.Set(42.0, map[string]string{"z": "val_z", "a": "val_a", "m": "val_m"}, collectors.WithGroup("group1"))
 
@@ -647,7 +787,10 @@ func TestConstGaugeCollector_LabelOrdering(t *testing.T) {
 
 func TestConstGaugeCollector_GroupOperations(t *testing.T) {
 	t.Run("operations with explicit groups", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		// Use WithGroup option
 		collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("custom_group"))
@@ -665,7 +808,10 @@ func TestConstGaugeCollector_GroupOperations(t *testing.T) {
 	})
 
 	t.Run("different groups same labels", func(t *testing.T) {
-		collector := collectors.NewConstGaugeCollector("test_gauge", []string{"method"})
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "test_gauge",
+			LabelNames: []string{"method"},
+		})
 
 		collector.Set(10.0, map[string]string{"method": "GET"}, collectors.WithGroup("group_a"))
 		collector.Set(20.0, map[string]string{"method": "GET"}, collectors.WithGroup("group_b"))
@@ -679,6 +825,28 @@ func TestConstGaugeCollector_GroupOperations(t *testing.T) {
 		metrics = collectGaugeMetrics(t, collector)
 		require.Len(t, metrics, 1)
 		verifyGaugeValue(t, metrics[0], 20.0)
+	})
+}
+
+func TestConstGaugeCollector_MetricDescription(t *testing.T) {
+	t.Run("empty metric description", func(t *testing.T) {
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{})
+
+		assert.Equal(t, "", collector.Name())
+		assert.Nil(t, collector.LabelNames())
+		assert.Equal(t, "gauge", collector.Type())
+	})
+
+	t.Run("metric description with all fields", func(t *testing.T) {
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:        "test_gauge",
+			Help:        "Test gauge help",
+			LabelNames:  []string{"method"},
+			ConstLabels: map[string]string{"service": "api", "version": "v1"},
+		})
+
+		assert.Equal(t, "test_gauge", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
 	})
 }
 

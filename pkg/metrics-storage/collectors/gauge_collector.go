@@ -42,12 +42,18 @@ type ConstGaugeCollector struct {
 	collection map[uint64]GroupedGaugeMetric
 }
 
-func NewConstGaugeCollector(name string, labelNames []string) *ConstGaugeCollector {
-	desc := prometheus.NewDesc(name, name, labelNames, nil)
+func NewConstGaugeCollector(desc *MetricDescription) *ConstGaugeCollector {
+	d := prometheus.NewDesc(
+		desc.Name,
+		desc.Help,
+		desc.LabelNames,
+		prometheus.Labels(desc.ConstLabels),
+	)
+
 	return &ConstGaugeCollector{
-		name:       name,
-		labelNames: labelNames,
-		desc:       desc,
+		name:       desc.Name,
+		labelNames: desc.LabelNames,
+		desc:       d,
 		collection: make(map[uint64]GroupedGaugeMetric),
 	}
 }

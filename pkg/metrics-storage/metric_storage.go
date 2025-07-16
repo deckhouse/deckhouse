@@ -144,8 +144,8 @@ func (m *MetricStorage) resolveMetricName(name string) string {
 	return name
 }
 
-func (m *MetricStorage) RegisterCounter(metric string, labelNames []string) (*collectors.ConstCounterCollector, error) {
-	c, err := m.vault.RegisterCounter(metric, labelNames)
+func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstCounterCollector, error) {
+	c, err := m.vault.RegisterCounter(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +153,8 @@ func (m *MetricStorage) RegisterCounter(metric string, labelNames []string) (*co
 	return c, nil
 }
 
-func (m *MetricStorage) RegisterGauge(metric string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
-	c, err := m.vault.RegisterGauge(metric, labelNames)
+func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstGaugeCollector, error) {
+	c, err := m.vault.RegisterGauge(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +162,8 @@ func (m *MetricStorage) RegisterGauge(metric string, labelNames []string) (*coll
 	return c, nil
 }
 
-func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
-	c, err := m.vault.RegisterHistogram(metric, labelNames, buckets)
+func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...vault.RegisterOption) (*collectors.ConstHistogramCollector, error) {
+	c, err := m.vault.RegisterHistogram(metric, labelNames, buckets, opts...)
 	if err != nil {
 		return nil, err
 	}

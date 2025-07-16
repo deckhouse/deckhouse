@@ -110,8 +110,8 @@ func TestHashLabelValues(t *testing.T) {
 // TestEdgeCases tests various edge cases
 func TestEdgeCases(t *testing.T) {
 	// Test with empty label names
-	counterCollector := collectors.NewConstCounterCollector("test_counter", []string{})
-	gaugeCollector := collectors.NewConstGaugeCollector("test_gauge", []string{})
+	counterCollector := collectors.NewConstCounterCollector(collectors.MetricDescription{Name: "test_counter", LabelNames: []string{}})
+	gaugeCollector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{Name: "test_gauge", LabelNames: []string{}})
 
 	// Add metrics with empty labels
 	counterCollector.Add(10, map[string]string{}, collectors.WithGroup("group"))
@@ -166,8 +166,8 @@ func TestEdgeCases(t *testing.T) {
 func TestUpdateLabelsNoChange(t *testing.T) {
 	// Create collectors
 	labelNames := []string{"label1", "label2"}
-	counterCollector := collectors.NewConstCounterCollector("test_counter", labelNames)
-	gaugeCollector := collectors.NewConstGaugeCollector("test_gauge", labelNames)
+	counterCollector := collectors.NewConstCounterCollector(collectors.MetricDescription{Name: "test_counter", LabelNames: labelNames})
+	gaugeCollector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{Name: "test_gauge", LabelNames: labelNames})
 
 	// Add metrics
 	counterCollector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup("group"))
@@ -198,8 +198,8 @@ func TestUpdateLabelsNoChange(t *testing.T) {
 // TestDescribeMethod tests the Describe method of collectors
 func TestDescribeMethod(t *testing.T) {
 	// Create collectors
-	counterCollector := collectors.NewConstCounterCollector("test_counter", []string{"label"})
-	gaugeCollector := collectors.NewConstGaugeCollector("test_gauge", []string{"label"})
+	counterCollector := collectors.NewConstCounterCollector(collectors.MetricDescription{Name: "test_counter", LabelNames: []string{"label"}})
+	gaugeCollector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{Name: "test_gauge", LabelNames: []string{"label"}})
 
 	// Create channels for descriptions
 	counterCh := make(chan *prometheus.Desc, 1)
