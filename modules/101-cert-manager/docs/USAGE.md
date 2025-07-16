@@ -212,10 +212,13 @@ metadata:
 spec:
   secretName: example-com-tls                # the name of the secret to store a private key and a certificate
   issuerRef:
-    kind: ClusterIssuer                      # the link to the certificate "issuer", see more below
+    kind: ClusterIssuer                      # the link to the certificate "issuer"
     name: selfsigned
   commonName: example.com                    # the main certificate domain
-  dnsNames:                                  # additional certificate domains (optional)
+  dnsNames:                                  # additional domain certificates. Requires at least duplicate commonName record.
   - www.example.com
   - admin.example.com
 ```
+{% alert level="info" %}
+Example of creating a self-signed certificate manually, without using the Cert-manager, is available in the [Deckhouse Kubernetes Platform, FAQ](../../deckhouse-faq.html#how-to-generate-a-correct-self-signed-certificate)
+{% endalert %}
