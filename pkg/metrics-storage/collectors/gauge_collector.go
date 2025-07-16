@@ -67,7 +67,6 @@ func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	metricHash := HashMetric(options.Group, labelValues)
 
-	// TODO add group to hash
 	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedGaugeMetric{

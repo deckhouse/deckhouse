@@ -42,7 +42,6 @@ const (
 //  2. Implement partial label support to avoid specifying all values for all labels
 //     (retrieve default labels from context or use predefined defaults)
 //  3. Improve prefix handling by using explicit options or builder functions instead of string substitution
-//  4. Add help to metric
 
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
