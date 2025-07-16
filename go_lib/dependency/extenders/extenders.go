@@ -42,7 +42,7 @@ func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
-		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper),
+		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
 	}
 }
 

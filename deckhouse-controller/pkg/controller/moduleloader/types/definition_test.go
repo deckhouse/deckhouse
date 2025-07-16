@@ -46,4 +46,5 @@ requirements:
 	assert.Equal(t, ">= 1.31", m.Requirements.Kubernetes)
 	assert.Equal(t, ">= 1.67", m.Requirements.Deckhouse)
 	assert.Equal(t, ">= 0.0.0", m.Requirements.ParentModules["prometheus"])
+	assert.Equal(t, false, m.Critical)
 }

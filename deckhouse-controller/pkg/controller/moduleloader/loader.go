@@ -339,6 +339,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Weight:       def.Weight,
 						Stage:        def.Stage,
 						Source:       v1alpha1.ModuleSourceEmbedded,
+						Critical:     def.Critical,
 						Requirements: def.Requirements,
 					},
 				}
@@ -357,6 +358,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
+			module.Properties.Critical = def.Critical
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())

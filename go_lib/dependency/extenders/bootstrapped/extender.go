@@ -17,9 +17,13 @@ limitations under the License.
 package bootstrapped
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	exterr "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -31,12 +35,15 @@ type Extender struct {
 	isBootstrapped func() (bool, error)
 	// functional modules require bootstrapped cluster
 	modules map[string]struct{}
+
+	logger *log.Logger
 }
 
-func NewExtender(helper func() (bool, error)) *Extender {
+func NewExtender(helper func() (bool, error), logger *log.Logger) *Extender {
 	return &Extender{
-		modules:        make(map[string]struct{}),
 		isBootstrapped: helper,
+		modules:        make(map[string]struct{}),
+		logger:         logger,
 	}
 }
 
@@ -51,9 +58,13 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 			return nil, exterr.Permanent(err)
 		}
 
+		e.logger.Debug("module is functional, filter", slog.String("module", moduleName), slog.Any("bootstrapped", bootstrapped))
+
 		// enable functional modules only if the cluster bootstrapped
 		return ptr.To(bootstrapped), nil
 	}
+
+	e.logger.Debug("module is critical, skip it", slog.String("module", moduleName))
 
 	return nil, nil
 }
