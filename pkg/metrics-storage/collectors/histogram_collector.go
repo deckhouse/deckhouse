@@ -73,7 +73,7 @@ func (c *ConstHistogramCollector) Observe(value float64, labels map[string]strin
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	// Get or create metric
 	storedMetric, ok := c.collection[labelsHash]
@@ -270,7 +270,7 @@ func (c *ConstHistogramCollector) UpdateLabels(labels []string) {
 			}
 		}
 
-		newLabelsHash := HashLabelValues(newLabelsValues)
+		newLabelsHash := HashMetric(metric.Group, newLabelsValues)
 		newCollection[newLabelsHash] = GroupedHistogramMetric{
 			Buckets:     metric.Buckets,
 			Sum:         metric.Sum,
@@ -291,7 +291,7 @@ func (c *ConstHistogramCollector) Reset(labels map[string]string, opts ...ConstC
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		// Reset all buckets to zero
@@ -312,7 +312,7 @@ func (c *ConstHistogramCollector) GetObservationCount(labels map[string]string, 
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		return metric.Count.Get()
@@ -328,7 +328,7 @@ func (c *ConstHistogramCollector) GetSum(labels map[string]string, opts ...Const
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		return metric.Sum.Get()

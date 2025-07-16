@@ -59,7 +59,7 @@ func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts 
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	// TODO add group to hash
 	storedMetric, ok := c.collection[labelsHash]
@@ -83,7 +83,7 @@ func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts 
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	labelsHash := HashMetric(options.Group, labelValues)
 
 	storedMetric, ok := c.collection[labelsHash]
 	if !ok {
@@ -180,7 +180,7 @@ func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
 			}
 		}
 
-		newLabelsHash := HashLabelValues(newLabelsValues)
+		newLabelsHash := HashMetric(metric.Group, newLabelsValues)
 		newCollection[newLabelsHash] = GroupedGaugeMetric{
 			Value:       metric.Value,
 			LabelValues: newLabelsValues,

@@ -60,10 +60,10 @@ func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opt
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
+	metricHash := HashMetric(options.Group, labelValues)
 
 	// TODO add group to hash
-	storedMetric, ok := c.collection[labelsHash]
+	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedCounterMetric{
 			Value:       NewMetricValue(uint64(value)),
@@ -74,7 +74,7 @@ func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opt
 		storedMetric.Value.Add(uint64(value))
 	}
 
-	c.collection[labelsHash] = storedMetric
+	c.collection[metricHash] = storedMetric
 }
 
 func (c *ConstCounterCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -159,7 +159,7 @@ func (c *ConstCounterCollector) UpdateLabels(labels []string) {
 			}
 		}
 
-		newLabelsHash := HashLabelValues(newLabelsValues)
+		newLabelsHash := HashMetric(metric.Group, newLabelsValues)
 		newCollection[newLabelsHash] = GroupedCounterMetric{
 			Value:       metric.Value,
 			LabelValues: newLabelsValues,

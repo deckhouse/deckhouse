@@ -15,7 +15,7 @@
 package collectors_test
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,36 +28,84 @@ import (
 
 // TestHashLabelValues tests the HashLabelValues function
 func TestHashLabelValues(t *testing.T) {
-	// Test that same label values produce the same hash
-	values1 := []string{"value1", "value2"}
-	values2 := []string{"value1", "value2"}
-	hash1 := collectors.HashLabelValues(values1)
-	hash2 := collectors.HashLabelValues(values2)
-	assert.Equal(t, hash1, hash2)
+	t.Run("empty inputs", func(t *testing.T) {
+		hash1 := collectors.HashMetric("", nil)
+		hash2 := collectors.HashMetric("", []string{})
+		assert.Equal(t, hash1, hash2)
+	})
 
-	// Test that different label values produce different hashes
-	values3 := []string{"value3", "value4"}
-	hash3 := collectors.HashLabelValues(values3)
-	assert.NotEqual(t, hash1, hash3)
+	t.Run("same inputs produce same hash", func(t *testing.T) {
+		group := "test_group"
+		labelValues := []string{"value1", "value2", "value3"}
 
-	// Test that order matters
-	values4 := []string{"value2", "value1"}
-	hash4 := collectors.HashLabelValues(values4)
-	assert.NotEqual(t, hash1, hash4)
+		hash1 := collectors.HashMetric(group, labelValues)
+		hash2 := collectors.HashMetric(group, labelValues)
+		assert.Equal(t, hash1, hash2)
+	})
 
-	// Test empty values
-	values5 := []string{"", ""}
-	hash5 := collectors.HashLabelValues(values5)
-	assert.NotEqual(t, hash1, hash5)
+	t.Run("different groups produce different hashes", func(t *testing.T) {
+		labelValues := []string{"value1", "value2"}
 
-	// Test with many values to ensure unique hashing
-	uniqueHashes := make(map[uint64]struct{})
-	for i := 0; i < 1000; i++ {
-		values := []string{strconv.Itoa(i), "constant"}
-		hash := collectors.HashLabelValues(values)
-		uniqueHashes[hash] = struct{}{}
-	}
-	assert.Equal(t, 1000, len(uniqueHashes))
+		hash1 := collectors.HashMetric("group1", labelValues)
+		hash2 := collectors.HashMetric("group2", labelValues)
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("different label values produce different hashes", func(t *testing.T) {
+		group := "test_group"
+
+		hash1 := collectors.HashMetric(group, []string{"value1", "value2"})
+		hash2 := collectors.HashMetric(group, []string{"value1", "value3"})
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("order matters for label values", func(t *testing.T) {
+		group := "test_group"
+
+		hash1 := collectors.HashMetric(group, []string{"value1", "value2"})
+		hash2 := collectors.HashMetric(group, []string{"value2", "value1"})
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("empty group vs non-empty group", func(t *testing.T) {
+		labelValues := []string{"value1", "value2"}
+
+		hash1 := collectors.HashMetric("", labelValues)
+		hash2 := collectors.HashMetric("group", labelValues)
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("empty label values", func(t *testing.T) {
+		group := "test_group"
+
+		hash1 := collectors.HashMetric(group, []string{""})
+		hash2 := collectors.HashMetric(group, []string{"", ""})
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("special characters in values", func(t *testing.T) {
+		group := "test_group"
+
+		hash1 := collectors.HashMetric(group, []string{"value with spaces", "value\nwith\nnewlines"})
+		hash2 := collectors.HashMetric(group, []string{"value with spaces", "value\twith\ttabs"})
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("large number of label values", func(t *testing.T) {
+		group := "test_group"
+		labelValues := make([]string, 100)
+		for i := range labelValues {
+			labelValues[i] = fmt.Sprintf("value_%d", i)
+		}
+
+		hash1 := collectors.HashMetric(group, labelValues)
+
+		// Modify one value
+		labelValues[50] = "modified_value"
+		hash2 := collectors.HashMetric(group, labelValues)
+
+		assert.NotEqual(t, hash1, hash2)
+	})
 }
 
 // TestEdgeCases tests various edge cases
@@ -100,8 +148,8 @@ func TestEdgeCases(t *testing.T) {
 	counterMetrics = collectMetrics(counterCollector)
 	gaugeMetrics = collectMetrics(gaugeCollector)
 
-	require.Len(t, counterMetrics, 1)
-	require.Len(t, gaugeMetrics, 1)
+	require.Len(t, counterMetrics, 2)
+	require.Len(t, gaugeMetrics, 2)
 
 	// Test expiring empty group
 	counterCollector.ExpireGroupMetrics("")

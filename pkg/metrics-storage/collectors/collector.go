@@ -64,8 +64,14 @@ func (v *MetricValue[T]) Add(value T) T {
 
 const labelsSeparator = byte(255)
 
-func HashLabelValues(labelValues []string) uint64 {
+func HashMetric(group string, labelValues []string) uint64 {
 	hasher := fnv.New64a()
+
+	if group != "" {
+		_, _ = hasher.Write([]byte(group))
+		_, _ = hasher.Write([]byte{labelsSeparator})
+	}
+
 	for _, labelValue := range labelValues {
 		_, _ = hasher.Write([]byte(labelValue))
 		_, _ = hasher.Write([]byte{labelsSeparator})
