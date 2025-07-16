@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,16 +46,6 @@ const (
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
 	Prefix string
-
-	countersLock sync.RWMutex
-	counters     map[string]*prometheus.CounterVec
-
-	gaugesLock sync.RWMutex
-	gauges     map[string]*prometheus.GaugeVec
-
-	histogramsLock   sync.RWMutex
-	histograms       map[string]*prometheus.HistogramVec
-	histogramBuckets map[string][]float64
 
 	vault        *vault.Vault
 	groupedVault *vault.GroupedVault
@@ -116,11 +105,6 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
 		Prefix: prefix,
 
-		gauges:           make(map[string]*prometheus.GaugeVec),
-		counters:         make(map[string]*prometheus.CounterVec),
-		histograms:       make(map[string]*prometheus.HistogramVec),
-		histogramBuckets: make(map[string][]float64),
-
 		gatherer:   prometheus.DefaultGatherer,
 		registerer: prometheus.DefaultRegisterer,
 
@@ -159,22 +143,45 @@ func (m *MetricStorage) resolveMetricName(name string) string {
 	return name
 }
 
-// Gauges
+func (m *MetricStorage) RegisterCounter(metric string, labelNames []string) (*collectors.ConstCounterCollector, error) {
+	c, err := m.vault.RegisterCounter(metric, labelNames)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (m *MetricStorage) RegisterGauge(metric string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
+	c, err := m.vault.RegisterGauge(metric, labelNames)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
+	c, err := m.vault.RegisterHistogram(metric, labelNames, buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[string]string) {
+	if m == nil {
+		return
+	}
+
+	m.Counter(metric, labels).Add(value, labels)
+}
 
 func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string]string) {
 	if m == nil {
 		return
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Metric gauge set",
-				slog.String("metric", m.resolveMetricName(metric)),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
 
 	m.vault.GaugeSet(metric, value, labels)
 }
@@ -184,256 +191,58 @@ func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string
 		return
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Metric gauge add",
-				slog.String("metric", m.resolveMetricName(metric)),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
 	m.vault.GaugeAdd(metric, value, labels)
 }
-
-// Gauge return saved or register a new gauge.
-func (m *MetricStorage) Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector {
-	c, err := m.vault.RegisterGaugeCollector(metric, labelspkg.LabelNames(labels))
-	if err != nil {
-		panic(err)
-	}
-
-	return c
-}
-
-// RegisterGauge creates and registers a prometheus GaugeVec metric with the specified metric name and labels.
-// If a Gauge with the same metric name already exists,
-// the existing GaugeVec is returned to avoid duplicate registration.
-//
-// This function is designed to be used for pre-registering metrics to document them
-// consistently in one place in the code, allowing for centralized metric management.
-//
-// Parameters:
-//   - metric: The base metric name to be registered.
-//   - labels: A map of label names to their initial values.
-//
-// Returns:
-//   - *prometheus.GaugeVec: The registered gauge vector metric or nil if the MetricStorage is nil.
-func (m *MetricStorage) RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec {
-	if m == nil {
-		return nil
-	}
-
-	metricName := m.resolveMetricName(metric)
-
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Create metric gauge",
-				slog.String("metric", m.resolveMetricName(metric)),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
-	m.gaugesLock.Lock()
-	defer m.gaugesLock.Unlock()
-
-	// double check
-	vec, ok := m.gauges[metric]
-	if ok {
-		return vec
-	}
-
-	m.logger.Info("Create metric gauge", slog.String("name", metricName))
-	vec = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: metricName,
-			Help: metricName,
-		},
-		labelspkg.LabelNames(labels),
-	)
-
-	m.registerer.MustRegister(vec)
-	m.gauges[metric] = vec
-
-	return vec
-}
-
-// Counters
-
-func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[string]string) {
-	if m == nil {
-		return
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Metric counter add",
-				slog.String("metric", m.resolveMetricName(metric)),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
-	m.Counter(metric, labels).With(labels).Add(value)
-}
-
-// Counter ...
-func (m *MetricStorage) Counter(metric string, labels map[string]string) *prometheus.CounterVec {
-	m.countersLock.RLock()
-	vec, ok := m.counters[metric]
-	m.countersLock.RUnlock()
-	if ok {
-		return vec
-	}
-
-	return m.RegisterCounter(metric, labels)
-}
-
-// RegisterCounter creates a new Counter metric with the given name and labels
-// and registers it in the metrics registry.
-// If a Counter with the same metric name already exists,
-// the existing CounterVec is returned to avoid duplicate registration.
-//
-// This function is designed to be used for pre-registering metrics to document them
-// consistently in one place in the code, allowing for centralized metric management.
-//
-// Parameters:
-//   - metric: The name of the metric (without the storage prefix)
-//   - labels: A map of label names and their values to attach to the metric
-//
-// Returns:
-//   - *prometheus.CounterVec: The registered Counter vector that can be used to report metrics
-func (m *MetricStorage) RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec {
-	metricName := m.resolveMetricName(metric)
-
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Create metric counter",
-				slog.String("metric", metricName),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
-	m.countersLock.Lock()
-	defer m.countersLock.Unlock()
-
-	// double check
-	vec, ok := m.counters[metric]
-	if ok {
-		return vec
-	}
-
-	m.logger.Info("Create metric counter", slog.String("name", metricName))
-	vec = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: metricName,
-			Help: metricName,
-		},
-		labelspkg.LabelNames(labels),
-	)
-
-	m.registerer.MustRegister(vec)
-	m.counters[metric] = vec
-
-	return vec
-}
-
-// Histograms
 
 func (m *MetricStorage) HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64) {
 	if m == nil {
 		return
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Metric histogram observe",
-				slog.String("metric", m.resolveMetricName(metric)),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
-	m.Histogram(metric, labels, buckets).With(labels).Observe(value)
+	m.Histogram(metric, labels, buckets).Observe(value, labels)
 }
 
-func (m *MetricStorage) Histogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
-	m.histogramsLock.RLock()
-	vec, ok := m.histograms[metric]
-	m.histogramsLock.RUnlock()
-	if ok {
-		return vec
+func (m *MetricStorage) Counter(metric string, labels map[string]string) *collectors.ConstCounterCollector {
+	c, err := m.vault.RegisterCounter(metric, labelspkg.LabelNames(labels))
+	if err != nil {
+		m.logger.Error(
+			"Counter",
+			slog.String("name", metric),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
 	}
 
-	return m.RegisterHistogram(metric, labels, buckets)
+	return c
 }
 
-// RegisterHistogram creates and registers a HistogramVec with the provided metric name, labels, and buckets.
-// If a Histogram with the same metric name already exists,
-// the existing HistogramVec is returned to avoid duplicate registration.
-// If buckets for this metric name are already registered with the storage,
-// those pre-registered buckets will be used instead of the ones provided to this function.
-//
-// This function is designed to be used for pre-registering metrics to document them
-// consistently in one place in the code, allowing for centralized metric management.
-//
-// Parameters:
-//   - metric: The base name for the metric (will be prefixed based on MetricStorage configuration)
-//   - labels: A map of label names to their default values
-//   - buckets: The histogram bucket boundaries (if nil or empty, default Prometheus buckets will be used)
-//
-// Returns:
-//   - *prometheus.HistogramVec: The registered histogram vector or nil if MetricStorage is nil
-func (m *MetricStorage) RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec {
-	metricName := m.resolveMetricName(metric)
-
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("Create metric histogram",
-				slog.String("metric", metricName),
-				slog.String("labels", strings.Join(labelspkg.LabelNames(labels), ", ")),
-				slog.String("labels_values", fmt.Sprintf("%v", labels)),
-				slog.String("recover", fmt.Sprintf("%v", r)))
-		}
-	}()
-
-	m.histogramsLock.Lock()
-	defer m.histogramsLock.Unlock()
-
-	// double check
-	vec, ok := m.histograms[metric]
-	if ok {
-		return vec
+// Gauge return saved or register a new gauge.
+func (m *MetricStorage) Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector {
+	c, err := m.vault.RegisterGauge(metric, labelspkg.LabelNames(labels))
+	if err != nil {
+		m.logger.Error(
+			"Gauge",
+			slog.String("name", metric),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
 	}
 
-	m.logger.Info("Create metric histogram", slog.String("name", metricName))
-	b, has := m.histogramBuckets[metric]
-	// This shouldn't happen except when entering this concurrently
-	// If there are buckets for this histogram about to be registered, keep them
-	// Otherwise, use the new buckets.
-	// No need to check for nil or empty slice, as the p8s lib will use DefBuckets
-	// (https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#HistogramOpts)
-	if has {
-		buckets = b
+	return c
+}
+
+func (m *MetricStorage) Histogram(metric string, labels map[string]string, buckets []float64) *collectors.ConstHistogramCollector {
+	c, err := m.vault.RegisterHistogram(metric, labelspkg.LabelNames(labels), buckets)
+	if err != nil {
+		m.logger.Error(
+			"Histogram",
+			slog.String("name", metric),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
 	}
 
-	vec = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    metricName,
-		Help:    metricName,
-		Buckets: buckets,
-	}, labelspkg.LabelNames(labels))
-
-	m.registerer.MustRegister(vec)
-	m.histograms[metric] = vec
-
-	return vec
+	return c
 }
 
 // Batch operations for metrics from hooks
@@ -571,17 +380,17 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
 
 		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
-			m.CounterAdd(metricOp.Name, *metricOp.Value, labels)
+			m.vault.CounterAdd(metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
 		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
-			m.GaugeSet(metricOp.Name, *metricOp.Value, labels)
+			m.vault.GaugeSet(metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
 		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
-			m.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
+			m.vault.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
 			continue
 		}
 
@@ -614,43 +423,19 @@ func (m *MetricStorage) Handler() http.Handler {
 }
 
 func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
-	m.countersLock.Lock()
-	for _, collector := range m.counters {
-		collector.Describe(ch)
+	if m.vault != nil {
+		m.vault.Collector().Describe(ch)
 	}
-	m.countersLock.Unlock()
 
-	m.gaugesLock.Lock()
-	for _, collector := range m.gauges {
-		collector.Describe(ch)
+	if m.groupedVault != nil {
+		m.groupedVault.Collector().Describe(ch)
 	}
-	m.gaugesLock.Unlock()
-
-	m.histogramsLock.Lock()
-	for _, collector := range m.histograms {
-		collector.Describe(ch)
-	}
-	m.histogramsLock.Unlock()
 }
 
 func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
-	m.countersLock.Lock()
-	for _, collector := range m.counters {
-		collector.Collect(ch)
+	if m.vault != nil {
+		m.vault.Collector().Collect(ch)
 	}
-	m.countersLock.Unlock()
-
-	m.gaugesLock.Lock()
-	for _, collector := range m.gauges {
-		collector.Collect(ch)
-	}
-	m.gaugesLock.Unlock()
-
-	m.histogramsLock.Lock()
-	for _, collector := range m.histograms {
-		collector.Collect(ch)
-	}
-	m.histogramsLock.Unlock()
 
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Collect(ch)

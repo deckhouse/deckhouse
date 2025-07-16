@@ -33,7 +33,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("basic registration", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
 		require.NoError(t, err)
 		require.NotNil(t, collector)
@@ -45,7 +45,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("registration with metric name transformation", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return "prefix_" + name }, WithNewRegistry())
 
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
 		require.NoError(t, err)
 		assert.Equal(t, "prefix_test_counter", collector.Name())
@@ -54,7 +54,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("registration with empty label names", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{})
+		collector, err := vault.RegisterCounter("test_counter", []string{})
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{}, collector.LabelNames())
@@ -63,7 +63,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("registration with nil label names", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector, err := vault.RegisterCounterCollector("test_counter", nil)
+		collector, err := vault.RegisterCounter("test_counter", nil)
 
 		require.NoError(t, err)
 		assert.Nil(t, collector.LabelNames())
@@ -73,7 +73,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		labelNames := []string{"method", "status", "endpoint"}
-		collector, err := vault.RegisterCounterCollector("test_counter", labelNames)
+		collector, err := vault.RegisterCounter("test_counter", labelNames)
 
 		require.NoError(t, err)
 		assert.Equal(t, labelNames, collector.LabelNames())
@@ -82,10 +82,10 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("re-registration returns same collector", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err1)
 
-		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector2, err2 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err2)
 
 		assert.Same(t, collector1, collector2)
@@ -94,10 +94,10 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("re-registration with subset labels returns same collector", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method", "status"})
+		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method", "status"})
 		require.NoError(t, err1)
 
-		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector2, err2 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err2)
 
 		assert.Same(t, collector1, collector2)
@@ -107,11 +107,11 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("re-registration with additional labels updates collector", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err1)
 		originalLabels := collector1.LabelNames()
 
-		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method", "status"})
+		collector2, err2 := vault.RegisterCounter("test_counter", []string{"method", "status"})
 		require.NoError(t, err2)
 
 		assert.Same(t, collector1, collector2)
@@ -126,7 +126,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("registration stores collector internally", func(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-		_, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		_, err := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err)
 
 		// Verify collector is stored
@@ -142,7 +142,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		vault := NewVault(func(name string) string { return name }, WithRegistry(registry))
 
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err)
 
 		// Add some data to verify it's properly registered
@@ -169,11 +169,11 @@ func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		// Register a gauge collector first
-		_, err := vault.RegisterGaugeCollector("conflicting_metric", []string{"method"})
+		_, err := vault.RegisterGauge("conflicting_metric", []string{"method"})
 		require.NoError(t, err)
 
 		// Try to register a counter with the same name
-		collector, err := vault.RegisterCounterCollector("conflicting_metric", []string{"method"})
+		collector, err := vault.RegisterCounter("conflicting_metric", []string{"method"})
 
 		assert.Error(t, err)
 		assert.Nil(t, collector)
@@ -195,7 +195,7 @@ func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to register through vault - should fail
-		collector, err := vault.RegisterCounterCollector("conflicting_metric", []string{})
+		collector, err := vault.RegisterCounter("conflicting_metric", []string{})
 
 		assert.Error(t, err)
 		assert.Nil(t, collector)
@@ -217,7 +217,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 		for i := 0; i < numGoroutines; i++ {
 			go func(index int) {
 				defer wg.Done()
-				collectors[index], errors[index] = vault.RegisterCounterCollector("concurrent_counter", []string{"method"})
+				collectors[index], errors[index] = vault.RegisterCounter("concurrent_counter", []string{"method"})
 			}(i)
 		}
 
@@ -248,7 +248,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 			go func(index int) {
 				defer wg.Done()
 				metricName := fmt.Sprintf("concurrent_counter_%d", index)
-				collectors[index], errors[index] = vault.RegisterCounterCollector(metricName, []string{"method"})
+				collectors[index], errors[index] = vault.RegisterCounter(metricName, []string{"method"})
 			}(i)
 		}
 
@@ -288,7 +288,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 		for i := 0; i < numGoroutines; i++ {
 			go func(index int) {
 				defer wg.Done()
-				collectors[index], errors[index] = vault.RegisterCounterCollector("expandable_counter", labelSets[index])
+				collectors[index], errors[index] = vault.RegisterCounter("expandable_counter", labelSets[index])
 			}(i)
 		}
 
@@ -317,7 +317,7 @@ func TestVault_RegisterCounterCollector_Integration(t *testing.T) {
 		vault := NewVault(func(name string) string { return "app_" + name }, WithRegistry(registry))
 
 		// Register counter
-		counter, err := vault.RegisterCounterCollector("requests_total", []string{"method", "status"})
+		counter, err := vault.RegisterCounter("requests_total", []string{"method", "status"})
 		require.NoError(t, err)
 
 		// Add some metrics
@@ -347,7 +347,7 @@ func TestVault_RegisterCounterCollector_Integration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Register and use counter
-		counter, err := vault.RegisterCounterCollector("test_metric", []string{"label"})
+		counter, err := vault.RegisterCounter("test_metric", []string{"label"})
 		require.NoError(t, err)
 
 		counter.Add(10.0, map[string]string{"label": "value"})
@@ -375,7 +375,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		// Prometheus will validate the metric name
-		collector, err := vault.RegisterCounterCollector("test_counter_123", []string{"method"})
+		collector, err := vault.RegisterCounter("test_counter_123", []string{"method"})
 
 		require.NoError(t, err)
 		assert.Equal(t, "test_counter_123", collector.Name())
@@ -385,7 +385,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		labelNames := []string{"method", "method", "status"}
-		_, err := vault.RegisterCounterCollector("test_counter", labelNames)
+		_, err := vault.RegisterCounter("test_counter", labelNames)
 
 		require.Error(t, err)
 	})
@@ -394,7 +394,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		longLabel := strings.Repeat("very_long_label_name_", 10)
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{longLabel})
+		collector, err := vault.RegisterCounter("test_counter", []string{longLabel})
 
 		require.NoError(t, err)
 		assert.Contains(t, collector.LabelNames(), longLabel)
@@ -408,7 +408,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 			manyLabels = append(manyLabels, fmt.Sprintf("label_%d", i))
 		}
 
-		collector, err := vault.RegisterCounterCollector("test_counter", manyLabels)
+		collector, err := vault.RegisterCounter("test_counter", manyLabels)
 
 		require.NoError(t, err)
 		assert.Len(t, collector.LabelNames(), 20)
@@ -445,7 +445,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				vault := NewVault(tc.transformer, WithNewRegistry())
 
-				collector, err := vault.RegisterCounterCollector(tc.input, []string{})
+				collector, err := vault.RegisterCounter(tc.input, []string{})
 
 				// Some transformations might create invalid metric names
 				if tc.expected == "" {
@@ -466,7 +466,7 @@ func TestVault_RegisterCounterCollector_WithCustomLogger(t *testing.T) {
 		logger := log.NewLogger().Named("test")
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry(), WithLogger(logger))
 
-		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
 		require.NoError(t, err)
 		assert.NotNil(t, collector)
@@ -480,11 +480,11 @@ func TestVault_RegisterCounterCollector_LabelOrdering(t *testing.T) {
 		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
 		// Register with some labels
-		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"z", "a", "m"})
+		collector1, err1 := vault.RegisterCounter("test_counter", []string{"z", "a", "m"})
 		require.NoError(t, err1)
 
 		// Register again with additional labels
-		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"b", "z", "y"})
+		collector2, err2 := vault.RegisterCounter("test_counter", []string{"b", "z", "y"})
 		require.NoError(t, err2)
 
 		assert.Same(t, collector1, collector2)

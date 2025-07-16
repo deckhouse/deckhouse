@@ -16,6 +16,7 @@ package vault
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -154,7 +155,7 @@ func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
 	v.mu.Unlock()
 }
 
-func (v *GroupedVault) RegisterCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
+func (v *GroupedVault) RegisterCounter(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -183,7 +184,7 @@ func (v *GroupedVault) RegisterCounterCollector(name string, labelNames []string
 	return counter, nil
 }
 
-func (v *GroupedVault) RegisterGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
+func (v *GroupedVault) RegisterGauge(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -212,12 +213,47 @@ func (v *GroupedVault) RegisterGaugeCollector(name string, labelNames []string) 
 	return gauge, nil
 }
 
+func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
+	metricName := v.resolveMetricNameFunc(name)
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	collector, ok := v.collectors[metricName]
+	if !ok {
+		collector = collectors.NewConstHistogramCollector(metricName, labelNames, buckets)
+
+		if err := v.registerer.Register(collector); err != nil {
+			return nil, fmt.Errorf("histogram '%s' %v registration: %v", metricName, labelNames, err)
+		}
+
+		v.collectors[metricName] = collector
+	}
+
+	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
+		collector.UpdateLabels(labelNames)
+	}
+
+	histogram, ok := collector.(*collectors.ConstHistogramCollector)
+	if !ok {
+		return nil, fmt.Errorf("histogram %v collector requested, but %s %v collector exists",
+			labelNames, collector.Type(), collector.LabelNames())
+	}
+
+	return histogram, nil
+}
+
 func (v *GroupedVault) CounterAdd(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
 
-	c, err := v.RegisterCounterCollector(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterCounter(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
-		v.logger.Error("CounterAdd", log.Err(err))
+		v.logger.Error(
+			"CounterAdd",
+			slog.String("group", group),
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
 
 		return
 	}
@@ -228,14 +264,55 @@ func (v *GroupedVault) CounterAdd(group string, name string, value float64, labe
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
 
-	c, err := v.RegisterGaugeCollector(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGauge(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
-		v.logger.Error("GaugeSet", log.Err(err))
+		v.logger.Error(
+			"GaugeSet",
+			slog.String("group", group),
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
 
 		return
 	}
 
 	c.Set(value, labels, collectors.WithGroup(group))
+}
+
+func (v *GroupedVault) GaugeAdd(group string, name string, value float64, labels map[string]string) {
+	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
+	if err != nil {
+		v.logger.Error(
+			"GaugeAdd",
+			slog.String("group", group),
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
+
+		return
+	}
+
+	c.Add(value, labels, collectors.WithGroup(group))
+}
+
+func (v *GroupedVault) HistogramObserve(group string, name string, value float64, labels map[string]string, buckets []float64) {
+	c, err := v.RegisterHistogram(name, labelspkg.LabelNames(labels), buckets)
+	if err != nil {
+		v.logger.Error(
+			"HistogramObserve",
+			slog.String("group", group),
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			slog.Any("buckets", buckets),
+			log.Err(err),
+		)
+
+		return
+	}
+
+	c.Observe(value, labels, collectors.WithGroup(group))
 }
 
 func (v *GroupedVault) Describe(ch chan<- *prometheus.Desc) {

@@ -23,20 +23,20 @@ import (
 )
 
 type Registerer interface {
-	RegisterCounter(metric string, labels map[string]string) *prometheus.CounterVec
-	RegisterGauge(metric string, labels map[string]string) *prometheus.GaugeVec
-	RegisterHistogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
+	RegisterCounter(metric string, labelNames []string) (*collectors.ConstCounterCollector, error)
+	RegisterGauge(metric string, labelNames []string) (*collectors.ConstGaugeCollector, error)
+	RegisterHistogram(metric string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error)
 }
 
 type Collector interface {
-	Counter(metric string, labels map[string]string) *prometheus.CounterVec
+	Counter(metric string, labels map[string]string) *collectors.ConstCounterCollector
 	CounterAdd(metric string, value float64, labels map[string]string)
 
 	Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector
 	GaugeAdd(metric string, value float64, labels map[string]string)
 	GaugeSet(metric string, value float64, labels map[string]string)
 
-	Histogram(metric string, labels map[string]string, buckets []float64) *prometheus.HistogramVec
+	Histogram(metric string, labels map[string]string, buckets []float64) *collectors.ConstHistogramCollector
 	HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64)
 }
 
@@ -53,26 +53,32 @@ type Storage interface {
 }
 
 type Vault interface {
+	Registerer
+	Collector
+
 	Collector() prometheus.Collector
 	Registerer() prometheus.Registerer
 
 	CounterAdd(metric string, value float64, labels map[string]string)
 	GaugeSet(metric string, value float64, labels map[string]string)
+}
 
-	RegisterCounterCollector(metric string, labelNames []string) (*collectors.ConstCounterCollector, error)
-	RegisterGaugeCollector(metric string, labelNames []string) (*collectors.ConstGaugeCollector, error)
+type GroupedCollector interface {
+	CounterAdd(group string, metric string, value float64, labels map[string]string)
+
+	GaugeAdd(group string, metric string, value float64, labels map[string]string)
+	GaugeSet(group string, metric string, value float64, labels map[string]string)
+
+	HistogramObserve(group string, metric string, value float64, labels map[string]string, buckets []float64)
 }
 
 type GroupedStorage interface {
+	Registerer
+	GroupedCollector
+
 	Collector() prometheus.Collector
 	Registerer() prometheus.Registerer
 
 	ExpireGroupMetrics(group string)
 	ExpireGroupMetricByName(group, name string)
-
-	CounterAdd(group string, metric string, value float64, labels map[string]string)
-	GaugeSet(group string, metric string, value float64, labels map[string]string)
-
-	RegisterCounterCollector(metric string, labelNames []string) (*collectors.ConstCounterCollector, error)
-	RegisterGaugeCollector(metric string, labelNames []string) (*collectors.ConstGaugeCollector, error)
 }

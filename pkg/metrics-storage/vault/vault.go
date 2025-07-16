@@ -16,6 +16,7 @@ package vault
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -94,7 +95,7 @@ func (v *Vault) Collector() prometheus.Collector {
 	return v
 }
 
-func (v *Vault) RegisterCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
+func (v *Vault) RegisterCounter(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -123,7 +124,7 @@ func (v *Vault) RegisterCounterCollector(name string, labelNames []string) (*col
 	return counter, nil
 }
 
-func (v *Vault) RegisterGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
+func (v *Vault) RegisterGauge(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -152,7 +153,7 @@ func (v *Vault) RegisterGaugeCollector(name string, labelNames []string) (*colle
 	return gauge, nil
 }
 
-func (v *Vault) RegisterHistogramCollector(name string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
+func (v *Vault) RegisterHistogram(name string, labelNames []string, buckets []float64) (*collectors.ConstHistogramCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -182,9 +183,15 @@ func (v *Vault) RegisterHistogramCollector(name string, labelNames []string, buc
 }
 
 func (v *Vault) CounterAdd(name string, value float64, labels map[string]string) {
-	c, err := v.RegisterCounterCollector(name, labelspkg.LabelNames(labels))
+	c, err := v.RegisterCounter(name, labelspkg.LabelNames(labels))
 	if err != nil {
-		v.logger.Error("CounterAdd", log.Err(err))
+		v.logger.Error(
+			"CounterAdd",
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
+
 		return
 	}
 
@@ -194,9 +201,15 @@ func (v *Vault) CounterAdd(name string, value float64, labels map[string]string)
 func (v *Vault) GaugeSet(name string, value float64, labels map[string]string) {
 	metricName := v.resolveMetricNameFunc(name)
 
-	c, err := v.RegisterGaugeCollector(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGauge(metricName, labelspkg.LabelNames(labels))
 	if err != nil {
-		v.logger.Error("GaugeSet", log.Err(err))
+		v.logger.Error(
+			"GaugeSet",
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
+
 		return
 	}
 
@@ -204,9 +217,15 @@ func (v *Vault) GaugeSet(name string, value float64, labels map[string]string) {
 }
 
 func (v *Vault) GaugeAdd(name string, value float64, labels map[string]string) {
-	c, err := v.RegisterGaugeCollector(name, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
 	if err != nil {
-		v.logger.Error("GaugeAdd", log.Err(err))
+		v.logger.Error(
+			"GaugeAdd",
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			log.Err(err),
+		)
+
 		return
 	}
 
@@ -214,9 +233,16 @@ func (v *Vault) GaugeAdd(name string, value float64, labels map[string]string) {
 }
 
 func (v *Vault) HistogramObserve(name string, value float64, labels map[string]string, buckets []float64) {
-	c, err := v.RegisterHistogramCollector(name, labelspkg.LabelNames(labels), buckets)
+	c, err := v.RegisterHistogram(name, labelspkg.LabelNames(labels), buckets)
 	if err != nil {
-		v.logger.Error("HistogramObserve", log.Err(err))
+		v.logger.Error(
+			"HistogramObserve",
+			slog.String("name", name),
+			slog.Any("labels", labels),
+			slog.Any("buckets", buckets),
+			log.Err(err),
+		)
+
 		return
 	}
 
