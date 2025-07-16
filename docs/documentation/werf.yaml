@@ -16,6 +16,7 @@ configVersion: 1
 {{- $_ := set . "prefix" "" }}
 ---
 # Base Images
+
 {{- include "parse_base_images_map" . }}
 ---
 {{- $context := . }}
