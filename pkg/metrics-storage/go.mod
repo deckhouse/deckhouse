@@ -7,7 +7,9 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/onsi/gomega v1.37.0
 	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_model v0.6.1
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 )
 
 require (
@@ -21,7 +23,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	golang.org/x/net v0.38.0 // indirect

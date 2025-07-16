@@ -16,18 +16,10 @@ package collectors
 
 import (
 	"hash/fnv"
-	"sort"
 	"sync"
-	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
-
-	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
-)
-
-var (
-	_ ConstCollector = (*ConstCounterCollector)(nil)
-	_ ConstCollector = (*ConstGaugeCollector)(nil)
+	"golang.org/x/exp/constraints"
 )
 
 type ConstCollector interface {
@@ -40,283 +32,34 @@ type ConstCollector interface {
 	UpdateLabels([]string)
 }
 
-type GroupedCounterMetric struct {
-	Value       uint64
-	LabelValues []string
-	Group       string
-}
-
-type GroupedGaugeMetric struct {
-	Value       float64
-	LabelValues []string
-	Group       string
-}
-
-type ConstCounterCollector struct {
-	mtx sync.RWMutex
-
-	collection map[uint64]GroupedCounterMetric
-	desc       *prometheus.Desc
-	name       string
-	labelNames []string
-}
-
-func NewConstCounterCollector(name string, labelNames []string) *ConstCounterCollector {
-	desc := prometheus.NewDesc(name, name, labelNames, nil)
-	return &ConstCounterCollector{
-		name:       name,
-		labelNames: labelNames,
-		desc:       desc,
-		collection: make(map[uint64]GroupedCounterMetric),
+func NewMetricValue[T constraints.Ordered](val T) *MetricValue[T] {
+	return &MetricValue[T]{
+		Value: val,
 	}
 }
 
-// Add increases a counter metric by a value. Metric is identified by label values and a group.
-func (c *ConstCounterCollector) Add(group string, value float64, labels map[string]string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
-
-	// TODO add group to hash
-	storedMetric, ok := c.collection[labelsHash]
-	if !ok {
-		storedMetric = GroupedCounterMetric{
-			Value:       uint64(value),
-			LabelValues: labelValues,
-			Group:       group,
-		}
-	} else {
-		atomic.AddUint64(&storedMetric.Value, uint64(value))
-	}
-
-	c.collection[labelsHash] = storedMetric
+type MetricValue[T constraints.Ordered] struct {
+	mu    sync.Mutex
+	Value T
 }
 
-func (c *ConstCounterCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.desc
+func (v *MetricValue[T]) Set(value T) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.Value = value
 }
 
-func (c *ConstCounterCollector) Collect(ch chan<- prometheus.Metric) {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-
-	for _, s := range c.collection {
-		ch <- prometheus.MustNewConstMetric(c.desc, prometheus.CounterValue, float64(s.Value), s.LabelValues...)
-	}
+func (v *MetricValue[T]) Get() T {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return v.Value
 }
 
-func (c *ConstCounterCollector) Type() string {
-	return "counter"
-}
-
-func (c *ConstCounterCollector) LabelNames() []string {
-	return c.labelNames
-}
-
-func (c *ConstCounterCollector) Name() string {
-	return c.name
-}
-
-// ExpireGroupMetrics deletes all metrics from collection with matched group.
-func (c *ConstCounterCollector) ExpireGroupMetrics(group string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	for hash, m := range c.collection {
-		if m.Group == group {
-			delete(c.collection, hash)
-		}
-	}
-}
-
-// UpdateLabels checks if any new labels are provided to the controller and updates its description, labelNames list and collection.
-// The collection is recalculated in accordance with new label list.
-func (c *ConstCounterCollector) UpdateLabels(labels []string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	// Create a map of current labels for quick lookup
-	previousLabelsMap := make(map[string]int, len(c.labelNames))
-	for idx, label := range c.labelNames {
-		previousLabelsMap[label] = idx
-	}
-
-	// Check if we need to update labels
-	var mustUpdate bool
-	for _, label := range labels {
-		if _, found := previousLabelsMap[label]; !found {
-			mustUpdate = true
-			c.labelNames = append(c.labelNames, label)
-		}
-	}
-
-	// If no new labels, return early
-	if !mustUpdate {
-		return
-	}
-
-	// Sort labels for consistency
-	sort.Strings(c.labelNames)
-
-	// Create new description and collection with updated labels
-	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
-	newCollection := make(map[uint64]GroupedCounterMetric)
-
-	// Update each metric in the collection
-	for _, metric := range c.collection {
-		newLabelsValues := make([]string, len(c.labelNames))
-
-		for i, labelName := range c.labelNames {
-			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
-				newLabelsValues[i] = metric.LabelValues[idx]
-			} else {
-				newLabelsValues[i] = ""
-			}
-		}
-
-		newLabelsHash := HashLabelValues(newLabelsValues)
-		newCollection[newLabelsHash] = GroupedCounterMetric{
-			Value:       metric.Value,
-			LabelValues: newLabelsValues,
-			Group:       metric.Group,
-		}
-	}
-
-	c.collection = newCollection
-}
-
-type ConstGaugeCollector struct {
-	mtx sync.RWMutex
-
-	name       string
-	labelNames []string
-	desc       *prometheus.Desc
-	collection map[uint64]GroupedGaugeMetric
-}
-
-func NewConstGaugeCollector(name string, labelNames []string) *ConstGaugeCollector {
-	desc := prometheus.NewDesc(name, name, labelNames, nil)
-	return &ConstGaugeCollector{
-		name:       name,
-		labelNames: labelNames,
-		desc:       desc,
-		collection: make(map[uint64]GroupedGaugeMetric),
-	}
-}
-
-func (c *ConstGaugeCollector) Set(group string, value float64, labels map[string]string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashLabelValues(labelValues)
-
-	storedMetric, ok := c.collection[labelsHash]
-	if !ok {
-		storedMetric = GroupedGaugeMetric{
-			Value:       value,
-			LabelValues: labelValues,
-			Group:       group,
-		}
-	}
-
-	storedMetric.Value = value
-	c.collection[labelsHash] = storedMetric
-}
-
-func (c *ConstGaugeCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.desc
-}
-
-func (c *ConstGaugeCollector) Collect(ch chan<- prometheus.Metric) {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-
-	for _, s := range c.collection {
-		ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, s.Value, s.LabelValues...)
-	}
-}
-
-func (c *ConstGaugeCollector) Type() string {
-	return "gauge"
-}
-
-func (c *ConstGaugeCollector) LabelNames() []string {
-	return c.labelNames
-}
-
-func (c *ConstGaugeCollector) Name() string {
-	return c.name
-}
-
-// ExpireGroupMetrics deletes all metrics from collection with matched group.
-func (c *ConstGaugeCollector) ExpireGroupMetrics(group string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	for hash, m := range c.collection {
-		if m.Group == group {
-			delete(c.collection, hash)
-		}
-	}
-}
-
-// UpdateLabels checks if any new labels are provided to the controller and updates its description, labelNames list and collection.
-// The collection is recalculated in accordance with new label list.
-func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	// Create a map of current labels for quick lookup
-	previousLabelsMap := make(map[string]int, len(c.labelNames))
-	for idx, label := range c.labelNames {
-		previousLabelsMap[label] = idx
-	}
-
-	// Check if we need to update labels
-	var mustUpdate bool
-	for _, label := range labels {
-		if _, found := previousLabelsMap[label]; !found {
-			mustUpdate = true
-			c.labelNames = append(c.labelNames, label)
-		}
-	}
-
-	// If no new labels, return early
-	if !mustUpdate {
-		return
-	}
-
-	// Sort labels for consistency
-	sort.Strings(c.labelNames)
-
-	// Create new description and collection with updated labels
-	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
-	newCollection := make(map[uint64]GroupedGaugeMetric)
-
-	// Update each metric in the collection
-	for _, metric := range c.collection {
-		newLabelsValues := make([]string, len(c.labelNames))
-
-		for i, labelName := range c.labelNames {
-			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
-				newLabelsValues[i] = metric.LabelValues[idx]
-			} else {
-				newLabelsValues[i] = ""
-			}
-		}
-
-		newLabelsHash := HashLabelValues(newLabelsValues)
-		newCollection[newLabelsHash] = GroupedGaugeMetric{
-			Value:       metric.Value,
-			LabelValues: newLabelsValues,
-			Group:       metric.Group,
-		}
-	}
-
-	c.collection = newCollection
+func (v *MetricValue[T]) Add(value T) T {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.Value = v.Value + value
+	return v.Value
 }
 
 const labelsSeparator = byte(255)
