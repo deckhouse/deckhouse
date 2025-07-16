@@ -25,10 +25,12 @@ import (
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
 )
 
+var _ prometheus.Collector = (*GroupedVault)(nil)
+
 type GroupedVault struct {
 	collectors map[string]collectors.ConstCollector
 
-	mtx        sync.Mutex
+	mu         sync.Mutex
 	registry   *prometheus.Registry
 	registerer prometheus.Registerer
 
@@ -37,28 +39,43 @@ type GroupedVault struct {
 	logger *log.Logger
 }
 
-type Option func(*GroupedVault)
+type Option func(*Options)
+
+type Options struct {
+	logger   *log.Logger
+	registry *prometheus.Registry
+}
+
+func NewOptions(opts ...Option) *Options {
+	v := &Options{
+		logger: log.NewLogger().Named("grouped-vault"),
+	}
+
+	for _, option := range opts {
+		option(v)
+	}
+
+	return v
+}
 
 // WithLogger sets the logger for the GroupedVault.
 func WithLogger(logger *log.Logger) Option {
-	return func(v *GroupedVault) {
+	return func(v *Options) {
 		v.logger = logger
 	}
 }
 
 // WithRegistry sets an existing registry for the GroupedVault.
 func WithRegistry(registry *prometheus.Registry) Option {
-	return func(v *GroupedVault) {
+	return func(v *Options) {
 		v.registry = registry
-		v.registerer = registry
 	}
 }
 
 // WithNewRegistry creates a new registry for the GroupedVault.
 func WithNewRegistry() Option {
-	return func(v *GroupedVault) {
+	return func(v *Options) {
 		v.registry = prometheus.NewRegistry()
-		v.registerer = v.registry
 	}
 }
 
@@ -80,7 +97,7 @@ func WithNewRegistry() Option {
 //   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
 //   - WithRegistry: Uses a provided Prometheus registry
 //   - WithLogger: Sets a custom logger for the metrics storage
-func NewGroupedVault(resolveMetricNameFunc func(name string) string, options ...Option) *GroupedVault {
+func NewGroupedVault(resolveMetricNameFunc func(name string) string, opts ...Option) *GroupedVault {
 	vault := &GroupedVault{
 		collectors:            make(map[string]collectors.ConstCollector),
 		registerer:            prometheus.DefaultRegisterer,
@@ -89,8 +106,11 @@ func NewGroupedVault(resolveMetricNameFunc func(name string) string, options ...
 		logger: log.NewLogger().Named("grouped-vault"),
 	}
 
-	for _, option := range options {
-		option(vault)
+	options := NewOptions(opts...)
+
+	if options.registry != nil {
+		vault.registry = options.registry
+		vault.registerer = options.registry
 	}
 
 	return vault
@@ -103,33 +123,37 @@ func (v *GroupedVault) Registerer() prometheus.Registerer {
 // Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
 func (v *GroupedVault) Collector() prometheus.Collector {
-	return v.registry
+	if v.registry != nil {
+		return v.registry
+	}
+
+	return v
 }
 
 // ExpireGroupMetrics takes each collector in collectors and clear all metrics by group.
 func (v *GroupedVault) ExpireGroupMetrics(group string) {
-	v.mtx.Lock()
+	v.mu.Lock()
 	for _, collector := range v.collectors {
 		collector.ExpireGroupMetrics(group)
 	}
-	v.mtx.Unlock()
+	v.mu.Unlock()
 }
 
 // ExpireGroupMetricByName gets a collector by its name and clears all metrics inside the collector by the group.
 func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
 	metricName := v.resolveMetricNameFunc(name)
-	v.mtx.Lock()
+	v.mu.Lock()
 	collector, ok := v.collectors[metricName]
 	if ok {
 		collector.ExpireGroupMetrics(group)
 	}
-	v.mtx.Unlock()
+	v.mu.Unlock()
 }
 
 func (v *GroupedVault) RegisterCounterCollector(name string, labelNames []string) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
-	v.mtx.Lock()
-	defer v.mtx.Unlock()
+	v.mu.Lock()
+	defer v.mu.Unlock()
 
 	collector, ok := v.collectors[metricName]
 	if !ok {
@@ -157,8 +181,8 @@ func (v *GroupedVault) RegisterCounterCollector(name string, labelNames []string
 
 func (v *GroupedVault) RegisterGaugeCollector(name string, labelNames []string) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
-	v.mtx.Lock()
-	defer v.mtx.Unlock()
+	v.mu.Lock()
+	defer v.mu.Unlock()
 
 	collector, ok := v.collectors[metricName]
 	if !ok {
@@ -208,4 +232,22 @@ func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels
 	}
 
 	c.Set(value, labels, collectors.WithGroup(group))
+}
+
+func (v *GroupedVault) Describe(ch chan<- *prometheus.Desc) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	for _, collector := range v.collectors {
+		collector.Describe(ch)
+	}
+}
+
+func (v *GroupedVault) Collect(ch chan<- prometheus.Metric) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	for _, collector := range v.collectors {
+		collector.Collect(ch)
+	}
 }

@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -238,42 +237,4 @@ func collectMetrics(collector collectors.ConstCollector) []prometheus.Metric {
 	}
 
 	return metrics
-}
-
-// getMetricValue extracts the value from a metric
-func getMetricValue(t *testing.T, metric prometheus.Metric) float64 {
-	pb := &dto.Metric{}
-	err := metric.Write(pb)
-	require.NoError(t, err)
-
-	switch {
-	case pb.Gauge != nil:
-		return pb.Gauge.GetValue()
-	case pb.Counter != nil:
-		return pb.Counter.GetValue()
-	case pb.Untyped != nil:
-		return pb.Untyped.GetValue()
-	default:
-		t.Fatalf("Unknown metric type")
-		return 0
-	}
-}
-
-// verifyLabels verifies that a metric has the expected labels
-func verifyLabels(t *testing.T, metric prometheus.Metric, expected map[string]string) {
-	labels := extractLabels(t, metric)
-	assert.Equal(t, expected, labels)
-}
-
-// extractLabels extracts labels from a metric as a map
-func extractLabels(t *testing.T, metric prometheus.Metric) map[string]string {
-	pb := &dto.Metric{}
-	err := metric.Write(pb)
-	require.NoError(t, err)
-
-	result := make(map[string]string)
-	for _, labelPair := range pb.Label {
-		result[labelPair.GetName()] = labelPair.GetValue()
-	}
-	return result
 }
