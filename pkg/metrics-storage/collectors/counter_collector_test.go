@@ -525,7 +525,7 @@ func collectCounterMetrics(t *testing.T, collector *collectors.ConstCounterColle
 	collector.Collect(ch)
 	close(ch)
 
-	var metrics []prometheus.Metric
+	metrics := make([]prometheus.Metric, 0, 1)
 	for metric := range ch {
 		metrics = append(metrics, metric)
 	}

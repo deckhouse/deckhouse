@@ -224,7 +224,6 @@ func TestDescribeMethod(t *testing.T) {
 
 // collectMetrics collects all metrics from a collector into a slice
 func collectMetrics(collector collectors.ConstCollector) []prometheus.Metric {
-	var metrics []prometheus.Metric
 	ch := make(chan prometheus.Metric)
 
 	go func() {
@@ -232,6 +231,7 @@ func collectMetrics(collector collectors.ConstCollector) []prometheus.Metric {
 		close(ch)
 	}()
 
+	metrics := make([]prometheus.Metric, 0, 1)
 	for metric := range ch {
 		metrics = append(metrics, metric)
 	}

@@ -58,7 +58,7 @@ func (v *MetricValue[T]) Get() T {
 func (v *MetricValue[T]) Add(value T) T {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	v.Value = v.Value + value
+	v.Value += value
 	return v.Value
 }
 

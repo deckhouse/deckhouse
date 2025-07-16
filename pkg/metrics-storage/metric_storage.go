@@ -20,9 +20,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"

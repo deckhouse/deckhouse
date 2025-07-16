@@ -717,7 +717,7 @@ func collectHistogramMetrics(t *testing.T, collector *collectors.ConstHistogramC
 	collector.Collect(ch)
 	close(ch)
 
-	var metrics []prometheus.Metric
+	metrics := make([]prometheus.Metric, 0, 1)
 	for metric := range ch {
 		metrics = append(metrics, metric)
 	}

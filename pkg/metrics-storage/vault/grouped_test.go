@@ -19,10 +19,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func Test_CounterAdd(t *testing.T) {

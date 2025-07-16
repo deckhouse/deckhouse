@@ -162,10 +162,6 @@ func TestJSONSerialization(t *testing.T) {
 
 // TestActionComparison tests comparing action values
 func TestActionComparison(t *testing.T) {
-	// Test direct equality
-	assert.True(t, operation.ActionSet == operation.ActionSet)
-	assert.False(t, operation.ActionSet == operation.ActionAdd)
-
 	// Test with variables
 	action1 := operation.ActionSet
 	action2 := operation.ActionSet
@@ -176,5 +172,5 @@ func TestActionComparison(t *testing.T) {
 
 	// Test with string conversion
 	assert.True(t, operation.ActionSet == "set")
-	assert.True(t, "add" == operation.ActionAdd)
+	assert.True(t, operation.ActionAdd == "add")
 }

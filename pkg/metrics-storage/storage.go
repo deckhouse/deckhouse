@@ -17,9 +17,10 @@ package metricsstorage
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Registerer interface {

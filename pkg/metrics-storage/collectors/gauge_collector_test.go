@@ -691,7 +691,7 @@ func collectGaugeMetrics(t *testing.T, collector *collectors.ConstGaugeCollector
 	collector.Collect(ch)
 	close(ch)
 
-	var metrics []prometheus.Metric
+	metrics := make([]prometheus.Metric, 0, 1)
 	for metric := range ch {
 		metrics = append(metrics, metric)
 	}
