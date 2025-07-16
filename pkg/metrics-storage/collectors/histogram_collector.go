@@ -66,9 +66,11 @@ func NewConstHistogramCollector(name string, labelNames []string, buckets []floa
 	}
 }
 
-func (c *ConstHistogramCollector) Observe(group string, value float64, labels map[string]string) {
+func (c *ConstHistogramCollector) Observe(value float64, labels map[string]string, opts ...ConstCollectorOption) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
@@ -81,7 +83,7 @@ func (c *ConstHistogramCollector) Observe(group string, value float64, labels ma
 			Sum:         NewMetricValue(0.0),
 			Count:       NewMetricValue(uint64(0)),
 			LabelValues: labelValues,
-			Group:       group,
+			Group:       options.Group,
 		}
 	}
 
@@ -282,14 +284,16 @@ func (c *ConstHistogramCollector) UpdateLabels(labels []string) {
 }
 
 // Reset clears all observations for a specific group and labels combination
-func (c *ConstHistogramCollector) Reset(group string, labels map[string]string) {
+func (c *ConstHistogramCollector) Reset(labels map[string]string, opts ...ConstCollectorOption) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
 
-	if metric, ok := c.collection[labelsHash]; ok && metric.Group == group {
+	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		// Reset all buckets to zero
 		for i := range metric.Buckets {
 			metric.Buckets[i] = 0
@@ -301,28 +305,32 @@ func (c *ConstHistogramCollector) Reset(group string, labels map[string]string) 
 }
 
 // GetObservationCount returns the total number of observations for a specific metric
-func (c *ConstHistogramCollector) GetObservationCount(group string, labels map[string]string) uint64 {
+func (c *ConstHistogramCollector) GetObservationCount(labels map[string]string, opts ...ConstCollectorOption) uint64 {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
 
-	if metric, ok := c.collection[labelsHash]; ok && metric.Group == group {
+	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		return metric.Count.Get()
 	}
 	return 0
 }
 
 // GetSum returns the sum of all observations for a specific metric
-func (c *ConstHistogramCollector) GetSum(group string, labels map[string]string) float64 {
+func (c *ConstHistogramCollector) GetSum(labels map[string]string, opts ...ConstCollectorOption) float64 {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
 
-	if metric, ok := c.collection[labelsHash]; ok && metric.Group == group {
+	if metric, ok := c.collection[labelsHash]; ok && metric.Group == options.Group {
 		return metric.Sum.Get()
 	}
 	return 0.0

@@ -194,7 +194,7 @@ func (v *GroupedVault) CounterAdd(group string, name string, value float64, labe
 		return
 	}
 
-	c.Add(group, value, labels)
+	c.Add(value, labels, collectors.WithGroup(group))
 }
 
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
@@ -207,5 +207,5 @@ func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels
 		return
 	}
 
-	c.Set(group, value, labels)
+	c.Set(value, labels, collectors.WithGroup(group))
 }

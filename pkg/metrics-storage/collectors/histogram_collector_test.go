@@ -67,7 +67,7 @@ func TestConstHistogramCollector_Observe(t *testing.T) {
 		buckets := []float64{0.1, 1.0, 10.0}
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, buckets)
 
-		collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
+		collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
 		metrics := collectHistogramMetrics(t, collector)
 		require.Len(t, metrics, 1)
@@ -83,9 +83,9 @@ func TestConstHistogramCollector_Observe(t *testing.T) {
 		buckets := []float64{0.1, 1.0, 10.0}
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, buckets)
 
-		collector.Observe("group1", 0.05, map[string]string{"method": "GET"})
-		collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-		collector.Observe("group1", 5.0, map[string]string{"method": "GET"})
+		collector.Observe(0.05, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+		collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+		collector.Observe(5.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
 		metrics := collectHistogramMetrics(t, collector)
 		require.Len(t, metrics, 1)
@@ -101,8 +101,8 @@ func TestConstHistogramCollector_Observe(t *testing.T) {
 		buckets := []float64{1.0, 10.0}
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, buckets)
 
-		collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-		collector.Observe("group1", 5.0, map[string]string{"method": "POST"})
+		collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+		collector.Observe(5.0, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
 
 		metrics := collectHistogramMetrics(t, collector)
 		require.Len(t, metrics, 2)
@@ -121,13 +121,13 @@ func TestConstHistogramCollector_Observe(t *testing.T) {
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{}, buckets)
 
 		// Test exact bucket boundary
-		collector.Observe("group1", 1.0, nil)
+		collector.Observe(1.0, nil, collectors.WithGroup("group1"))
 		// Test zero
-		collector.Observe("group1", 0.0, nil)
+		collector.Observe(0.0, nil, collectors.WithGroup("group1"))
 		// Test negative
-		collector.Observe("group1", -1.0, nil)
+		collector.Observe(-1.0, nil, collectors.WithGroup("group1"))
 		// Test very large value
-		collector.Observe("group1", 100.0, nil)
+		collector.Observe(100.0, nil, collectors.WithGroup("group1"))
 
 		metrics := collectHistogramMetrics(t, collector)
 		require.Len(t, metrics, 1)
@@ -141,8 +141,8 @@ func TestConstHistogramCollector_Observe(t *testing.T) {
 	t.Run("with empty labels", func(t *testing.T) {
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{}, []float64{1.0})
 
-		collector.Observe("group1", 0.5, map[string]string{})
-		collector.Observe("group1", 0.3, nil)
+		collector.Observe(0.5, map[string]string{}, collectors.WithGroup("group1"))
+		collector.Observe(0.3, nil, collectors.WithGroup("group1"))
 
 		metrics := collectHistogramMetrics(t, collector)
 		require.Len(t, metrics, 1)
@@ -163,9 +163,9 @@ func TestConstHistogramCollector_Concurrency(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < observationsPerWorker; j++ {
 				value := float64(j % 5)
-				collector.Observe("group1", value, map[string]string{
+				collector.Observe(value, map[string]string{
 					"worker": fmt.Sprintf("worker_%d", workerID),
-				})
+				}, collectors.WithGroup("group1"))
 			}
 		}(i)
 	}
@@ -188,9 +188,9 @@ func TestConstHistogramCollector_Concurrency(t *testing.T) {
 func TestConstHistogramCollector_ExpireGroupMetrics(t *testing.T) {
 	collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0})
 
-	collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-	collector.Observe("group2", 1.5, map[string]string{"method": "POST"})
-	collector.Observe("group1", 0.3, map[string]string{"method": "PUT"})
+	collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+	collector.Observe(1.5, map[string]string{"method": "POST"}, collectors.WithGroup("group2"))
+	collector.Observe(0.3, map[string]string{"method": "PUT"}, collectors.WithGroup("group1"))
 
 	// Verify initial state
 	metrics := collectHistogramMetrics(t, collector)
@@ -212,7 +212,7 @@ func TestConstHistogramCollector_UpdateLabels(t *testing.T) {
 	t.Run("add new labels", func(t *testing.T) {
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0})
 
-		collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
+		collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
 		// Add new label
 		collector.UpdateLabels([]string{"status"})
@@ -232,7 +232,7 @@ func TestConstHistogramCollector_UpdateLabels(t *testing.T) {
 	t.Run("no change when same labels", func(t *testing.T) {
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0})
 
-		collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
+		collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
 		// Try to add existing label
 		collector.UpdateLabels([]string{"method"})
@@ -256,8 +256,8 @@ func TestConstHistogramCollector_UpdateBuckets(t *testing.T) {
 	t.Run("update to new buckets", func(t *testing.T) {
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{}, []float64{1.0, 10.0})
 
-		collector.Observe("group1", 0.5, nil)
-		collector.Observe("group1", 5.0, nil)
+		collector.Observe(0.5, nil, collectors.WithGroup("group1"))
+		collector.Observe(5.0, nil, collectors.WithGroup("group1"))
 
 		// Update buckets
 		newBuckets := []float64{0.1, 1.0, 5.0, 50.0}
@@ -287,7 +287,7 @@ func TestConstHistogramCollector_UpdateBuckets(t *testing.T) {
 		buckets := []float64{1.0, 10.0}
 		collector := collectors.NewConstHistogramCollector("test_histogram", []string{}, buckets)
 
-		collector.Observe("group1", 0.5, nil)
+		collector.Observe(0.5, nil, collectors.WithGroup("group1"))
 
 		// Update with same buckets
 		collector.UpdateBuckets(buckets)
@@ -307,16 +307,15 @@ func TestConstHistogramCollector_UpdateBuckets(t *testing.T) {
 		assert.Equal(t, []float64{1.0}, collector.Buckets())
 	})
 }
-
 func TestConstHistogramCollector_Reset(t *testing.T) {
 	collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0, 10.0})
 
-	collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-	collector.Observe("group1", 5.0, map[string]string{"method": "GET"})
-	collector.Observe("group1", 1.5, map[string]string{"method": "POST"})
+	collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+	collector.Observe(5.0, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+	collector.Observe(1.5, map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
 
 	// Reset GET metric
-	collector.Reset("group1", map[string]string{"method": "GET"})
+	collector.Reset(map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
 	metrics := collectHistogramMetrics(t, collector)
 	require.Len(t, metrics, 2)
@@ -345,36 +344,36 @@ func TestConstHistogramCollector_Reset(t *testing.T) {
 func TestConstHistogramCollector_GetObservationCount(t *testing.T) {
 	collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0})
 
-	collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-	collector.Observe("group1", 1.5, map[string]string{"method": "GET"})
+	collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+	collector.Observe(1.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
-	count := collector.GetObservationCount("group1", map[string]string{"method": "GET"})
+	count := collector.GetObservationCount(map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 	assert.Equal(t, uint64(2), count)
 
 	// Non-existent metric
-	count = collector.GetObservationCount("group1", map[string]string{"method": "POST"})
+	count = collector.GetObservationCount(map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
 	assert.Equal(t, uint64(0), count)
 
 	// Non-existent group
-	count = collector.GetObservationCount("group2", map[string]string{"method": "GET"})
+	count = collector.GetObservationCount(map[string]string{"method": "GET"}, collectors.WithGroup("group2"))
 	assert.Equal(t, uint64(0), count)
 }
 
 func TestConstHistogramCollector_GetSum(t *testing.T) {
 	collector := collectors.NewConstHistogramCollector("test_histogram", []string{"method"}, []float64{1.0})
 
-	collector.Observe("group1", 0.5, map[string]string{"method": "GET"})
-	collector.Observe("group1", 1.5, map[string]string{"method": "GET"})
+	collector.Observe(0.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
+	collector.Observe(1.5, map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 
-	sum := collector.GetSum("group1", map[string]string{"method": "GET"})
+	sum := collector.GetSum(map[string]string{"method": "GET"}, collectors.WithGroup("group1"))
 	assert.Equal(t, 2.0, sum)
 
 	// Non-existent metric
-	sum = collector.GetSum("group1", map[string]string{"method": "POST"})
+	sum = collector.GetSum(map[string]string{"method": "POST"}, collectors.WithGroup("group1"))
 	assert.Equal(t, 0.0, sum)
 
 	// Non-existent group
-	sum = collector.GetSum("group2", map[string]string{"method": "GET"})
+	sum = collector.GetSum(map[string]string{"method": "GET"}, collectors.WithGroup("group2"))
 	assert.Equal(t, 0.0, sum)
 }
 
@@ -411,7 +410,7 @@ func TestConstHistogramCollector_SpecialValues(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			collector.Observe("group1", tc.value, nil)
+			collector.Observe(tc.value, nil, collectors.WithGroup("group1"))
 
 			// Should not panic and should collect metrics
 			metrics := collectHistogramMetrics(t, collector)

@@ -52,9 +52,11 @@ func NewConstGaugeCollector(name string, labelNames []string) *ConstGaugeCollect
 	}
 }
 
-func (c *ConstGaugeCollector) Add(group string, value float64, labels map[string]string) {
+func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts ...ConstCollectorOption) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
@@ -65,7 +67,7 @@ func (c *ConstGaugeCollector) Add(group string, value float64, labels map[string
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
 			LabelValues: labelValues,
-			Group:       group,
+			Group:       options.Group,
 		}
 	} else {
 		storedMetric.Value.Add(value)
@@ -74,9 +76,11 @@ func (c *ConstGaugeCollector) Add(group string, value float64, labels map[string
 	c.collection[labelsHash] = storedMetric
 }
 
-func (c *ConstGaugeCollector) Set(group string, value float64, labels map[string]string) {
+func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts ...ConstCollectorOption) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
@@ -86,7 +90,7 @@ func (c *ConstGaugeCollector) Set(group string, value float64, labels map[string
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
 			LabelValues: labelValues,
-			Group:       group,
+			Group:       options.Group,
 		}
 	}
 

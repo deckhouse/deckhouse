@@ -72,3 +72,28 @@ func HashLabelValues(labelValues []string) uint64 {
 	}
 	return hasher.Sum64()
 }
+
+type ConstCollectorOptions struct {
+	Group string
+}
+
+type ConstCollectorOption func(*ConstCollectorOptions)
+
+// WithGroup sets a group for the counter collector.
+func WithGroup(group string) ConstCollectorOption {
+	return func(opts *ConstCollectorOptions) {
+		opts.Group = group
+	}
+}
+
+func NewConstCollectorOptions(opts ...ConstCollectorOption) *ConstCollectorOptions {
+	options := &ConstCollectorOptions{
+		Group: "",
+	}
+
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	return options
+}

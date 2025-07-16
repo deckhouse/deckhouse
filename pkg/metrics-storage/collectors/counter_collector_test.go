@@ -44,8 +44,8 @@ func TestConstCounterCollectorAdd(t *testing.T) {
 
 	// Add some metrics
 	group := "test_group"
-	collector.Add(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group, 5, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
+	collector.Add(5, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Collect the metrics
 	metrics := collectMetrics(collector)
@@ -65,8 +65,8 @@ func TestConstCounterCollectorAddMultipleGroups(t *testing.T) {
 	// Add metrics with different groups but same labels
 	group1 := "group1"
 	group2 := "group2"
-	collector.Add(group1, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group2, 5, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group1))
+	collector.Add(5, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group2))
 
 	// Since the labels are the same, we should end up with a single metric
 	// This tests that groups don't affect the metric identity for collection
@@ -84,8 +84,8 @@ func TestExpireGroupMetricsCounter(t *testing.T) {
 	// Add metrics with different groups
 	group1 := "group1"
 	group2 := "group2"
-	collector.Add(group1, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group2, 20, map[string]string{"label1": "value3", "label2": "value4"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group1))
+	collector.Add(20, map[string]string{"label1": "value3", "label2": "value4"}, collectors.WithGroup(group2))
 
 	// Verify both metrics exist
 	metrics := collectMetrics(collector)
@@ -109,7 +109,7 @@ func TestUpdateLabelsCounter(t *testing.T) {
 
 	// Add a metric
 	group := "test_group"
-	collector.Add(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Verify the initial state
 	metrics := collectMetrics(collector)

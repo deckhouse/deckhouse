@@ -45,8 +45,8 @@ func TestConstGaugeCollectorAdd(t *testing.T) {
 
 	// Add some metrics to the gauge
 	group := "test_group"
-	collector.Add(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group, 5, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
+	collector.Add(5, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Collect the metrics
 	metrics := collectMetrics(collector)
@@ -66,8 +66,8 @@ func TestConstGaugeCollectorAddMultipleGroups(t *testing.T) {
 	// Add metrics with different groups but same labels
 	group1 := "group1"
 	group2 := "group2"
-	collector.Add(group1, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group2, 5, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group1))
+	collector.Add(5, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group2))
 
 	// Since the labels are the same, we should end up with a single metric
 	// This tests that groups don't affect the metric identity for collection
@@ -84,8 +84,8 @@ func TestConstGaugeCollectorAddMultipleLabels(t *testing.T) {
 
 	// Add metrics with different labels
 	group := "test_group"
-	collector.Add(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Add(group, 20, map[string]string{"label1": "value3", "label2": "value4"})
+	collector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
+	collector.Add(20, map[string]string{"label1": "value3", "label2": "value4"}, collectors.WithGroup(group))
 
 	// Verify we have two separate metrics
 	metrics := collectMetrics(collector)
@@ -113,10 +113,10 @@ func TestConstGaugeCollectorAddNegativeValues(t *testing.T) {
 	labels := map[string]string{"label1": "value1"}
 
 	// Add positive value first
-	collector.Add(group, 10, labels)
+	collector.Add(10, labels, collectors.WithGroup(group))
 
 	// Add negative value (should subtract from total)
-	collector.Add(group, -3, labels)
+	collector.Add(-3, labels, collectors.WithGroup(group))
 
 	// Verify the result
 	metrics := collectMetrics(collector)
@@ -134,7 +134,7 @@ func TestConstGaugeCollectorAddZeroValues(t *testing.T) {
 	labels := map[string]string{"label1": "value1"}
 
 	// Add zero value
-	collector.Add(group, 0, labels)
+	collector.Add(0, labels, collectors.WithGroup(group))
 
 	// Verify the metric exists with zero value
 	metrics := collectMetrics(collector)
@@ -142,10 +142,10 @@ func TestConstGaugeCollectorAddZeroValues(t *testing.T) {
 	verifyGaugeValue(t, metrics[0], 0)
 
 	// Add positive value
-	collector.Add(group, 5, labels)
+	collector.Add(5, labels, collectors.WithGroup(group))
 
 	// Add zero again (should not change the value)
-	collector.Add(group, 0, labels)
+	collector.Add(0, labels, collectors.WithGroup(group))
 
 	// Verify the result
 	metrics = collectMetrics(collector)
@@ -163,8 +163,8 @@ func TestConstGaugeCollectorAddFloatingPoint(t *testing.T) {
 	labels := map[string]string{"label1": "value1"}
 
 	// Add floating point values
-	collector.Add(group, 3.14, labels)
-	collector.Add(group, 2.86, labels)
+	collector.Add(3.14, labels, collectors.WithGroup(group))
+	collector.Add(2.86, labels, collectors.WithGroup(group))
 
 	// Verify the result (should be approximately 6.0)
 	metrics := collectMetrics(collector)
@@ -182,7 +182,7 @@ func TestConstGaugeCollectorAddSequentialOperations(t *testing.T) {
 	labels := map[string]string{"label1": "value1"}
 
 	// Start with Add
-	collector.Add(group, 10, labels)
+	collector.Add(10, labels, collectors.WithGroup(group))
 
 	// Verify initial value
 	metrics := collectMetrics(collector)
@@ -190,7 +190,7 @@ func TestConstGaugeCollectorAddSequentialOperations(t *testing.T) {
 	verifyGaugeValue(t, metrics[0], 10)
 
 	// Set to a different value
-	collector.Set(group, 5, labels)
+	collector.Set(5, labels, collectors.WithGroup(group))
 
 	// Verify set operation overwrote the previous value
 	metrics = collectMetrics(collector)
@@ -198,7 +198,7 @@ func TestConstGaugeCollectorAddSequentialOperations(t *testing.T) {
 	verifyGaugeValue(t, metrics[0], 5)
 
 	// Add to the set value
-	collector.Add(group, 3, labels)
+	collector.Add(3, labels, collectors.WithGroup(group))
 
 	// Verify add operation added to the set value
 	metrics = collectMetrics(collector)
@@ -225,7 +225,7 @@ func TestConstGaugeCollectorAddConcurrency(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < opsPerGoroutine; j++ {
-				collector.Add(group, valuePerOp, labels)
+				collector.Add(valuePerOp, labels, collectors.WithGroup(group))
 			}
 			done <- true
 		}()
@@ -251,10 +251,10 @@ func TestConstGaugeCollectorAddWithEmptyLabels(t *testing.T) {
 	group := "test_group"
 
 	// Add with empty labels map
-	collector.Add(group, 10, map[string]string{})
+	collector.Add(10, map[string]string{}, collectors.WithGroup(group))
 
 	// Add with nil labels map
-	collector.Add(group, 5, nil)
+	collector.Add(5, nil, collectors.WithGroup(group))
 
 	// Verify the metrics - both should contribute to the same metric
 	metrics := collectMetrics(collector)
@@ -272,7 +272,7 @@ func TestConstGaugeCollectorAddAfterExpire(t *testing.T) {
 	labels := map[string]string{"label1": "value1"}
 
 	// Add initial value
-	collector.Add(group, 10, labels)
+	collector.Add(10, labels, collectors.WithGroup(group))
 
 	// Verify initial value
 	metrics := collectMetrics(collector)
@@ -287,7 +287,7 @@ func TestConstGaugeCollectorAddAfterExpire(t *testing.T) {
 	require.Len(t, metrics, 0)
 
 	// Add new value after expiration
-	collector.Add(group, 20, labels)
+	collector.Add(20, labels, collectors.WithGroup(group))
 
 	// Verify new value is set correctly
 	metrics = collectMetrics(collector)
@@ -303,7 +303,7 @@ func TestConstGaugeCollectorSet(t *testing.T) {
 
 	// Set some metrics
 	group := "test_group"
-	collector.Set(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Set(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Verify the initial value
 	metrics := collectMetrics(collector)
@@ -311,7 +311,7 @@ func TestConstGaugeCollectorSet(t *testing.T) {
 	verifyGaugeValue(t, metrics[0], 10)
 
 	// Update the value
-	collector.Set(group, 20, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Set(20, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Verify the updated value
 	metrics = collectMetrics(collector)
@@ -327,8 +327,8 @@ func TestConstGaugeCollectorSetMultipleLabels(t *testing.T) {
 
 	// Set metrics with different labels
 	group := "test_group"
-	collector.Set(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Set(group, 20, map[string]string{"label1": "value3", "label2": "value4"})
+	collector.Set(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
+	collector.Set(20, map[string]string{"label1": "value3", "label2": "value4"}, collectors.WithGroup(group))
 
 	// Verify we have two metrics
 	metrics := collectMetrics(collector)
@@ -355,8 +355,8 @@ func TestExpireGroupMetricsGauge(t *testing.T) {
 	// Set metrics with different groups
 	group1 := "group1"
 	group2 := "group2"
-	collector.Set(group1, 10, map[string]string{"label1": "value1", "label2": "value2"})
-	collector.Set(group2, 20, map[string]string{"label1": "value3", "label2": "value4"})
+	collector.Set(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group1))
+	collector.Set(20, map[string]string{"label1": "value3", "label2": "value4"}, collectors.WithGroup(group2))
 
 	// Verify both metrics exist
 	metrics := collectMetrics(collector)
@@ -380,7 +380,7 @@ func TestUpdateLabelsGauge(t *testing.T) {
 
 	// Set a metric
 	group := "test_group"
-	collector.Set(group, 10, map[string]string{"label1": "value1", "label2": "value2"})
+	collector.Set(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup(group))
 
 	// Verify the initial state
 	metrics := collectMetrics(collector)

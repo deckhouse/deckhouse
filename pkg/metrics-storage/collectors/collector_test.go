@@ -67,8 +67,8 @@ func TestEdgeCases(t *testing.T) {
 	gaugeCollector := collectors.NewConstGaugeCollector("test_gauge", []string{})
 
 	// Add metrics with empty labels
-	counterCollector.Add("group", 10, map[string]string{})
-	gaugeCollector.Set("group", 20, map[string]string{})
+	counterCollector.Add(10, map[string]string{}, collectors.WithGroup("group"))
+	gaugeCollector.Set(20, map[string]string{}, collectors.WithGroup("group"))
 
 	// Verify the metrics
 	counterMetrics := collectMetrics(counterCollector)
@@ -80,8 +80,8 @@ func TestEdgeCases(t *testing.T) {
 	verifyGaugeValue(t, gaugeMetrics[0], 20)
 
 	// Test with nil label values map
-	counterCollector.Add("group", 5, nil)
-	gaugeCollector.Set("group", 25, nil)
+	counterCollector.Add(5, nil, collectors.WithGroup("group"))
+	gaugeCollector.Set(25, nil, collectors.WithGroup("group"))
 
 	// Verify the metrics
 	counterMetrics = collectMetrics(counterCollector)
@@ -93,8 +93,8 @@ func TestEdgeCases(t *testing.T) {
 	verifyGaugeValue(t, gaugeMetrics[0], 25)
 
 	// Test with empty groups
-	counterCollector.Add("", 10, map[string]string{})
-	gaugeCollector.Set("", 20, map[string]string{})
+	counterCollector.Add(10, map[string]string{}, collectors.WithGroup(""))
+	gaugeCollector.Set(20, map[string]string{}, collectors.WithGroup(""))
 
 	// Verify the metrics
 	counterMetrics = collectMetrics(counterCollector)
@@ -123,8 +123,8 @@ func TestUpdateLabelsNoChange(t *testing.T) {
 	gaugeCollector := collectors.NewConstGaugeCollector("test_gauge", labelNames)
 
 	// Add metrics
-	counterCollector.Add("group", 10, map[string]string{"label1": "value1", "label2": "value2"})
-	gaugeCollector.Set("group", 20, map[string]string{"label1": "value1", "label2": "value2"})
+	counterCollector.Add(10, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup("group"))
+	gaugeCollector.Set(20, map[string]string{"label1": "value1", "label2": "value2"}, collectors.WithGroup("group"))
 
 	// Verify initial state
 	counterMetrics := collectMetrics(counterCollector)

@@ -53,9 +53,11 @@ func NewConstCounterCollector(name string, labelNames []string) *ConstCounterCol
 }
 
 // Add increases a counter metric by a value. Metric is identified by label values and a group.
-func (c *ConstCounterCollector) Add(group string, value float64, labels map[string]string) {
+func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opts ...ConstCollectorOption) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	labelsHash := HashLabelValues(labelValues)
@@ -66,7 +68,7 @@ func (c *ConstCounterCollector) Add(group string, value float64, labels map[stri
 		storedMetric = GroupedCounterMetric{
 			Value:       NewMetricValue(uint64(value)),
 			LabelValues: labelValues,
-			Group:       group,
+			Group:       options.Group,
 		}
 	} else {
 		storedMetric.Value.Add(uint64(value))
