@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
@@ -33,13 +34,15 @@ type ExtendersStack struct {
 	DeckhouseVersion  *deckhouseversion.Extender
 	KubernetesVersion *kubernetesversion.Extender
 	ModuleDependency  *moduledependency.Extender
+	Bootstrapped      *bootstrapped.Extender
 }
 
-func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersStack {
+func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion string, logger *log.Logger) *ExtendersStack {
 	return &ExtendersStack{
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
+		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper),
 	}
 }
 
@@ -48,10 +51,11 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 		b.DeckhouseVersion,
 		b.KubernetesVersion,
 		b.ModuleDependency,
+		b.Bootstrapped,
 	}
 }
 
-func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
+func (b *ExtendersStack) AddConstraints(module string, critical bool, requirements *v1alpha1.ModuleRequirements) error {
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -73,6 +77,10 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return err
 		}
+	}
+
+	if !critical {
+		b.Bootstrapped.AddFunctionalModule(module)
 	}
 
 	return nil
