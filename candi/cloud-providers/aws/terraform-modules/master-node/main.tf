@@ -108,7 +108,7 @@ resource "aws_instance" "master" {
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
       volume_tags,
-      root_block_device.tags_all
+      root_block_device[0].tags_all
     ]
   }
 
