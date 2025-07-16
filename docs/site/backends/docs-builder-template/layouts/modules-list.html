@@ -23,7 +23,7 @@
   {{ $moduleDescription := "" }}
   {{ $moduleTags := slice }}
 
-  /* Skip the module if there is embedded module with the same name (in the $embeddedModulesList) */
+  {{/* Skip the module if there is embedded module with the same name (in the $embeddedModulesList) */}}
   {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
   {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
     {{ warnf "Found embedded module %s and external modules with the same name. Use only embedded module." $module }}
