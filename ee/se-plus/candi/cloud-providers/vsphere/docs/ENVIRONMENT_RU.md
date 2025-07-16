@@ -133,7 +133,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 
 {% alert %}
 Deckhouse создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
-Подробнее можно прочитать в [документации](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
