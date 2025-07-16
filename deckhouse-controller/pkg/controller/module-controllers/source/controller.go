@@ -365,7 +365,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source != "" && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
