@@ -3,35 +3,45 @@
 
 # NSX-T resources
 
-resource "vcd_nsxt_ip_set" "internal_network" {
-  count           = var.useNSXV ? 0 : 1
-  org             = var.providerClusterConfiguration.organization
-  edge_gateway_id = var.edgeGatewayId
+locals {
+  use_nsxv = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+}
 
-  name         = var.providerClusterConfiguration.mainNetwork
-  description  = format("%s CIDR", var.providerClusterConfiguration.mainNetwork)
-  ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+data "vcd_nsxt_edgegateway" "gateway" {
+  count = local.use_nsxv ? 0 : 1
+  org   = var.organization
+  name  = var.edge_gateway_name
+}
+
+resource "vcd_nsxt_ip_set" "internal_network" {
+  count           = local.use_nsxv ? 0 : 1
+  org             = var.organization
+  edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
+
+  name         = var.internal_network_name
+  description  = format("%s CIDR", var.internal_network_name)
+  ip_addresses = [var.internal_network_cidr]
 }
 
 data "vcd_nsxt_app_port_profile" "ssh" {
-  count = var.useNSXV ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
+  count = local.use_nsxv ? 0 : 1
+  org   = var.organization
 
   name  = "SSH"
   scope = "SYSTEM"
 }
 
 data "vcd_nsxt_app_port_profile" "icmp" {
-  count = var.useNSXV ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
+  count = local.use_nsxv ? 0 : 1
+  org   = var.organization
 
   name  = "ICMP ALL"
   scope = "SYSTEM"
 }
 
 resource "vcd_nsxt_app_port_profile" "node_ports" {
-  count       = var.useNSXV ? 0 : 1
-  org         = var.providerClusterConfiguration.organization
+  count       = local.use_nsxv ? 0 : 1
+  org         = var.organization
   description = "Node ports for Kubernetes"
 
   name  = "NODE PORTS"
@@ -49,14 +59,14 @@ resource "vcd_nsxt_app_port_profile" "node_ports" {
 }
 
 resource "vcd_nsxt_firewall" "firewall" {
-  count           = var.useNSXV ? 0 : 1
-  org             = var.providerClusterConfiguration.organization
-  edge_gateway_id = var.edgeGatewayId
+  count           = local.use_nsxv ? 0 : 1
+  org             = var.organization
+  edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
 
   rule {
     enabled              = true
     action               = "ALLOW"
-    name                 = format("%s-inbound-ssh", var.providerClusterConfiguration.mainNetwork)
+    name                 = format("%s-inbound-ssh", var.internal_network_name)
     direction            = "IN"
     ip_protocol          = "IPV4"
     source_ids           = []
@@ -67,7 +77,7 @@ resource "vcd_nsxt_firewall" "firewall" {
   rule {
     enabled              = true
     action               = "ALLOW"
-    name                 = format("%s-inbound-icmp", var.providerClusterConfiguration.mainNetwork)
+    name                 = format("%s-inbound-icmp", var.internal_network_name)
     direction            = "IN"
     ip_protocol          = "IPV4"
     source_ids           = []
@@ -78,7 +88,7 @@ resource "vcd_nsxt_firewall" "firewall" {
   rule {
     enabled              = true
     action               = "ALLOW"
-    name                 = format("%s-inbound-node-ports", var.providerClusterConfiguration.mainNetwork)
+    name                 = format("%s-inbound-node-ports", var.internal_network_name)
     direction            = "IN"
     ip_protocol          = "IPV4"
     source_ids           = []
@@ -89,7 +99,7 @@ resource "vcd_nsxt_firewall" "firewall" {
   rule {
     enabled         = true
     action          = "ALLOW"
-    name            = format("%s-outbound-any", var.providerClusterConfiguration.mainNetwork)
+    name            = format("%s-outbound-any", var.internal_network_name)
     direction       = "OUT"
     ip_protocol     = "IPV4"
     source_ids      = [vcd_nsxt_ip_set.internal_network[0].id]
@@ -100,18 +110,18 @@ resource "vcd_nsxt_firewall" "firewall" {
 # NSX-V resources
 
 resource "vcd_nsxv_firewall_rule" "ssh" {
-  count        = var.useNSXV ? 1 : 0
-  org          = var.providerClusterConfiguration.organization
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  count        = local.use_nsxv ? 1 : 0
+  org          = var.organization
+  edge_gateway = var.edge_gateway_name
 
-  name = format("%s-inbound-ssh", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-inbound-ssh", var.internal_network_name)
 
   source {
     ip_addresses = ["any"]
   }
 
   destination {
-    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+    ip_addresses = [var.internal_network_cidr]
   }
 
   service {
@@ -121,18 +131,18 @@ resource "vcd_nsxv_firewall_rule" "ssh" {
 }
 
 resource "vcd_nsxv_firewall_rule" "icmp" {
-  count        = var.useNSXV ? 1 : 0
-  org          = var.providerClusterConfiguration.organization
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  count        = local.use_nsxv ? 1 : 0
+  org          = var.organization
+  edge_gateway = var.edge_gateway_name
 
-  name = format("%s-inbound-icmp", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-inbound-icmp", var.internal_network_name)
 
   source {
     ip_addresses = ["any"]
   }
 
   destination {
-    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+    ip_addresses = [var.internal_network_cidr]
   }
 
   service {
@@ -141,11 +151,11 @@ resource "vcd_nsxv_firewall_rule" "icmp" {
 }
 
 resource "vcd_nsxv_firewall_rule" "node_ports_tcp" {
-  count        = var.useNSXV ? 1 : 0
-  org          = var.providerClusterConfiguration.organization
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  count        = local.use_nsxv ? 1 : 0
+  org          = var.organization
+  edge_gateway = var.edge_gateway_name
 
-  name = format("%s-inbound-tcp-node-ports", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-inbound-tcp-node-ports", var.internal_network_name)
 
   source {
     ip_addresses = ["any"]
@@ -162,11 +172,11 @@ resource "vcd_nsxv_firewall_rule" "node_ports_tcp" {
 }
 
 resource "vcd_nsxv_firewall_rule" "node_ports_udp" {
-  count        = var.useNSXV ? 1 : 0
-  org          = var.providerClusterConfiguration.organization
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  count        = local.use_nsxv ? 1 : 0
+  org          = var.organization
+  edge_gateway = var.edge_gateway_name
 
-  name = format("%s-inbound-udp-node-ports", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-inbound-udp-node-ports", var.internal_network_name)
 
   source {
     ip_addresses = ["any"]
@@ -183,14 +193,14 @@ resource "vcd_nsxv_firewall_rule" "node_ports_udp" {
 }
 
 resource "vcd_nsxv_firewall_rule" "outbound_any" {
-  count        = var.useNSXV ? 1 : 0
-  org          = var.providerClusterConfiguration.organization
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
+  count        = local.use_nsxv ? 1 : 0
+  org          = var.organization
+  edge_gateway = var.edge_gateway_name
 
-  name = format("%s-outbound-any", var.providerClusterConfiguration.mainNetwork)
+  name = format("%s-outbound-any", var.internal_network_name)
 
   source {
-    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+    ip_addresses = [var.internal_network_cidr]
   }
 
   destination {

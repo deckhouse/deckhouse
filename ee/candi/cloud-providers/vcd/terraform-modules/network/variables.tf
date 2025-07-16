@@ -1,19 +1,41 @@
 # Copyright 2025 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-variable "providerClusterConfiguration" {
-  type = any
-
-  validation {
-    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
-    error_message = "Invalid internalNetworkCIDR in VCDClusterConfiguration."
-  }
-}
-
-variable "edgeGatewayId" {
+variable "organization" {
   type = string
 }
 
-variable "useNSXV" {
-  type = bool
+variable "edge_gateway_name" {
+  type = string
+}
+
+variable "edge_gateway_type" {
+  type = string
+}
+
+variable "internal_network_name" {
+  type = string
+}
+
+variable "internal_network_cidr" {
+  type = string
+
+  validation {
+    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
+    error_message = format("%s is not valid CIDR.", var.internal_network_cidr)
+  }
+}
+
+variable "internal_network_dns_servers" {
+  type = list(string)
+
+  validation {
+    condition     = length(var.internal_network_dns_servers) <= 2
+    error_message = "You must specify at most 2 DNS servers."
+  }
+}
+
+variable "internal_network_dhcp_pool_start_address" {
+  type    = number
+  default = 30
 }

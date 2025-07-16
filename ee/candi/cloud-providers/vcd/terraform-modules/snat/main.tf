@@ -3,38 +3,45 @@
 
 locals {
   main_ip_addresses = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "mainNetworkIPAddresses", [])
+  use_nsxv    = var.edge_gateway_type == "NSX-V"
 }
 
 # NSX-T resources
 
+data "vcd_nsxt_edgegateway" "gateway" {
+  count = local.use_nsxv ? 0 : 1
+  org   = var.organization
+  name  = var.edge_gateway_name
+}
+
 resource "vcd_nsxt_nat_rule" "snat" {
-  count = var.useNSXV ? 0 : 1
+  count = local.use_nsxv ? 0 : 1
   org   = var.providerClusterConfiguration.organization
 
-  edge_gateway_id = var.edgeGatewayId
+  edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
 
-  name        = format("%s-snat", var.providerClusterConfiguration.mainNetwork)
+  name        = format("%s-snat", var.internal_network_name)
   rule_type   = "SNAT"
-  description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
+  description = format("SNAT rule for %s", var.internal_network_name)
 
-  external_address = var.providerClusterConfiguration.edgeGateway.externalIP
-  internal_address = var.providerClusterConfiguration.internalNetworkCIDR
+  external_address = var.external_address
+  internal_address = var.internal_network_cidr
   logging          = false
 }
 
 # NSX-V resources
 
 resource "vcd_nsxv_snat" "snat" {
-  count = var.useNSXV ? 1 : 0
+  count = local.use_nsxv ? 1 : 0
 
   enabled     = true
-  description = format("SNAT rule for %s", var.providerClusterConfiguration.mainNetwork)
-  org         = var.providerClusterConfiguration.organization
+  description = format("SNAT rule for %s", var.internal_network_name)
+  org         = var.organization
 
-  edge_gateway = var.providerClusterConfiguration.edgeGateway.name
-  network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
-  network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
+  edge_gateway = var.edge_gateway_name
+  network_type = var.external_network_type
+  network_name = var.external_network_name
 
-  original_address   = var.providerClusterConfiguration.internalNetworkCIDR
-  translated_address = var.providerClusterConfiguration.edgeGateway.externalIP
+  original_address   = var.internal_network_cidr
+  translated_address = var.external_address
 }
