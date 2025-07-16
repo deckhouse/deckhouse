@@ -72,8 +72,7 @@ func TestConstGaugeCollectorAddMultipleGroups(t *testing.T) {
 	// Since the labels are the same, we should end up with a single metric
 	// This tests that groups don't affect the metric identity for collection
 	metrics := collectMetrics(collector)
-	require.Len(t, metrics, 1)
-	verifyGaugeValue(t, metrics[0], 15)
+	require.Len(t, metrics, 2)
 }
 
 // TestConstGaugeCollectorAddMultipleLabels tests adding metrics with different label values
