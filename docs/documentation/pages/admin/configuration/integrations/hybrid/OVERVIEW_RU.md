@@ -48,3 +48,183 @@ parameters:
   type: ceph-ssd
 volumeBindingMode: WaitForFirstConsumer
 ```
+
+## Гибридный кластер с Yandex Cloud
+
+Для создания гибридного кластера, объединяющего статические узлы и узлы в Yandex Cloud, выполните описанные далее шаги.
+
+### Предварительные требования
+
+- Рабочий кластер с параметром `clusterType: Static`.
+- Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка tunnelMode](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
+- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера.
+
+### Шаги по настройке
+
+1. Добавьте аннотацию ко всем текущим `static NodeGroup`, чтобы исключить узлы из процесса удаления Cluster Autoscaler:
+
+   ```yaml
+   metadata:
+    annotations:
+      cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
+   ```
+
+   Эта аннотация предотвращает добавление taints типа `ToBeDeletedByClusterAutoscaler` и `DeletionCandidateOfClusterAutoscaler` к узлам, которые не управляются MachineControllerManager (например, `static` и `CloudPermanent`). [Подробнее](https://github.com/deckhouse/deckhouse/issues/5252).
+
+1. Создайте Service Account в нужном каталоге Yandex Cloud:
+
+   - Назначьте роль `editor`.
+   - Предоставьте доступ к используемой VPC с ролью `vpc.admin`.
+
+1. Создайте секрет `d8-provider-cluster-configuration` с нужными данными. Пример содержимого `cloud-provider-cluster-configuration.yaml`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: YandexClusterConfiguration
+   layout: WithoutNAT
+   masterNodeGroup:
+     replicas: 1
+     instanceClass:
+       cores: 4
+       memory: 8192
+       imageID: fd80bm0rh4rkepi5ksdi
+       diskSizeGB: 100
+       platform: standard-v3
+       externalIPAddresses:
+       - "Auto"
+   nodeNetworkCIDR: 10.160.0.0/16
+   existingNetworkID: empty
+   provider:
+     cloudID: CLOUD_ID
+     folderID: FOLDER_ID
+     serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
+   sshPublicKey: <ssh-rsa SSHKEY>
+   ```
+
+   Значения параметров:
+   - `nodeNetworkCIDR` - CIDR сети, который включает адреса всех используемых подсетей нод в ЯО;
+   - `cloudID` - ID вашего облака;
+   - `folderID` - ID фолдера;
+   - `serviceAccountJSON` - service account в фолдере выгруженный в формате JSON;
+   - `sshPublicKey` -  публичный ключ, который будет добавлен на разворачиваемые машины.
+
+     Значения в `masterNodeGroup` не имеют значения, так как master-узлы не разворачиваются.
+
+1. Заполните значения для файла `data.cloud-provider-discovery-data.json` в этом же секрете. Пример:
+
+   ```yaml
+   {
+     "apiVersion": "deckhouse.io/v1",
+     "defaultLbTargetGroupNetworkId": "empty",
+     "internalNetworkIDs": [
+       "<NETWORK-ID>"
+     ],
+     "kind": "YandexCloudDiscoveryData",
+     "monitoringAPIKey": "",
+     "region": "ru-central1",
+     "routeTableID": "empty",
+     "shouldAssignPublicIPAddress": false,
+     "zoneToSubnetIdMap": {
+       "ru-central1-a": "<A-SUBNET-ID>",
+       "ru-central1-b": "<B-SUBNET-ID>", 
+       "ru-central1-d": "<D-SUBNET-ID>"
+     },
+     "zones": [
+       "ru-central1-a",
+       "ru-central1-b",
+      "ru-central1-d"
+     ]
+   }
+   ```
+
+    Значения параметров:
+    - `internalNetworkIDs` — список ID сетей в Yandex Cloud, через которые обеспечивается внутренняя связность между узлами.
+    - `zoneToSubnetIdMap` — отображение зон на соответствующие подсети внутри указанных сетей (по одной подсети на зону).
+    - `shouldAssignPublicIPAddress: true` — указывает, требуется ли назначать публичные IP-адреса для создаваемых узлов. Для зон, в которых подсети отсутствуют, допустимо использовать значение empty.
+
+1. Закодируйте полученные выше файлы YandexClusterConfiguration и YandexCloudDiscoveryData в формат base64.
+Затем вставьте закодированные строки в поля `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` секрета, как показано в примере ниже:
+
+   ```yaml
+   apiVersion: v1
+   data:
+     cloud-provider-cluster-configuration.yaml: <YANDEXCLUSTERCONFIGURATION_BASE64_ENCODED>
+     cloud-provider-discovery-data.json: <YANDEXCLOUDDISCOVERYDATA-BASE64-ENCODED>
+   kind: Secret
+   metadata:
+     labels:
+       heritage: deckhouse
+       name: d8-provider-cluster-configuration
+     name: d8-provider-cluster-configuration
+     namespace: kube-system
+   type: Opaque
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-yandex
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       storageClass:
+         default: network-ssd
+   ```
+
+1. Удалите объект `ValidatingAdmissionPolicyBinding`, чтобы избежать конфликтов:
+
+   ```console
+   kubectl delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
+   ```
+
+1. Примените два созданных на предыдущем шаге манифеста в кластере.
+
+1. После применения дождитесь активации модуля `cloud-provider-yandex` и появления CRD yandexinstanceclasses:
+
+   ```console
+   kubectl get mc cloud-provider-yandex
+   kubectl get crd yandexinstanceclasses
+   ```
+
+1. Внесите необходимые значения в приведённые ниже манифесты и примените их в кластере. Пример:
+
+   ```yaml
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Cloud
+     cloudInstances:
+       classReference:
+         kind: YandexInstanceClass
+         name: worker
+       minPerZone: 1
+       maxPerZone: 3
+       zones:
+         - ru-central1-d
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: YandexInstanceClass
+   metadata:
+     name: worker
+   spec:
+     cores: 4
+     memory: 8192
+     diskSizeGB: 50
+     diskType: network-ssd
+     mainSubnet: <YOUR-SUBNET-ID>
+   ```
+
+   Параметр `mainSubnet` должен содержать ID подсети из Yandex Cloud, которая используется для интерконнекта с вашей инфраструктурой (L2-связность с узлами `static NodeGroup`).
+
+   После применения манифестов начнётся заказ виртуальных машин в Yandex Cloud, управляемых модулем `node-manager`.
+
+1. Для диагностики состояния и поиска возможных проблем проверьте логи `machine-controller-manager`:
+
+   ```console
+   kubectl -n d8-cloud-provider-yandex get machine
+   kubectl -n d8-cloud-provider-yandex get machineset
+   kubectl -n d8-cloud-instance-manager logs deploy/machine-controller-manager
+   ```

@@ -14,6 +14,44 @@ lang: ru
 - Сети с DHCP и интернетом;
 - Доступные shared datastore на всех ESXi.
 
+### Подготовка образа виртуальной машины
+
+Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
+
+* [**Ubuntu**](https://cloud-images.ubuntu.com/)
+* [**Debian**](https://cloud.debian.org/images/cloud/)
+* [**CentOS**](https://cloud.centos.org/)
+* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция *Generic Cloud / OpenStack*)
+
+{% alert %}
+Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
+{% endalert %}
+
+### Требования к образу виртуальной машины
+
+DKP использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
+
+* `open-vm-tools`
+* `cloud-init`
+* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
+
+Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
+
+* `cloud-config.service`
+* `cloud-final.service`
+* `cloud-init.service`
+
+Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
+
+{% alert %}
+DKP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
+Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
+{% endalert %}
+
+{% alert %}
+DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+{% endalert %}
+
 ## Установка govc
 
 Для настройки окружения используется CLI-инструмент [`govc`](https://github.com/vmware/govmomi/tree/main/govc). После установки задайте переменные окружения:

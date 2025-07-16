@@ -358,9 +358,9 @@ entries:
                             en: Configuration and layout scheme
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
-                    - title:
-                        en: Integration with RED
-                        ru: TODO Интеграция с РЭД виртуализацией
+                    #- title:
+                        #en: Integration with RED
+                        #ru: Интеграция с РЭД виртуализацией
                       folders:
                         - title:
                             en: Overview
