@@ -359,7 +359,7 @@ import:
 shell:
   setup:
   # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
-  - /tmp/apps/adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - chown www-data:www-data /usr/bin/nginx
   - chown www-data:www-data /usr/bin/curl
   - chmod 1777 /tmp
