@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-# fromCacheVersion: "2025-06-11.2"
+# fromCacheVersion: "2025-07-16.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -49,6 +49,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -64,6 +65,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -87,6 +89,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -117,6 +120,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -145,6 +149,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -309,15 +314,16 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-ingress-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-07-16.07"
 final: false
 mount:
 - from: build_dir
   to: /tmp/apps
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-  add: /chroot
-  to: /chroot
-  before: setup
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+#   add: /chroot
+#   to: /chroot
+#   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/dbg
   to: /dbg
@@ -346,6 +352,10 @@ import:
   add: /src/dumb-init
   to: /usr/bin/dumb-init
   before: setup
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: setup
 shell:
   setup:
   # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
@@ -354,19 +364,19 @@ shell:
   - chown www-data:www-data /usr/bin/curl
   - chmod 1777 /tmp
   - rm -rf /etc/pki
-  - ln -sf /chroot/etc/pki /etc/pki
-  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
+  # - ln -sf /chroot/etc/pki /etc/pki
+  # - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+  # - ln -sf /chroot/etc/nginx /etc/nginx
+  # - ln -sf /chroot/tmp/nginx /tmp/nginx
   - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
+  # - ln -sf /chroot/var/log/nginx /var/log/nginx
   # Utils for final image
-  - cp -a /usr/sbin/{setcap,useradd,adduser} /tmp/apps
+  - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: common/distroless
-fromImage: common/alt-p11-artifact
-final: false
+fromImage: common/distroless
+# fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-07-16.07"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -390,28 +400,34 @@ import:
   add: /
   to: /
   includePaths:
-  - etc/pki
-  - usr/share/ca-certificates
-  - etc/nginx
-  - tmp/nginx
-  - etc/ingress-controller
-  - var/log/nginx
   - tmp
+  - etc/passwd
+  - etc/group
+  # - etc/pki
+  # - usr/share/ca-certificates
+  # - etc/nginx
+  # - tmp/nginx
+  - etc/ingress-controller
+  # - var/log/nginx
   before: setup
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
+- image: tools/util-linux
+  add: /usr/bin/unshare
+  to: /usr/bin/unshare
+  before: install
 shell:
   setup:
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  # - /tmp/apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  # - /tmp/apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /
