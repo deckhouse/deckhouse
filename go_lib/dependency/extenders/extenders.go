@@ -56,6 +56,10 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 }
 
 func (b *ExtendersStack) AddConstraints(module string, critical bool, requirements *v1alpha1.ModuleRequirements) error {
+	if !critical {
+		b.Bootstrapped.AddFunctionalModule(module)
+	}
+
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -77,10 +81,6 @@ func (b *ExtendersStack) AddConstraints(module string, critical bool, requiremen
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return err
 		}
-	}
-
-	if !critical {
-		b.Bootstrapped.AddFunctionalModule(module)
 	}
 
 	return nil
