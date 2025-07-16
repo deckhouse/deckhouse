@@ -2,33 +2,24 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXV                    = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
-  edgeGatewayId              = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
   createDefaultFirewallRules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
 }
 
-data "vcd_nsxt_edgegateway" "gateway" {
-  count = local.useNSXV ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGateway.name
-}
-
-data "vcd_edgegateway" "gateway" {
-  count = local.useNSXV ? 1 : 0
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGateway.name
-}
-
 module "network" {
-  source                       = "../../../terraform-modules/network"
-  providerClusterConfiguration = var.providerClusterConfiguration
-  edgeGatewayId                = local.edgeGatewayId
-  useNSXV                      = local.useNSXV
+  source                                   = "../../../terraform-modules/network"
+  organization                             = var.providerClusterConfiguration.organization
+  edge_gateway_name                        = var.providerClusterConfiguration.edgeGateway.name
+  edge_gateway_type                        = var.providerClusterConfiguration.edgeGateway.type
+  internal_network_name                    = var.providerClusterConfiguration.mainNetwork
+  internal_network_cidr                    = var.providerClusterConfiguration.internalNetworkCIDR
+  internal_network_dhcp_pool_start_address = var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress
+  internal_network_dns_servers             = var.providerClusterConfiguration.internalNetworkDNSServers
 }
 
 module "vapp" {
-  source                       = "../../../terraform-modules/vapp"
-  providerClusterConfiguration = var.providerClusterConfiguration
+  source       = "../../../terraform-modules/vapp"
+  organization = var.providerClusterConfiguration.organization
+  vapp_name    = var.providerClusterConfiguration.virtualApplicationName
 }
 
 resource "vcd_vapp_org_network" "vapp_network" {
@@ -40,18 +31,25 @@ resource "vcd_vapp_org_network" "vapp_network" {
 }
 
 module "snat" {
-  source                       = "../../../terraform-modules/snat"
-  providerClusterConfiguration = var.providerClusterConfiguration
-  edgeGatewayId                = local.edgeGatewayId
-  useNSXV                      = local.useNSXV
-  depends_on                   = [vcd_vapp_org_network.vapp_network]
+  source                = "../../../terraform-modules/snat"
+  organization          = var.providerClusterConfiguration.organization
+  edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
+  edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
+  internal_network_name = var.providerClusterConfiguration.mainNetwork
+  internal_network_cidr = var.providerClusterConfiguration.internalNetworkCIDR
+  external_network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
+  external_network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
+  external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
+  external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
 }
 
 module "firewall" {
   count = local.createDefaultFirewallRules ? 1 : 0
 
   source                       = "../../../terraform-modules/firewall"
-  providerClusterConfiguration = var.providerClusterConfiguration
-  edgeGatewayId                = local.edgeGatewayId
-  useNSXV                      = local.useNSXV
+  organization          = var.providerClusterConfiguration.organization
+  edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
+  edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
+  internal_network_name = var.providerClusterConfiguration.mainNetwork
+  internal_network_cidr = var.providerClusterConfiguration.internalNetworkCIDR
 }
