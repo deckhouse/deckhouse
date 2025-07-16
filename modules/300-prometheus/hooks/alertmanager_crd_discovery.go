@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -106,17 +107,19 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 		return fmt.Errorf("can't init Kubernetes client: %v", err)
 	}
 
-	snap := input.Snapshots["alertmanager_crds"]
+	snaps := input.NewSnapshots.Get("alertmanager_crds")
 
-	addressDeclaredAlertmanagers := make([]alertmanagerAddress, 0, len(snap))
-	serviceDeclaredAlertmanagers := make([]alertmanagerService, 0, len(snap))
-	internalDeclaredAlertmanagers := make([]alertmanagerInternal, 0, len(snap))
+	addressDeclaredAlertmanagers := make([]alertmanagerAddress, 0, len(snaps))
+	serviceDeclaredAlertmanagers := make([]alertmanagerService, 0, len(snaps))
+	internalDeclaredAlertmanagers := make([]alertmanagerInternal, 0, len(snaps))
 
-	for _, s := range snap {
-		am := s.(Alertmanager)
+	for am, err := range sdkobjectpatch.SnapshotIter[Alertmanager](snaps) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'alertmanager_crds' snapshot: %v", err)
+		}
 
 		// set observed status
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(s, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(am, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 
 		// External AlertManagers by service or address
 		if _, ok, _ := unstructured.NestedMap(am.Spec, "external"); ok {

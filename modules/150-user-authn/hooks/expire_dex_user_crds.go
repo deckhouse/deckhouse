@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -79,10 +80,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func expireDexUsers(input *go_hook.HookInput) error {
 	now := time.Now()
 
-	for _, user := range input.Snapshots["users"] {
-		dexUserExpire, ok := user.(DexUserExpire)
-		if !ok {
-			return fmt.Errorf("cannot convert user to dex expire")
+	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.NewSnapshots.Get("users")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type PublishAPICert struct {
@@ -78,12 +79,16 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 	)
 
 	caCertificates := make(map[string][]byte)
-	for _, s := range input.Snapshots["secret"] {
-		publishCert := s.(PublishAPICert)
+	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.NewSnapshots.Get("secret")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
+		}
+
 		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
 	var cert string
+	var err error
 	switch input.Values.Get(modePath).String() {
 	case "Global":
 		if input.Values.Exists(globalOptsPath) {
@@ -91,9 +96,15 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 		} else {
 			switch module.GetHTTPSMode("userAuthn", input) {
 			case "CertManager":
-				cert = getCert(input, "kubernetes-tls")
+				cert, err = getCert(input, "kubernetes-tls")
+				if err != nil {
+					return fmt.Errorf("failed to get cert from 'kubernetes-tls' secret: %w", err)
+				}
 			case "CustomCertificate":
-				cert = getCert(input, "kubernetes-tls-customcertificate")
+				cert, err = getCert(input, "kubernetes-tls-customcertificate")
+				if err != nil {
+					return fmt.Errorf("failed to get cert from 'kubernetes-tls-customcertificate' secret: %w", err)
+				}
 			case "OnlyInURI", "Disabled":
 			}
 			if cert == "" {
@@ -101,7 +112,10 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 			}
 		}
 	case "SelfSigned":
-		cert = getCert(input, "kubernetes-tls-selfsigned")
+		cert, err = getCert(input, "kubernetes-tls-selfsigned")
+		if err != nil {
+			return fmt.Errorf("failed to get cert from 'kubernetes-tls-selfsigned' secret: %w", err)
+		}
 		if cert == "" {
 			cert = input.Values.Get(kubeCAPath).String()
 		}
@@ -111,12 +125,15 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getCert(input *go_hook.HookInput, secretKey string) string {
+func getCert(input *go_hook.HookInput, secretKey string) (string, error) {
 	caCertificates := make(map[string][]byte)
 
 	var cert string
-	for _, s := range input.Snapshots["secret"] {
-		publishCert := s.(PublishAPICert)
+	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.NewSnapshots.Get("secret")) {
+		if err != nil {
+			return "", fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
+		}
+
 		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
@@ -127,5 +144,5 @@ func getCert(input *go_hook.HookInput, secretKey string) string {
 		}
 		input.PatchCollector.DeleteInBackground("v1", "Secret", "d8-user-authn", name)
 	}
-	return cert
+	return cert, nil
 }

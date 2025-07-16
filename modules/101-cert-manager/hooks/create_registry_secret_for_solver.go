@@ -190,7 +190,7 @@ func handleChallenge(input *go_hook.HookInput) error {
 	}
 
 	var regSecret registrySecret
-	err := d8RegistrySnap[0].UnmarshalTo(regSecret)
+	err := d8RegistrySnap[0].UnmarshalTo(&regSecret)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal d8_registry_secret snapshot: %w", err)
 	}
