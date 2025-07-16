@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -79,8 +80,11 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
 	}
 
-	for _, iop := range input.Snapshots["istiooperators"] {
-		iopInfo := iop.(IstioOperatorCrdInfo)
+	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.NewSnapshots.Get("istiooperators")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istiooperators' snapshot: %w", err)
+		}
+
 		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
 		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
 			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)

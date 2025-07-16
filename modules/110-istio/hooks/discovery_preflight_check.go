@@ -79,6 +79,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
+	//todo
 	var kubernetesVersionStr string
 	clusterConfigurationSnapshots, ok := input.Snapshots["cluster-configuration"]
 	if !ok || len(clusterConfigurationSnapshots) == 0 {

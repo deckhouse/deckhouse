@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -83,12 +84,11 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 func ensureDictBindings(input *go_hook.HookInput) error {
 	subjects := make(map[string]rbacv1.Subject)
-	for _, binding := range input.Snapshots["useBindings"] {
-		if binding == nil {
-			continue
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.NewSnapshots.Get("useBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
 		}
 
-		parsed := binding.(*filteredUseBinding)
 		if len(parsed.Subjects) == 0 {
 			continue
 		}

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -182,13 +183,19 @@ func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccoun
 //	In future we want to rid all of patches in cert-manager
 //	and use vanilla cert-manager
 func handleChallenge(input *go_hook.HookInput) error {
-	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
+	d8RegistrySnap := input.NewSnapshots.Get(d8RegistrySnapshot)
 	if len(d8RegistrySnap) == 0 {
 		input.Logger.Warn("Registry secret not found. Skip")
 		return nil
 	}
 
-	registryCfg := d8RegistrySnap[0].(registrySecret).Config
+	var regSecret registrySecret
+	err := d8RegistrySnap[0].UnmarshalTo(regSecret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal d8_registry_secret snapshot: %w", err)
+	}
+
+	registryCfg := regSecret.Config
 
 	challengesNss := set.NewFromSnapshot(input.NewSnapshots.Get(challengesSnapshot))
 
@@ -197,8 +204,11 @@ func handleChallenge(input *go_hook.HookInput) error {
 	// namespace -> .dockerconfigjson content
 	secretsByNs := map[string]string{}
 
-	for _, sRaw := range input.Snapshots[secretsSnapshot] {
-		regSecret := sRaw.(registrySecret)
+	for regSecret, err := range sdkobjectpatch.SnapshotIter[registrySecret](input.NewSnapshots.Get(secretsSnapshot)) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'd8_registry_secret' snapshot: %w", err)
+		}
+
 		secretsByNs[regSecret.Namespace] = regSecret.Config
 	}
 
