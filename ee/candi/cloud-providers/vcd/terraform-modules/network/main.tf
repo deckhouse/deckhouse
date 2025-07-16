@@ -2,7 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  dhcpPoolStartAddress = var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress != null ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
+  dhcpPoolStartAddress = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
 }
 
 resource "vcd_network_routed_v2" "network" {
