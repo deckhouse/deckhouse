@@ -219,6 +219,7 @@ spec:
   - www.example.com
   - admin.example.com
 ```
+
 {% alert level="info" %}
 Example of creating a self-signed certificate manually, without using the Cert-manager, is available in the [Deckhouse Kubernetes Platform, FAQ](../../deckhouse-faq.html#how-to-generate-a-correct-self-signed-certificate)
 {% endalert %}

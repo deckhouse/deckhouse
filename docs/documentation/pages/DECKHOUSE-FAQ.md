@@ -522,7 +522,7 @@ It is also recommended to:
    If the certificate is intended for multiple domain names listed in the `SAN` field, specifying one of the domains additionally in `CN` can cause a validation error in some services when accessing domains not listed in `CN`.  
    If non-domain-related information is specified in `CN` (e.g., an identifier or service name), the certificate will also extend to these names, which could be exploited for malicious purposes.
 
-**Certificate generation example**
+#### Certificate generation example
 
 To generate a certificate, we'll use the `openssl` utility.
 
