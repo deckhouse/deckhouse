@@ -12,7 +12,7 @@
         severity_level: "4"
         tier: cluster
       annotations:
-        summary: "High DNS request latency in kubeforward (p95 > 300ms)"
+        summary: "High DNS request latency in kubeforward (p95 > 300ms)."
         description: |
           The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
           exceeded 300 milliseconds over the last 5 minutes.

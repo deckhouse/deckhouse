@@ -2391,10 +2391,10 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        The 'forward' plugin healthcheck system failed completely >10 times in 5 minutes on node `{{$labels.node}}`.
-        This means all upstreams were considered unhealthy.
+        The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
+        As a result, all upstreams were considered unhealthy.
       summary: |
-        Too many upstream healthcheck failures in 'forward' plugin
+        Too many upstream health check failures in forward plugin.
       severity: "5"
       markupFormat: default
     - name: D8NodeLocalDNSForwardMaxConcurrentRejects
@@ -2403,10 +2403,10 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        More than 20 queries were rejected in the last 5 minutes on node `{{$labels.node}}`
+        More than 20 queries were rejected within the last 5 minutes on node `{{$labels.node}}`
         because the max concurrent query limit was reached.
       summary: |
-        The 'forward' plugin is rejecting DNS queries due to max concurrency
+        The forward plugin is rejecting DNS queries due to max concurrency limit.
       severity: "5"
       markupFormat: default
     - name: D8NodeLocalDNSKubeforwardRequestLatencyP95High
@@ -2419,7 +2419,7 @@ alerts:
         exceeded 300 milliseconds over the last 5 minutes.
         This may indicate slow upstreams, network issues, or DNS overload on this node.
       summary: |
-        High DNS request latency in kubeforward (p95 &gt; 300ms)
+        High DNS request latency in kubeforward (p95 &gt; 300ms).
       severity: "4"
       markupFormat: default
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
