@@ -59,10 +59,10 @@ func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts 
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(options.Group, labelValues)
 
 	// TODO add group to hash
-	storedMetric, ok := c.collection[labelsHash]
+	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
@@ -73,7 +73,7 @@ func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts 
 		storedMetric.Value.Add(value)
 	}
 
-	c.collection[labelsHash] = storedMetric
+	c.collection[metricHash] = storedMetric
 }
 
 func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts ...ConstCollectorOption) {
@@ -83,9 +83,9 @@ func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts 
 	options := NewConstCollectorOptions(opts...)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	labelsHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(options.Group, labelValues)
 
-	storedMetric, ok := c.collection[labelsHash]
+	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
@@ -95,7 +95,7 @@ func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts 
 	}
 
 	storedMetric.Value.Set(value)
-	c.collection[labelsHash] = storedMetric
+	c.collection[metricHash] = storedMetric
 }
 
 func (c *ConstGaugeCollector) Describe(ch chan<- *prometheus.Desc) {

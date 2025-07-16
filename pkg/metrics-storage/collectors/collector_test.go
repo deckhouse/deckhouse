@@ -259,24 +259,6 @@ func getMetricValue(t *testing.T, metric prometheus.Metric) float64 {
 	}
 }
 
-// verifyCounterValue verifies that a metric has the expected counter value
-func verifyCounterValue(t *testing.T, metric prometheus.Metric, expected float64) {
-	pb := &dto.Metric{}
-	err := metric.Write(pb)
-	require.NoError(t, err)
-	require.NotNil(t, pb.Counter, "Metric is not a counter")
-	assert.Equal(t, expected, pb.Counter.GetValue())
-}
-
-// verifyGaugeValue verifies that a metric has the expected gauge value
-func verifyGaugeValue(t *testing.T, metric prometheus.Metric, expected float64) {
-	pb := &dto.Metric{}
-	err := metric.Write(pb)
-	require.NoError(t, err)
-	require.NotNil(t, pb.Gauge, "Metric is not a gauge")
-	assert.Equal(t, expected, pb.Gauge.GetValue())
-}
-
 // verifyLabels verifies that a metric has the expected labels
 func verifyLabels(t *testing.T, metric prometheus.Metric, expected map[string]string) {
 	labels := extractLabels(t, metric)
