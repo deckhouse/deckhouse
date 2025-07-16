@@ -1,5 +1,6 @@
 ---
 title: "The monitoring-custom module"
+description: "Monitoring user applications in Deckhouse Kubernetes Platform."
 type:
   - instruction
 search: prometheus

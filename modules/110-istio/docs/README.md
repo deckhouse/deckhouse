@@ -1,6 +1,6 @@
 ---
 title: "The istio module"
-description: "Description of the istio module of the Deckhouse Kubernetes Platform, including the tasks it solves, architecture, as well as features of configuration and management."
+description: "Enables Istio Service Mesh in the Deckhouse Kubernetes Platform cluster."
 webIfaces:
 - name: istio
 ---

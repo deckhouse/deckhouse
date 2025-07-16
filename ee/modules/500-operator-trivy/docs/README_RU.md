@@ -1,6 +1,6 @@
 ---
 title: "Модуль operator-trivy"
-description: operator-trivy — модуль Deckhouse для периодического сканирования на уязвимости в кластере Kubernetes. 
+description: Периодическое сканирование на уязвимости в кластере Deckhouse Kubernetes Platform.
 ---
 
 Модуль позволяет запускать регулярную проверку пользовательских образов в runtime на известные CVE, включая уязвимости Astra Linux, Redos и ALT Linux. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc) уязвимостей, обогащаемые базами Astra Linux, ALT Linux и РЕД ОС.
