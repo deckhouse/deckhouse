@@ -18,6 +18,7 @@
 {{ $modulesChannelsData := .Site.Data.modules.channels }}
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
+{{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
 {{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{ $ctx := $ }}
 
@@ -30,6 +31,13 @@
   {{ $moduleChannel := "" }}
   {{ $moduleDescription := "" }}
   {{ $moduleTags := slice }}
+
+  /* Skip the module if there is embedded module with the same name (in the $embeddedModulesList) */
+  {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
+  {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
+    {{ warnf "Found embedded module %s and external modules with the same name. Use only embedded module." $module }}
+    {{ continue }}
+  {{ end }}
 
   {{ range sort $channelsInfo "stability" "desc" }}
     {{/* Skip rock-solid channel */}}
@@ -56,9 +64,9 @@
 {{ end}}
 
 {{ warnf "Found %d modules from sources." ($modulesList | len) }}
-{{ if .Site.Data.dkp.embedded_modules.entries }}
-  {{ warnf "Found %d embedded modules." ( .Site.Data.dkp.embedded_modules.entries | len) }}
-  {{ $modulesList = $modulesList | append .Site.Data.dkp.embedded_modules.entries }}
+{{ if $embeddedModulesList }}
+  {{ warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
+  {{ $modulesList = $modulesList | append $embeddedModulesList }}
 {{ else }}
   {{ warnf "No embedded modules found!" }}
 {{ end }}
