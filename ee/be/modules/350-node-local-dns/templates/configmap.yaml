@@ -24,7 +24,7 @@ data:
         service_name d8-kube-dns
         port_name dns
         expire 10s
-        health_check 300ms
+        health_check 330ms
         prefer_udp
       }
       reload 2s
