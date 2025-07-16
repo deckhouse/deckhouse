@@ -101,12 +101,11 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		}
 	}
 
-	for _, binding := range input.Snapshots["dictBindings"] {
-		if binding == nil {
-			continue
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.NewSnapshots.Get("dictBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'dictBindings' snapshot: %w", err)
 		}
 
-		parsed := binding.(*filteredManageBinding)
 		if parsed.Subjects == nil {
 			continue
 		}

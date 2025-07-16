@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -107,11 +108,10 @@ func discoverDexCA(input *go_hook.HookInput) error {
 	case doNotNeedCAMode:
 		input.Values.Remove(dexCAPath)
 	case fromIngressSecretCAMode:
-		dexCASnapshots := input.Snapshots["secret"]
-		for _, d := range dexCASnapshots {
-			dexCAFromSnapshot, ok := d.(DexCA)
-			if !ok {
-				return fmt.Errorf("cannot convert dex ca certificate from snaphots")
+		dexCASnapshots := input.NewSnapshots.Get("secret")
+		for dexCAFromSnapshot, err := range sdkobjectpatch.SnapshotIter[DexCA](dexCASnapshots) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
 			}
 
 			if dexCAFromSnapshot.Name == secretKey {
