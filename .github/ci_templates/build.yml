@@ -1,22 +1,3 @@
-{!{ define "workflow_render_template" }!}
-# <template: workflow_render_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-
-  - name: Render GitHub workflow
-    run: |
-      cd .github
-      ./render-workflows.sh
-
-  - name: Check rendered files
-    run: |
-      git diff --exit-code
-# </template: workflow_render_template>
-{!{ end }!}
-
 {!{ define "build_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
@@ -151,7 +132,7 @@ steps:
       type werf && source $(werf ci-env github --verbose --as-file)
 
       werf build \
-        --parallel=true --parallel-tasks-limit=5 --verbose \
+        --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json

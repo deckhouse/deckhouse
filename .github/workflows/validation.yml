@@ -472,7 +472,7 @@ jobs:
 
       - name: Check rendered files
         run: |
-          git diff --exit-code
+          git diff --exit-code фывфывфыв
     # </template: workflow_render_template>
 
 
@@ -723,6 +723,7 @@ jobs:
               `);
               throw(error);
             }
+
 
 
 
