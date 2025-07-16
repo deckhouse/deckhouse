@@ -33,7 +33,7 @@ docker:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye-1.24
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
