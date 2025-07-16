@@ -344,7 +344,7 @@ import:
   to: /usr/bin/mount
   owner: root
   group: root
-- image: tools/ipset-v7.22
+- image: tools/ipset
   before: install
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
@@ -386,13 +386,6 @@ import:
   - rtmon
   - tc
   - vdpa
-- image: tools/iproute2
-  before: install
-  add: /sbin/
-  to: /usr/sbin/
-  owner: root
-  group: root
-  includePaths:
   - bridge
   - genl
   - lnstat
