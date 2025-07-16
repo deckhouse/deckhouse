@@ -804,6 +804,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding-bottom: 10px;
     margin-left: 30px;
     position: relative;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul > li::before {
@@ -885,6 +889,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs ol li {
     padding-bottom: 10px;
     margin-left: 30px;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
