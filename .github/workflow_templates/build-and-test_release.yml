@@ -108,20 +108,6 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - check_branch_name
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - check_branch_name
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
-
   build_fe:
     name: Build FE
     needs:

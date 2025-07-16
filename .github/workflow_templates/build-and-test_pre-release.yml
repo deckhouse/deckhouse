@@ -36,18 +36,7 @@ concurrency:
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE

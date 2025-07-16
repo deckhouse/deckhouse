@@ -1,29 +1,3 @@
-{!{ define "go_generate_template" }!}
-# <template: go_generate_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
-
-  - name: Set up Go 1.24
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.24'
-      cache: false
-
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: |
-      git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-# </template: go_generate_template>
-{!{ end }!}
-
 {!{ define "workflow_render_template" }!}
 # <template: workflow_render_template>
 runs-on: [self-hosted, regular]
@@ -60,6 +34,20 @@ steps:
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
+
+  - name: Set up Go 1.24
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.24'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
   - name: Build and push deckhouse images
     id: build

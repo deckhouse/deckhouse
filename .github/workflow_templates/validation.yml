@@ -130,6 +130,11 @@ jobs:
     name: Docs Validation (base)
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
+
   doc_spell_check:
     name: Docs Validation (spellcheck)
 {!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
