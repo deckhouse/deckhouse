@@ -2392,9 +2392,9 @@ alerts:
       edition: be
       description: |
         The 'forward' plugin healthcheck system failed completely >10 times in 5 minutes on node `{{$labels.node}}`.
-        This means all upstreams were considered unhealthy repeatedly.
+        This means all upstreams were considered unhealthy.
       summary: |
-        Too many complete healthcheck failures in 'forward' plugin
+        Too many upstream healthcheck failures in 'forward' plugin
       severity: "5"
       markupFormat: default
     - name: D8NodeLocalDNSForwardMaxConcurrentRejects
