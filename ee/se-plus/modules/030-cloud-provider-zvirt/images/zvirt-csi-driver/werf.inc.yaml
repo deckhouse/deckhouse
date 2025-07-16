@@ -81,8 +81,8 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    {{- include "alt packages proxy" . | nindent 2 }}
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
-    {{- include "alt packages clean" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  {{- include "alt packages clean" . | nindent 2 }}
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
