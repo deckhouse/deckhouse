@@ -1,6 +1,6 @@
 ---
 title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
+permalink: ru/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 lang: ru
 ---
 
@@ -37,6 +37,120 @@ masterNodeGroup:
     sizingPolicy: 4cpu8mem
     template: "catalog/Ubuntu 22.04 Server"
     mainNetwork: internal
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+    mainNetwork: internal
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
+## StandardWithNetwork
+
+![Схема размещения StandardWithNetwork](../../../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+
+При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
+
+Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью параметра `internalNetworkDHCPPoolStartAddress`.
+
+Если используется `NSX-V`, DHCP необходимо настроить вручную. В противном случае узлы, ожидающие получение IP-адреса по DHCP, не смогут его получить.
+
+{% alert level="warning" %}
+Не рекомендуется использовать динамическую адресацию для первого master-узла совместно с `NSX-V`.
+{% endalert %}
+
+Схема размещения предполагает автоматическое создание следующих правил NAT:
+
+- SNAT — трансляция адресов внутренней сети узлов во внешний адрес, указанный в параметре `edgeGateway.externalIP`.
+- DNAT — трансляция внешнего адреса и порта, заданных в параметрах `edgeGateway.externalIP` и `edgeGateway.externalPort`, на внутренний IP-адрес первого master-узла по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
+
+{% alert level="warning" %}
+Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
+{% endalert %}
+
+Дополнительно возможно создание правил брандмауэра отдельным свойством `createDefaultFirewallRules`.
+
+{% alert level="warning" %}
+Если Edge Gateway обеспечивается средствами `NSX-T`, то существующие в Edge Gateway правила будут перезаписаны. Предполагается, что использование данной опции подразумевает размещение одного кластера на Edge Gateway.
+{% endalert %}
+
+Будут созданы следующие правила:
+
+- Разрешение любого исходящего трафика;
+- Разрешение входящего трафика по протоколу `TCP` и 22 порту для соединения с узлами кластера по SSH;
+- Разрешение любого входящего трафика по протоколу `ICMP`;
+- Разрешение входящего трафика по протоколам `TCP` и `UDP` и портам 30000–32767 для использования `NodePort`.
+
+Пример конфигурации схемы размещения с использованием `NSX-T`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-T"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
+Пример конфигурации схемы размещения с использованием `NSX-V`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-V"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+  NSX-V:
+    externalNetworkName: external
+    externalNetworkType: ext
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
     mainNetworkIPAddresses:
     - 192.168.199.2
 ```
@@ -157,7 +271,7 @@ spec:
 О том, как создать и назначить роль пользователю, читайте [в документации](environment.html#создание-и-назначение-роли).
 {% endalert %}
 
-**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
+**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в VCD:**
 
 <table>
   <thead>
@@ -185,3 +299,4 @@ spec:
     </tr>
   </tbody>
 </table>
+=======

@@ -173,6 +173,7 @@ The provider is confirmed to work with Ubuntu 22.04-based virtual machine templa
 
 {% include notice_envinronment.liquid %}
 
+<<<<<<< HEAD
 The example below uses the OVA file provided by Ubuntu, updated to include two fixes.
 Those fixes are essential for CloudPermanent nodes to be provisioned correctly and to be able to mount CSI-created disks.
 

@@ -35,7 +35,7 @@ spec:
         - slow-lun103
 ```
 
-### Изменение размера тома (PVC)
+## Изменение размера тома (PVC)
 
 Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
 
@@ -63,3 +63,31 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 {% alert level="info" %}
 Необходимо обеспечить связь между BGP-роутерами и frontend-узлами в выделенном VLAN.
 {% endalert %}
+
+## CSI
+
+Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью параметра `compatibilityFlag`.
+
+## Важная информация об увеличении размера PVC
+
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
+
+1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
+1. Удалите под.
+1. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
+   > Состояние `FileSystemResizePending` не является проблемой.
+1. На узле, где находится под, выполните команду `d8 k  uncordon <имя_узла>`.
+
+## Настройка Datastore
+
+Для корректной работы PersistentVolume необходимо, чтобы datastore был доступен на всех ESXi.
+
+Назначьте теги:
+
+```console
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+```

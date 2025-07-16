@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Configuration and layout
 permalink: en/admin/integrations/virtualization/vsphere/vsphere-layout.html
 ---
 
@@ -29,7 +29,6 @@ provider:
   server: '<SERVER>'
   username: '<USERNAME>'
   password: '<PASSWORD>'
-  insecure: true
 vmFolderPath: dev
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone

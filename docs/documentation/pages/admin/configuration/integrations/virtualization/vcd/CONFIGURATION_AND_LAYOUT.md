@@ -1,9 +1,8 @@
 ---
-title: Layouts and configuration
-permalink: en/admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
+title: Configuration and layout scheme
+permalink: en/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
+lang: en
 ---
-
-## Layouts
 
 Deckhouse Kubernetes Platform supports one layout for deploying resources in VCD.
 
@@ -40,21 +39,123 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
+## StandardWithNetwork
+
+![StandardWithNetwork layout](../../../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+
+When using this layout, you must confirm the type of network virtualization platform with your administrator and specify it in the `edgeGateway.type` parameter. Two options are supported: `NSX-T` and `NSX-V`.
+
+If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically enabled for the created node network. It will assign IP addresses starting from the 30th address in the subnet up to the penultimate one (before the broadcast address). The starting address of the DHCP pool can be changed using the `internalNetworkDHCPPoolStartAddress` parameter.
+
+If `NSX-V` is used, DHCP must be configured manually. Otherwise, nodes waiting to obtain an IP address via DHCP will not be able to receive one.
+
+{% alert level="warning" %}
+It is not recommended to use dynamic addressing for the first master node together with `NSX-V`.
+{% endalert %}
+
+This layout assumes the automatic creation of the following NAT rules:
+
+- **SNAT** — translation of internal node network addresses to the external address specified in `edgeGateway.externalIP`.
+- **DNAT** — translation of the external address and port specified in `edgeGateway.externalIP` and `edgeGateway.externalPort` to the internal IP address of the first master node on port 22 (TCP) to provide administrative SSH access.
+
+{% alert level="warning" %}
+If the Edge Gateway is powered by `NSX-V`, you must specify the name and type of the network to which the rule will be bound in the `edgeGateway.NSX-V.externalNetworkName` and `edgeGateway.NSX-V.externalNetworkType` properties. Usually, this is the network connected to the Edge Gateway in the `Gateway Interfaces` section and having an external IP address.
+{% endalert %}
+
+It is also possible to create firewall rules using the `createDefaultFirewallRules` property.
+
+{% alert level="warning" %}
+If the Edge Gateway is powered by `NSX-T`, existing Edge Gateway rules will be overwritten. This option is intended for scenarios where only one cluster is deployed on the Edge Gateway.
+{% endalert %}
+
+The following rules will be created:
+
+- Allow all outgoing traffic;
+- Allow incoming TCP traffic on port 22 for SSH connections to cluster nodes;
+- Allow all incoming ICMP traffic;
+- Allow incoming TCP and UDP traffic on ports 30000–32767 for `NodePort` services.
+
+Example configuration for the StandardWithNetwork layout using `NSX-T`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-T"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
+Example configuration for the StandardWithNetwork layout using `NSX-V`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-V"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+  NSX-V:
+    externalNetworkName: external
+    externalNetworkType: ext
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
 ## Configuration
 
-Integration is performed using the VCDClusterConfiguration resource.
-It defines the configuration of the cloud cluster in VCD
-and is used by the virtualization system when the cluster control plane is hosted in the system.
-The DKP module responsible for the integration is automatically configured based on the selected layout.
+Integration is carried out using the VCDClusterConfiguration resource, which describes the configuration of the cloud cluster in VCD and is used by the virtualization system if the cluster’s control plane is hosted there. The DKP module responsible for integration is automatically configured based on the selected deployment layout.
 
-To modify the configuration in a running cluster, run the following command:
+To modify the configuration in a running cluster, execute the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}
-After changing node-related parameters, run the `dhctl converge` command to apply the changes.
+After changing the node parameters, you must run the `dhctl converge` command for the changes to take effect.
 {% endalert %}
 
 Example configuration:

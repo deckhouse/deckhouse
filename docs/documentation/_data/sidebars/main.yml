@@ -355,25 +355,33 @@ entries:
                             ru: Интеграция со службами VMware vSphere
                           url: /admin/integrations/virtualization/vsphere/vsphere-services.html
                     - title:
+                        en: Integration with DVP
+                        ru: Интеграция с DVP
+                      folders:
+                        - title:
+                            en: Integration with DVP
+                            ru: Интеграция с облаком DVP
+                          url: /admin/integrations/virtualization/dvp/dvp-services.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/dvp/dvp-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html      
+                    - title:
                         en: Integration with VMware Cloud Director
                         ru: Интеграция с VMware Cloud Director
                       folders:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
+                          url: /admin/integrations/virtualization/vcd/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
-                    - title:
-                        en: Integration with RED
-                        ru: TODO Интеграция с РЭД виртуализацией
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/virtualization/red/red-overview.html
+                          url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
