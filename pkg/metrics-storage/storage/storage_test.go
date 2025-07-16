@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault
+package storage
 
 import (
 	"fmt"
@@ -28,11 +28,12 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
 func TestVault_RegisterCounterCollector(t *testing.T) {
 	t.Run("basic registration", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
@@ -44,7 +45,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("registration with metric name transformation", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return "prefix_" + name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return "prefix_" + name }, options.WithNewRegistry())
 
 		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
@@ -53,7 +54,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("registration with empty label names", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector, err := vault.RegisterCounter("test_counter", []string{})
 
@@ -62,7 +63,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("registration with nil label names", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector, err := vault.RegisterCounter("test_counter", nil)
 
@@ -71,7 +72,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("registration with multiple labels", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		labelNames := []string{"method", "status", "endpoint"}
 		collector, err := vault.RegisterCounter("test_counter", labelNames)
@@ -81,7 +82,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("re-registration returns same collector", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err1)
@@ -93,7 +94,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("re-registration with subset labels returns same collector", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method", "status"})
 		require.NoError(t, err1)
@@ -106,7 +107,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("re-registration with additional labels updates collector", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		collector1, err1 := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err1)
@@ -125,7 +126,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 	})
 
 	t.Run("registration stores collector internally", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		_, err := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err)
@@ -141,7 +142,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 
 	t.Run("registration integrates with prometheus", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
-		vault := NewVault(func(name string) string { return name }, WithRegistry(registry))
+		vault := NewVault(func(name string) string { return name }, options.WithRegistry(registry))
 
 		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 		require.NoError(t, err)
@@ -167,7 +168,7 @@ func TestVault_RegisterCounterCollector(t *testing.T) {
 
 func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
 	t.Run("error when different collector type exists", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		// Register a gauge collector first
 		_, err := vault.RegisterGauge("conflicting_metric", []string{"method"})
@@ -185,7 +186,7 @@ func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
 
 	t.Run("error when prometheus registration fails", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
-		vault := NewVault(func(name string) string { return name }, WithRegistry(registry))
+		vault := NewVault(func(name string) string { return name }, options.WithRegistry(registry))
 
 		// Pre-register a metric with prometheus to cause conflict
 		conflictingCollector := prometheus.NewCounter(prometheus.CounterOpts{
@@ -206,7 +207,7 @@ func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
 
 func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 	t.Run("concurrent registration of same collector", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		const numGoroutines = 10
 		collectors := make([]*collectors.ConstCounterCollector, numGoroutines)
@@ -236,7 +237,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent registration of different collectors", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		const numGoroutines = 10
 		collectors := make([]*collectors.ConstCounterCollector, numGoroutines)
@@ -269,7 +270,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent registration with label updates", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		const numGoroutines = 5
 		labelSets := [][]string{
@@ -315,7 +316,7 @@ func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
 func TestVault_RegisterCounterCollector_Integration(t *testing.T) {
 	t.Run("full workflow with metric operations", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
-		vault := NewVault(func(name string) string { return "app_" + name }, WithRegistry(registry))
+		vault := NewVault(func(name string) string { return "app_" + name }, options.WithRegistry(registry))
 
 		// Register counter
 		counter, err := vault.RegisterCounter("requests_total", []string{"method", "status"})
@@ -373,7 +374,7 @@ func TestVault_RegisterCounterCollector_Integration(t *testing.T) {
 
 func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 	t.Run("registration with special characters in name", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		// Prometheus will validate the metric name
 		collector, err := vault.RegisterCounter("test_counter_123", []string{"method"})
@@ -383,7 +384,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("registration with duplicate labels", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		labelNames := []string{"method", "method", "status"}
 		_, err := vault.RegisterCounter("test_counter", labelNames)
@@ -392,7 +393,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("registration with very long label names", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		longLabel := strings.Repeat("very_long_label_name_", 10)
 		collector, err := vault.RegisterCounter("test_counter", []string{longLabel})
@@ -402,7 +403,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("registration with many labels", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		var manyLabels []string
 		for i := 0; i < 20; i++ {
@@ -444,7 +445,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				vault := NewVault(tc.transformer, WithNewRegistry())
+				vault := NewVault(tc.transformer, options.WithNewRegistry())
 
 				collector, err := vault.RegisterCounter(tc.input, []string{})
 
@@ -465,7 +466,7 @@ func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
 func TestVault_RegisterCounterCollector_WithCustomLogger(t *testing.T) {
 	t.Run("vault with custom logger", func(t *testing.T) {
 		logger := log.NewLogger().Named("test")
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry(), WithLogger(logger))
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry(), options.WithLogger(logger))
 
 		collector, err := vault.RegisterCounter("test_counter", []string{"method"})
 
@@ -478,7 +479,7 @@ func TestVault_RegisterCounterCollector_WithCustomLogger(t *testing.T) {
 
 func TestVault_RegisterCounterCollector_LabelOrdering(t *testing.T) {
 	t.Run("label ordering is preserved during updates", func(t *testing.T) {
-		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+		vault := NewVault(func(name string) string { return name }, options.WithNewRegistry())
 
 		// Register with some labels
 		collector1, err1 := vault.RegisterCounter("test_counter", []string{"z", "a", "m"})

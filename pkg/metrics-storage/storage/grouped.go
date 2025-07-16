@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault
+package storage
 
 import (
 	"fmt"
@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
 var _ prometheus.Collector = (*GroupedVault)(nil)
@@ -59,7 +60,7 @@ type GroupedVault struct {
 //   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
 //   - WithRegistry: Uses a provided Prometheus registry
 //   - WithLogger: Sets a custom logger for the metrics storage
-func NewGroupedVault(resolveMetricNameFunc func(name string) string, opts ...VaultOption) *GroupedVault {
+func NewGroupedVault(resolveMetricNameFunc func(name string) string, opts ...options.VaultOption) *GroupedVault {
 	vault := &GroupedVault{
 		collectors:            make(map[string]collectors.ConstCollector),
 		registerer:            prometheus.DefaultRegisterer,
@@ -68,15 +69,15 @@ func NewGroupedVault(resolveMetricNameFunc func(name string) string, opts ...Vau
 		logger: log.NewLogger().Named("vault-grouped"),
 	}
 
-	options := NewVaultOptions(opts...)
+	o := options.NewVaultOptions(opts...)
 
-	if options.registry != nil {
-		vault.registry = options.registry
-		vault.registerer = options.registry
+	if o.Registry != nil {
+		vault.registry = o.Registry
+		vault.registerer = o.Registry
 	}
 
-	if options.logger != nil {
-		vault.logger = options.logger
+	if o.Logger != nil {
+		vault.logger = o.Logger
 	}
 
 	return vault
@@ -116,24 +117,24 @@ func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
 	v.mu.Unlock()
 }
 
-func (v *GroupedVault) RegisterCounter(name string, labelNames []string, opts ...RegisterOption) (*collectors.ConstCounterCollector, error) {
+func (v *GroupedVault) RegisterCounter(name string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
-	options := NewRegisterOptions(opts...)
+	o := options.NewRegisterOptions(opts...)
 
-	if options.Help == "" {
-		options.Help = metricName
+	if o.Help == "" {
+		o.Help = metricName
 	}
 
 	collector, ok := v.collectors[metricName]
 	if !ok {
 		collector = collectors.NewConstCounterCollector(collectors.MetricDescription{
 			Name:        metricName,
-			Help:        options.Help,
+			Help:        o.Help,
 			LabelNames:  labelNames,
-			ConstLabels: options.ConstantLabels,
+			ConstLabels: o.ConstantLabels,
 		})
 
 		if err := v.registerer.Register(collector); err != nil {
@@ -156,12 +157,12 @@ func (v *GroupedVault) RegisterCounter(name string, labelNames []string, opts ..
 	return counter, nil
 }
 
-func (v *GroupedVault) RegisterGauge(name string, labelNames []string, opts ...RegisterOption) (*collectors.ConstGaugeCollector, error) {
+func (v *GroupedVault) RegisterGauge(name string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstGaugeCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
-	options := NewRegisterOptions(opts...)
+	options := options.NewRegisterOptions(opts...)
 
 	if options.Help == "" {
 		options.Help = metricName
@@ -196,24 +197,24 @@ func (v *GroupedVault) RegisterGauge(name string, labelNames []string, opts ...R
 	return gauge, nil
 }
 
-func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, buckets []float64, opts ...RegisterOption) (*collectors.ConstHistogramCollector, error) {
+func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, buckets []float64, opts ...options.RegisterOption) (*collectors.ConstHistogramCollector, error) {
 	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
-	options := NewRegisterOptions(opts...)
+	o := options.NewRegisterOptions(opts...)
 
-	if options.Help == "" {
-		options.Help = metricName
+	if o.Help == "" {
+		o.Help = metricName
 	}
 
 	collector, ok := v.collectors[metricName]
 	if !ok {
 		collector = collectors.NewConstHistogramCollector(&collectors.MetricDescription{
 			Name:        metricName,
-			Help:        options.Help,
+			Help:        o.Help,
 			LabelNames:  labelNames,
-			ConstLabels: options.ConstantLabels,
+			ConstLabels: o.ConstantLabels,
 		}, buckets)
 
 		if err := v.registerer.Register(collector); err != nil {

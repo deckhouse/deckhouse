@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault
+package options
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,8 +23,8 @@ import (
 type VaultOption func(*VaultOptions)
 
 type VaultOptions struct {
-	logger   *log.Logger
-	registry *prometheus.Registry
+	Logger   *log.Logger
+	Registry *prometheus.Registry
 }
 
 func NewVaultOptions(opts ...VaultOption) *VaultOptions {
@@ -40,21 +40,21 @@ func NewVaultOptions(opts ...VaultOption) *VaultOptions {
 // WithLogger sets the logger for the GroupedVault.
 func WithLogger(logger *log.Logger) VaultOption {
 	return func(v *VaultOptions) {
-		v.logger = logger
+		v.Logger = logger
 	}
 }
 
 // WithRegistry sets an existing registry for the GroupedVault.
 func WithRegistry(registry *prometheus.Registry) VaultOption {
 	return func(v *VaultOptions) {
-		v.registry = registry
+		v.Registry = registry
 	}
 }
 
 // WithNewRegistry creates a new registry for the GroupedVault.
 func WithNewRegistry() VaultOption {
 	return func(v *VaultOptions) {
-		v.registry = prometheus.NewRegistry()
+		v.Registry = prometheus.NewRegistry()
 	}
 }
 

@@ -28,7 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/vault"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/storage"
 )
 
 var _ Storage = (*MetricStorage)(nil)
@@ -47,8 +48,8 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	vault        *vault.Vault
-	groupedVault *vault.GroupedVault
+	vault        *storage.Vault
+	groupedVault *storage.GroupedVault
 
 	registry   *prometheus.Registry
 	gatherer   prometheus.Gatherer
@@ -116,16 +117,16 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 		opt(m)
 	}
 
-	m.vault = vault.NewVault(
+	m.vault = storage.NewVault(
 		m.resolveMetricName,
-		vault.WithRegistry(m.registry),
-		vault.WithLogger(m.logger.Named("vault")),
+		options.WithRegistry(m.registry),
+		options.WithLogger(m.logger.Named("vault")),
 	)
 
-	m.groupedVault = vault.NewGroupedVault(
+	m.groupedVault = storage.NewGroupedVault(
 		m.resolveMetricName,
-		vault.WithRegistry(m.registry),
-		vault.WithLogger(m.logger.Named("grouped-vault")),
+		options.WithRegistry(m.registry),
+		options.WithLogger(m.logger.Named("grouped-vault")),
 	)
 
 	return m
@@ -143,7 +144,7 @@ func (m *MetricStorage) resolveMetricName(name string) string {
 	return name
 }
 
-func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstCounterCollector, error) {
+func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error) {
 	c, err := m.vault.RegisterCounter(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts
 	return c, nil
 }
 
-func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstGaugeCollector, error) {
+func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstGaugeCollector, error) {
 	c, err := m.vault.RegisterGauge(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
@@ -161,7 +162,7 @@ func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts .
 	return c, nil
 }
 
-func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...vault.RegisterOption) (*collectors.ConstHistogramCollector, error) {
+func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...options.RegisterOption) (*collectors.ConstHistogramCollector, error) {
 	c, err := m.vault.RegisterHistogram(metric, labelNames, buckets, opts...)
 	if err != nil {
 		return nil, err

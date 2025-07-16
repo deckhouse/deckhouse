@@ -21,13 +21,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/vault"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
 type Registerer interface {
-	RegisterCounter(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstCounterCollector, error)
-	RegisterGauge(metric string, labelNames []string, opts ...vault.RegisterOption) (*collectors.ConstGaugeCollector, error)
-	RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...vault.RegisterOption) (*collectors.ConstHistogramCollector, error)
+	RegisterCounter(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error)
+	RegisterGauge(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstGaugeCollector, error)
+	RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...options.RegisterOption) (*collectors.ConstHistogramCollector, error)
 }
 
 type Collector interface {
