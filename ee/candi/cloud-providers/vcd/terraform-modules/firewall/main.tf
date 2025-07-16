@@ -4,7 +4,7 @@
 # NSX-T resources
 
 locals {
-  use_nsxv = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+  use_nsxv = var.edge_gateway_type == "NSX-V"
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -162,7 +162,7 @@ resource "vcd_nsxv_firewall_rule" "node_ports_tcp" {
   }
 
   destination {
-    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+    ip_addresses = [var.internal_network_cidr]
   }
 
   service {
@@ -183,7 +183,7 @@ resource "vcd_nsxv_firewall_rule" "node_ports_udp" {
   }
 
   destination {
-    ip_addresses = [var.providerClusterConfiguration.internalNetworkCIDR]
+    ip_addresses = [var.internal_network_cidr]
   }
 
   service {

@@ -2,7 +2,6 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  main_ip_addresses = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "mainNetworkIPAddresses", [])
   use_nsxv    = var.edge_gateway_type == "NSX-V"
 }
 
@@ -16,7 +15,7 @@ data "vcd_nsxt_edgegateway" "gateway" {
 
 resource "vcd_nsxt_nat_rule" "snat" {
   count = local.use_nsxv ? 0 : 1
-  org   = var.providerClusterConfiguration.organization
+  org   = var.organization
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
 

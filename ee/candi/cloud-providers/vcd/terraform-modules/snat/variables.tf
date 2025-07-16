@@ -21,7 +21,7 @@ variable "internal_network_cidr" {
   type = string
 
   validation {
-    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
+    condition     = cidrsubnet(var.internal_network_cidr, 0, 0) == var.internal_network_cidr
     error_message = format("%s is not valid CIDR.", var.internal_network_cidr)
   }
 }
