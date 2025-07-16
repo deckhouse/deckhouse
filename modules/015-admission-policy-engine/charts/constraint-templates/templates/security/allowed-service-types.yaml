@@ -24,7 +24,7 @@ spec:
           properties:
             allowedServiceTypes:
               type: array
-              description: "An allow-list for service types."
+              description: "List of types of Services allowed to be created."
               items:
                 type: string
 

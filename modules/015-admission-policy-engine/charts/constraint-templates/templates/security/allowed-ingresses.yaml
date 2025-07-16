@@ -11,7 +11,7 @@ metadata:
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Controls that the ingress satisfies the following conditions: 
-        - Does not contain * in the hosts field 
+        - Does not contain `*` in the hosts field 
 spec:
   crd:
     spec:
