@@ -22,6 +22,7 @@ shell:
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
         # The list of modules, which documentation should be excluded from the site...
+        # TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
         cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
