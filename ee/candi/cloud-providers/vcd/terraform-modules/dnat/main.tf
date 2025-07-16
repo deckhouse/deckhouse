@@ -33,12 +33,6 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
 # NSX-V DNAT rule only for the first master node
 
-data "vcd_edgegateway" "gateway" {
-  count = local.isFirstNode ? (var.useNSXV ? 1 : 0) : 0
-  org   = var.providerClusterConfiguration.organization
-  name  = var.providerClusterConfiguration.edgeGateway.name
-}
-
 resource "vcd_nsxv_dnat" "master-dnat" {
   count = local.isFirstNode && var.useNSXV ? 1 : 0
 

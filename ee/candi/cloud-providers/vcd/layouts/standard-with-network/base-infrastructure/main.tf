@@ -2,8 +2,8 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  useNSXV        = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
-  edgeGatewayId  = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
+  useNSXV                    = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+  edgeGatewayId              = local.useNSXV ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
   createDefaultFirewallRules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
 }
 
