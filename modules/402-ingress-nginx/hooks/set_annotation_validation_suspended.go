@@ -92,7 +92,7 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(input *go_hoo
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "IngressNginxController", ctrl.Namespace, ctrl.Name)
+		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController", ctrl.Namespace, ctrl.Name)
 	}
 
 	input.MetricsCollector.Set("ingress_nginx_validation_suspended", 1.0, nil)
