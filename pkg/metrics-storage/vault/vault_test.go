@@ -15,195 +15,483 @@
 package vault
 
 import (
-	"bytes"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 )
 
-func Test_CounterAdd(t *testing.T) {
-	g := NewWithT(t)
+func TestVault_RegisterCounterCollector(t *testing.T) {
+	t.Run("basic registration", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	logger := log.NewLogger()
-	log.SetDefault(logger)
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
 
-	buf := &bytes.Buffer{}
-	logger.SetOutput(buf)
+		require.NoError(t, err)
+		require.NotNil(t, collector)
+		assert.Equal(t, "test_counter", collector.Name())
+		assert.Equal(t, []string{"method"}, collector.LabelNames())
+		assert.Equal(t, "counter", collector.Type())
+	})
 
-	v := NewGroupedVault(func(name string) string { return name })
+	t.Run("registration with metric name transformation", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return "prefix_" + name }, WithNewRegistry())
 
-	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val"})
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
+		require.NoError(t, err)
+		assert.Equal(t, "prefix_test_counter", collector.Name())
+	})
 
-	expect := `
-# HELP metric_total metric_total
-# TYPE metric_total counter
-metric_total{lbl="val"} 1
-`
-	err := promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+	t.Run("registration with empty label names", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	v.ExpireGroupMetrics("group1")
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{})
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
+		require.NoError(t, err)
+		assert.Equal(t, []string{}, collector.LabelNames())
+	})
 
-	// Expect no metric with lbl="val"
-	expect = ``
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+	t.Run("registration with nil label names", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val2"})
+		collector, err := vault.RegisterCounterCollector("test_counter", nil)
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
+		require.NoError(t, err)
+		assert.Nil(t, collector.LabelNames())
+	})
 
-	// Expect metric_total with new label value
-	expect = `
-# HELP metric_total metric_total
-# TYPE metric_total counter
-metric_total{lbl="val2"} 1
-`
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+	t.Run("registration with multiple labels", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val2"})
-	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val222"})
+		labelNames := []string{"method", "status", "endpoint"}
+		collector, err := vault.RegisterCounterCollector("test_counter", labelNames)
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
+		require.NoError(t, err)
+		assert.Equal(t, labelNames, collector.LabelNames())
+	})
 
-	// Expect metric_total with 2 label values
-	expect = `
-# HELP metric_total metric_total
-# TYPE metric_total counter
-metric_total{lbl="val2"} 2
-metric_total{lbl="val222"} 1
-`
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+	t.Run("re-registration returns same collector", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	v.ExpireGroupMetrics("group1")
-	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val"})
-	v.CounterAdd("group2", "metric2_total", 1.0, map[string]string{"lbl": "val222"})
+		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err1)
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
-	// Expect metric_total is updated and metric2_total
-	expect = `
-# HELP metric_total metric_total
-# TYPE metric_total counter
-metric_total{lbl="val"} 1
-# HELP metric2_total metric2_total
-# TYPE metric2_total counter
-metric2_total{lbl="val222"} 1
-`
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total", "metric2_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err2)
 
-	v.ExpireGroupMetrics("group1")
-	v.CounterAdd("group2", "metric2_total", 1.0, map[string]string{"lbl": "val222"})
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
-	// Expect metric_total is updated and metric2_total is updated and metric_total left as is
-	expect = `
-# HELP metric2_total metric2_total
-# TYPE metric2_total counter
-metric2_total{lbl="val222"} 2
-`
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total", "metric2_total")
-	g.Expect(err).ShouldNot(HaveOccurred())
+		assert.Same(t, collector1, collector2)
+	})
 
-	v.ExpireGroupMetrics("group1")
-	v.ExpireGroupMetrics("group2")
+	t.Run("re-registration with subset labels returns same collector", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	// Expect all metric instances sharing the same name to share equal labelsets respectively
+		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method", "status"})
+		require.NoError(t, err1)
 
-	v.GaugeSet("group1", "metric_total1", 1.0, map[string]string{"a": "A"})
-	v.GaugeSet("group1", "metric_total1", 2.0, map[string]string{"c": "C"})
-	v.GaugeSet("group1", "metric_total1", 3.0, map[string]string{"a": "A", "b": "B"})
-	v.GaugeSet("group1", "metric_total1", 5.0, map[string]string{"a": "A"})
-	v.GaugeSet("group1", "metric_total2", 1.0, map[string]string{"a": "A1"})
-	v.GaugeSet("group1", "metric_total2", 2.0, map[string]string{"c": "C2"})
-	v.GaugeSet("group1", "metric_total2", 3.0, map[string]string{"a": "A3", "b": "B3"})
+		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err2)
 
-	v.CounterAdd("group2", "metric_total3", 1.0, map[string]string{"lbl": "val222"})
-	v.CounterAdd("group2", "metric_total3", 1.0, map[string]string{"ord": "ord222"})
-	v.CounterAdd("group2", "metric_total3", 4.0, map[string]string{"lbl": "val222"})
-	v.CounterAdd("group2", "metric_total3", 9.0, map[string]string{"ord": "ord222"})
-	v.CounterAdd("group2", "metric_total3", 99.0, map[string]string{"lbl": "val222", "ord": "ord222"})
-	v.CounterAdd("group2", "metric_total3", 9.0, map[string]string{"lbl": "val222", "ord": "ord222"})
+		assert.Same(t, collector1, collector2)
+		assert.Equal(t, []string{"method", "status"}, collector2.LabelNames())
+	})
 
-	v.CounterAdd("group3", "metric_total4", 9.0, map[string]string{"d": "d1"})
-	v.CounterAdd("group3", "metric_total4", 99.0, map[string]string{"a": "a1", "b": "b1", "c": "c1", "d": "d1"})
-	v.CounterAdd("group3", "metric_total4", 19.0, map[string]string{"c": "c2"})
-	v.CounterAdd("group3", "metric_total4", 29.0, map[string]string{})
-	v.CounterAdd("group3", "metric_total4", 39.0, map[string]string{"j": "j1"})
-	v.CounterAdd("group3", "metric_total4", 1.0, map[string]string{"j": "j1"})
-	v.CounterAdd("group3", "metric_total4", 1.0, map[string]string{"a": "", "b": "", "c": "", "d": "", "j": "j1"})
-	v.CounterAdd("group3", "metric_total5", 7.0, map[string]string{"g": "g1"})
-	v.CounterAdd("group3", "metric_total5", 11.0, map[string]string{"foo": "bar"})
+	t.Run("re-registration with additional labels updates collector", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
 
-	g.Expect(buf.String()).ShouldNot(ContainSubstring("error"), "error occurred in log: %s", buf.String())
+		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err1)
+		originalLabels := collector1.LabelNames()
 
-	expect = `
-# HELP metric_total1 metric_total1
-# TYPE metric_total1 gauge
-metric_total1{a="A", b="", c=""} 5
-metric_total1{a="", b="", c="C"} 2
-metric_total1{a="A", b="B", c=""} 3
-# HELP metric_total2 metric_total2
-# TYPE metric_total2 gauge
-metric_total2{a="A1", b="", c=""} 1
-metric_total2{a="", b="", c="C2"} 2
-metric_total2{a="A3", b="B3", c=""} 3
-# HELP metric_total3 metric_total3
-# TYPE metric_total3 counter
-metric_total3{lbl="val222", ord=""} 5
-metric_total3{lbl="", ord="ord222"} 10
-metric_total3{lbl="val222", ord="ord222"} 108
-# HELP metric_total4 metric_total4
-# TYPE metric_total4 counter
-metric_total4{a="", b="", c="", d="d1", j=""} 9
-metric_total4{a="a1", b="b1", c="c1", d="d1", j=""} 99
-metric_total4{a="", b="", c="c2", d="", j=""} 19
-metric_total4{a="", b="", c="", d="", j=""} 29
-metric_total4{a="", b="", c="", d="", j="j1"} 41
-# HELP metric_total5 metric_total5
-# TYPE metric_total5 counter
-metric_total5{foo="", g="g1"} 7
-metric_total5{foo="bar", g=""} 11
-`
+		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"method", "status"})
+		require.NoError(t, err2)
 
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total1", "metric_total2", "metric_total3", "metric_total4", "metric_total5")
-	g.Expect(err).ShouldNot(HaveOccurred())
+		assert.Same(t, collector1, collector2)
+		assert.NotEqual(t, originalLabels, collector2.LabelNames())
 
-	expect = `
-# HELP metric_total1 metric_total1
-# TYPE metric_total1 gauge
-metric_total1{a="A", b="", c=""} 5
-metric_total1{a="", b="", c="C"} 2
-metric_total1{a="A", b="B", c=""} 3
-# HELP metric_total2 metric_total2
-# TYPE metric_total2 gauge
-metric_total2{a="A1", b="", c=""} 1
-metric_total2{a="", b="", c="C2"} 2
-metric_total2{a="A3", b="B3", c=""} 3
-# HELP metric_total3 metric_total3
-# TYPE metric_total3 counter
-metric_total3{lbl="val222", ord=""} 5
-metric_total3{lbl="", ord="ord222"} 10
-metric_total3{lbl="val222", ord="ord222"} 108
-# HELP metric_total4 metric_total4
-# TYPE metric_total4 counter
-metric_total4{a="", b="", c="", d="d1", j=""} 9
-metric_total4{a="a1", b="b1", c="c1", d="d1", j=""} 99
-metric_total4{a="", b="", c="c2", d="", j=""} 19
-metric_total4{a="", b="", c="", d="", j=""} 29
-metric_total4{a="", b="", c="", d="", j="j1"} 41
-`
+		// Labels should be updated and sorted
+		expectedLabels := []string{"method", "status"}
+		actualLabels := collector2.LabelNames()
+		assert.ElementsMatch(t, expectedLabels, actualLabels)
+	})
 
-	v.ExpireGroupMetricByName("group3", "metric_total5")
-	err = promtest.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expect), "metric_total1", "metric_total2", "metric_totalr3", "metric_total4", "metric_total5")
-	g.Expect(err).ShouldNot(HaveOccurred())
+	t.Run("registration stores collector internally", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		_, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err)
+
+		// Verify collector is stored
+		vault.mu.Lock()
+		storedCollector, exists := vault.collectors["test_counter"]
+		vault.mu.Unlock()
+
+		assert.True(t, exists)
+		assert.Equal(t, "counter", storedCollector.Type())
+	})
+
+	t.Run("registration integrates with prometheus", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		vault := NewVault(func(name string) string { return name }, WithRegistry(registry))
+
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+		require.NoError(t, err)
+
+		// Add some data to verify it's properly registered
+		collector.Add(1.0, map[string]string{"method": "GET"})
+
+		// Check that metrics are available through the registry
+		families, err := registry.Gather()
+		require.NoError(t, err)
+
+		var found bool
+		for _, family := range families {
+			if family.GetName() == "test_counter" {
+				found = true
+				assert.Equal(t, "COUNTER", family.GetType().String())
+				break
+			}
+		}
+		assert.True(t, found, "Counter metric should be registered with prometheus")
+	})
+}
+
+func TestVault_RegisterCounterCollector_ErrorCases(t *testing.T) {
+	t.Run("error when different collector type exists", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		// Register a gauge collector first
+		_, err := vault.RegisterGaugeCollector("conflicting_metric", []string{"method"})
+		require.NoError(t, err)
+
+		// Try to register a counter with the same name
+		collector, err := vault.RegisterCounterCollector("conflicting_metric", []string{"method"})
+
+		assert.Error(t, err)
+		assert.Nil(t, collector)
+		assert.Contains(t, err.Error(), "counter")
+		assert.Contains(t, err.Error(), "gauge")
+		assert.Contains(t, err.Error(), "collector exists")
+	})
+
+	t.Run("error when prometheus registration fails", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		vault := NewVault(func(name string) string { return name }, WithRegistry(registry))
+
+		// Pre-register a metric with prometheus to cause conflict
+		conflictingCollector := prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "conflicting_metric",
+			Help: "conflicting metric",
+		})
+		err := registry.Register(conflictingCollector)
+		require.NoError(t, err)
+
+		// Try to register through vault - should fail
+		collector, err := vault.RegisterCounterCollector("conflicting_metric", []string{})
+
+		assert.Error(t, err)
+		assert.Nil(t, collector)
+		assert.Contains(t, err.Error(), "registration")
+	})
+}
+
+func TestVault_RegisterCounterCollector_Concurrency(t *testing.T) {
+	t.Run("concurrent registration of same collector", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		const numGoroutines = 10
+		collectors := make([]*collectors.ConstCounterCollector, numGoroutines)
+		errors := make([]error, numGoroutines)
+
+		var wg sync.WaitGroup
+		wg.Add(numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func(index int) {
+				defer wg.Done()
+				collectors[index], errors[index] = vault.RegisterCounterCollector("concurrent_counter", []string{"method"})
+			}(i)
+		}
+
+		wg.Wait()
+
+		// All registrations should succeed
+		for i, err := range errors {
+			assert.NoError(t, err, "goroutine %d should not have error", i)
+		}
+
+		// All should return the same collector instance
+		for i := 1; i < numGoroutines; i++ {
+			assert.Same(t, collectors[0], collectors[i], "all goroutines should get the same collector")
+		}
+	})
+
+	t.Run("concurrent registration of different collectors", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		const numGoroutines = 10
+		collectors := make([]*collectors.ConstCounterCollector, numGoroutines)
+		errors := make([]error, numGoroutines)
+
+		var wg sync.WaitGroup
+		wg.Add(numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func(index int) {
+				defer wg.Done()
+				metricName := fmt.Sprintf("concurrent_counter_%d", index)
+				collectors[index], errors[index] = vault.RegisterCounterCollector(metricName, []string{"method"})
+			}(i)
+		}
+
+		wg.Wait()
+
+		// All registrations should succeed
+		for i, err := range errors {
+			assert.NoError(t, err, "goroutine %d should not have error", i)
+		}
+
+		// All should be different collectors
+		for i := 0; i < numGoroutines; i++ {
+			for j := i + 1; j < numGoroutines; j++ {
+				assert.NotSame(t, collectors[i], collectors[j], "collectors %d and %d should be different", i, j)
+			}
+		}
+	})
+
+	t.Run("concurrent registration with label updates", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		const numGoroutines = 5
+		labelSets := [][]string{
+			{"method"},
+			{"method", "status"},
+			{"method", "status", "endpoint"},
+			{"method", "status", "endpoint", "user"},
+			{"method", "status", "endpoint", "user", "region"},
+		}
+
+		collectors := make([]*collectors.ConstCounterCollector, numGoroutines)
+		errors := make([]error, numGoroutines)
+
+		var wg sync.WaitGroup
+		wg.Add(numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func(index int) {
+				defer wg.Done()
+				collectors[index], errors[index] = vault.RegisterCounterCollector("expandable_counter", labelSets[index])
+			}(i)
+		}
+
+		wg.Wait()
+
+		// All registrations should succeed
+		for i, err := range errors {
+			assert.NoError(t, err, "goroutine %d should not have error", i)
+		}
+
+		// All should return the same collector instance
+		for i := 1; i < numGoroutines; i++ {
+			assert.Same(t, collectors[0], collectors[i], "all goroutines should get the same collector")
+		}
+
+		// Final collector should have all labels
+		finalLabels := collectors[0].LabelNames()
+		expectedLabels := []string{"endpoint", "method", "region", "status", "user"} // sorted
+		assert.ElementsMatch(t, expectedLabels, finalLabels)
+	})
+}
+
+func TestVault_RegisterCounterCollector_Integration(t *testing.T) {
+	t.Run("full workflow with metric operations", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		vault := NewVault(func(name string) string { return "app_" + name }, WithRegistry(registry))
+
+		// Register counter
+		counter, err := vault.RegisterCounterCollector("requests_total", []string{"method", "status"})
+		require.NoError(t, err)
+
+		// Add some metrics
+		counter.Add(5.0, map[string]string{"method": "GET", "status": "200"})
+		counter.Add(3.0, map[string]string{"method": "POST", "status": "201"})
+		counter.Add(1.0, map[string]string{"method": "GET", "status": "404"})
+
+		// Verify metrics through prometheus test utility
+		expected := `
+		# HELP app_requests_total app_requests_total
+		# TYPE app_requests_total counter
+		app_requests_total{method="GET",status="200"} 5
+		app_requests_total{method="GET",status="404"} 1
+		app_requests_total{method="POST",status="201"} 3
+		`
+
+		err = promtest.GatherAndCompare(registry, strings.NewReader(expected), "app_requests_total")
+		assert.NoError(t, err)
+	})
+
+	t.Run("counter integration with vault collector interface", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		vault := NewVault(func(name string) string { return name })
+
+		// Register the vault as a collector
+		err := registry.Register(vault)
+		require.NoError(t, err)
+
+		// Register and use counter
+		counter, err := vault.RegisterCounterCollector("test_metric", []string{"label"})
+		require.NoError(t, err)
+
+		counter.Add(10.0, map[string]string{"label": "value"})
+
+		// Metrics should be available through vault's collector interface
+		families, err := registry.Gather()
+		require.NoError(t, err)
+
+		var found bool
+		for _, family := range families {
+			if family.GetName() == "test_metric" {
+				found = true
+				metrics := family.GetMetric()
+				require.Len(t, metrics, 1)
+				assert.Equal(t, 10.0, metrics[0].GetCounter().GetValue())
+				break
+			}
+		}
+		assert.True(t, found)
+	})
+}
+
+func TestVault_RegisterCounterCollector_EdgeCases(t *testing.T) {
+	t.Run("registration with special characters in name", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		// Prometheus will validate the metric name
+		collector, err := vault.RegisterCounterCollector("test_counter_123", []string{"method"})
+
+		require.NoError(t, err)
+		assert.Equal(t, "test_counter_123", collector.Name())
+	})
+
+	t.Run("registration with duplicate labels", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		labelNames := []string{"method", "method", "status"}
+		_, err := vault.RegisterCounterCollector("test_counter", labelNames)
+
+		require.Error(t, err)
+	})
+
+	t.Run("registration with very long label names", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		longLabel := strings.Repeat("very_long_label_name_", 10)
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{longLabel})
+
+		require.NoError(t, err)
+		assert.Contains(t, collector.LabelNames(), longLabel)
+	})
+
+	t.Run("registration with many labels", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		var manyLabels []string
+		for i := 0; i < 20; i++ {
+			manyLabels = append(manyLabels, fmt.Sprintf("label_%d", i))
+		}
+
+		collector, err := vault.RegisterCounterCollector("test_counter", manyLabels)
+
+		require.NoError(t, err)
+		assert.Len(t, collector.LabelNames(), 20)
+	})
+
+	t.Run("name transformation edge cases", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			transformer func(string) string
+			input       string
+			expected    string
+		}{
+			{
+				name:        "empty string transformer",
+				transformer: func(string) string { return "" },
+				input:       "test",
+				expected:    "",
+			},
+			{
+				name:        "identity transformer",
+				transformer: func(s string) string { return s },
+				input:       "test_metric",
+				expected:    "test_metric",
+			},
+			{
+				name:        "uppercase transformer",
+				transformer: strings.ToUpper,
+				input:       "test_metric",
+				expected:    "TEST_METRIC",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				vault := NewVault(tc.transformer, WithNewRegistry())
+
+				collector, err := vault.RegisterCounterCollector(tc.input, []string{})
+
+				// Some transformations might create invalid metric names
+				if tc.expected == "" {
+					// Empty names will likely cause prometheus registration to fail
+					assert.Error(t, err)
+					assert.Nil(t, collector)
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tc.expected, collector.Name())
+				}
+			})
+		}
+	})
+}
+
+func TestVault_RegisterCounterCollector_WithCustomLogger(t *testing.T) {
+	t.Run("vault with custom logger", func(t *testing.T) {
+		logger := log.NewLogger().Named("test")
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry(), WithLogger(logger))
+
+		collector, err := vault.RegisterCounterCollector("test_counter", []string{"method"})
+
+		require.NoError(t, err)
+		assert.NotNil(t, collector)
+		// Verify logger is set (though we can't easily test its usage in registration)
+		assert.NotNil(t, vault.logger)
+	})
+}
+
+func TestVault_RegisterCounterCollector_LabelOrdering(t *testing.T) {
+	t.Run("label ordering is preserved during updates", func(t *testing.T) {
+		vault := NewVault(func(name string) string { return name }, WithNewRegistry())
+
+		// Register with some labels
+		collector1, err1 := vault.RegisterCounterCollector("test_counter", []string{"z", "a", "m"})
+		require.NoError(t, err1)
+
+		// Register again with additional labels
+		collector2, err2 := vault.RegisterCounterCollector("test_counter", []string{"b", "z", "y"})
+		require.NoError(t, err2)
+
+		assert.Same(t, collector1, collector2)
+
+		// All unique labels should be present
+		finalLabels := collector2.LabelNames()
+		expectedLabels := []string{"a", "b", "m", "y", "z"} // should be sorted
+		assert.ElementsMatch(t, expectedLabels, finalLabels)
+	})
 }

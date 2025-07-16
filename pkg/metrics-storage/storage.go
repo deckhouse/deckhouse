@@ -32,7 +32,7 @@ type Collector interface {
 	Counter(metric string, labels map[string]string) *prometheus.CounterVec
 	CounterAdd(metric string, value float64, labels map[string]string)
 
-	Gauge(metric string, labels map[string]string) *prometheus.GaugeVec
+	Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector
 	GaugeAdd(metric string, value float64, labels map[string]string)
 	GaugeSet(metric string, value float64, labels map[string]string)
 

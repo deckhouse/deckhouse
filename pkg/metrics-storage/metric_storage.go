@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	labelspkg "github.com/deckhouse/deckhouse/pkg/metrics-storage/labels"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/vault"
@@ -57,6 +58,7 @@ type MetricStorage struct {
 	histograms       map[string]*prometheus.HistogramVec
 	histogramBuckets map[string][]float64
 
+	vault        *vault.Vault
 	groupedVault *vault.GroupedVault
 
 	registry   *prometheus.Registry
@@ -130,10 +132,16 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 		opt(m)
 	}
 
+	m.vault = vault.NewVault(
+		m.resolveMetricName,
+		vault.WithRegistry(m.registry),
+		vault.WithLogger(m.logger.Named("vault")),
+	)
+
 	m.groupedVault = vault.NewGroupedVault(
 		m.resolveMetricName,
 		vault.WithRegistry(m.registry),
-		vault.WithLogger(m.logger.Named("grouped")),
+		vault.WithLogger(m.logger.Named("grouped-vault")),
 	)
 
 	return m
@@ -168,7 +176,7 @@ func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string
 		}
 	}()
 
-	m.Gauge(metric, labels).With(labels).Set(value)
+	m.vault.GaugeSet(metric, value, labels)
 }
 
 func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string]string) {
@@ -186,19 +194,17 @@ func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string
 		}
 	}()
 
-	m.Gauge(metric, labels).With(labels).Add(value)
+	m.vault.GaugeAdd(metric, value, labels)
 }
 
 // Gauge return saved or register a new gauge.
-func (m *MetricStorage) Gauge(metric string, labels map[string]string) *prometheus.GaugeVec {
-	m.gaugesLock.RLock()
-	vec, ok := m.gauges[metric]
-	m.gaugesLock.RUnlock()
-	if ok {
-		return vec
+func (m *MetricStorage) Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector {
+	c, err := m.vault.RegisterGaugeCollector(metric, labelspkg.LabelNames(labels))
+	if err != nil {
+		panic(err)
 	}
 
-	return m.RegisterGauge(metric, labels)
+	return c
 }
 
 // RegisterGauge creates and registers a prometheus GaugeVec metric with the specified metric name and labels.
@@ -588,7 +594,11 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 // Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
 func (m *MetricStorage) Collector() prometheus.Collector {
-	return m.registry
+	if m.registry != nil {
+		return m.registry
+	}
+
+	return m
 }
 
 // Handler returns handler of MetricStorage
@@ -601,4 +611,48 @@ func (m *MetricStorage) Handler() http.Handler {
 	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
 		Registry: m.registry,
 	})
+}
+
+func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
+	m.countersLock.Lock()
+	for _, collector := range m.counters {
+		collector.Describe(ch)
+	}
+	m.countersLock.Unlock()
+
+	m.gaugesLock.Lock()
+	for _, collector := range m.gauges {
+		collector.Describe(ch)
+	}
+	m.gaugesLock.Unlock()
+
+	m.histogramsLock.Lock()
+	for _, collector := range m.histograms {
+		collector.Describe(ch)
+	}
+	m.histogramsLock.Unlock()
+}
+
+func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
+	m.countersLock.Lock()
+	for _, collector := range m.counters {
+		collector.Collect(ch)
+	}
+	m.countersLock.Unlock()
+
+	m.gaugesLock.Lock()
+	for _, collector := range m.gauges {
+		collector.Collect(ch)
+	}
+	m.gaugesLock.Unlock()
+
+	m.histogramsLock.Lock()
+	for _, collector := range m.histograms {
+		collector.Collect(ch)
+	}
+	m.histogramsLock.Unlock()
+
+	if m.groupedVault != nil {
+		m.groupedVault.Collector().Collect(ch)
+	}
 }
