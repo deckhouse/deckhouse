@@ -266,7 +266,7 @@ func (b *ConfigBuilder) proxyEndpoints() []string {
 func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 	ret := make(map[string]bashible.ConfigHosts)
 
-	for _, params := range append(b.ActualParams, b.ModeParams) {
+	for _, params := range append(slices.Clone(b.ActualParams), b.ModeParams) {
 		var (
 			host    string
 			mirrors []bashible.ConfigMirrorHost
