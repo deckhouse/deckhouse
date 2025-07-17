@@ -1,5 +1,6 @@
 ---
 title: "The loki module"
+description: "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki."
 ---
 
 The module implements log storage.

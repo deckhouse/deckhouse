@@ -432,7 +432,6 @@ dependencies:
 - `name` — *Строка, обязательный параметр.* Имя модуля в Kebab Case. Например, `echo-server`.
 - `exclusiveGroup` — *Строка.* Если несколько модулей принадлежат к одной и той же `exclusiveGroup`, то только один из них может быть активен в системе одновременно. Это предотвращает конфликты между модулями, выполняющими схожие или несовместимые задачи.
 - `requirements` — *Объект.* [Зависимости](../dependencies/) модуля — условия, при которых Deckhouse Kubernetes Platform (DKP) может запустить модуль.
-  - `bootstrapped` — *Булевый.* Зависимость от [статуса установки кластера](../dependencies/#зависимость-от-статуса-установки-кластера) (только для встроенных модулей DKP).
   - `deckhouse` — *Строка.* Зависимость от [версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform).
   - `kubernetes` — *Строка.* Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes).
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
@@ -462,7 +461,6 @@ descriptions:
 requirements:
   deckhouse: ">= 1.61"
   kubernetes: ">= 1.27"
-  bootstrapped: true
 disable:
   confirmation: true
   message: "Отключение этого модуля приведёт к удалению всех созданных им ресурсов."

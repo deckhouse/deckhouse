@@ -1,5 +1,6 @@
 ---
 title: "Модуль loki"
+description: "Хранилище логов в кластере Deckhouse Kubernetes Platform на базе Grafana Loki."
 ---
 
 Модуль предназначен для организации хранилища логов.

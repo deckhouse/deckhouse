@@ -1,5 +1,6 @@
 ---
 title: "Модуль cert-manager"
+description: "Управление сертификатами в кластере Deckhouse Kubernetes Platform."
 ---
 
 Устанавливает надежную и высокодоступную инсталляцию cert-manager [release v1.17.1](https://github.com/jetstack/cert-manager).

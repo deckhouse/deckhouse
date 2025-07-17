@@ -1,11 +1,7 @@
 name: documentation
-weight: 810
 stage: "General Availability"
 description: |
   Documentation module
 descriptions:
   en: Documentation module
 namespace: d8-system
-
-requirements:
-  bootstrapped: true

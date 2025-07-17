@@ -432,7 +432,6 @@ Parameters that can be used in `module.yaml`:
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
 - `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
 - `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
-  - `bootstrapped` — *Boolean.* Dependency on the [cluster installation status](../dependencies/#cluster-installation-status-dependency) (only for built-in DKP modules).
   - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
@@ -462,7 +461,6 @@ descriptions:
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
-    bootstrapped: true
 disable:
   confirmation: true
   message: "Disabling this module will delete all resources, created by the module."
