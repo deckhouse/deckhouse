@@ -134,11 +134,11 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
-       livenessProbe:
-          httpGet:
-            path: /livez
-            port: 8080
-            scheme: HTTPS
+        livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8080
+              scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez

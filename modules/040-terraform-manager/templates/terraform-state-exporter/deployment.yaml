@@ -109,11 +109,11 @@ spec:
               path: /livez
               port: 8080
               scheme: HTTPS
-          readinessProbe:
-            httpGet:
-              path: /livez
-              port: 8080
-              scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
         ports:
         - containerPort: 9100
           name: https-metrics
