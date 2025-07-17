@@ -1,29 +1,127 @@
 ---
-title: "Module registry: FAQ"
+title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to check the registry mode switch status?
+## How to prepare ContainerdV1?
 
-You can get the status of the registry mode switch using the following command:
+{% alert level="danger" %}
+When removing [custom Auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth), the containerd service will be restarted.  
+New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to one of the `Managed` registry modes (`Direct`, `Local`, `Proxy`).
+{% endalert %}
+
+During the switch to any of the `Managed` modes (`Direct`, `Local`, `Proxy`), the `ContainerdV1` service will be restarted.  
+The `ContainerdV1` authorization configuration will be changed to Mirror Auth (this configuration is used by default in `ContainerdV2`).
+
+Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on nodes with `ContainerdV1` that are located in the `/etc/containerd/conf.d` directory.
+
+If such configurations exist, they must be deleted and replaced with new authorization configurations in the `/etc/containerd/registry.d` directory. Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: custom-registry
+spec:
+  bundles:
+    - '*'
+  content: |
+    #!/bin/bash
+    REGISTRY_ADDRESS="registry.io"
+    REGISTRY_SCHEME="https"
+    host_toml=$(cat <<EOF
+    [host]
+      [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}"]
+        capabilities = ["pull", "resolve"]
+        skip_verify = true
+        ca = ["/path/to/ca.crt"]
+        [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}".auth]
+          username = "username"
+          password = "password"
+          # If auth string:
+          auth = "<base64>"
+    EOF
+    )
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
+    echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
+  nodeGroups:
+    - '*'
+  weight: 0
+```
+
+To verify the new configuration is working correctly, use the command:
 
 ```bash
-kubectl -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'"
+# for https:
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
+# for http:
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
 ```
-<!-- TODO(nabokihms): replace with a d8 subcommand when implemented -->
 
-### What do the conditions in `registry-state` mean?
+## How to check the registry mode switch status?
 
-Each condition can be either `True` or `False` and also has a `message` field containing a description of the state. Below are all the types of conditions that can be present in `registry-state` and their descriptions:
+The status of the registry mode switch can be retrieved using the following command:
 
-| Condition                         | Description                                                                                                                                                                              |
-|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ContainerdConfigPreflightReady`  | The state of checking the `containerd` configuration before switching modes. Checks that the node is using `containerd` and that its configuration does not contain manual user changes. |
-| `TransitionContainerdConfigReady` | The state of preparing the `containerd` configuration for the new mode. Checks that the `containerd` configuration has been successfully prepared for the new mode.                      |
-| `FinalContainerdConfigReady`      | The state of completing the mode switch. Checks that all changes to the `containerd` configuration have been successfully applied and the system is ready to operate in the new mode.    |
-| `DeckhouseRegistrySwitchReady`    | Switching to the new container registry address. Checks that the new address has been successfully applied and Deckhouse components are ready to work with the new registry.             |
-| `InClusterProxyReady`             | The readiness state of the In-Cluster Proxy. Checks that the In-Cluster Proxy has been successfully started and is running.                                                              |
-| `CleanupInClusterProxy`           | The state of cleaning up the In-Cluster Proxy if the proxy is not needed for the desired mode. Checks that all resources related to the In-Cluster Proxy have been successfully removed. |
-| `NodeServicesReady`               | The readiness state of node services. Checks that all required services on the nodes have been successfully started and are running.                                                     |
-| `CleanupNodeServices`             | The state of cleaning up node services if they are not needed for the desired mode. Checks that all resources related to node services have been successfully removed.                   |
-| `Ready`                           | The overall readiness state of the registry for operation in the specified mode. Checks that all previous conditions are met and the module is ready for operation.                      |
+<!-- TODO(nabokihms): replace with d8 subcommand when available -->
+```bash
+kubectl -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
+```
+
+Example output:
+
+```yaml
+conditions:
+  - lastTransitionTime: "2025-07-15T12:52:46Z"
+    message: 'registry.deckhouse.ru: all 157 items are checked'
+    reason: Ready
+    status: "True"
+    type: RegistryContainsRequiredImages
+  - lastTransitionTime: "2025-07-11T11:59:03Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: ContainerdConfigPreflightReady
+  - lastTransitionTime: "2025-07-15T12:47:47Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: TransitionContainerdConfigReady
+  - lastTransitionTime: "2025-07-15T12:52:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: InClusterProxyReady
+  - lastTransitionTime: "2025-07-15T12:54:53Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: DeckhouseRegistrySwitchReady
+  - lastTransitionTime: "2025-07-15T12:55:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: FinalContainerdConfigReady
+  - lastTransitionTime: "2025-07-15T12:55:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: Ready
+mode: Direct
+target_mode: Direct
+```
+
+The output displays the status of the switch process. Each condition can have a status of `True` or `False`, and may contain a `message` field with additional details.
+
+Description of conditions:
+
+| Condition                         | Description                                                                                                                                                                      |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContainerdConfigPreflightReady`  | State of the `containerd` configuration preflight check. Verifies there are no custom `containerd` auth configurations on the nodes.                                             |
+| `TransitionContainerdConfigReady` | State of preparing the `containerd` configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                 |
+| `FinalContainerdConfigReady`      | State of finalizing the switch to the new `containerd` mode. Verifies that the `containerd` configuration has been successfully applied and contains only the new mode settings. |
+| `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                   |
+| `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                   |
+| `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                       |
+| `NodeServicesReady`               | State of node services readiness. Verifies that all necessary services on the nodes have started and are operational.                                                            |
+| `CleanupNodeServices`             | State of cleaning up node services if they are not needed in the selected mode. Ensures all related resources have been removed.                                                 |
+| `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the module is ready to operate.                                        |
