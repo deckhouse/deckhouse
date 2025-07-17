@@ -167,7 +167,7 @@ function prepare_environment() {
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
+    cluster_template_id="e4f2104b-4ed8-4508-a8fd-71ca7deda036"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
