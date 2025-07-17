@@ -22,6 +22,6 @@ variable "internal_network_cidr" {
 
   validation {
     condition     = cidrsubnet(var.internal_network_cidr, 0, 0) == var.internal_network_cidr
-    error_message = format("%s is not valid CIDR.", var.internal_network_cidr)
+    error_message = "Content of the internal_network_cidr is not valid network CIDR."
   }
 }
