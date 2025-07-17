@@ -106,10 +106,10 @@ resource "vcd_vapp_vm" "master" {
 
     content {
       type        = "MetadataStringValue"
-      key         = each.key
-      value       = each.value
+      key         = metadata_entry.key
+      value       = metadata_entry.value
       is_system   = false
-      user_access = "READONLY"
+      user_access = "READWRITE"
     }
   }
 }
