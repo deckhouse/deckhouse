@@ -106,10 +106,13 @@ resource "vcd_vapp_vm" "master" {
 
     content {
       type        = "MetadataStringValue"
-      key         = metadata_entry.key
-      value       = metadata_entry.value
       is_system   = false
       user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
     }
   }
+
+  # stub metadata_entry for deleting metadata if field was deleted
+  metadata_entry {}
 }
