@@ -149,7 +149,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-16.12"
+fromCacheVersion: "2025-07-17.02"
 final: false
 mount:
 - from: build_dir
@@ -222,8 +222,7 @@ shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates
-  - apt-get -y install curl
-  - apt-get -y install libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
+  - apt-get -y install curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   # Prepare chroot directories and files
@@ -294,8 +293,6 @@ shell:
 ###############################################################
   # - cp -R /usr/lib64 /chroot/usr/lib64
 
-  # - cp -a /usr/bin/curl /chroot/usr/bin/curl # FIXME
-
   # - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
   # - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
   # - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
@@ -318,7 +315,7 @@ shell:
   # - rm -rf /chroot/usr/lib64/ruby
 
 
-# for DELETE
+  # For NGINX
   - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
   - cp -a /lib64/libcrypt.so* /chroot/lib64
   - cp -a /lib64/libpcre2-8.so* /chroot/lib64
@@ -424,9 +421,9 @@ shell:
   - cp -a /tools/{setcap,coreutils,rm,chmod,ln,mkdir} /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11-artifact
-# fromImage: common/distroless
-fromCacheVersion: "2025-07-16.11"
+# fromImage: common/alt-p11-artifact
+fromImage: common/distroless
+fromCacheVersion: "2025-07-17.02"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -478,7 +475,6 @@ import:
 shell:
   setup:
   # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
-  # - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - /tmp/apps/chmod 1777 /tmp
   - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
   - /tmp/apps/mkdir -p /var/log
