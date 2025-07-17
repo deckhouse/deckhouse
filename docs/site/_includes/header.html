@@ -293,11 +293,7 @@
           {%- endif %}
           <span>{{ productName }}</span>
         </div>
-        {%- if page.lang == "ru" %}
-          <div class="nav__trigger">О продукте</div>
-        {%- else %}
-          <div class="nav__trigger">Learn more</div>
-        {%- endif %}
+        <div class="nav__trigger"></div>
         <ul id="bottom-header-nav" class="nav header__nav">
           {%- for item in productMenuData.items %}
             {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}

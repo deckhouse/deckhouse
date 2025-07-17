@@ -560,6 +560,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const overlay = document.createElement('div');
   const body = document.querySelector('body');
   const navList = document.querySelector('div .nav__trigger');
+  const activeList = document.querySelector('li.active');
+  
+  if(activeList) {
+    navList.textContent = activeList.textContent;
+  }
 
   hamburgerCollapse.addEventListener('click', function() {
     headerSidebar.classList.toggle('show');
