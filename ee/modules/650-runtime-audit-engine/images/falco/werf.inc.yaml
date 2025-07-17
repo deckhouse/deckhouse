@@ -107,7 +107,13 @@ shell:
     EOF
     chmod +x /replace_urls.sh
     /replace_urls.sh
-    sed -i "61iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "163iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "162iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "160iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "145iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "142iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
+    sed -i "65iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/driver.cmake
+    cmake/modules/falcosecurity-libs.cmake
   {{- end }}
   - mkdir -p /src/build
   - cd /src/build
