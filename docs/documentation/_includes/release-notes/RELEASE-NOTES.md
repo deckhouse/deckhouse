@@ -13,6 +13,7 @@
 - The new version of Cilium requires nodes to run Linux kernel version 5.8 or newer. If any node in the cluster has a kernel older than 5.8, the Deckhouse Kubernetes Platform upgrade will be blocked. In addition, Cilium Pods will be restarted, and some functionality may change.
 
 - All DKP components will be restarted during the update.
+
 ### Major changes
 
 - You can now enforce two-factor authentication for static users. This is configured via the [`staticUsers2FA`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter section of the `user-authn` module.
