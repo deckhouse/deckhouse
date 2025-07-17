@@ -7,13 +7,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
@@ -31,6 +35,7 @@ type Discoverer struct {
 	csiCompatibilityFlag string
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
+	vsphereClient        vsphere.Client
 }
 
 func NewDiscoverer(logger *log.Logger) *Discoverer {
@@ -97,12 +102,45 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatalf("Failed to create CNS client: %v", err)
 	}
 
+	region := os.Getenv("REGION")
+	if region == "" {
+		logger.Fatalf("Cannot get REGION env")
+	}
+
+	regionTagCategory := os.Getenv("REGION_TAG_CATEGORY")
+	if regionTagCategory == "" {
+		logger.Fatalf("Cannot get REGION_TAG_CATEGORY env")
+	}
+
+	zoneTagCategory := os.Getenv("ZONE_TAG_CATEGORY")
+	if zoneTagCategory == "" {
+		logger.Fatalf("Cannot get ZONE_TAG_CATEGORY env")
+	}
+
+	config := &vsphere.ProviderClusterConfiguration{
+		Region:            region,
+		RegionTagCategory: regionTagCategory,
+		ZoneTagCategory:   zoneTagCategory,
+		Provider: vsphere.Provider{
+			Server:   host,
+			Username: username,
+			Password: password,
+			Insecure: insecureFlag,
+		},
+	}
+
+	vc, err := vsphere.NewClient(config)
+	if err != nil {
+		logger.Fatalf("Failed to create vSphere client: %v", err)
+	}
+
 	return &Discoverer{
 		logger:               logger,
 		clusterUUID:          clusterUUID,
 		csiCompatibilityFlag: csiCompatibilityFlag,
 		govmomiClient:        govmomiClient,
 		cnsClient:            cnsClient,
+		vsphereClient:        vc,
 	}
 }
 
@@ -117,7 +155,31 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 // NotImplemented
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	return nil, nil
+	discoveryData := &v1.VsphereCloudProviderDiscoveryData{}
+	if len(cloudProviderDiscoveryData) > 0 {
+		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+		}
+	}
+
+	zonesDatastores, err := d.vsphereClient.GetZonesDatastores()
+	if err != nil {
+		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
+	}
+
+	discoveryData.StorageProfiles = mergeZonedDataStores(
+		discoveryData.StorageProfiles,
+		zonesDatastores.ZonedDataStores,
+	)
+
+	discoveryDataJSON, err := json.Marshal(discoveryData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal discovery data: %w", err)
+	}
+
+	d.logger.Debugf("discovery data: %v", discoveryDataJSON)
+	return discoveryDataJSON, nil
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
@@ -147,4 +209,32 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 	}
 
 	return diskList.Volumes, nil
+}
+
+func mergeZonedDataStores(storageProfiles []v1.ZonedDataStore, discoveredZonedDataStores []vsphere.ZonedDataStore) []v1.ZonedDataStore {
+	result := make([]v1.ZonedDataStore, 0, len(storageProfiles))
+
+	discoveredZonedDataStoresMap := make(map[string]v1.ZonedDataStore)
+	for i := range discoveredZonedDataStores {
+		discoveredZonedDataStoresMap[discoveredZonedDataStores[i].Name] = v1.ZonedDataStore{
+			Zones:         discoveredZonedDataStores[i].Zones,
+			InventoryPath: discoveredZonedDataStores[i].InventoryPath,
+			Name:          discoveredZonedDataStores[i].Name,
+			DatastoreType: discoveredZonedDataStores[i].DatastoreType,
+			DatastoreURL:  discoveredZonedDataStores[i].DatastoreURL,
+		}
+		result = append(result, discoveredZonedDataStoresMap[discoveredZonedDataStores[i].Name])
+	}
+
+	for i := range storageProfiles {
+		if _, ok := discoveredZonedDataStoresMap[storageProfiles[i].Name]; !ok {
+			result = append(result, storageProfiles[i])
+		}
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	return result
 }
