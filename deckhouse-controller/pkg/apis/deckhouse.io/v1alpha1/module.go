@@ -86,11 +86,10 @@ const (
 	ModuleMessageInstalling                  = "installing"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
 
-	DeckhouseRequirementFieldName                string = "deckhouse"
-	KubernetesRequirementFieldName               string = "kubernetes"
-	BootstrappedRequirementFieldName             string = "bootstrapped"
-	ModuleDependencyRequirementFieldName         string = "modules"
-	AllowExperimentalModulesRequirementFieldName string = "allowExperimentalModules"
+	DeckhouseRequirementFieldName        string = "deckhouse"
+	KubernetesRequirementFieldName       string = "kubernetes"
+	BootstrappedRequirementFieldName     string = "bootstrapped"
+	ModuleDependencyRequirementFieldName string = "modules"
 )
 
 var (

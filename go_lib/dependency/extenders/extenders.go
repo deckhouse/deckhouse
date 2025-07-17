@@ -60,6 +60,10 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 }
 
 func (b *ExtendersStack) AddConstraints(module string, experimental bool, requirements *v1alpha1.ModuleRequirements) error {
+	if experimental {
+		b.Experimental.AddConstraint(module)
+	}
+
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -87,10 +91,6 @@ func (b *ExtendersStack) AddConstraints(module string, experimental bool, requir
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return err
 		}
-	}
-
-	if experimental {
-		b.Experimental.AddConstraint(module)
 	}
 
 	return nil
@@ -137,6 +137,5 @@ func (b *ExtendersStack) IsExtendersField(field string) bool {
 		v1alpha1.DeckhouseRequirementFieldName,
 		v1alpha1.BootstrappedRequirementFieldName,
 		v1alpha1.ModuleDependencyRequirementFieldName,
-		v1alpha1.AllowExperimentalModulesRequirementFieldName,
 	}, field)
 }
