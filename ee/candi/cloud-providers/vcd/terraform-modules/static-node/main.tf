@@ -87,5 +87,20 @@ resource "vcd_vapp_vm" "node" {
     "public-keys"     = var.providerClusterConfiguration.sshPublicKey
     "user-data"       = var.cloudConfig
     "disk.EnableUUID" = "1"
+<<<<<<< HEAD
+=======
+  }
+
+  dynamic "metadata_entry" {
+    for_each = local.additional_metadata
+
+    content {
+      type        = "MetadataStringValue"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
+      is_system   = false
+      user_access = "READWRITE"
+    }
+>>>>>>> 82fd6ae55c (add additionalMetadata to static instances)
   }
 }

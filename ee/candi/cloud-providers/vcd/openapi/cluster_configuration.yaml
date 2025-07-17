@@ -261,6 +261,7 @@ apiVersions:
                       type: string
                       description: An IP address with a CIDR prefix.
                       pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+<<<<<<< HEAD
         bastion:
           type: object
           additionalProperties: false
@@ -321,6 +322,15 @@ apiVersions:
                     The IP address of the bastion host in the `mainNetwork`.
                     If not set, the DHCP client will be enabled.
                   pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+=======
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every VM of the node group,
+                    useful for organizing and categorizing your virtualization inventory.
+                  additionalProperties:
+                    type: string
+>>>>>>> 82fd6ae55c (add additionalMetadata to static instances)
         sshPublicKey:
           type: string
           description: |
