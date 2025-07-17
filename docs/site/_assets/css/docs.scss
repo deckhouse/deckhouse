@@ -1118,7 +1118,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
   
     .code__transfer {
-      position: relative;
       padding-right: 70px;
       padding-left: 48px;
     }
@@ -2034,7 +2033,7 @@ select#contact-select {
     .wrap {
       white-space: pre-wrap;
       overflow-x: auto;
-      word-wrap: break-word;
+      word-break: normal;
     }
 
     button.wrap__button {
