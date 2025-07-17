@@ -100,6 +100,21 @@ spec:
             secretKeyRef:
               name: cloud-data-discoverer
               key: insecure
+        - name: REGION
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: region
+        - name: REGION_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: regionTagCategory
+        - name: ZONE_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: zoneTagCategory
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG
