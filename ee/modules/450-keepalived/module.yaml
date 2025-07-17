@@ -1,6 +1,5 @@
 name: keepalived
 stage: "General Availability"
-critical: true
 weight: 450
 subsystems:
   - infrastructure
