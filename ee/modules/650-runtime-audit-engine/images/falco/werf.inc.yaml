@@ -89,6 +89,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - exit 1
   - export ALTWRAP_LLVM_VERSION=18.1
   - export GCC_VERSION=12
   - cd /src
