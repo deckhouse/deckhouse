@@ -16,10 +16,10 @@ imageSpec:
     labels: {"distro": "all", "version": "all", "kubernetes-api-proxy": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/alpine
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
   stageDependencies:
     setup:
@@ -40,8 +40,7 @@ dependencies:
 mount:
 - fromPath: ~/.docker
   to: /root/.docker
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 shell:
   setup:
-  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST /kubernetes-api-proxy.tar
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /kubernetes-api-proxy.tar
