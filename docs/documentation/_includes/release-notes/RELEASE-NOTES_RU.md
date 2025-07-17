@@ -109,7 +109,6 @@
 - `Prometheus memcached_exporter`: 0.15.3
 - `Prometheus mimir`: 2.14.3
 - `Prometheus promxy`: 0.0.93
-- `vertical-pod-autoscaler`: 1.4.1
 - `Extended-monitoring k8s-image-availability-exporter`: 0.13.0
 - `Extended-monitoring x509-certificate-exporter`: 3.19.1
 - `Cilium-hubble hubble-ui`: 0.13.2
