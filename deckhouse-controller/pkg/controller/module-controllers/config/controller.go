@@ -250,7 +250,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		r.logger.Warn("debug delete pending release", slog.String("module", module.Name), slog.Bool("ModuleConditionEnabledByModuleConfig", module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)))
 		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			releases := new(v1alpha1.ModuleReleaseList)
-			selector := client.MatchingFields{"spec.moduleName": module.Name}
+			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
 				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
 			}
