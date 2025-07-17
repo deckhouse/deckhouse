@@ -2,9 +2,10 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  create_default_firewall_rules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
-  external_network_name         = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
-  external_network_type         = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
+  create_default_firewall_rules            = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
+  external_network_name                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
+  external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
+  internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
 }
 
 module "network" {
@@ -14,7 +15,7 @@ module "network" {
   edge_gateway_type                        = var.providerClusterConfiguration.edgeGateway.type
   internal_network_name                    = var.providerClusterConfiguration.mainNetwork
   internal_network_cidr                    = var.providerClusterConfiguration.internalNetworkCIDR
-  internal_network_dhcp_pool_start_address = var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress
+  internal_network_dhcp_pool_start_address = local.internal_network_dhcp_pool_start_address
   internal_network_dns_servers             = var.providerClusterConfiguration.internalNetworkDNSServers
 }
 
