@@ -238,11 +238,13 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
+	r.logger.Warn("debug processModule", slog.String("module", module.Name))
 
 	// clear conflict metrics
 	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
+	r.logger.Warn("debug module is enabled", slog.String("module", module.Name), slog.Bool("isEnabled", moduleConfig.IsEnabled()))
 	if !moduleConfig.IsEnabled() {
 		if err := r.disableModule(ctx, module); err != nil {
 			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
@@ -262,20 +264,24 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 
 		// delete all pending releases for EnabledByModuleConfig disabled modules
+		r.logger.Warn("debug delete pending release", slog.String("module", module.Name), slog.Bool("ModuleConditionEnabledByModuleConfig", module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)))
 		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			releases := new(v1alpha1.ModuleReleaseList)
 			selector := client.MatchingFields{"spec.moduleName": module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
 				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
 			}
+			r.logger.Warn("debug releases len", slog.String("module", module.Name), slog.Int("len", len(releases.Items)))
 
 			pendingReleases := make([]*v1alpha1.ModuleRelease, 0)
 			for _, release := range releases.Items {
+				r.logger.Warn("debug release phase", slog.String("module", module.Name), slog.String("release", release.Name), slog.String("phase", string(release.GetPhase())), slog.Bool("isPending", release.GetPhase() == v1alpha1.ModuleReleasePhasePending))
 				if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
 					pendingReleases = append(pendingReleases, &release)
 				}
 			}
 
+			r.logger.Warn("debug pending releases len", slog.String("module", module.Name), slog.Int("len", len(pendingReleases)))
 			if len(pendingReleases) > 0 {
 				for _, release := range pendingReleases {
 					err := r.client.Delete(ctx, release)
