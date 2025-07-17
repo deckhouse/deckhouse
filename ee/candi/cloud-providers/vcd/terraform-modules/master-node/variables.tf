@@ -43,6 +43,12 @@ locals {
   prefix                = var.clusterConfiguration.cloud.prefix
   vapp_name             = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
+<<<<<<< HEAD
   main_ip_addresses     = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
   main_network_name     = var.providerClusterConfiguration.mainNetwork
+=======
+  additional_metadata = contains(keys(local.master_instance_class), "additionalMetadata") ? local.master_instance_class.additionalMetadata : {}
+  main_ip_addresses = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
+  main_network_name = var.providerClusterConfiguration.mainNetwork
+>>>>>>> c6d0233895 (fix additional_metadata logic absence logic)
 }
