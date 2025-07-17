@@ -336,6 +336,7 @@ shell:
   - cp -a /usr/lib64/liblua-* /chroot/lib64
   - cp -a /usr/lib64/libpcre.so* /chroot/lib64
   - cp -a /usr/lib64/libstdc++* /chroot/lib64
+  - cp -a /usr/lib64/libnghttp3.so* /chroot/lib64
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
