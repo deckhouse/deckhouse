@@ -2,7 +2,9 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  createDefaultFirewallRules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
+  create_default_firewall_rules = contains(keys(var.providerClusterConfiguration), "createDefaultFirewallRules") ? var.providerClusterConfiguration.createDefaultFirewallRules : false
+  external_network_name         = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
+  external_network_type         = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
 }
 
 module "network" {
@@ -37,16 +39,16 @@ module "snat" {
   edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
   internal_network_name = var.providerClusterConfiguration.mainNetwork
   internal_network_cidr = var.providerClusterConfiguration.internalNetworkCIDR
-  external_network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
-  external_network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
+  external_network_name = local.external_network_name
+  external_network_type = local.external_network_type
   external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
   external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
 }
 
 module "firewall" {
-  count = local.createDefaultFirewallRules ? 1 : 0
+  count = local.create_default_firewall_rules ? 1 : 0
 
-  source                       = "../../../terraform-modules/firewall"
+  source                = "../../../terraform-modules/firewall"
   organization          = var.providerClusterConfiguration.organization
   edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
   edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
