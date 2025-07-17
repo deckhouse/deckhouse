@@ -636,6 +636,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -952,6 +953,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1268,6 +1270,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1584,6 +1587,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1900,6 +1904,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -2216,6 +2221,7 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
