@@ -149,7 +149,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-16.10"
+fromCacheVersion: "2025-07-16.12"
 final: false
 mount:
 - from: build_dir
@@ -329,14 +329,93 @@ shell:
   - cp -a /usr/lib64/libc.so* /chroot/lib64
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
-  - cp -a /usr/lib64/libbrotlienc.so* /chroot/lib64
-  - cp -a /usr/lib64/libbrotlicommon.so* /chroot/lib64
-  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libmaxminddb.so* /chroot/lib64
-  - cp -a /usr/lib64/liblua-* /chroot/lib64
-  - cp -a /usr/lib64/libpcre.so* /chroot/lib64
-  - cp -a /usr/lib64/libstdc++* /chroot/lib64
-  - cp -a /usr/lib64/libnghttp3.so* /chroot/lib64
+  - cp -a /lib64/libabsl_base.so* /chroot/lib64
+  - cp -a /lib64/libabsl_city.so* /chroot/lib64
+  - cp -a /lib64/libabsl_cord_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_cord.so* /chroot/lib64
+  - cp -a /lib64/libabsl_cordz_functions.so* /chroot/lib64
+  - cp -a /lib64/libabsl_cordz_handle.so* /chroot/lib64
+  - cp -a /lib64/libabsl_cordz_info.so* /chroot/lib64
+  - cp -a /lib64/libabsl_crc_cord_state.so* /chroot/lib64
+  - cp -a /lib64/libabsl_crc_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_crc32c.so* /chroot/lib64
+  - cp -a /lib64/libabsl_debugging_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_demangle_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_exponential_biased.so* /chroot/lib64
+  - cp -a /lib64/libabsl_hash.so* /chroot/lib64
+  - cp -a /lib64/libabsl_int128.so* /chroot/lib64
+  - cp -a /lib64/libabsl_low_level_hash.so* /chroot/lib64
+  - cp -a /lib64/libabsl_malloc_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_platform.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_pool_urbg.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_randen_hwaes_impl.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_randen_hwaes.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_randen_slow.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_randen.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_internal_seed_material.so* /chroot/lib64
+  - cp -a /lib64/libabsl_random_seed_gen_exception.so* /chroot/lib64
+  - cp -a /lib64/libabsl_raw_hash_set.so* /chroot/lib64
+  - cp -a /lib64/libabsl_raw_logging_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_spinlock_wait.so* /chroot/lib64
+  - cp -a /lib64/libabsl_stacktrace.so* /chroot/lib64
+  - cp -a /lib64/libabsl_status.so* /chroot/lib64
+  - cp -a /lib64/libabsl_statusor.so* /chroot/lib64
+  - cp -a /lib64/libabsl_str_format_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_strerror.so* /chroot/lib64
+  - cp -a /lib64/libabsl_strings_internal.so* /chroot/lib64
+  - cp -a /lib64/libabsl_strings.so* /chroot/lib64
+  - cp -a /lib64/libabsl_symbolize.so* /chroot/lib64
+  - cp -a /lib64/libabsl_synchronization.so* /chroot/lib64
+  - cp -a /lib64/libabsl_throw_delegate.so* /chroot/lib64
+  - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
+  - cp -a /lib64/libabsl_time.so* /chroot/lib64
+  - cp -a /lib64/libaddress_sorting.so* /chroot/lib64
+  - cp -a /lib64/libbrotlicommon.so* /chroot/lib64
+  - cp -a /lib64/libbrotlidec.so* /chroot/lib64
+  - cp -a /lib64/libbrotlienc.so* /chroot/lib64
+  - cp -a /lib64/libcares.so* /chroot/lib64
+  - cp -a /lib64/libcom_err.so* /chroot/lib64
+  - cp -a /lib64/libcurl.so* /chroot/lib64
+  - cp -a /lib64/libffi.so* /chroot/lib64
+  - cp -a /lib64/libgcrypt.so* /chroot/lib64
+  - cp -a /lib64/libgmp.so* /chroot/lib64
+  - cp -a /lib64/libgnutls.so* /chroot/lib64
+  - cp -a /lib64/libgpg-error.so* /chroot/lib64
+  - cp -a /lib64/libgpr.so* /chroot/lib64
+  - cp -a /lib64/libgrpc.so* /chroot/lib64
+  - cp -a /lib64/libgrpc++.so* /chroot/lib64
+  - cp -a /lib64/libgsasl.so* /chroot/lib64
+  - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64
+  - cp -a /lib64/libhogweed.so* /chroot/lib64
+  - cp -a /lib64/libidn.so* /chroot/lib64
+  - cp -a /lib64/libidn2.so* /chroot/lib64
+  - cp -a /lib64/libk5crypto.so* /chroot/lib64
+  - cp -a /lib64/libkeyutils.so* /chroot/lib64
+  - cp -a /lib64/libkrb5.so* /chroot/lib64
+  - cp -a /lib64/libkrb5support.so* /chroot/lib64
+  - cp -a /lib64/liblber.so* /chroot/lib64
+  - cp -a /lib64/libldap.so* /chroot/lib64
+  - cp -a /lib64/liblua-5.3.so* /chroot/lib64
+  - cp -a /lib64/libmaxminddb.so* /chroot/lib64
+  - cp -a /lib64/libnettle.so* /chroot/lib64
+  - cp -a /lib64/libnghttp2.so* /chroot/lib64
+  - cp -a /lib64/libnghttp3.so* /chroot/lib64
+  - cp -a /lib64/libngtcp2_crypto_gnutls.so* /chroot/lib64
+  - cp -a /lib64/libngtcp2.so* /chroot/lib64
+  - cp -a /lib64/libntlm.so* /chroot/lib64
+  - cp -a /lib64/libp11-kit.so* /chroot/lib64
+  - cp -a /lib64/libpcre.so* /chroot/lib64
+  - cp -a /lib64/libprotobuf.so* /chroot/lib64
+  - cp -a /lib64/libpsl.so* /chroot/lib64
+  - cp -a /lib64/libre2.so* /chroot/lib64
+  - cp -a /lib64/libsasl2.so* /chroot/lib64
+  - cp -a /lib64/libselinux.so* /chroot/lib64
+  - cp -a /lib64/libssh2.so* /chroot/lib64
+  - cp -a /lib64/libstdc++.so* /chroot/lib64
+  - cp -a /lib64/libtasn1.so* /chroot/lib64
+  - cp -a /lib64/libunistring.so* /chroot/lib64
+  - cp -a /lib64/libupb.so* /chroot/lib64
+  - cp -a /lib64/libzstd.so* /chroot/lib64
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
