@@ -1,5 +1,6 @@
 ---
 title: "Модуль upmeter"
+description: "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform."
 webIfaces:
 - name: status
 - name: upmeter
