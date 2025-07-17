@@ -2,8 +2,8 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  isFirstNode = var.node_index == 0
-  use_nsxv    = var.edge_gateway_type == "NSX-V"
+  is_first_node = var.node_index == 0
+  use_nsxv      = var.edge_gateway_type == "NSX-V"
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {
@@ -15,14 +15,14 @@ data "vcd_nsxt_edgegateway" "gateway" {
 # NSX-T DNAT rule only for the first master node
 
 data "vcd_nsxt_app_port_profile" "ssh" {
-  count = local.isFirstNode ? (local.use_nsxv ? 0 : 1) : 0
+  count = local.is_first_node ? (local.use_nsxv ? 0 : 1) : 0
   org   = var.organization
   name  = "SSH"
   scope = "SYSTEM"
 }
 
 resource "vcd_nsxt_nat_rule" "master-dnat" {
-  count = local.isFirstNode && local.use_nsxv ? 0 : 1
+  count = local.is_first_node && local.use_nsxv ? 0 : 1
   org   = var.organization
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
@@ -41,7 +41,7 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 # NSX-V DNAT rule only for the first master node
 
 resource "vcd_nsxv_dnat" "master-dnat" {
-  count = local.isFirstNode && local.use_nsxv ? 1 : 0
+  count = local.is_first_node && local.use_nsxv ? 1 : 0
 
   enabled     = true
   description = format("SSH DNAT rule for first master of %s", var.internal_network_name)
@@ -57,4 +57,4 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   protocol           = "tcp"
   translated_port    = 22
 }
- 
+

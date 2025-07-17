@@ -13,7 +13,9 @@ module "master_node" {
 }
 
 locals {
-  use_nsxv = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+  use_nsxv              = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
+  external_network_name = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
+  external_network_type = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
 }
 
 module "dnat" {
@@ -26,7 +28,7 @@ module "dnat" {
   internal_address      = module.master_node.master_ip_address_for_ssh
   external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
   external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
-  external_network_name = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName
-  external_network_type = var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType
+  external_network_name = local.external_network_name
+  external_network_type = local.external_network_type
   node_index            = var.nodeIndex
 }
