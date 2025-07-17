@@ -1,6 +1,6 @@
 ---
 title: "Модуль runtime-audit-engine"
-description: Описание модуля runtime-audit-engine Deckhouse, предназначенного для поиска угроз безопасности в кластере Kubernetes.
+description: Поиск угроз безопасности в кластере Deckhouse Kubernetes Platform.
 ---
 
 ## Описание

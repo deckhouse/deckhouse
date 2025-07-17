@@ -1,6 +1,6 @@
 ---
 title: "The operator-trivy module"
-description: operator-trivy is a Deckhouse module for periodic scanning for vulnerabilities in a Kubernetes cluster.
+description: Periodic scanning for vulnerabilities in a Deckhouse Kubernetes Platform cluster.
 ---
 
 The module allows you to run a regular vulnerability scans of user images in runtime on known CVEs. The module uses the [Trivy](https://github.com/aquasecurity/trivy) project. [Public databases](https://github.com/aquasecurity/travy-db/tree/main/pkg/vulnsrc) are used for scanning vulnerabilities.
