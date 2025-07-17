@@ -449,7 +449,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:   "test_counter",
-			Action: operation.ActionAdd,
+			Action: operation.ActionCounterAdd,
 			Value:  &value,
 			Labels: map[string]string{"method": "GET"},
 		}
@@ -467,7 +467,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:   "test_gauge",
-			Action: operation.ActionSet,
+			Action: operation.ActionOldGaugeSet,
 			Value:  &value,
 			Labels: map[string]string{"instance": "server1"},
 		}
@@ -486,7 +486,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:    "test_histogram",
-			Action:  operation.ActionObserve,
+			Action:  operation.ActionHistogramObserve,
 			Value:   &value,
 			Buckets: buckets,
 			Labels:  map[string]string{"endpoint": "/api"},
@@ -504,7 +504,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:   "test_counter",
-			Action: operation.ActionAdd,
+			Action: operation.ActionCounterAdd,
 			Value:  nil,
 			Labels: map[string]string{"method": "GET"},
 		}
@@ -521,7 +521,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:   "test_counter",
-			Action: operation.ActionAdd,
+			Action: operation.ActionCounterAdd,
 			Value:  &value,
 			Labels: map[string]string{},
 		}
@@ -538,7 +538,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 		op := operation.MetricOperation{
 			Name:   "test_counter",
-			Action: operation.ActionAdd,
+			Action: operation.ActionCounterAdd,
 			Value:  &value,
 		}
 
@@ -561,19 +561,19 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 		ops := []operation.MetricOperation{
 			{
 				Name:   "test_counter",
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 				Value:  &value1,
 				Labels: map[string]string{"method": "GET"},
 			},
 			{
 				Name:   "test_gauge",
-				Action: operation.ActionSet,
+				Action: operation.ActionOldGaugeSet,
 				Value:  &value2,
 				Labels: map[string]string{"instance": "server1"},
 			},
 			{
 				Name:    "test_histogram",
-				Action:  operation.ActionObserve,
+				Action:  operation.ActionHistogramObserve,
 				Value:   &value3,
 				Buckets: buckets,
 				Labels:  map[string]string{"endpoint": "/api"},
@@ -602,14 +602,14 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 		ops := []operation.MetricOperation{
 			{
 				Name:   "test_counter",
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 				Value:  &value1,
 				Labels: map[string]string{"method": "GET"},
 				Group:  "api_metrics",
 			},
 			{
 				Name:   "test_gauge",
-				Action: operation.ActionSet,
+				Action: operation.ActionOldGaugeSet,
 				Value:  &value2,
 				Labels: map[string]string{"instance": "server1"},
 				Group:  "api_metrics",
@@ -644,7 +644,7 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 		ops := []operation.MetricOperation{
 			{
 				Name:   "", // Invalid: empty name
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 			},
 		}
 
@@ -659,7 +659,7 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 		ops := []operation.MetricOperation{
 			{
 				Name:   "test_counter",
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 				Value:  &value,
 			},
 		}
@@ -1064,20 +1064,20 @@ func TestMetricStorage_ComplexScenarios(t *testing.T) {
 		ops := []operation.MetricOperation{
 			{
 				Name:   "batch_counter",
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 				Value:  &value1,
 				Labels: map[string]string{"type": "increment"},
 			},
 			{
 				Name:   "batch_grouped_counter",
-				Action: operation.ActionAdd,
+				Action: operation.ActionCounterAdd,
 				Value:  &value2,
 				Labels: map[string]string{"type": "grouped"},
 				Group:  "batch_group",
 			},
 			{
 				Name:   "batch_gauge",
-				Action: operation.ActionSet,
+				Action: operation.ActionOldGaugeSet,
 				Value:  &value3,
 				Labels: map[string]string{"type": "value"},
 				Group:  "batch_group",
@@ -1163,13 +1163,13 @@ func BenchmarkMetricStorage_BatchOperations(b *testing.B) {
 	ops := []operation.MetricOperation{
 		{
 			Name:   "bench_counter",
-			Action: operation.ActionAdd,
+			Action: operation.ActionCounterAdd,
 			Value:  &value,
 			Labels: map[string]string{"type": "counter"},
 		},
 		{
 			Name:   "bench_gauge",
-			Action: operation.ActionSet,
+			Action: operation.ActionOldGaugeSet,
 			Value:  &value,
 			Labels: map[string]string{"type": "gauge"},
 		},

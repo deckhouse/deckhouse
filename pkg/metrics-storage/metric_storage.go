@@ -318,17 +318,22 @@ func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabel
 
 	labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 
-	if op.Action == operation.ActionAdd && op.Value != nil {
+	if op.Action == operation.ActionCounterAdd && op.Value != nil {
 		m.CounterAdd(op.Name, *op.Value, labels)
 		return
 	}
 
-	if op.Action == operation.ActionSet && op.Value != nil {
+	if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
 		m.GaugeSet(op.Name, *op.Value, labels)
 		return
 	}
 
-	if op.Action == operation.ActionObserve && op.Value != nil && op.Buckets != nil {
+	if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
+		m.GaugeSet(op.Name, *op.Value, labels)
+		return
+	}
+
+	if op.Action == operation.ActionHistogramObserve && op.Value != nil && op.Buckets != nil {
 		m.HistogramObserve(op.Name, *op.Value, labels, op.Buckets)
 	}
 }
@@ -346,18 +351,18 @@ func (m *MetricStorage) applyGroupedOperations(group string, ops []operation.Met
 
 	// Apply metric operations one-by-one.
 	for _, op := range ops {
-		if op.Action == operation.ActionExpire {
+		if op.Action == operation.ActionExpireMetrics {
 			m.groupedVault.ExpireGroupMetrics(group)
 			continue
 		}
 
 		labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 
-		if op.Action == operation.ActionAdd && op.Value != nil {
+		if op.Action == operation.ActionCounterAdd && op.Value != nil {
 			m.groupedVault.CounterAdd(group, op.Name, *op.Value, labels)
 		}
 
-		if op.Action == operation.ActionSet && op.Value != nil {
+		if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
 			m.groupedVault.GaugeSet(group, op.Name, *op.Value, labels)
 		}
 	}
@@ -374,17 +379,17 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 	for _, metricOp := range ops {
 		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
 
-		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
+		if metricOp.Action == operation.ActionCounterAdd && metricOp.Value != nil {
 			m.groupedVault.CounterAdd(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
-		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
+		if metricOp.Action == operation.ActionOldGaugeSet && metricOp.Value != nil {
 			m.groupedVault.GaugeSet(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
-		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
+		if metricOp.Action == operation.ActionHistogramObserve && metricOp.Value != nil && metricOp.Buckets != nil {
 			m.groupedVault.HistogramObserve(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
 			continue
 		}

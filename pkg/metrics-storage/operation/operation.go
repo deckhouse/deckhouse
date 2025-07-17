@@ -81,11 +81,11 @@ func ValidateMetricOperation(op MetricOperation) error {
 	}
 
 	if op.Group == "" {
-		if op.Action != ActionSet && op.Action != ActionAdd && op.Action != ActionObserve {
+		if op.Action != ActionOldGaugeSet && op.Action != ActionCounterAdd && op.Action != ActionHistogramObserve {
 			opErrs = multierror.Append(opErrs, fmt.Errorf("unsupported action '%s': %s", op.Action, op))
 		}
 	} else {
-		if op.Action != ActionExpire && op.Action != ActionSet && op.Action != ActionAdd {
+		if op.Action != ActionExpireMetrics && op.Action != ActionOldGaugeSet && op.Action != ActionCounterAdd {
 			opErrs = multierror.Append(opErrs, fmt.Errorf("unsupported action '%s': %s", op.Action, op))
 		}
 	}
@@ -94,23 +94,23 @@ func ValidateMetricOperation(op MetricOperation) error {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required: %s", op))
 	}
 
-	if op.Name == "" && op.Group != "" && op.Action != ActionExpire {
+	if op.Name == "" && op.Group != "" && op.Action != ActionExpireMetrics {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required when action is not 'expire': %s", op))
 	}
 
-	if op.Action == ActionSet && op.Value == nil {
+	if op.Action == ActionOldGaugeSet && op.Value == nil {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'set': %s", op))
 	}
 
-	if op.Action == ActionAdd && op.Value == nil {
+	if op.Action == ActionCounterAdd && op.Value == nil {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'add': %s", op))
 	}
 
-	if op.Action == ActionObserve && op.Value == nil {
+	if op.Action == ActionHistogramObserve && op.Value == nil {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'observe': %s", op))
 	}
 
-	if op.Action == ActionObserve && op.Buckets == nil {
+	if op.Action == ActionHistogramObserve && op.Buckets == nil {
 		opErrs = multierror.Append(opErrs, fmt.Errorf("'buckets' is required for action 'observe': %s", op))
 	}
 

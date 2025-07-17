@@ -19,16 +19,20 @@ type MetricAction string
 
 // Enum values for MetricAction
 const (
-	ActionSet     MetricAction = "set"
-	ActionAdd     MetricAction = "add"
-	ActionObserve MetricAction = "observe"
-	ActionExpire  MetricAction = "expire"
+	ActionCounterAdd          MetricAction = "c_add"
+	ActionOldCounterAdd       MetricAction = "add"
+	ActionGaugeAdd            MetricAction = "g_add"
+	ActionGaugeSet            MetricAction = "g_set"
+	ActionOldGaugeSet         MetricAction = "set"
+	ActionHistogramObserve    MetricAction = "h_observe"
+	ActionOldHistogramObserve MetricAction = "observe"
+	ActionExpireMetrics       MetricAction = "expire"
 )
 
 // IsValid checks if the action is one of the valid actions
 func (a MetricAction) IsValid() bool {
 	switch a {
-	case ActionSet, ActionAdd, ActionObserve, ActionExpire:
+	case ActionOldGaugeSet, ActionCounterAdd, ActionHistogramObserve, ActionExpireMetrics:
 		return true
 	default:
 		return false

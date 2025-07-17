@@ -27,10 +27,10 @@ import (
 // TestMetricActionConstants verifies the constant values
 func TestMetricActionConstants(t *testing.T) {
 	// Test that the constants have the expected string values
-	assert.Equal(t, "set", string(operation.ActionSet))
-	assert.Equal(t, "add", string(operation.ActionAdd))
-	assert.Equal(t, "observe", string(operation.ActionObserve))
-	assert.Equal(t, "expire", string(operation.ActionExpire))
+	assert.Equal(t, "set", string(operation.ActionOldGaugeSet))
+	assert.Equal(t, "add", string(operation.ActionCounterAdd))
+	assert.Equal(t, "observe", string(operation.ActionHistogramObserve))
+	assert.Equal(t, "expire", string(operation.ActionExpireMetrics))
 }
 
 // TestIsValid tests the validity checking for actions
@@ -41,10 +41,10 @@ func TestAction_IsValid(t *testing.T) {
 		valid  bool
 	}{
 		// Valid actions
-		{name: "ActionSet", action: operation.ActionSet, valid: true},
-		{name: "ActionAdd", action: operation.ActionAdd, valid: true},
-		{name: "ActionObserve", action: operation.ActionObserve, valid: true},
-		{name: "ActionExpire", action: operation.ActionExpire, valid: true},
+		{name: "ActionSet", action: operation.ActionOldGaugeSet, valid: true},
+		{name: "ActionAdd", action: operation.ActionCounterAdd, valid: true},
+		{name: "ActionObserve", action: operation.ActionHistogramObserve, valid: true},
+		{name: "ActionExpire", action: operation.ActionExpireMetrics, valid: true},
 
 		// Invalid actions
 		{name: "Empty string", action: "", valid: false},
@@ -70,10 +70,10 @@ func TestAction_String(t *testing.T) {
 		action   operation.MetricAction
 		expected string
 	}{
-		{name: "ActionSet", action: operation.ActionSet, expected: "set"},
-		{name: "ActionAdd", action: operation.ActionAdd, expected: "add"},
-		{name: "ActionObserve", action: operation.ActionObserve, expected: "observe"},
-		{name: "ActionExpire", action: operation.ActionExpire, expected: "expire"},
+		{name: "ActionSet", action: operation.ActionOldGaugeSet, expected: "set"},
+		{name: "ActionAdd", action: operation.ActionCounterAdd, expected: "add"},
+		{name: "ActionObserve", action: operation.ActionHistogramObserve, expected: "observe"},
+		{name: "ActionExpire", action: operation.ActionExpireMetrics, expected: "expire"},
 		{name: "Empty action", action: "", expected: ""},
 		{name: "Custom action", action: "custom", expected: "custom"},
 	}
@@ -93,10 +93,10 @@ func TestMetricActionInSwitch(t *testing.T) {
 		action   operation.MetricAction
 		expected string
 	}{
-		{name: "ActionSet", action: operation.ActionSet, expected: "set case"},
-		{name: "ActionAdd", action: operation.ActionAdd, expected: "add case"},
-		{name: "ActionObserve", action: operation.ActionObserve, expected: "observe case"},
-		{name: "ActionExpire", action: operation.ActionExpire, expected: "expire case"},
+		{name: "ActionSet", action: operation.ActionOldGaugeSet, expected: "set case"},
+		{name: "ActionAdd", action: operation.ActionCounterAdd, expected: "add case"},
+		{name: "ActionObserve", action: operation.ActionHistogramObserve, expected: "observe case"},
+		{name: "ActionExpire", action: operation.ActionExpireMetrics, expected: "expire case"},
 		{name: "Unknown action", action: "unknown", expected: "default case"},
 	}
 
@@ -106,13 +106,13 @@ func TestMetricActionInSwitch(t *testing.T) {
 
 			// This tests how the enum would be used in typical code
 			switch tt.action {
-			case operation.ActionSet:
+			case operation.ActionOldGaugeSet:
 				result = "set case"
-			case operation.ActionAdd:
+			case operation.ActionCounterAdd:
 				result = "add case"
-			case operation.ActionObserve:
+			case operation.ActionHistogramObserve:
 				result = "observe case"
-			case operation.ActionExpire:
+			case operation.ActionExpireMetrics:
 				result = "expire case"
 			default:
 				result = "default case"
@@ -135,10 +135,10 @@ func TestJSONSerialization(t *testing.T) {
 		action   operation.MetricAction
 		expected string
 	}{
-		{name: "ActionSet", action: operation.ActionSet, expected: `{"action":"set"}`},
-		{name: "ActionAdd", action: operation.ActionAdd, expected: `{"action":"add"}`},
-		{name: "ActionObserve", action: operation.ActionObserve, expected: `{"action":"observe"}`},
-		{name: "ActionExpire", action: operation.ActionExpire, expected: `{"action":"expire"}`},
+		{name: "ActionSet", action: operation.ActionOldGaugeSet, expected: `{"action":"set"}`},
+		{name: "ActionAdd", action: operation.ActionCounterAdd, expected: `{"action":"add"}`},
+		{name: "ActionObserve", action: operation.ActionHistogramObserve, expected: `{"action":"observe"}`},
+		{name: "ActionExpire", action: operation.ActionExpireMetrics, expected: `{"action":"expire"}`},
 		{name: "Empty action", action: "", expected: `{"action":""}`},
 		{name: "Custom action", action: "custom", expected: `{"action":"custom"}`},
 	}
@@ -163,14 +163,14 @@ func TestJSONSerialization(t *testing.T) {
 // TestActionComparison tests comparing action values
 func TestActionComparison(t *testing.T) {
 	// Test with variables
-	action1 := operation.ActionSet
-	action2 := operation.ActionSet
-	action3 := operation.ActionAdd
+	action1 := operation.ActionOldGaugeSet
+	action2 := operation.ActionOldGaugeSet
+	action3 := operation.ActionCounterAdd
 
 	assert.True(t, action1 == action2)
 	assert.False(t, action1 == action3)
 
 	// Test with string conversion
-	assert.True(t, operation.ActionSet == "set")
-	assert.True(t, operation.ActionAdd == "add")
+	assert.True(t, operation.ActionOldGaugeSet == "set")
+	assert.True(t, operation.ActionCounterAdd == "add")
 }
