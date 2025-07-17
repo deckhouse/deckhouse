@@ -35,7 +35,7 @@
             articles.forEach(article => {
                 const tagElement = Array.from(article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')).map(tag => tag.textContent);
 
-                const shoulShow = selectedTags.length === 0 || selectedTags.some(tag => tagElement.includes(tag));
+                const shoulShow = selectedTags.length === 0 || selectedTags.every(tag => tagElement.includes(tag));
                 article.style.display = shoulShow ? 'flex' : 'none';
             });
 
