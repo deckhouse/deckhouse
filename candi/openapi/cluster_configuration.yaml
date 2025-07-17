@@ -120,7 +120,7 @@ apiVersions:
         - "Containerd"
         - "ContainerdV2"
         - "NotManaged"
-        default: "Containerd"
+        default: "ContainerdV2"
       kubernetesVersion:
         type: string
         description: |
