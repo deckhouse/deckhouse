@@ -288,7 +288,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// Convert memory to Mi and format as a string. 1 Mi = 1024 * 1024 bytes.
 		reserveMemoryInMi := standbyRequestMemory.Value() / (1024 * 1024)
 		reserveMemoryMi := fmt.Sprintf("%dMi", reserveMemoryInMi)
-		resource.Mega
+
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:          nodeGroup.Name,
 			Standby:       desiredStandby,
