@@ -35,7 +35,8 @@ import (
 var _ Storage = (*MetricStorage)(nil)
 
 const (
-	PrefixTemplate = "{PREFIX}"
+	PrefixTemplate   = "{PREFIX}"
+	emptyUniqueGroup = `@_/_default_group_\_@`
 )
 
 // TODO:
@@ -48,7 +49,6 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	vault        *storage.Vault
 	groupedVault *storage.GroupedVault
 
 	registry   *prometheus.Registry
@@ -117,12 +117,6 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 		opt(m)
 	}
 
-	m.vault = storage.NewVault(
-		m.resolveMetricName,
-		options.WithRegistry(m.registry),
-		options.WithLogger(m.logger.Named("vault")),
-	)
-
 	m.groupedVault = storage.NewGroupedVault(
 		m.resolveMetricName,
 		options.WithRegistry(m.registry),
@@ -145,7 +139,7 @@ func (m *MetricStorage) resolveMetricName(name string) string {
 }
 
 func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error) {
-	c, err := m.vault.RegisterCounter(metric, labelNames, opts...)
+	c, err := m.groupedVault.RegisterCounter(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +148,7 @@ func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts
 }
 
 func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstGaugeCollector, error) {
-	c, err := m.vault.RegisterGauge(metric, labelNames, opts...)
+	c, err := m.groupedVault.RegisterGauge(metric, labelNames, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +157,7 @@ func (m *MetricStorage) RegisterGauge(metric string, labelNames []string, opts .
 }
 
 func (m *MetricStorage) RegisterHistogram(metric string, labelNames []string, buckets []float64, opts ...options.RegisterOption) (*collectors.ConstHistogramCollector, error) {
-	c, err := m.vault.RegisterHistogram(metric, labelNames, buckets, opts...)
+	c, err := m.groupedVault.RegisterHistogram(metric, labelNames, buckets, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +170,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 		return
 	}
 
-	m.Counter(metric, labels).Add(value, labels)
+	m.groupedVault.GaugeAdd(emptyUniqueGroup, metric, value, labels)
 }
 
 func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string]string) {
@@ -184,7 +178,7 @@ func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string
 		return
 	}
 
-	m.vault.GaugeSet(metric, value, labels)
+	m.groupedVault.GaugeSet(emptyUniqueGroup, metric, value, labels)
 }
 
 func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string]string) {
@@ -192,7 +186,7 @@ func (m *MetricStorage) GaugeAdd(metric string, value float64, labels map[string
 		return
 	}
 
-	m.vault.GaugeAdd(metric, value, labels)
+	m.groupedVault.GaugeAdd(emptyUniqueGroup, metric, value, labels)
 }
 
 func (m *MetricStorage) HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64) {
@@ -200,11 +194,11 @@ func (m *MetricStorage) HistogramObserve(metric string, value float64, labels ma
 		return
 	}
 
-	m.Histogram(metric, labels, buckets).Observe(value, labels)
+	m.groupedVault.HistogramObserve(emptyUniqueGroup, metric, value, labels, buckets)
 }
 
 func (m *MetricStorage) Counter(metric string, labels map[string]string) *collectors.ConstCounterCollector {
-	c, err := m.vault.RegisterCounter(metric, labelspkg.LabelNames(labels))
+	c, err := m.groupedVault.RegisterCounter(metric, labelspkg.LabelNames(labels))
 	if err != nil {
 		m.logger.Error(
 			"Counter",
@@ -219,7 +213,7 @@ func (m *MetricStorage) Counter(metric string, labels map[string]string) *collec
 
 // Gauge return saved or register a new gauge.
 func (m *MetricStorage) Gauge(metric string, labels map[string]string) *collectors.ConstGaugeCollector {
-	c, err := m.vault.RegisterGauge(metric, labelspkg.LabelNames(labels))
+	c, err := m.groupedVault.RegisterGauge(metric, labelspkg.LabelNames(labels))
 	if err != nil {
 		m.logger.Error(
 			"Gauge",
@@ -233,7 +227,7 @@ func (m *MetricStorage) Gauge(metric string, labels map[string]string) *collecto
 }
 
 func (m *MetricStorage) Histogram(metric string, labels map[string]string, buckets []float64) *collectors.ConstHistogramCollector {
-	c, err := m.vault.RegisterHistogram(metric, labelspkg.LabelNames(labels), buckets)
+	c, err := m.groupedVault.RegisterHistogram(metric, labelspkg.LabelNames(labels), buckets)
 	if err != nil {
 		m.logger.Error(
 			"Histogram",
@@ -381,17 +375,17 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
 
 		if metricOp.Action == operation.ActionAdd && metricOp.Value != nil {
-			m.vault.CounterAdd(metricOp.Name, *metricOp.Value, labels)
+			m.groupedVault.CounterAdd(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
 		if metricOp.Action == operation.ActionSet && metricOp.Value != nil {
-			m.vault.GaugeSet(metricOp.Name, *metricOp.Value, labels)
+			m.groupedVault.GaugeSet(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
 			continue
 		}
 
 		if metricOp.Action == operation.ActionObserve && metricOp.Value != nil && metricOp.Buckets != nil {
-			m.vault.HistogramObserve(metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
+			m.groupedVault.HistogramObserve(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
 			continue
 		}
 
@@ -424,8 +418,8 @@ func (m *MetricStorage) Handler() http.Handler {
 }
 
 func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
-	if m.vault != nil {
-		m.vault.Collector().Describe(ch)
+	if m.groupedVault != nil {
+		m.groupedVault.Collector().Describe(ch)
 	}
 
 	if m.groupedVault != nil {
@@ -434,8 +428,8 @@ func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
-	if m.vault != nil {
-		m.vault.Collector().Collect(ch)
+	if m.groupedVault != nil {
+		m.groupedVault.Collector().Collect(ch)
 	}
 
 	if m.groupedVault != nil {

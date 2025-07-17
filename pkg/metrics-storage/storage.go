@@ -54,17 +54,6 @@ type Storage interface {
 	Handler() http.Handler
 }
 
-type Vault interface {
-	Registerer
-	Collector
-
-	Collector() prometheus.Collector
-	Registerer() prometheus.Registerer
-
-	CounterAdd(metric string, value float64, labels map[string]string)
-	GaugeSet(metric string, value float64, labels map[string]string)
-}
-
 type GroupedCollector interface {
 	CounterAdd(group string, metric string, value float64, labels map[string]string)
 
@@ -79,7 +68,6 @@ type GroupedStorage interface {
 	GroupedCollector
 
 	Collector() prometheus.Collector
-	Registerer() prometheus.Registerer
 
 	ExpireGroupMetrics(group string)
 	ExpireGroupMetricByName(group, name string)
