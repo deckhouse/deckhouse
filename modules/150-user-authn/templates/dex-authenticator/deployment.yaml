@@ -105,8 +105,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}.{{ $crd.namespace }}
-        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}.{{ $crd.namespace }}.svc
+        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
+        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}.svc
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
