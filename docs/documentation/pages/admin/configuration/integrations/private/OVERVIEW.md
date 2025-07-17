@@ -9,7 +9,7 @@ deploy clusters within private cloud environments, and scale resources as needed
 
 - Deckhouse Virtualization Platform (DVP)
 - [Huawei Cloud](./huaweicloud/huawei-authorization.html)
-- [OpenStack](./openstack/сonnection-and-authorization.html)
-- [VK Private Cloud](./vk/сonnection-and-authorization.html)
+- [OpenStack](./openstack/connection-and-authorization.html)
+- [VK Private Cloud](./vk/connection-and-authorization.html)
 
 The following sections describe how you can configure integration with each of these private cloud platforms.

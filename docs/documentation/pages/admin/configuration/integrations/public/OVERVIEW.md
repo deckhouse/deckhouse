@@ -9,12 +9,12 @@ enabling the use of scalable infrastructure and flexible integration with cloud 
 DKP supports the following providers:
 
 - [Amazon Web Services (AWS)](./amazon/amazon-authorization.html)
-- [Google Cloud Platform (GCP)](./gcp/сonnection-and-authorization.html)
+- [Google Cloud Platform (GCP)](./gcp/connection-and-authorization.html)
 - [Microsoft Azure](./azure/azure-authorization.html)
-- [OpenStack](./openstack/сonnection-and-authorization.html)
-- [OVH Cloud](./ovh/сonnection-and-authorization.html)
-- [Selectel Cloud](./selectel/сonnection-and-authorization.html)
-- [VK Cloud](./vk/сonnection-and-authorization.html)
+- [OpenStack](./openstack/connection-and-authorization.html)
+- [OVH Cloud](./ovh/connection-and-authorization.html)
+- [Selectel Cloud](./selectel/connection-and-authorization.html)
+- [VK Cloud](./vk/connection-and-authorization.html)
 - [Yandex Cloud](./yandex/yandex-authorization.html)
 
 This simplifies the choice of deployment environment
