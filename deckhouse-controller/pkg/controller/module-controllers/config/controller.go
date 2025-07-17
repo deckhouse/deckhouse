@@ -246,23 +246,6 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	r.logger.Warn("debug module is enabled", slog.String("module", module.Name), slog.Bool("isEnabled", moduleConfig.IsEnabled()))
 	if !moduleConfig.IsEnabled() {
-		if err := r.disableModule(ctx, module); err != nil {
-			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
-
-		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
-			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
-				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
-				return true
-			}
-			return false
-		})
-		if err != nil {
-			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
-
 		// delete all pending releases for EnabledByModuleConfig disabled modules
 		r.logger.Warn("debug delete pending release", slog.String("module", module.Name), slog.Bool("ModuleConditionEnabledByModuleConfig", module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)))
 		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
@@ -291,6 +274,23 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 					}
 				}
 			}
+		}
+
+		if err := r.disableModule(ctx, module); err != nil {
+			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+
+		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
+				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
+				return true
+			}
+			return false
+		})
+		if err != nil {
+			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
 		}
 
 		// skip disabled modules
