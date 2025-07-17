@@ -504,7 +504,7 @@ spec:
 
 ## Configuring a certificate for an additional registry
 
-{% alert level="info" %} 
+{% alert level="info" %}
 In addition to `containerd`, the certificate can also be added to the operating system.
 {% endalert %}
 

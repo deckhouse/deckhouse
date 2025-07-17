@@ -306,7 +306,7 @@ resource "aws_iam_policy" "policy" {
   description = "Deckhouse policy"
 
   policy = <<EOF
-<JSON-спецификация Policy>
+<JSON policy specification>
 EOF
 }
 

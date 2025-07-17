@@ -393,7 +393,6 @@ spec:
       ${CONFIG_TMP_FILE} 
 ```
 
-
 ### Kernel update on nodes
 
 #### Debian-based distros
