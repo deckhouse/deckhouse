@@ -102,7 +102,7 @@ resource "vcd_vapp_vm" "master" {
   }, length(var.cloudConfig) > 0 ? { "user-data" = var.cloudConfig } : {})
 
   dynamic "metadata_entry" {
-    for_each = local.master_instance_class.additionalMetadata
+    for_each = local.additional_metadata
 
     content {
       type        = "MetadataStringValue"
