@@ -126,7 +126,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+        - --client-id={{ $crd.finalName }}
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}

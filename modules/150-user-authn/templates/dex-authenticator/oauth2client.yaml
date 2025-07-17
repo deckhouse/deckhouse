@@ -7,8 +7,8 @@ metadata:
   name: {{ $crd.encodedName }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
-id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
-name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+id: {{ $crd.finalName }}
+name: {{ $crd.finalName }}
 secret: {{ $crd.credentials.appDexSecret }}
     {{- if $crd.spec.allowedEmails }}
 allowedEmails:

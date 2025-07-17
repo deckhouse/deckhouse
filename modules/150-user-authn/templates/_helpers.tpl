@@ -49,3 +49,4 @@
     {{- printf "%s-%s-%s" $prefix $truncatedName $hash }}
   {{- end }}
 {{- end }}
+

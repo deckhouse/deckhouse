@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"crypto/md5"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -32,6 +33,7 @@ import (
 type DexAuthenticator struct {
 	ID          string                 `json:"uuid"`
 	EncodedName string                 `json:"encodedName"`
+	FinalName   string                 `json:"finalName"`
 	Name        string                 `json:"name"`
 	Namespace   string                 `json:"namespace"`
 	Spec        map[string]interface{} `json:"spec"`
@@ -65,13 +67,30 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	namespace := obj.GetNamespace()
 
 	id := fmt.Sprintf("%s@%s", name, namespace)
-	encodedName := encoding.ToFnvLikeDex(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
+	// Generate name with namespace and check length
+	fullName := fmt.Sprintf("%s-%s-dex-authenticator", name, namespace)
+	var finalName string
+	if len(fullName) <= 63 {
+		finalName = fullName
+	} else {
+		// Use MD5 hash and truncate to fit 63 characters
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(fullName)))[:8]
+		baseName := fmt.Sprintf("%s-%s", name, namespace)
+		// Calculate max base name length: 63 - "dex-authenticator" - hash - 2 hyphens
+		maxBaseNameLen := 63 - len("dex-authenticator") - len(hash) - 2 // 63 - 17 - 8 - 2 = 36
+		if len(baseName) > maxBaseNameLen {
+			baseName = baseName[:maxBaseNameLen]
+		}
+		finalName = fmt.Sprintf("%s-%s-dex-authenticator", baseName, hash)
+	}
+	encodedName := encoding.ToFnvLikeDex(finalName)
 
 	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
 
 	return DexAuthenticator{
 		ID:                      id,
 		EncodedName:             encodedName,
+		FinalName:               finalName,
 		Name:                    name,
 		Namespace:               namespace,
 		Spec:                    spec,

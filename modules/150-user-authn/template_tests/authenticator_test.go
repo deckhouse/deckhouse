@@ -45,6 +45,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
 - name: test
   encodedName: justForTest
+  finalName: test-d8-test-dex-authenticator
   namespace: d8-test
   credentials:
     appDexSecret: dexSecret
@@ -75,6 +76,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
       value: bar
 - name: test-2
   encodedName: justForTest2
+  finalName: test-2-d8-test-dex-authenticator
   namespace: d8-test
   credentials:
     appDexSecret: dexSecret
@@ -91,6 +93,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     sendAuthorizationHeader: false
 - name: test-3
   encodedName: justForTest3
+  finalName: test-3-d8-test-dex-authenticator
   namespace: d8-test
   credentials:
     appDexSecret: dexSecret
@@ -100,6 +103,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     keepUsersLoggedInFor: "19m"
 - name: test-4
   encodedName: justForTest4
+  finalName: test-4-d8-test-dex-authenticator
   namespace: d8-test
   credentials:
     appDexSecret: dexSecret
@@ -124,6 +128,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			oauth2clientTest := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest")
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
+			Expect(oauth2clientTest.Field("id").String()).To(Equal("test-d8-test-dex-authenticator"))
+			Expect(oauth2clientTest.Field("name").String()).To(Equal("test-d8-test-dex-authenticator"))
 			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
 			Expect(oauth2clientTest.Field("allowedEmails").String()).To(MatchJSON(`["test@mail.io"]`))
@@ -172,6 +178,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			oauth2client2 := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest2")
 			Expect(oauth2client2.Exists()).To(BeTrue())
+			Expect(oauth2client2.Field("id").String()).To(Equal("test-2-d8-test-dex-authenticator"))
+			Expect(oauth2client2.Field("name").String()).To(Equal("test-2-d8-test-dex-authenticator"))
 			Expect(oauth2client2.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.com/dex-authenticator/callback","https://authenticator-two.com/dex-authenticator/callback"]`))
 			Expect(oauth2client2.Field("secret").String()).To(Equal("dexSecret"))
 

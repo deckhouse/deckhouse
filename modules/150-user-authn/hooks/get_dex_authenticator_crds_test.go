@@ -84,6 +84,7 @@ spec:
   "uuid": "test@test",
   "name": "test",
   "namespace": "test",
+  "finalName": "test-test-dex-authenticator",
   "spec": {
     "applications": [
       {
@@ -153,6 +154,7 @@ spec:
   "uuid": "test@d8-dashboard",
   "name": "test",
   "namespace": "d8-dashboard",
+  "finalName": "test-d8-dashboard-dex-authenticator",
   "spec": {
     "applications": [
       {
@@ -224,6 +226,7 @@ data:
   "uuid": "test@d8-monitoring",
   "name": "test",
   "namespace": "d8-monitoring",
+  "finalName": "test-d8-monitoring-dex-authenticator",
   "spec": {
     "applications": [
       {
@@ -240,6 +243,56 @@ data:
     "appDexSecret": "test"
   }
 }]`))
+		})
+	})
+
+	Context("With long names that exceed 63 characters", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-authenticator-very-long-name-that-exceeds-limit
+  namespace: very-long-namespace-name-that-exceeds-limit
+  labels:
+    app: dex-authenticator
+    name: credentials
+data:
+  client-secret: dGVzdA==
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: very-long-name-that-exceeds-limit
+  namespace: very-long-namespace-name-that-exceeds-limit
+spec:
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
+  sendAuthorizationHeader: false
+`))
+			f.RunHook()
+		})
+		It("Should generate truncated name with hash", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			dexAuthenticators := f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").Array()
+			Expect(dexAuthenticators).To(HaveLen(1))
+			
+			authenticator := dexAuthenticators[0]
+			finalName := authenticator.Get("finalName").String()
+			
+			// Final name should be exactly 63 characters
+			Expect(len(finalName)).To(Equal(63))
+			
+			// Final name should end with "-dex-authenticator"
+			Expect(finalName).To(HaveSuffix("-dex-authenticator"))
+			
+			// Should contain hash (8 characters before "-dex-authenticator")
+			Expect(finalName).To(MatchRegexp(`^.+-[a-f0-9]{8}-dex-authenticator$`))
 		})
 	})
 })
