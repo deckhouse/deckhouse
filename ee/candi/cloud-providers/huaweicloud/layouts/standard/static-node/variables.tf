@@ -52,4 +52,5 @@ locals {
   flavor_name           = local.instance_class["flavorName"]
   root_disk_size        = lookup(local.instance_class, "rootDiskSize", 50) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
   additional_tags       = lookup(local.instance_class, "additionalTags", {})
+  enterprise_project_id = lookup(var.providerClusterConfiguration.provider, "enterpriseProjectID", "")
 }

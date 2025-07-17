@@ -1,5 +1,6 @@
 ---
 title: "The monitoring-kubernetes module"
+description: "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform."
 ---
 
 The module is intended for the basic monitoring of cluster nodes.

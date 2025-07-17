@@ -50,6 +50,9 @@ spec:
                 stage:
                   type: string
                   description: Current stage of the module lifecycle.
+                critical:
+                  type: boolean
+                  description: Indicates whether the module critical or not.
                 version:
                   type: string
                   description: Module version.

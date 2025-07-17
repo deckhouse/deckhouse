@@ -429,6 +429,25 @@ build: set-build-envs ## Build Deckhouse images.
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
+GO=$(shell which go)
+GIT=$(shell which git)
+GOLANGCI_LINT=$(shell which golangci-lint)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
+
 .PHONY: go-module-version
-go-module-version:
+go-module-version: go-check
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
+.PHONY: all-mod
+all-mod: go-check
+	@for dir in $$(find . -mindepth 2 -name go.mod | sed -r 's/(.*)(go.mod)/\1/g'); do \
+		echo "Running go mod tidy in $${dir}"; \
+		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
+	done
+
+define error-if-empty
+@if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi
+endef

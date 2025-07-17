@@ -50,6 +50,6 @@ func RegisterAdmissionHandlers(
 ) {
 	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	reg.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
+	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
 }

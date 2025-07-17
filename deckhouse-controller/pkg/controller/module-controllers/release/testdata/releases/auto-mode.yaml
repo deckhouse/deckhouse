@@ -60,3 +60,5 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: parca
+status:
+  phase: Ready

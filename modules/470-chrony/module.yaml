@@ -1,4 +1,5 @@
 name: chrony
+critical: true
 weight: 470
 subsystems:
   - infrastructure

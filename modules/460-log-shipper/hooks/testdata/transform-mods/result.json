@@ -1,0 +1,105 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/kube-audit/audit.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/destination/test-kafka-dest/00_tf_parseMessage_JSON": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if is_string(.message) {\n  .message = parse_json(\n    .message, max_depth: 1\n  ) ?? .message\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/01_tf_parseMessage_Klog": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/00_tf_parseMessage_JSON"
+      ],
+      "source": "if is_string(.message) {\n  .message = parse_klog(.message) ?? .message\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/02_tf_parseMessage_String": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/01_tf_parseMessage_Klog"
+      ],
+      "source": "if is_string(.message) {\n  .message = {\"text\": .message}\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/03_tf_replaceKeys": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/02_tf_parseMessage_String"
+      ],
+      "source": "if exists(.pod_labels) {\n  .pod_labels = map_keys(\n    object!(.pod_labels), recursive: true\n  ) -\u003e |key| {\n    replace(key, \".\", \"_\")\n  }\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/04_tf_dropLabels": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/03_tf_replaceKeys"
+      ],
+      "source": "if exists(.first) {\n  del(.first)\n}\nif exists(.second) {\n  del(.second)\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/05_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/04_tf_dropLabels"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/00_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/test-kafka-dest": {
+      "type": "kafka",
+      "inputs": [
+        "transform/destination/test-kafka-dest/05_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "bootstrap_servers": "192.168.1.1:9200",
+      "encoding": {
+        "codec": "json",
+        "timestamp_format": "rfc3339"
+      },
+      "topic": "logs",
+      "key_field": "host",
+      "compression": "gzip",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
+      "sasl": {
+        "username": "test",
+        "password": "test",
+        "mechanism": "PLAIN",
+        "enabled": true
+      }
+    }
+  }
+}

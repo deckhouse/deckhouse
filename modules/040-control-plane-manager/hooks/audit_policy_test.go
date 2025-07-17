@@ -188,8 +188,8 @@ rules:
 				"system:serviceaccount:d8-istio:istiod-v1x19x7",
 			}
 
-			// All rules, except last three are dropping rules.
-			for i := 0; i < len(policy.Rules)-8; i++ {
+			// All rules, except last nine are dropping rules.
+			for i := 0; i < len(policy.Rules)-9; i++ {
 				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
 			}
 

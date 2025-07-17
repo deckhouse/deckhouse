@@ -191,6 +191,17 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	// TODO: remove after 1.73+
+	if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
+		patch := client.MergeFrom(moduleConfig.DeepCopy())
+		controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
+
+		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
+			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
+
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
@@ -431,6 +442,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			needsUpdate = true
 		}
+
 		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 			needsUpdate = true

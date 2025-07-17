@@ -1,0 +1,53 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - erofs
+  - ld-musl-x86_64.so.1
+  - dump.erofs
+  - fsck.erofs
+  - mkfs.erofs
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "erofs": "1.8.5" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/alpine
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: tools/erofs-utils
+  add: /usr/lib/libc.so
+  to: /ld-musl-x86_64.so.1
+  before: setup
+- image: tools/erofs-utils
+  add: /
+  includePaths:
+  - usr/bin/*.erofs
+  before: setup
+shell:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache patchelf
+  - mkdir -p /opt/deckhouse
+  setup:
+  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
+  - mv /usr/bin/*.erofs /
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /ld-musl-x86_64.so.1 /install /uninstall

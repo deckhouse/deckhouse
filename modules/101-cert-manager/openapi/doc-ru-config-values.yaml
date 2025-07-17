@@ -61,3 +61,10 @@ properties:
     description: |
       Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
       Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
+
+  ingressClassHttp01:
+    type: string
+    x-examples: ["nginx"]
+    description: |
+      Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).  
+      Если параметр не указан, то используется `ingressClass` по умолчанию.      

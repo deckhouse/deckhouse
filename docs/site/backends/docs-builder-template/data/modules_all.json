@@ -19,9 +19,9 @@
       }
     },
     "commercialBadgeMessage": {
-        "en": "A separate license may be required",
-        "ru": "Может потребоваться отдельная лицензия"
-      },
+      "en": "A separate license may be required",
+      "ru": "Может потребоваться отдельная лицензия"
+    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/"
   },
@@ -42,6 +42,7 @@
       "se",
       "se-plus",
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
@@ -119,7 +120,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
@@ -130,6 +133,13 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
   },
   "observability": {
     "editions": [
@@ -224,6 +234,7 @@
       "se",
       "se-plus",
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
     "external": "true",
