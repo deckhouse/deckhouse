@@ -149,12 +149,22 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-16.09"
+fromCacheVersion: "2025-07-16.10"
 final: false
 mount:
 - from: build_dir
   to: /tmp/apps
 import:
+- image: tools/coreutils
+  add: /usr/bin
+  to: /tools
+  includePaths:
+  - chmod
+  - coreutils
+  - ln
+  - rm
+  - mkdir
+  before: install
 - image: tools/libcap
   add: /usr/sbin/setcap
   to: /tools/setcap
@@ -212,7 +222,7 @@ shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates
-  # - apt-get -y install curl
+  - apt-get -y install curl
   - apt-get -y install libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -316,37 +326,38 @@ shell:
   - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
   - cp -a /usr/lib64/libz.so* /chroot/lib64
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  - cp -a /usr/lib64/libz.so* /chroot/lib64
-  - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   - cp -a /usr/lib64/libc.so* /chroot/lib64
-
+  - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
+  # For modules
   - cp -a /usr/lib64/libbrotlienc.so* /chroot/lib64
   - cp -a /usr/lib64/libbrotlicommon.so* /chroot/lib64
+  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
+  - cp -a /usr/lib64/libmaxminddb.so* /chroot/lib64
+  - cp -a /usr/lib64/liblua-* /chroot/lib64
+  - cp -a /usr/lib64/libpcre.so* /chroot/lib64
+  - cp -a /usr/lib64/libstdc++* /chroot/lib64
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
 
   # Utils for final image
-  - cp -a /tools/setcap /tmp/apps
+  - cp -a /tools/{setcap,coreutils,rm,chmod,ln,mkdir} /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-16.09"
+fromCacheVersion: "2025-07-16.11"
 mount:
 - from: build_dir
   to: /tmp/apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-  add: /chroot
-  to: /chroot
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-  add: /chroot
+  add: /
   to: /
   includePaths:
   - etc/passwd
   - etc/group
+  - chroot
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/dbg
@@ -388,14 +399,15 @@ shell:
   setup:
   # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
   # - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - chmod 1777 /tmp
-  - rm -rf /etc/pki
-  - ln -sf /chroot/etc/pki /etc/pki
-  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
+  - /tmp/apps/chmod 1777 /tmp
+  - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
+  - /tmp/apps/mkdir -p /var/log
+  - /tmp/apps/ln -sf /chroot/etc/pki /etc/pki
+  - /tmp/apps/ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+  - /tmp/apps/ln -sf /chroot/etc/nginx /etc/nginx
+  - /tmp/apps/ln -sf /chroot/tmp/nginx /tmp/nginx
+  - /tmp/apps/ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  - /tmp/apps/ln -sf /chroot/var/log/nginx /var/log/nginx
 
   - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
