@@ -74,6 +74,18 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+from: dev-registry.deckhouse.io/base_images@sha256:b7bfb0f7db69a644d6b48461f26e632b3cc8d8b4ae557597aa7eca7ae8e5b008
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+from: dev-registry.deckhouse.io/base_images@sha256:0dbfa46661e53b920ab1e43efc571dc6315ceb3e5b4ed878ff824faf4bf98ad3
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+from: dev-registry.deckhouse.io/base_images@sha256:9017aa36c76354d06ce4d6cae562b80486fec27ba60905e13001776d7f0cf654
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -249,7 +261,6 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-07-15.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -344,13 +355,13 @@ import:
   to: /usr/bin/mount
   owner: root
   group: root
-- from: dev-registry.deckhouse.io/base_images@sha256:b7bfb0f7db69a644d6b48461f26e632b3cc8d8b4ae557597aa7eca7ae8e5b008
+- image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
   before: install
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
   owner: root
   group: root
-- from: dev-registry.deckhouse.io/base_images@sha256:0dbfa46661e53b920ab1e43efc571dc6315ceb3e5b4ed878ff824faf4bf98ad3
+- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
   before: install
   add: /bin/
   to: /usr/bin/
@@ -359,7 +370,7 @@ import:
   includePaths:
   - kmod
   - lsmod
-- from: dev-registry.deckhouse.io/base_images@sha256:0dbfa46661e53b920ab1e43efc571dc6315ceb3e5b4ed878ff824faf4bf98ad3
+- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
   before: install
   add: /bin/
   to: /usr/sbin/
@@ -372,7 +383,7 @@ import:
   - modinfo
   - modprobe
   - rmmod
-- from: dev-registry.deckhouse.io/base_images@sha256:9017aa36c76354d06ce4d6cae562b80486fec27ba60905e13001776d7f0cf654
+- image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
   before: install
   add: /sbin/
   to: /usr/sbin/
