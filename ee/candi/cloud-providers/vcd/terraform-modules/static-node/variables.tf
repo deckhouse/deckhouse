@@ -46,9 +46,18 @@ locals {
   prefix                = var.clusterConfiguration.cloud.prefix
   vapp_name             = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
+<<<<<<< HEAD
   ng                    = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
   instance_class        = local.ng["instanceClass"]
   node_group_name       = local.ng.name
   main_ip_addresses     = lookup(local.instance_class, "mainNetworkIPAddresses", [])
   main_network_name     = var.providerClusterConfiguration.mainNetwork
+=======
+  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
+  instance_class = local.ng["instanceClass"]
+  additional_metadata = contains(keys(local.instance_class), "additionalMetadata") ? local.instance_class.additionalMetadata : {}
+  node_group_name = local.ng.name
+  main_ip_addresses  = lookup(local.instance_class, "mainNetworkIPAddresses", [])
+  main_network_name = var.providerClusterConfiguration.mainNetwork
+>>>>>>> 82fd6ae55c (add additionalMetadata to static instances)
 }
