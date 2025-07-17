@@ -136,6 +136,13 @@ apiVersions:
                     type: string
                     description: An IP address with a CIDR prefix.
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every master node VM,
+                    useful for organizing and categorizing your virtualization inventory.
+                  additionalProperties:
+                    type: string
         nodeGroups:
           type: array
           description: |
