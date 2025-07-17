@@ -1,5 +1,6 @@
 ---
 title: "Модуль metallb"
+description: "Балансировка трафика для сервисов в кластерах bare metal."
 ---
 
 Модуль реализует механизм `LoadBalancer` для сервисов в кластерах bare metal.
