@@ -15,14 +15,14 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
+  name: {{ include "dex_authenticator_name" (dict "name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
+    name: {{ include "dex_authenticator_name" (dict "name" $crd.name) }}
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -44,7 +44,7 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
+  name: {{ include "dex_authenticator_name" (dict "name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -57,7 +57,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
+  name: {{ include "dex_authenticator_name" (dict "name" $crd.name) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -105,8 +105,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}
-        - {{ include "dex_authenticator_name" (dict "finalName" $crd.finalName) }}.svc
+        - {{ include "dex_authenticator_name" (dict "name" $crd.name) }}
+        - {{ include "dex_authenticator_name" (dict "name" $crd.name) }}.svc
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -172,12 +172,12 @@ spec:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "dex_authenticator_secret_name" (dict "finalName" $crd.finalName) }}
+              name: {{ include "dex_authenticator_secret_name" (dict "name" $crd.name) }}
               key: client-secret
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "dex_authenticator_secret_name" (dict "finalName" $crd.finalName) }}
+              name: {{ include "dex_authenticator_secret_name" (dict "name" $crd.name) }}
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt

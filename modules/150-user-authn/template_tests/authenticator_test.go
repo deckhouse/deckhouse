@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -238,6 +240,102 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			}
 			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-expire=2h20m5s"))
 			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-refresh=2h20m4s"))
+		})
+	})
+
+	Context("With long DexAuthenticator name", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
+- name: very-long-dex-authenticator-name-that-exceeds-sixty-three-characters-limit
+  encodedName: justForTestLongName
+  finalName: very-long-dex-authenticator-name-that-exceeds-sixty-three-characters-limit-d8-test-dex-authenticator
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  allowAccessToKubernetes: true
+  spec:
+    applications:
+    - domain: authenticator.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    - domain: authenticator-two.example.com
+      ingressClassName: test-two
+      ingressSecretName: test
+    sendAuthorizationHeader: true
+    keepUsersLoggedInFor: "1020h"
+    allowedGroups:
+    - everyone
+    - admins
+    allowedEmails:
+    - test@mail.io
+    nodeSelector:
+      testnode: ""
+    tolerations:
+    - key: foo
+      operator: Equal
+      value: bar
+`)
+			hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
+			hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
+			hec.HelmRender()
+		})
+
+		It("Should create desired objects with truncated names", func() {
+			// Find the service by iterating through all services in the namespace
+			var serviceName string
+			for idx := range hec.AllObjects() {
+				if idx.Kind == "Service" && idx.Namespace == "d8-test" && strings.HasSuffix(idx.Name, "-dex-authenticator") && strings.HasPrefix(idx.Name, "very-long-dex-authenticator-name-that-") {
+					serviceName = idx.Name
+					break
+				}
+			}
+
+			Expect(serviceName).NotTo(Equal(""), "Service with truncated name should exist")
+
+			// The service name should be exactly 63 characters (truncated)
+			Expect(len(serviceName)).To(Equal(63))
+
+			// Verify the service name contains a hash (pattern: name-hash-dex-authenticator)
+			Expect(serviceName).To(MatchRegexp(`^very-long-dex-authenticator-name-that-\w+-[a-f0-9]{8}-dex-authenticator$`))
+
+			// Check that other resources use the same truncated name
+			Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-test", serviceName).Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", serviceName).Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Deployment", "d8-test", serviceName).Exists()).To(BeTrue())
+
+			// Find the secret by iterating through all secrets in the namespace
+			var secretName string
+			for idx := range hec.AllObjects() {
+				if idx.Kind == "Secret" && idx.Namespace == "d8-test" && strings.HasPrefix(idx.Name, "dex-authenticator-very-long-dex-authenticator-name-that-") {
+					secretName = idx.Name
+					break
+				}
+			}
+
+			Expect(secretName).NotTo(Equal(""), "Secret with truncated name should exist")
+
+			// The secret name should be exactly 63 characters (truncated)
+			Expect(len(secretName)).To(Equal(63))
+
+			// Verify the secret name contains a hash
+			Expect(secretName).To(MatchRegexp(`^dex-authenticator-very-long-dex-authenticator-name-that-\w+-[a-f0-9]{8}$`))
+
+			// Find ingress resources - there should be 2 (one for each application)
+			var ingressNames []string
+			for idx := range hec.AllObjects() {
+				if idx.Kind == "Ingress" && idx.Namespace == "d8-test" && strings.HasPrefix(idx.Name, "very-long-dex-authenticator-name-that-") {
+					ingressNames = append(ingressNames, idx.Name)
+				}
+			}
+
+			Expect(len(ingressNames)).To(Equal(2), "Should have 2 ingress resources")
+
+			// Check that both ingress names are exactly 63 characters
+			for _, ingress := range ingressNames {
+				Expect(len(ingress)).To(Equal(63))
+			}
 		})
 	})
 })

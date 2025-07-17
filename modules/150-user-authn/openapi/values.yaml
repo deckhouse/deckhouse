@@ -132,6 +132,8 @@ properties:
                   type: string
                 appDexSecret:
                   type: string
+            finalName:
+              type: string
       dexClientCRDs:
         type: array
         default: []

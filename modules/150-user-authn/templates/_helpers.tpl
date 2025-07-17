@@ -22,30 +22,42 @@
 
 
 {{- define "dex_authenticator_name" }}
-  {{- $finalName := .finalName }}
+  {{- $name := .name }}
+  {{- $suffix := .suffix | default "" }}
   {{- $prefix := "dex-authenticator" }}
-  {{- $fullName := printf "%s-%s" $finalName $prefix }}
+  {{- $fullName := "" }}
+  {{- if $suffix }}
+    {{- $fullName = printf "%s-%s-%s" $name $suffix $prefix }}
+  {{- else }}
+    {{- $fullName = printf "%s-%s" $name $prefix }}
+  {{- end }}
   {{- if le (len $fullName) 63 }}
     {{- $fullName }}
   {{- else }}
-    {{- $hash := $finalName | sha256sum | trunc 8 }}
-    {{- $maxFinalNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
-    {{- $truncatedName := $finalName | trunc $maxFinalNameLen }}
-    {{- printf "%s-%s-%s" $truncatedName $hash $prefix }}
+    {{- $hash := $name | sha256sum | trunc 8 }}
+    {{- if $suffix }}
+      {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) (len $suffix) 3) }}
+      {{- $truncatedName := $name | trunc $maxNameLen }}
+      {{- printf "%s-%s-%s-%s" $truncatedName $hash $suffix $prefix }}
+    {{- else }}
+      {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
+      {{- $truncatedName := $name | trunc $maxNameLen }}
+      {{- printf "%s-%s-%s" $truncatedName $hash $prefix }}
+    {{- end }}
   {{- end }}
 {{- end }}
 
 
 {{- define "dex_authenticator_secret_name" }}
-  {{- $finalName := .finalName }}
+  {{- $name := .name }}
   {{- $prefix := "dex-authenticator" }}
-  {{- $fullName := printf "%s-%s" $prefix $finalName }}
+  {{- $fullName := printf "%s-%s" $prefix $name }}
   {{- if le (len $fullName) 63 }}
     {{- $fullName }}
   {{- else }}
-    {{- $hash := $finalName | sha256sum | trunc 8 }}
-    {{- $maxFinalNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
-    {{- $truncatedName := $finalName | trunc $maxFinalNameLen }}
+    {{- $hash := $name | sha256sum | trunc 8 }}
+    {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
+    {{- $truncatedName := $name | trunc $maxNameLen }}
     {{- printf "%s-%s-%s" $prefix $truncatedName $hash }}
   {{- end }}
 {{- end }}

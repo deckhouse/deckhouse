@@ -68,6 +68,10 @@ func (hec *Config) KubernetesResource(kind, namespace, name string) object_store
 	return hec.objectStore.KubernetesResource(kind, namespace, name)
 }
 
+func (hec *Config) AllObjects() map[object_store.MetaIndex]object_store.KubeObject {
+	return hec.objectStore
+}
+
 func SetupHelmConfig(values string) *Config {
 	wd, err := os.Getwd()
 	if err != nil {
