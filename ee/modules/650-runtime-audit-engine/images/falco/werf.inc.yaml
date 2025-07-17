@@ -95,17 +95,19 @@ shell:
   {{- if .DistroPackagesProxy }}
   # build in the closed env
   - |
-    cat <<'EOF' > replace_urls.sh
+    cat <<'EOF' > /replace_urls.sh
     #!/bin/bash
-    for f in \$(grep -lari 'URL "https://github.com' /src); do
-      sed -i "s|https://github.com|http://{{ .DistroPackagesProxy }}/repository/github-com|g" "\$f"
+    set -x
+    for f in $(grep -lari 'URL "https://github.com' /src); do
+      sed -i "s|https://github.com|http://{{ .DistroPackagesProxy }}/repository/github-com|g" "$f"
     done
-    for f in \$(grep -lari 'URL "https://download.falco.org' /src); do
-      sed -i "s|https://download.falco.org|http://{{ .DistroPackagesProxy }}/repository/download-falco-org|g" "\$f"
+    for f in $(grep -lari 'URL "https://download.falco.org' /src); do
+      sed -i "s|https://download.falco.org|http://{{ .DistroPackagesProxy }}/repository/download-falco-org|g" "$f"
     done
     EOF
-    chmod +x replace_urls.sh
-    ./replace_urls.sh
+    chmod +x /replace_urls.sh
+    /replace_urls.sh
+    sed -i "61iexecute_process( COMMAND /replace_urls.sh)" cmake/modules/falcosecurity-libs.cmake
   {{- end }}
   - mkdir -p /src/build
   - cd /src/build
