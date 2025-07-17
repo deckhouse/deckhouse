@@ -281,16 +281,16 @@ spec:
 
 			dexAuthenticators := f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").Array()
 			Expect(dexAuthenticators).To(HaveLen(1))
-			
+
 			authenticator := dexAuthenticators[0]
 			finalName := authenticator.Get("finalName").String()
-			
+
 			// Final name should be exactly 63 characters
 			Expect(len(finalName)).To(Equal(63))
-			
+
 			// Final name should end with "-dex-authenticator"
 			Expect(finalName).To(HaveSuffix("-dex-authenticator"))
-			
+
 			// Should contain hash (8 characters before "-dex-authenticator")
 			Expect(finalName).To(MatchRegexp(`^.+-[a-f0-9]{8}-dex-authenticator$`))
 		})
