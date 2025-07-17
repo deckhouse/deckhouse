@@ -3,17 +3,17 @@ title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to prepare ContainerdV1?
+## How to prepare Containerd V1?
 
 {% alert level="danger" %}
 When removing [custom Auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth), the containerd service will be restarted.  
 New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to one of the `Managed` registry modes (`Direct`, `Local`, `Proxy`).
 {% endalert %}
 
-During the switch to any of the `Managed` modes (`Direct`, `Local`, `Proxy`), the `ContainerdV1` service will be restarted.  
-The `ContainerdV1` authorization configuration will be changed to Mirror Auth (this configuration is used by default in `ContainerdV2`).
+During the switch to any of the `Managed` modes (`Direct`, `Local`, `Proxy`), the `Containerd V1` service will be restarted.  
+The `Containerd V1` authorization configuration will be changed to Mirror Auth (this configuration is used by default in `Containerd V2`).
 
-Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on nodes with `ContainerdV1` that are located in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on nodes with `Containerd V1` that are located in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist, they must be deleted and replaced with new authorization configurations in the `/etc/containerd/registry.d` directory. Example:
 

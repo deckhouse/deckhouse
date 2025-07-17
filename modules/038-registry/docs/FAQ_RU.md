@@ -3,7 +3,7 @@ title: "Модуль registry: FAQ"
 description: ""
 ---
 
-## Как подготовить ContainerdV1?
+## Как подготовить Containerd V1?
 
 {% alert level="danger" %}
 При удалении [пользовательских конфигураций Auth](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) сервис containerd будет перезапущен.
@@ -11,11 +11,11 @@ description: ""
 Новые Mirror Auth конфигурации, добавленные в `/etc/containerd/registry.d`, начнут применяться только после переключения на любой из `Managed` режимов registry (`Direct`, `Local`, `Proxy`).
 {% endalert %}
 
-Во время переключения на любой из `Managed` режимов (`Direct`, `Local`, `Proxy`) сервис `ContainerdV1` будет перезапущен.
+Во время переключения на любой из `Managed` режимов (`Direct`, `Local`, `Proxy`) сервис `Containerd V1` будет перезапущен.
 
-Конфигурация авторизации `ContainerdV1` будет изменена на Mirror Auth (`ContainerdV2` использует данную конфигурацию по умолчанию).
+Конфигурация авторизации `Containerd V1` будет изменена на Mirror Auth (`Containerd V2` использует данную конфигурацию по умолчанию).
 
-Перед переключением необходимо убедиться, что на узлах с `ContainerdV1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
+Перед переключением необходимо убедиться, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
 
 Если конфигурации присутствуют, их необходимо удалить и создать новые конфигурации авторизации в директории `/etc/containerd/registry.d`. Пример:
 ```yaml

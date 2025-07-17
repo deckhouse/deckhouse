@@ -1,6 +1,6 @@
 # Direct
 
-## Architecture of the Direct mode
+## Архитектура Direct режима
 
 ```mermaid
 ---

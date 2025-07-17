@@ -8,14 +8,14 @@ description: ""
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-During the first switch, the `ContainerdV1` service will be restarted, as the switch to the [new authorization configuration](./faq.html#how-to-prepare-containerdv1) will take place.
+During the first switch, the `Containerd V1` service will be restarted, as the switch to the [new authorization configuration](./faq.html#how-to-prepare-containerd-v1) will take place.
 {% endalert %}
 
 {% alert level="danger" %}
 When changing the registry mode or registry parameters, Deckhouse will be restarted.
 {% endalert %}
 
-1. If the cluster is running with `ContainerdV1`, [you need to prepare custom containerd configuration](./faq.html#how-to-prepare-containerdv1).
+1. If the cluster is running with `Containerd V1`, [you need to prepare custom containerd configuration](./faq.html#how-to-prepare-containerd-v1).
 
 <!-- markdownlint-disable MD029 -->
 2. Make sure the `registry` module is enabled and running. To do this, execute the following command:

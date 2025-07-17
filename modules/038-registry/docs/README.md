@@ -18,7 +18,7 @@ This fixed address eliminates the need to re-download images and restart compone
 The `Unmanaged` mode allows operating without the internal registry. Within the cluster, image access occurs via the address specified during bootstrap or updated using the `helper change-registry` utility.
 
 {% alert level="info" %}
-To use the `Direct`, `Proxy`, or `Local` modes, the `Containerd` or `ContainerdV2` CRI must be used on all nodes of the cluster.  
+To use the `Direct`, `Proxy`, or `Local` modes, the `Containerd` or `Containerd V2` CRI must be used on all nodes of the cluster.  
 For CRI setup, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) documentation.
 {% endalert %}
 

@@ -7,17 +7,17 @@ description: ""
 
 Модуль registry - компонент, реализующий внутренний реестр container образов Deckhouse.
 
-Внутрений реестр container образов позволяет оптимизировать загрузку и хранение образов, а также обеспечивает высокую доступность и отказоустойчивость Deckhouse.
+Внутренний реестр container образов позволяет оптимизировать загрузку и хранение образов, а также обеспечивает высокую доступность и отказоустойчивость Deckhouse.
 
 Модуль реализует несколько режимов работы `Direct`, `Proxy`, `Local` и `Unmanaged` (на данный момент поддерживается режимы `Direct` и `Unmanaged`).
 
 `Direct`, `Proxy` и `Local` (`Managed` режимы) - реализуют работу внутреннего реестра container образов. Данные режимы позволяют адаптировать реестр под различные сценарии использования. Обращение к внутреннему реестру в заданных режимах выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес позволяет избежать повторное скачивание образов и перезапуск компонентов, при изменение параметров реестра и смене режима.
 
-`Unmanaged` - реализует работу без использования внутреннего реестра. Обращение внутри кластера выполняется по адресу заданному при бутстрапе кластера, или через `helper change-registry`.
+`Unmanaged` - реализует работу без использования внутреннего реестра. Обращение внутри кластера выполняется по адресу заданному при bootstrap кластера, или через `helper change-registry`.
 
 {% alert level="info" %}
-Для работы в режимах `Direct`, `Proxy` и `Local` необходимо использовать CRI `Containerd` или `ContainerdV2` на всех узлах кластера.
-Для настройки CRI ознакомтесь с конфигурацией [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration)
+Для работы в режимах `Direct`, `Proxy` и `Local` необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера.
+Для настройки CRI ознакомьтесь с конфигурацией [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration)
 {% endalert %}
 
 
