@@ -110,7 +110,7 @@ spec:
 
 <!-- markdownlint-disable MD029 -->
 3. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
-    
+
 ```yaml
 ...
   - lastTransitionTime: "..."

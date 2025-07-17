@@ -20,7 +20,6 @@ description: ""
 Для настройки CRI ознакомьтесь с конфигурацией [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration)
 {% endalert %}
 
-
 ### Direct режим
 
 В режиме Direct, запросы к реестру обрабатываются напрямую, без промежуточного кэширования.
@@ -28,7 +27,6 @@ description: ""
 Перенаправление запросов к registry от CRI осуществляется при помощи его настроек, которые прописываются в конфигурации `containerd`.
 
 В случае компонентов, обращающихся к реестру напрямую, таких как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращения будут идти через In-Cluster Proxy, расположенный на узлах control plane.
-
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../../images/registry-module/direct.png)
