@@ -51,6 +51,8 @@
 
 - Known vulnerabilities have been fixed in the following modules: `loki`, `extended-monitoring`, `operator-prometheus`, `prometheus`, `prometheus-metrics-adapter`, `user-authn`, and `cloud-provider-zvirt`.
 
+### Network
+
 - Added support for Istio version 1.25.2, which uses the Sail operator instead of the deprecated Istio Operator. Also added support for Kiali version 2.7, without Ambient Mesh support. Istio version 1.19 is now considered deprecated.
 
 - Added support for encrypting traffic between nodes and Pods using the WireGuard protocol (via the [`encryption.mode`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-encryption-mode) parameter).
