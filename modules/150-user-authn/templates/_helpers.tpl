@@ -37,12 +37,20 @@
     {{- $hash := $name | sha256sum | trunc 8 }}
     {{- if $suffix }}
       {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) (len $suffix) 3) }}
-      {{- $truncatedName := $name | trunc $maxNameLen }}
-      {{- printf "%s-%s-%s-%s" $truncatedName $hash $suffix $prefix }}
+      {{- if gt $maxNameLen 0 }}
+        {{- $truncatedName := $name | trunc $maxNameLen }}
+        {{- printf "%s-%s-%s-%s" $truncatedName $hash $suffix $prefix }}
+      {{- else }}
+        {{- printf "%s-%s-%s" $hash $suffix $prefix }}
+      {{- end }}
     {{- else }}
       {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
-      {{- $truncatedName := $name | trunc $maxNameLen }}
-      {{- printf "%s-%s-%s" $truncatedName $hash $prefix }}
+      {{- if gt $maxNameLen 0 }}
+        {{- $truncatedName := $name | trunc $maxNameLen }}
+        {{- printf "%s-%s-%s" $truncatedName $hash $prefix }}
+      {{- else }}
+        {{- printf "%s-%s" $hash $prefix }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -57,8 +65,12 @@
   {{- else }}
     {{- $hash := $name | sha256sum | trunc 8 }}
     {{- $maxNameLen := sub 63 (add (len $prefix) (len $hash) 2) }}
-    {{- $truncatedName := $name | trunc $maxNameLen }}
-    {{- printf "%s-%s-%s" $prefix $truncatedName $hash }}
+    {{- if gt $maxNameLen 0 }}
+      {{- $truncatedName := $name | trunc $maxNameLen }}
+      {{- printf "%s-%s-%s" $prefix $truncatedName $hash }}
+    {{- else }}
+      {{- printf "%s-%s" $prefix $hash }}
+    {{- end }}
   {{- end }}
 {{- end }}
 

@@ -20,7 +20,7 @@ metadata:
   {{- end }}
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
-  name: {{ include "dex_authenticator_name" (dict "name" $crd.name "suffix" (ternary (trimPrefix "-" $nameSuffix) "" $nameSuffix)) }}
+  name: {{ include "dex_authenticator_name" (dict "name" $crd.name "suffix" (ternary (trimPrefix "-" $nameSuffix) "" (ne $nameSuffix ""))) }}
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -55,7 +55,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
-  name: {{ include "dex_authenticator_name" (dict "name" $crd.name "suffix" (ternary (trimPrefix "-" $nameSuffix) "" $nameSuffix)) }}-sign-out
+  name: {{ include "dex_authenticator_name" (dict "name" $crd.name "suffix" (ternary (trimPrefix "-" $nameSuffix) "" (ne $nameSuffix ""))) }}-sign-out
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
