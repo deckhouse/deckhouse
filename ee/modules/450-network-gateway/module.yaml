@@ -1,5 +1,6 @@
 name: network-gateway
 stage: "General Availability"
+critical: true
 weight: 450
 subsystems:
   - networking
