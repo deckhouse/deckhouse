@@ -1,5 +1,0 @@
-- name: Falco
-  link: https://github.com/falcosecurity/falco
-  description: Falco, the cloud-native runtime security project, is the de facto Kubernetes threat detection engine.
-  logo: https://raw.githubusercontent.com/falcosecurity/community/master/logo/primary-logo.png
-  license: Apache License 2.0
