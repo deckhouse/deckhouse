@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if eq .runType "Normal" }}
-  {{ if .gpu }}
+  {{ if .nodeGroup.gpu }}
 
 if ! command -v /usr/bin/nvidia-container-runtime >/dev/null 2>&1; then
     bb-log-error "'/usr/bin/nvidia-container-runtime' doesn't exist. It's require for Nvdia GPU nodes."
