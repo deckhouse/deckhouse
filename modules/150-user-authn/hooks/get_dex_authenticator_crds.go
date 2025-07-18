@@ -30,65 +30,53 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
-// dexAuthenticatorNameWithNamespace creates safe names for DexAuthenticator objects
-// following the same logic as dex_authenticator_name_with_namespace in _helpers.tpl
-func dexAuthenticatorNameWithNamespace(name, namespace string) string {
-	suffix := "dex-authenticator"
-	fullName := fmt.Sprintf("%s-%s-%s", name, namespace, suffix)
+// generateSafeName creates a safe name within 63 character limit with optional hash suffix
+func generateSafeName(baseName, fixedPart string, isPrefix bool) string {
+	var fullName string
+	if isPrefix {
+		fullName = fmt.Sprintf("%s-%s", fixedPart, baseName)
+	} else {
+		fullName = fmt.Sprintf("%s-%s", baseName, fixedPart)
+	}
 
 	if len(fullName) <= 63 {
 		return fullName
 	}
 
-	// Generate hash from name-namespace combination
-	combinedName := fmt.Sprintf("%s-%s", name, namespace)
+	// Generate hash from base name
 	hasher := sha256.New()
-	hasher.Write([]byte(combinedName))
+	hasher.Write([]byte(baseName))
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))[:8]
 
 	// Calculate maximum length for the truncated name
-	maxNameLength := 63 - len(suffix) - 1 - len(hash) - 1 // 63 - suffix - dash - hash - dash
+	maxNameLength := 63 - len(fixedPart) - 1 - len(hash) - 1 // 63 - fixedPart - dash - hash - dash
 	if maxNameLength < 1 {
 		maxNameLength = 1
 	}
 
-	// Truncate combined name if necessary
-	truncatedName := combinedName
-	if len(combinedName) > maxNameLength {
-		truncatedName = combinedName[:maxNameLength]
+	// Truncate base name if necessary
+	truncatedName := baseName
+	if len(baseName) > maxNameLength {
+		truncatedName = baseName[:maxNameLength]
 	}
 
-	return fmt.Sprintf("%s-%s-%s", truncatedName, hash, suffix)
+	if isPrefix {
+		return fmt.Sprintf("%s-%s-%s", fixedPart, truncatedName, hash)
+	}
+	return fmt.Sprintf("%s-%s-%s", truncatedName, hash, fixedPart)
+}
+
+// dexAuthenticatorNameWithNamespace creates safe names for DexAuthenticator objects
+// following the same logic as dex_authenticator_name_with_namespace in _helpers.tpl
+func dexAuthenticatorNameWithNamespace(name, namespace string) string {
+	combinedName := fmt.Sprintf("%s-%s", name, namespace)
+	return generateSafeName(combinedName, "dex-authenticator", false)
 }
 
 // dexAuthenticatorNameReverse creates safe names with reverse pattern (prefix-name)
 // following the same logic as dex_authenticator_name_reverse in _helpers.tpl
 func dexAuthenticatorNameReverse(name string) string {
-	prefix := "dex-authenticator"
-	fullName := fmt.Sprintf("%s-%s", prefix, name)
-
-	if len(fullName) <= 63 {
-		return fullName
-	}
-
-	// Generate hash from name
-	hasher := sha256.New()
-	hasher.Write([]byte(name))
-	hash := fmt.Sprintf("%x", hasher.Sum(nil))[:8]
-
-	// Calculate maximum length for the truncated name
-	maxNameLength := 63 - len(prefix) - 1 - len(hash) - 1 // 63 - prefix - dash - hash - dash
-	if maxNameLength < 1 {
-		maxNameLength = 1
-	}
-
-	// Truncate name if necessary
-	truncatedName := name
-	if len(name) > maxNameLength {
-		truncatedName = name[:maxNameLength]
-	}
-
-	return fmt.Sprintf("%s-%s-%s", prefix, truncatedName, hash)
+	return generateSafeName(name, "dex-authenticator", true)
 }
 
 type DexAuthenticator struct {
