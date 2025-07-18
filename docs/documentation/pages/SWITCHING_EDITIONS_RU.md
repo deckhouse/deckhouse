@@ -14,7 +14,7 @@ lang: ru
 
 Для переключения Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
-1. Выполните следующую команду для запуска временного пода DKP CE для получения актуальных дайджестов и списка модулей:
+1. Чтобы получить актуальные дайджесты образов и список модулей, создайте временный под DKP CE с помощью следующей команды:
 
    ```shell
    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
@@ -35,7 +35,7 @@ lang: ru
      CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
      ```
 
-     И выполните команду:
+     Загрузите CE-образ Deckhouse по полученному значению:
 
      ```shell
      crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
@@ -101,11 +101,11 @@ lang: ru
      node-local-dns registry-packages-proxy
      ```
 
-     > Обратите внимание, если в `$MODULES_WILL_DISABLE` указана `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение в 8 пункте.
+     > Обратите внимание, если в `$MODULES_WILL_DISABLE` присутствует `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение описано в 8 пункте.
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CE.
 
-   Отобразить список модулей, которые не поддерживаются в DKP CE и будут отключены, можно следующей командой:
+   Список модулей, которые не поддерживаются и будут отключены, можно вывести командой:
 
    ```shell
    echo $MODULES_WILL_DISABLE
@@ -158,13 +158,13 @@ lang: ru
 
 1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
-   Посмотреть статус пода DKP:
+   Проверка статуса пода DKP:
 
    ```shell
    kubectl -n d8-system get po -l app=deckhouse
    ```
 
-   Проверить состояние очереди DKP:
+   Проверка состояния очереди Deckhouse:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
@@ -177,7 +177,7 @@ lang: ru
       | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   > Если в процессе был отключён модуль, включите его обратно:
+   > Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
    >
    > ```shell
    > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
@@ -191,10 +191,10 @@ lang: ru
 
 ## Переключение DKP с CE на EE
 
-Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
+Вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. В случае использования другого адреса реестра контейнеров измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](./#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. В случае использования другого адреса реестра контейнеров, измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](./#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 {% endalert %}
 
 Для переключения Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
@@ -290,7 +290,7 @@ lang: ru
      EE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
      ```
 
-     И выполните команду:
+      Загрузите EE-образ Deckhouse по полученному значению:
 
      ```shell
      crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
@@ -333,13 +333,13 @@ lang: ru
 
 1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
-   Посмотреть статус пода DKP:
+   Проверка статуса пода DKP:
 
    ```shell
    kubectl -n d8-system get po -l app=deckhouse
    ```
 
-   Проверить состояние очереди DKP:
+   Проверка состояния очереди DKP:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
