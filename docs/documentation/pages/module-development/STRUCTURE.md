@@ -360,6 +360,8 @@ When using CEL validations, keep the following features in mind:
 
 ##### Examples of complex rules
 
+Below are examples of complex validation rules described in CEL:
+
 - Checking whether the parameter value falls within the range:
   
   ```yaml
