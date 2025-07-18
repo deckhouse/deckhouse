@@ -27,6 +27,9 @@ properties:
           format: int64
         value:
           type: string
+    x-deckhouse-validations:
+      - expression: "self.size() > 0"
+        message: "The items list must not be empty"
     x-examples:
       - - key: "key1"
           operator: "Equal"
