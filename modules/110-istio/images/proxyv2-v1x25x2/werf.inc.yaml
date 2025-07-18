@@ -39,15 +39,15 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
   after: setup
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
   after: setup
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   after: setup
@@ -211,15 +211,15 @@ import:
   add: /root/.ssh
   to: /root/.ssh
   before: install
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
   before: install
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
   before: install
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
@@ -300,4 +300,8 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:428b3ac5e5e8145eb4dbfeda22bddda2b48e342c484bb9f458ae48ff625a06ae
+final: false
 ---
