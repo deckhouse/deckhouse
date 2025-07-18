@@ -55,8 +55,9 @@ locals {
     cores         = local.instance_class.virtualMachine.cpu.cores
     core_fraction = lookup(local.instance_class.virtualMachine.cpu, "coreFraction", "100%")
   }
-  memory_size = local.instance_class.virtualMachine.memory.size
-  bootloader  = lookup(local.instance_class.virtualMachine, "bootloader", null)
+  memory_size                = local.instance_class.virtualMachine.memory.size
+  virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
+  bootloader                 = lookup(local.instance_class.virtualMachine, "bootloader", null)
 
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 

@@ -1,6 +1,7 @@
 ---
 title: "The user-authn module"
 search: kube config generator
+description: "A unified authentication system for Deckhouse Kubernetes Platform, integrated with Kubernetes and Deckhouse Kubernetes Platform web interfaces."
 webIfaces:
 - name: kubeconfig
   urlInfo: faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api

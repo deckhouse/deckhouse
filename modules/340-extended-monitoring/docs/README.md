@@ -1,5 +1,6 @@
 ---
 title: "The extended-monitoring module"
+description: "Metrics for extended monitoring of the Deckhouse Kubernetes Platform cluster."
 ---
 
 Contains the following Prometheus exporters:

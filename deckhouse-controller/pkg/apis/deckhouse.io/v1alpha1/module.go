@@ -56,6 +56,7 @@ const (
 	ModuleReasonEnabledScriptExtender       = "EnabledScriptExtender"
 	ModuleReasonDeckhouseVersionExtender    = "DeckhouseVersionExtender"
 	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
+	ModuleReasonBootstrappedExtender        = "BootstrappedExtender"
 	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
 	ModuleReasonModuleDependencyExtender    = "ModuleDependencyExtender"
 	ModuleReasonExperimentalExtender        = "ExperimentalExtender"
@@ -75,6 +76,7 @@ const (
 	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
 	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
 	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
+	ModuleMessageBootstrappedExtender        = "turned off because the cluster not bootstrapped yet"
 	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
 	ModuleMessageModuleDependencyExtender    = "turned off because of unmet module dependencies"
 	ModuleMessageExperimentalExtender        = "turned off because experimental extender are false"
@@ -88,7 +90,6 @@ const (
 
 	DeckhouseRequirementFieldName        string = "deckhouse"
 	KubernetesRequirementFieldName       string = "kubernetes"
-	BootstrappedRequirementFieldName     string = "bootstrapped"
 	ModuleDependencyRequirementFieldName string = "modules"
 )
 
@@ -144,9 +145,8 @@ type ModuleRequirements struct {
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
-	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	Deckhouse  string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
 }
 
 type ModuleProperties struct {
@@ -154,6 +154,7 @@ type ModuleProperties struct {
 	Source           string                `json:"source,omitempty"`
 	ReleaseChannel   string                `json:"releaseChannel,omitempty"`
 	Stage            string                `json:"stage,omitempty"`
+	Critical         bool                  `json:"critical,omitempty"`
 	Namespace        string                `json:"namespace,omitempty"`
 	Subsystems       []string              `json:"subsystems,omitempty"`
 	Version          string                `json:"version,omitempty"`

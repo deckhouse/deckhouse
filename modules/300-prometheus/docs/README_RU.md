@@ -3,6 +3,7 @@ title: "Prometheus-мониторинг"
 type:
   - instruction
 search: prometheus
+description: "Мониторинг кластера Deckhouse Kubernetes Platform на базе Prometheus и Grafana."
 webIfaces:
 - name: grafana
 ---

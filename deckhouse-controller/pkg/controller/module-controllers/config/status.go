@@ -26,7 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
-	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -193,7 +193,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
-	case kubeconfig.Name:
+	case kubeconfigextender.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
 
@@ -222,8 +222,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
-		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+		reason = v1alpha1.ModuleReasonBootstrappedExtender
+		message = v1alpha1.ModuleMessageBootstrappedExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender

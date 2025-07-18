@@ -98,3 +98,7 @@ TODO: update readme with patch description
 Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
 which the validator server trusts (CA and Common Name verification).  
 Without a valid client certificate, access to the validation service will be denied.
+
+### 016-verbose-maxmind-logs.patch
+
+Added additional logging for downloading GeoIP databases from the MaxMind service.

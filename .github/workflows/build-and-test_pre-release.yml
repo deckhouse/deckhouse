@@ -28,7 +28,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.1"
+  WERF_VERSION: "v2.42.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -38,6 +38,7 @@ env:
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_FINAL_IMAGES_ONLY: true
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -141,72 +142,6 @@ jobs:
 
   # </template: git_info_job>
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-
-    # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: |
-          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-    # </template: go_generate_template>
-
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -220,66 +155,10 @@ jobs:
           bash ./.github/scripts/send-report.sh
       # </template: send_fail_report>
 
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-
-    # <template: workflow_render_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      - name: Render GitHub workflow
-        run: |
-          cd .github
-          ./render-workflows.sh
-
-      - name: Check rendered files
-        run: |
-          git diff --exit-code
-    # </template: workflow_render_template>
-
-
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
     env:
       WERF_ENV: "FE"
     # <template: build_template>
@@ -414,9 +293,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -511,7 +405,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -590,8 +485,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -727,9 +620,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -824,7 +732,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -903,8 +812,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -1040,9 +947,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1137,7 +1059,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1216,8 +1139,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -1353,9 +1274,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1450,7 +1386,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1529,8 +1466,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -1666,9 +1601,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1763,7 +1713,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1842,8 +1793,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"
@@ -1979,9 +1928,24 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2076,7 +2040,8 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
+            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json

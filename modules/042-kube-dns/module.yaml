@@ -1,5 +1,6 @@
 name: kube-dns
 stage: "General Availability"
+critical: true
 weight: 42
 subsystems:
   - kubernetes

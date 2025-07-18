@@ -153,6 +153,9 @@ common:
   documentation:
     en: Documentation
     ru: Документация
+  documentation_platform:
+    en: Platform documentation
+    ru: Документация платформы
   platform:
     en: Platform
     ru: Платформа
@@ -303,6 +306,9 @@ common:
   d8_cli_reference_title:
     en: Deckhouse CLI command reference
     ru: Справка по командам Deckhouse CLI
+  d8_cli_reference_description:
+    en: List of commands and parameters for Deckhouse CLI (d8)
+    ru: Список команд и параметров Deckhouse CLI (d8)
 
 comparison:
   except_parameters:

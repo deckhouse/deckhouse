@@ -92,11 +92,6 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 		return nil, err
 	}
 
-	err = d.WaitDiskCreation(ctx, diskName)
-	if err != nil {
-		return nil, err
-	}
-
 	newDisk, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
 		return nil, err
@@ -135,11 +130,6 @@ func (d *DiskService) CreateDiskFromDataSource(
 
 	err := d.client.Create(ctx, &vmd)
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
-		return nil, err
-	}
-
-	err = d.WaitDiskCreation(ctx, diskName)
-	if err != nil {
 		return nil, err
 	}
 

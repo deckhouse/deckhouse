@@ -130,6 +130,11 @@ jobs:
     name: Docs Validation (base)
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
+
   doc_spell_check:
     name: Docs Validation (spellcheck)
 {!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
@@ -283,3 +288,22 @@ steps:
       make lint-doc-spellcheck-pr
    # </template: spellcheck_template>
 {!{- end -}!}
+
+{!{ define "workflow_render_template" }!}
+# <template: workflow_render_template>
+runs-on: [self-hosted, regular]
+steps:
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
+
+  - name: Render GitHub workflow
+    run: |
+      cd .github
+      ./render-workflows.sh
+
+  - name: Check rendered files
+    run: |
+      git diff --exit-code
+# </template: workflow_render_template>
+{!{ end }!}
