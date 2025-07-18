@@ -35,7 +35,7 @@ type ExtendersStack struct {
 	DeckhouseVersion  *deckhouseversion.Extender
 	KubernetesVersion *kubernetesversion.Extender
 	ModuleDependency  *moduledependency.Extender
-  Bootstrapped      *bootstrapped.Extender
+	Bootstrapped      *bootstrapped.Extender
 	Experimental      *experimentalextender.Extender
 }
 
@@ -44,7 +44,7 @@ func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
-    Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
+		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
 		Experimental:      experimentalextender.NewExtender(allowExperimental, logger.Named("experimental-extender")),
 	}
 }
@@ -54,18 +54,17 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 		b.DeckhouseVersion,
 		b.KubernetesVersion,
 		b.ModuleDependency,
-    b.Bootstrapped,
+		b.Bootstrapped,
 		b.Experimental,
 	}
 }
-
 
 func (b *ExtendersStack) AddConstraints(module string, critical bool, experimental bool, requirements *v1alpha1.ModuleRequirements) error {
 	if experimental {
 		b.Experimental.AddConstraint(module)
 	}
-  
-  if !critical {
+
+	if !critical {
 		b.Bootstrapped.AddFunctionalModule(module)
 	}
 
