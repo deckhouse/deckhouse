@@ -79,7 +79,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" $context | nindent 6 }}
       containers:
       - name: smoke-mini
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ $sts.image }}
         command: [ '/smoke-mini' ]
         ports:

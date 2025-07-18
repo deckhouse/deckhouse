@@ -76,7 +76,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: caphc-controller-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "caphcControllerManager") }}
         imagePullPolicy: IfNotPresent
         args:
