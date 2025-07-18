@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- if eq .cri "ContainerdV2" }}
+echo 'systemd' > /var/lib/bashible/cgroup_config
+{{- end }}
+
 {{- if eq .cri "Containerd" }}
 # Migration already done
 if [ -f /var/lib/bashible/cgroup_config ]; then

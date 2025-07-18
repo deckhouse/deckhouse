@@ -53,7 +53,6 @@ type SubstitutionRule struct {
 	Pattern     string `json:"pattern"`
 	Replacement string `json:"replacement"`
 }
-
 type ParseMessageSpec struct {
 	SourceFormat SourceFormat           `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`

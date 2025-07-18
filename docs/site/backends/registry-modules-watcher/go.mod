@@ -6,7 +6,7 @@ toolchain go1.23.2
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250204065946-25630dc9d659
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250707071005-ceea64ca880e
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
 	github.com/google/go-containerregistry v0.20.2

@@ -16,9 +16,9 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-{{ $kubernetes_api_proxy_image := printf "%s%s@%s" .registry.address .registry.path ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
+{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 

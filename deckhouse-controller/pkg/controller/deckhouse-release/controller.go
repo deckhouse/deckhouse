@@ -47,6 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -242,7 +243,14 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return res, nil
 
 	case v1alpha1.DeckhouseReleasePhaseDeployed:
-		return r.reconcileDeployedRelease(ctx, dr)
+		res, err := r.reconcileDeployedRelease(ctx, dr)
+		if err != nil {
+			r.logger.Debug("result of reconcile deployed release",
+				slog.String("release_name", dr.GetName()),
+				slog.String("release_version", dr.Spec.Version),
+				log.Err(err))
+		}
+		return res, err
 	}
 
 	// update pending release with suspend annotation
@@ -256,12 +264,19 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return res, err
 	}
 
-	return r.pendingReleaseReconcile(ctx, dr)
+	res, err = r.pendingReleaseReconcile(ctx, dr)
+	if err != nil {
+		r.logger.Debug("result of reconcile pending release",
+			slog.String("release_name", dr.GetName()),
+			slog.String("release_version", dr.Spec.Version),
+			log.Err(err))
+	}
+	return res, err
 }
 
 // patchManualRelease modify deckhouse release with approved status
 func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	if r.updateSettings.Get().Update.Mode != v1alpha1.UpdateModeManual.String() {
+	if r.updateSettings.Get().Update.Mode != v1alpha2.UpdateModeManual.String() {
 		return nil
 	}
 
@@ -544,7 +559,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		// if we have wrong mode - autopatch
-		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
+		Mode:    v1alpha2.ParseUpdateMode(us.Update.Mode),
 		Windows: us.Update.Windows,
 		Subject: releaseUpdater.SubjectDeckhouse,
 	}
@@ -770,15 +785,19 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
-		if len(depl.Spec.Template.Spec.Containers) == 0 {
-			return ErrDeploymentContainerIsNotFound
-		}
+	patch := client.MergeFrom(depl.DeepCopy())
 
-		depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	if len(depl.Spec.Template.Spec.Containers) == 0 {
+		return ErrDeploymentContainerIsNotFound
+	}
+	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-		return nil
-	})
+	err = r.client.Patch(ctx, depl, patch)
+	if err != nil {
+		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+	}
+
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {

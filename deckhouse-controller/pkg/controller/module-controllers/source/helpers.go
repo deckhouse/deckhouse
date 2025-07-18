@@ -170,7 +170,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
-	meta downloader.ModuleDownloadResult,
+	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	// check the active source
 	if module.Properties.Source != source.Name {

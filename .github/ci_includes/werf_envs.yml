@@ -1,6 +1,6 @@
 {!{ define "werf_envs" }!}
 # <template: werf_envs>
-WERF_VERSION: "v2.36.1"
+WERF_VERSION: "v2.42.0"
 WERF_ENV: "FE"
 TEST_TIMEOUT: "15m"
 # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -10,6 +10,7 @@ GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 # Need for ssh: default.
 DOCKER_BUILDKIT: "1"
 WERF_LOG_TERMINAL_WIDTH: "200"
+WERF_FINAL_IMAGES_ONLY: true
 # </template: werf_envs>
 {!{- end -}!}
 

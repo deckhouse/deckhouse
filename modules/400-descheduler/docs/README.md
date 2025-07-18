@@ -12,7 +12,7 @@ The module is based on the [descheduler](https://github.com/kubernetes-sigs/desc
 * The module can take into account the pod priority class (parameter [spec.priorityClassThreshold](cr.html#descheduler-v1alpha2-spec-priorityclassthreshold)), restricting its operation to only those pods that have a priority class lower than the specified threshold;
 * The module does not evict pods in the following cases:
   * a pod is in the `d8-*` or `kube-system` namespaces;
-  * a pod has a [priorityClassName](../priority-class/) `system-cluster-critical` or `system-node-critical`;
+  * a pod has a `priorityClassName` `system-cluster-critical` or `system-node-critical`;
   * a pod is associated with a local storage;
   * a pod is associated with a [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
   * pod eviction will violate [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);

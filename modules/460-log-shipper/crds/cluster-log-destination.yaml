@@ -432,6 +432,34 @@ spec:
                           type: string
                           enum: ["JSON", "CEF"]
                           default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["JSON"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     keyField:
                       type: string
                       description: |
@@ -596,6 +624,34 @@ spec:
                           type: string
                           enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
                           default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["Text", "JSON", "Syslog", "GELF"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     mode:
                       type: string
                       enum: ["TCP", "UDP"]

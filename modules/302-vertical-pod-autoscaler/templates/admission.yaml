@@ -1,0 +1,37 @@
+{{- if (semverCompare "< 1.33" .Values.global.discovery.kubernetesVersion) }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-vpa-in-place-mode"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["autoscaling.k8s.io"]
+        apiVersions: ["v1", "v2beta2"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["verticalpodautoscalers"]
+  validations:
+    - expression: >-
+        !has(object.spec.updatePolicy) ||
+        !has(object.spec.updatePolicy.updateMode) ||
+        object.spec.updatePolicy.updateMode != 'InPlaceOrRecreate'
+      message: "VerticalPodAutoscaler with updateMode=InPlaceOrRecreate is not allowed before kubernetes 1.33"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-vpa-initial-mode-binding"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
+spec:
+  policyName: "deny-vpa-in-place-mode"
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: "heritage"
+          operator: "NotIn"
+          values: ["deckhouse"]
+  validationActions: [Deny]
+{{- end }}

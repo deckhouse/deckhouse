@@ -1,0 +1,63 @@
+Subject: [PATCH] Fix InPlace vpa metrics
+---
+Index: vertical-pod-autoscaler/pkg/utils/metrics/updater/updater.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/utils/metrics/updater/updater.go b/vertical-pod-autoscaler/pkg/utils/metrics/updater/updater.go
+--- a/vertical-pod-autoscaler/pkg/utils/metrics/updater/updater.go	(revision 736e264efc3aa1b1a25632ab2ab3ef8404da3999)
++++ b/vertical-pod-autoscaler/pkg/utils/metrics/updater/updater.go	(date 1750367847349)
+@@ -158,19 +158,19 @@
+ 	evictedCount.WithLabelValues(strconv.Itoa(log2)).Inc()
+ }
+
+-// NewInPlaceUpdtateablePodsCounter returns a wrapper for counting Pods which are matching in-place update criteria
+-func NewInPlaceUpdtateablePodsCounter() *SizeBasedGauge {
+-	return newSizeBasedGauge(evictableCount)
++// NewInPlaceUpdatablePodsCounter returns a wrapper for counting Pods which are matching in-place update criteria
++func NewInPlaceUpdatablePodsCounter() *SizeBasedGauge {
++	return newSizeBasedGauge(inPlaceUpdatableCount)
+ }
+
+-// NewVpasWithInPlaceUpdtateablePodsCounter returns a wrapper for counting VPA objects with Pods matching in-place update criteria
+-func NewVpasWithInPlaceUpdtateablePodsCounter() *SizeBasedGauge {
+-	return newSizeBasedGauge(vpasWithEvictablePodsCount)
++// NewVpasWithInPlaceUpdatablePodsCounter returns a wrapper for counting VPA objects with Pods matching in-place update criteria
++func NewVpasWithInPlaceUpdatablePodsCounter() *SizeBasedGauge {
++	return newSizeBasedGauge(vpasWithInPlaceUpdatablePodsCount)
+ }
+
+-// NewVpasWithInPlaceUpdtatedPodsCounter returns a wrapper for counting VPA objects with evicted Pods
+-func NewVpasWithInPlaceUpdtatedPodsCounter() *SizeBasedGauge {
+-	return newSizeBasedGauge(vpasWithEvictedPodsCount)
++// NewVpasWithInPlaceUpdatedPodsCounter returns a wrapper for counting VPA objects with in-place updated Pods
++func NewVpasWithInPlaceUpdatedPodsCounter() *SizeBasedGauge {
++	return newSizeBasedGauge(vpasWithInPlaceUpdatedPodsCount)
+ }
+
+ // AddInPlaceUpdatedPod increases the counter of pods updated in place by Updater, by given VPA size
+Index: vertical-pod-autoscaler/pkg/updater/logic/updater.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/updater/logic/updater.go b/vertical-pod-autoscaler/pkg/updater/logic/updater.go
+--- a/vertical-pod-autoscaler/pkg/updater/logic/updater.go	(revision 736e264efc3aa1b1a25632ab2ab3ef8404da3999)
++++ b/vertical-pod-autoscaler/pkg/updater/logic/updater.go	(date 1750367847338)
+@@ -213,12 +213,12 @@
+ 	// wrappers for metrics which are computed every loop run
+ 	controlledPodsCounter := metrics_updater.NewControlledPodsCounter()
+ 	evictablePodsCounter := metrics_updater.NewEvictablePodsCounter()
+-	inPlaceUpdatablePodsCounter := metrics_updater.NewInPlaceUpdtateablePodsCounter()
++	inPlaceUpdatablePodsCounter := metrics_updater.NewInPlaceUpdatablePodsCounter()
+ 	vpasWithEvictablePodsCounter := metrics_updater.NewVpasWithEvictablePodsCounter()
+ 	vpasWithEvictedPodsCounter := metrics_updater.NewVpasWithEvictedPodsCounter()
+
+-	vpasWithInPlaceUpdatablePodsCounter := metrics_updater.NewVpasWithInPlaceUpdtateablePodsCounter()
+-	vpasWithInPlaceUpdatedPodsCounter := metrics_updater.NewVpasWithInPlaceUpdtatedPodsCounter()
++	vpasWithInPlaceUpdatablePodsCounter := metrics_updater.NewVpasWithInPlaceUpdatablePodsCounter()
++	vpasWithInPlaceUpdatedPodsCounter := metrics_updater.NewVpasWithInPlaceUpdatedPodsCounter()
+
+ 	// using defer to protect against 'return' after evictionRateLimiter.Wait
+ 	defer controlledPodsCounter.Observe()
