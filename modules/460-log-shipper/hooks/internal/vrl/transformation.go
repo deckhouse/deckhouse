@@ -16,7 +16,7 @@ limitations under the License.
 
 package vrl
 
-// ParseJSONMEssage If it can parse the log into a object with parsing depth
+// ParseJSONMessage If it can parse the log into a object with parsing depth
 // or leaves the log in its original state
 const ParseJSONMessage Rule = `
 if is_string(.message) {
@@ -79,4 +79,27 @@ if exists({{$label}}) {
   del({{$label}})
 }
 {{- end }}
+`
+
+// Substitution replaces sensitive data patterns in specified field
+// Works with strings, objects, and arrays recursively
+const Substitution Rule = `
+if exists({{.spec.Field}}) {
+  if is_string({{.spec.Field}}) {
+    # Direct string replacement
+{{- range $pattern := $.spec.Patterns }}
+    {{$.spec.Field}} = replace_with_regex({{$.spec.Field}}, r'{{$pattern.Pattern}}', "{{$pattern.Replacement}}")
+{{- end }}
+  } else if is_object({{.spec.Field}}) || is_array({{.spec.Field}}) {
+    # Recursive replacement for objects and arrays
+    {{$.spec.Field}} = map_values({{$.spec.Field}}, recursive: true) -> |value| {
+      if is_string(value) {
+{{- range $pattern := $.spec.Patterns }}
+        value = replace_with_regex(value, r'{{$pattern.Pattern}}', "{{$pattern.Replacement}}")
+{{- end }}
+      }
+      value
+    }
+  }
+}
 `

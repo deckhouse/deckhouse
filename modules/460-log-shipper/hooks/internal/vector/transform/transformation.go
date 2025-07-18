@@ -42,6 +42,8 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 			transformation, err = parseMessage(tm.ParseMessage)
 		case v1alpha1.DropLabels:
 			transformation, err = dropLabels(tm.DropLabels)
+		case v1alpha1.Substitution:
+			transformation, err = substitution(tm.Substitution)
 		default:
 			return nil, fmt.Errorf("transformations action: %s not valid", tm.Action)
 		}
@@ -61,7 +63,7 @@ func replaceKeys(r v1alpha1.ReplaceKeysSpec) (apis.LogTransform, error) {
 		return nil, fmt.Errorf("transformations replaceKeys: Source is empty")
 	}
 	if label, valide := validLabels(r.Labels); !valide {
-		return nil, fmt.Errorf("transformations dropLabels label: %s not valid", label)
+		return nil, fmt.Errorf("transformations replaceKeys label: %s not valid", label)
 	}
 	source, err := vrl.ReplaceKeys.Render(vrl.Args{"spec": r})
 	if err != nil {
@@ -107,6 +109,38 @@ func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	source, err := vrl.DropLabels.Render(vrl.Args{"spec": d})
 	if err != nil {
 		return nil, fmt.Errorf("transformations dropLabels render error: %v", err)
+	}
+	return NewTransformation(vrlName, source), nil
+}
+
+func substitution(s v1alpha1.SubstitutionSpec) (apis.LogTransform, error) {
+	vrlName := "tf_substitution"
+	if s.Field == "" {
+		return nil, fmt.Errorf("transformations substitution: Field is empty")
+	}
+	if len(s.Patterns) == 0 {
+		return nil, fmt.Errorf("transformations substitution: Patterns are empty")
+	}
+
+	// Validate field format
+	if !vectorLabelTemplate.MatchString(s.Field) {
+		return nil, fmt.Errorf("transformations substitution field: %s not valid", s.Field)
+	}
+
+	// Validate patterns
+	for _, pattern := range s.Patterns {
+		if pattern.Pattern == "" {
+			return nil, fmt.Errorf("transformations substitution: Pattern cannot be empty")
+		}
+		// Test regex validity
+		if _, err := regexp.Compile(pattern.Pattern); err != nil {
+			return nil, fmt.Errorf("transformations substitution: invalid regex pattern '%s': %v", pattern.Pattern, err)
+		}
+	}
+
+	source, err := vrl.Substitution.Render(vrl.Args{"spec": s})
+	if err != nil {
+		return nil, fmt.Errorf("transformations substitution render error: %v", err)
 	}
 	return NewTransformation(vrlName, source), nil
 }

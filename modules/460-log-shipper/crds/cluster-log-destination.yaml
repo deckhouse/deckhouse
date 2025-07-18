@@ -954,6 +954,22 @@ spec:
                               - .second
                         ```
 
+                      - `Substitution`: Replaces sensitive data patterns with specified replacement strings in the specified field.
+                            
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: Substitution
+                          substitution:
+                            field: .message
+                            patterns:
+                              - pattern: 'password=\w+'
+                                replacement: 'password=***'
+                              - pattern: 'token:\s*[\w\-]+'
+                                replacement: 'token: ***'
+                        ```
+
                   items:
                     type: object
                     oneOf:
@@ -981,10 +997,18 @@ spec:
                         required:
                           - dropLabels
                           - action
+                      - properties:
+                          substitution: {}
+                          action:
+                            enum:
+                              - Substitution
+                        required:
+                          - substitution
+                          - action
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "Substitution"]
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
@@ -1087,6 +1111,33 @@ spec:
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                      substitution:
+                        type: object
+                        description: "Replaces sensitive data patterns with specified replacement strings in the specified field."
+                        required:
+                          - field
+                          - patterns
+                        properties:
+                          field:
+                            type: string
+                            pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                            description: "Field in which to perform the substitution."
+                          patterns:
+                            type: array
+                            description: "List of patterns to search for and their replacements."
+                            minItems: 1
+                            items:
+                              type: object
+                              required:
+                                - pattern
+                                - replacement
+                              properties:
+                                pattern:
+                                  type: string
+                                  description: "Regular expression pattern to search for in the field."
+                                replacement:
+                                  type: string
+                                  description: "String to replace all matches of the pattern."
                 buffer:
                   type: object
                   oneOf:
