@@ -121,7 +121,9 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apk add --no-cache openssh-client
+  {{- include "alt packages clean" . | nindent 2 }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - cd /src
