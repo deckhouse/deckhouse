@@ -687,11 +687,11 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 
 Для Deployment:
 
-```shell
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  ...
+# ...
 spec:
   template:
     metadata:
@@ -705,11 +705,11 @@ spec:
 
 Для ReplicaSet:
 
-```shell
+```yaml
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  ...
+# ...
 spec:
   template:
     metadata:
@@ -723,7 +723,7 @@ spec:
 
 Для Pod:
 
-```shell
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -735,4 +735,4 @@ metadata:
 # ... остальная часть манифеста
 ```
 
-{% alert level="warning" %}Все четыре параметра должны быть указаны вместе - `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}
+{% alert level="warning" %}Все четыре параметра должны быть указаны вместе — `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory` и `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}

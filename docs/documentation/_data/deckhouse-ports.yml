@@ -158,7 +158,7 @@ groups:
       en: "`sds-replicated-volume` agent metrics"
       ru: "Метрики агента `sds-replicated-volume`"
   - ports: "4218"
-    protocol: TCP
+    protocol: TCP/UDP
     description:
       en: "Synchronization of the `speaker` components in `metallb` modules via memberlist protocol"
       ru: "Синхронизация компонентов `speaker` модулей `metallb` через протокол memberlist"
@@ -173,7 +173,7 @@ groups:
       en: "`node-local-dns` metrics"
       ru: "Метрики `node-local-dns`"
   - ports: "4225"
-    protocol: UDP
+    protocol: TCP/UDP
     description:
       en: "Synchronization of the `speaker` components in `metallb` modules via memberlist protocol"
       ru: "Синхронизация компонентов `speaker` модулей `metallb` через протокол memberlist"

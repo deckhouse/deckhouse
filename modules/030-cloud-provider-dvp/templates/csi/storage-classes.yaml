@@ -7,9 +7,9 @@ metadata:
   {{- include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | nindent 2 }}
   name: {{ $storageClass.name | quote }}
 provisioner: csi.dvp.deckhouse.io
-reclaimPolicy: Delete
-allowVolumeExpansion: true
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: {{ $storageClass.volumeBindingMode | quote }}
+reclaimPolicy: {{ $storageClass.reclaimPolicy | quote }}
+allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion }}
 parameters:
   dvpStorageClass: {{ $storageClass.dvpStorageClass | quote }}
 {{- end }}

@@ -1,6 +1,5 @@
 name: network-policy-engine
 stage: "General Availability"
-weight: 50
 subsystems:
   - networking
 namespace: d8-system
