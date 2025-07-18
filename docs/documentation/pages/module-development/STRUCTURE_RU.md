@@ -348,32 +348,66 @@ properties:
 
 #### CEL-валидации (x-deckhouse-validations)
 
-В Deckhouse вы можете использовать расширение OpenAPI `x-deckhouse-validations` для описания сложных правил валидации параметров модуля на языке CEL (Common Expression Language).
+При разработке модуля для Deckhouse Kubernetes Platform вы можете использовать расширение OpenAPI `x-deckhouse-validations` для описания сложных правил валидации параметров модуля на языке CEL (Common Expression Language).
 
-**Пример:**
-```yaml
-type: object
-properties:
-  replicas:
-    type: integer
-  minReplicas:
-    type: integer
-  maxReplicas:
-    type: integer
-x-deckhouse-validations:
-  - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
-    message: "replicas должно быть между minReplicas и maxReplicas"
-```
+При использовании CEL-валидаций учитывайте следующие особенности:
 
 - Валидации можно размещать как на корневом уровне, так и внутри любого свойства (в том числе внутри объектов, массивов и additionalProperties).
 - В выражениях доступны все параметры текущего уровня через переменную `self`.
+- Валидация работает рекурсивно: все вложенные объекты, массивы и карты также могут содержать свои `x-deckhouse-validations`.
+- Поддерживаются скалярные типы, массивы, объекты и карты (`additionalProperties`).
+- В случае множественных ошибок валидации пользователю будут показаны все сообщения из соответствующих правил.
 
-##### Валидация скалярных и массивных значений
+##### Примеры правил
+
+Ниже представлены примеры описаний сложных правил валидации на языке CEL:
+
+- Проверка попадания значения параметра в диапазон:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas должно быть между minReplicas и maxReplicas"
+  ```
+
+- Проверка наличия ключа:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "Должен быть ключ Available"
+  ```
+
+- Проверка, что хотя бы один из двух списков не пуст:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Ровно один из списков должен быть непустым"
+  ```
+
+- Проверка значения по регулярному выражению:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "Все значения должны содержать только буквы"
+  ```
+
+##### Валидация скалярных значений и массивов
+
+Валидации скалярных значений и массивов имеют следующие особенности:
 
 - Если свойство — скаляр (например, число или строка), то в CEL-выражении `self` будет этим значением.
 - Если свойство — массив, то `self` будет массивом, и можно использовать методы `.size()`, `.all()`, `.exists()` и т.д.
 
-**Пример для массива:**
+Пример для массива:
+
 ```yaml
 type: object
 properties:
@@ -388,9 +422,10 @@ properties:
 
 ##### Валидация additionalProperties (map)
 
-- Для объектов с additionalProperties (map) можно валидировать ключи и значения через методы `.all(key, ...)`, `.exists(key, ...)` и т.д.
+Для объектов с additionalProperties (map) можно валидировать ключи и значения через методы `.all(key, ...)`, `.exists(key, ...)` и т.д.
 
-**Пример:**
+Пример:
+
 ```yaml
 type: object
 properties:
@@ -402,31 +437,6 @@ properties:
       - expression: "self.all(key, self[key] > 0)"
         message: "Все значения в mymap должны быть больше 0"
 ```
-
-##### Примеры сложных правил
-
-- Проверка наличия ключа:
-  ```yaml
-  - expression: "'Available' in self.stateCounts"
-    message: "Должен быть ключ Available"
-  ```
-- Проверка, что хотя бы один из двух списков не пуст:
-  ```yaml
-  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
-    message: "Ровно один из списков должен быть непустым"
-  ```
-- Проверка значения по регулярному выражению:
-  ```yaml
-  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
-    message: "Все значения должны содержать только буквы"
-  ```
-
-##### Особенности
-
-- Валидация работает рекурсивно: все вложенные объекты, массивы и карты также могут содержать свои `x-deckhouse-validations`.
-- Поддерживаются скалярные типы, массивы, объекты и карты (`additionalProperties`).
-- В случае множественных ошибок валидации пользователю будут показаны все сообщения из соответствующих правил.
-
 
 ### values.yaml
 

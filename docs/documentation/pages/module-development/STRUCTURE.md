@@ -348,32 +348,64 @@ properties:
 
 #### x-deckhouse-validations (CEL validations)
 
-In Deckhouse, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
+When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
 
-**Example:**
-```yaml
-type: object
-properties:
-  replicas:
-    type: integer
-  minReplicas:
-    type: integer
-  maxReplicas:
-    type: integer
-x-deckhouse-validations:
-  - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
-    message: "replicas must be between minReplicas and maxReplicas"
-```
+When using CEL validations, keep the following features in mind:
 
 - Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
 - All parameters at the current level are available in expressions via the `self` variable.
+- Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
+- Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
+- If there are multiple validation errors, the user will see all messages from the corresponding rules.
+
+##### Examples of complex rules
+
+- Checking whether the parameter value falls within the range:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas must be between minReplicas and maxReplicas"
+  ```
+
+- Checking for the presence of a key:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "The key 'Available' must be present"
+  ```
+
+- Checking that exactly one of two lists is non-empty:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Exactly one of the lists must be non-empty"
+  ```
+
+- Checking a value by regular expression:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "All values must contain only letters"
+  ```
 
 ##### Scalar and array value validation
+
+Validation of scalar values and arrays has the following features:
 
 - If the property is a scalar (e.g., number or string), then in the CEL expression `self` will be that value.
 - If the property is an array, then `self` will be an array, and you can use methods like `.size()`, `.all()`, `.exists()`, etc.
 
-**Example for an array:**
+Example for an array:
+
 ```yaml
 type: object
 properties:
@@ -388,9 +420,10 @@ properties:
 
 ##### Validation of additionalProperties (map)
 
-- For objects with additionalProperties (map), you can validate keys and values using methods like `.all(key, ...)`, `.exists(key, ...)`, etc.
+For objects with additionalProperties (map), you can validate keys and values using methods like `.all(key, ...)`, `.exists(key, ...)`, etc.
 
-**Example:**
+Example:
+
 ```yaml
 type: object
 properties:
@@ -402,30 +435,6 @@ properties:
       - expression: "self.all(key, self[key] > 0)"
         message: "All values in mymap must be greater than 0"
 ```
-
-##### Examples of complex rules
-
-- Checking for the presence of a key:
-  ```yaml
-  - expression: "'Available' in self.stateCounts"
-    message: "The key 'Available' must be present"
-  ```
-- Checking that exactly one of two lists is non-empty:
-  ```yaml
-  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
-    message: "Exactly one of the lists must be non-empty"
-  ```
-- Checking a value by regular expression:
-  ```yaml
-  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
-    message: "All values must contain only letters"
-  ```
-
-##### Features
-
-- Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
-- Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
-- If there are multiple validation errors, the user will see all messages from the corresponding rules.
 
 ### values.yaml
 
