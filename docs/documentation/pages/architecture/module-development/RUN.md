@@ -33,13 +33,13 @@ After the ModuleSource resource is created, DKP will start to perform periodic (
 Use the following command to check the synchronization status:
 
 ```shell
-kubectl get ms
+d8 k get ms
 ```
 
 If the synchronization is successful, you will see output similar to the one below:
 
 ```shell
-$ kubectl get ms
+$ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Ready
 ```
@@ -47,7 +47,7 @@ example     2       16s    Ready
 If there are synchronization errors, the `MSG` column will contain a general description of the error, e.g.:
 
 ```console
-$ kubectl get ms
+$ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
@@ -57,7 +57,7 @@ Detailed error information can be found in the `pullError` field in the status o
 For example, here's how you can get detailed error description from the `example` module source:
 
 ```console
-$ kubectl get ms example -o jsonpath='{range .status.modules[*]}{.name}{" module error:\n\t"}{.pullError}{"\n"}{end}'
+$ d8 k get ms example -o jsonpath='{range .status.modules[*]}{.name}{" module error:\n\t"}{.pullError}{"\n"}{end}'
 module-1 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-1/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 module-2 module error:
@@ -69,26 +69,26 @@ If synchronization is successful, the `.status.modules` field of the ModuleSourc
 Here is an example of how you can get a list of modules available from the `example` module source:
 
 ```console
-$ kubectl get ms example -o jsonpath='{.status.modules[*].name}'
+$ d8 k get ms example -o jsonpath='{.status.modules[*].name}'
 module-1 module-2
 ```
 
 The complete list of modules available from all module sources created in the cluster can be retrieved using the following command:
 
 ```shell
-kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
+d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
 After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](../../cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
-kubectl get module
+d8 k get module
 ```
 
 Example of getting a list of modules:
 
 ```console
-$ kubectl get module
+$ d8 k get module
 NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
@@ -97,7 +97,7 @@ module-two                   Available   False     False
 To get additional information about the module, use the following command:
 
 ```shell
-kubectl get module module-one -oyaml
+d8 k get module module-one -oyaml
 ```
 
 Example of output:
@@ -161,7 +161,7 @@ If there are mandatory parameters in the module configuration and the module is 
 To get more details, use the following command:
 
 ```shell
-kubectl get mr -l module=<MODULE_NAME>
+d8 k get mr -l module=<MODULE_NAME>
 ```
 
 Make sure to specify the required configuration parameters in `ModuleConfig` according to the module’s documentation.
@@ -170,7 +170,7 @@ Make sure to specify the required configuration parameters in `ModuleConfig` acc
 After turning on the module, it should enter the download phase:
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
@@ -182,7 +182,7 @@ If the module has not entered the download phase, check the module source (Modul
 After a successful download, the module will enter the installation phase (`Installing`):
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
 module-one  900      example  Installing    False     False
 ```
@@ -190,7 +190,7 @@ module-one  900      example  Installing    False     False
 If the module was successfully installed, it will enter the `Ready` phase:
 
 ```shell
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  900      example  Ready  True     True
 ```
@@ -243,7 +243,7 @@ In the Module, you can see the current installed version of the module, its size
 In case of any errors, the module will enter the `Error` phase:
 
 ```console
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  910      example  Error  True     Error
 ```
@@ -251,7 +251,7 @@ module-one  910      example  Error  True     Error
 If the enabled module has several available sources, and a source for the module is not explicitly selected in its ModuleConfig, the module will enter the `Conflict` phase:
 
 ```console
-$ kubectl get module module-one
+$ d8 k get module module-one
 NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
@@ -263,13 +263,13 @@ After downloading the module, the module releases will appear in the cluster —
 You can view the list of releases using the following command:
 
 ```shell
-kubectl get mr
+d8 k get mr
 ```
 
 An example of retrieving the list of module releases:
 
 ```console
-$ kubectl get mr
+$ d8 k get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
 module-one-v0.7.23         Superseded   deckhouse       33h              
 module-one-v0.7.24         Deployed     deckhouse       33h              
@@ -286,7 +286,7 @@ If the module release is in the `Superseded` status, it means that the module re
 If a module release is `Pending`, it means that manual confirmation is required to install it (see [module update policy](#module-update-policy) below). You can confirm the module release using the following command (specify the moduleRelease name):
 
 ```shell
-kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
+d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
 {% endalert %}
@@ -301,7 +301,7 @@ Follow these steps to deploy a module from a different module source:
 1. Ensure that new module releases (ModuleRelease objects) are created from the new module source in accordance with the update policy:
 
    ```shell
-   kubectl get mr
+   d8 k get mr
    ```
 
 ## Module update policy
@@ -339,7 +339,7 @@ The update policy is specified in the `updatePolicy` field in ModuleConfig.
 Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DKP modules:
 
 ```shell
-kubectl get modules
+d8 k get modules
 ```
 
 The module must be in the list.
@@ -347,7 +347,7 @@ The module must be in the list.
 Below is an example of the output:
 
 ```console
-$ kubectl get module
+$ d8 k get module
 NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 ...
 module-one                   Available   False     False                      
@@ -363,7 +363,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 - Run the command below (specify the name of the module):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
@@ -388,13 +388,13 @@ If there were errors while enabling a module in the cluster, you can learn about
 - View Deckhouse log:
 
   ```shell
-  kubectl -n d8-system logs -l app=deckhouse
+  d8 k -n d8-system logs -l app=deckhouse
   ```
 
 - View the Module object in more detail:
 
   ```console
-  kubectl get module module-one -oyaml
+  d8 k get module module-one -oyaml
   ```
   
 - View the ModuleConfig object of the module.
@@ -402,7 +402,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   Here is an example of the error message for `module-one`:
 
   ```console
-  $ kubectl get moduleconfig module-1
+  $ d8 k get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
@@ -412,7 +412,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   Example output if the module source has problems with downloading the module:
 
   ```console
-  $ kubectl get ms
+  $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
@@ -420,13 +420,13 @@ If there were errors while enabling a module in the cluster, you can learn about
 Similar to [DeckhouseRelease](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](../../cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
-kubectl get mr
+d8 k get mr
 ```
 
 Output example:
 
 ```console
-$ kubectl get mr
+$ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
@@ -434,7 +434,7 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 The example output above illustrates ModuleRelease message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
 
 ```shell
-kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
 ## Integrating Deckhouse Module Tools for Module Validation

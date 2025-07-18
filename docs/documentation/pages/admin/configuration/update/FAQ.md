@@ -16,7 +16,7 @@ The update will be applied immediately after the annotation is set.
 Example command to set the annotation and skip update windows for version `v1.56.2`:
 
 ```shell
-sudo -i d8 k annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+d8 k annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
 ```
 
 Example of a resource with the annotation set:
@@ -45,7 +45,7 @@ If the `DeckhouseUpdating` alert is gone, the update has finished.
 You can also check the status of DKP releases in the cluster with the following command:
 
 ```shell
-sudo -i d8 k get deckhouserelease
+d8 k get deckhouserelease
 ```
 
 Example output:
@@ -64,7 +64,7 @@ but it doesn’t guarantee that the update has been successful.
 To ensure the update completed successfully, check the state of the `deckhouse` Pod with the following command:
 
 ```shell
-sudo -i d8 k -n d8-system get pods -l app=deckhouse
+d8 k -n d8-system get pods -l app=deckhouse
 ```
 
 Example output:
@@ -84,7 +84,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 - Check the logs using the following command:
 
   ```shell
-  sudo -i d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+  d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
 - Collect debug information and contact DKP technical support.
@@ -96,7 +96,7 @@ As soon as a new version appears on the configured release channel:
 
 - The `DeckhouseReleaseIsWaitingManualApproval` alert will appear if the cluster is in [manual update mode](configuration.html#manual-update-approval).
 - A new [DeckhouseRelease](../../../reference/cr/deckhouserelease) custom resource will be created.
-  To see the list of releases, run `sudo -i d8 k get deckhousereleases`.
+  To see the list of releases, run `d8 k get deckhousereleases`.
   If the new version is in `Pending` state, it means it hasn’t been installed yet. Possible reasons:
   - [Manual update mode](configuration.html#manual-update-approval) is enabled.
   - Automatic update mode is enabled and [update windows](configuration.html#update-windows) are scheduled, but the window hasn’t started yet.
@@ -145,7 +145,7 @@ For information about the current DKP versions across all release channels, visi
   Example of obtaining an IP of `registry.deckhouse.io` from the `deckhouse` Pod:
 
   ```shell
-  sudo -i d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
+  d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   ```
 
   Example output:

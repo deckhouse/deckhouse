@@ -53,7 +53,7 @@ lang: ru
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
-kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ### Создание собственного шаблона для проекта
@@ -66,7 +66,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 2. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
 
    ```shell
-   kubectl get projecttemplates default -o yaml > my-project-template.yaml
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
 3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
@@ -78,13 +78,13 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 5. Примените полученный шаблон командой:
 
    ```shell
-   kubectl apply -f my-project-template.yaml
+   d8 k apply -f my-project-template.yaml
    ```
 
 6. Проверьте доступность нового шаблона с помощью команды:
 
    ```shell
-   kubectl get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
+   d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
    ```
 
 ## Создание проекта

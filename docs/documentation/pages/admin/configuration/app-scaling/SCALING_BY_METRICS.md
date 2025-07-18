@@ -143,25 +143,25 @@ When dealing with unstable metrics (e.g., metrics that fluctuate and cause exces
 To get a list of available metrics, use the following command:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
 
 To retrieve metric values associated with specific objects, use:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
 ```
 
 To get values of metrics created via `NamespaceMetric`, use:
 
 ```console
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
 
 To retrieve external metrics, use:
 
 ```console
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
 ```
 
 ### Configuring autoscaling in the Deckhouse Web Interface

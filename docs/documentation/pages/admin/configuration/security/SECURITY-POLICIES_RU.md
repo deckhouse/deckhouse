@@ -40,7 +40,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
   Пример команды для назначения политики `restricted` на все поды в пространстве имён `my-namespace`:
 
   ```shell
-  kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
+  d8 k label ns my-namespace security.deckhouse.io/pod-policy=restricted
   ```
 
 ### Режимы применения политики
@@ -64,7 +64,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
   Пример команды для установки режима `warn` на все поды в пространстве имён `my-namespace`:
 
   ```shell
-  kubectl label ns my-namespace security.deckhouse.io/pod-policy-action=warn
+  d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
   ```
 
 ### Расширение политики
@@ -198,7 +198,7 @@ spec:
 примените лейбл `operation-policy.deckhouse.io/enabled=true` к необходимому пространству имён:
 
 ```shell
-kubectl label ns my-namespace operation-policy.deckhouse.io/enabled=true
+d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
 ## Политики безопасности

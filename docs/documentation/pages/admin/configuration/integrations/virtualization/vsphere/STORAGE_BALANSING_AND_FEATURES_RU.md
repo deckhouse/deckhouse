@@ -39,12 +39,12 @@ spec:
 
 Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
 
-1. Выполните `kubectl cordon <имя_узла>`.
+1. Выполните `d8 k cordon <имя_узла>`.
 1. Удалите под, использующий PVC.
 1. Дождитесь завершения операции Resize:
    - убедитесь, что у PVC нет condition `Resizing`;
    - `FileSystemResizePending` можно игнорировать.
-1. Выполните `kubectl uncordon <имя_узла>`.
+1. Выполните `d8 k uncordon <имя_узла>`.
 
 ## Балансировка нагрузки
 

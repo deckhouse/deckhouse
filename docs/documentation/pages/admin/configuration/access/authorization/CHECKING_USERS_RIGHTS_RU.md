@@ -11,11 +11,11 @@ lang: ru
 * `groups` — группы пользователя.
 
 {% alert level="info" %}
-При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `d8 k -n d8-user-authn logs -l app=dex` (видны только при авторизации).
 {% endalert %}
 
 ```shell
-cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+cat  <<EOF | 2>&1 d8 k create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",
@@ -57,7 +57,7 @@ EOF
 Если в кластере включён режим **multitenancy**, выполните ещё одну проверку, чтобы убедиться, что у пользователя есть доступ в пространство имён:
 
 ```shell
-cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",

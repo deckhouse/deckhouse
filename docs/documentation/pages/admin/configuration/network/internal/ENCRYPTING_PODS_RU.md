@@ -28,7 +28,7 @@ lang: ru
 Включите модуль istio:
 
 ```yaml
-kubectl create -f -<<EOF
+d8 k create -f -<<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -42,9 +42,9 @@ EOF
 Создайте пространство имен, добавьте лейблы:
 
 ```bash
-kubectl create namespace test-istio-mtls
-kubectl label namespace test-istio-mtls istio-injection=enabled
-kubectl label namespace test-istio-mtls security.deckhouse.io/pod-policy=privileged
+d8 k create namespace test-istio-mtls
+d8 k label namespace test-istio-mtls istio-injection=enabled
+d8 k label namespace test-istio-mtls security.deckhouse.io/pod-policy=privileged
 ```
 
 Добавьте политику, определяющую режим работы  mTLS.
@@ -54,7 +54,7 @@ kubectl label namespace test-istio-mtls security.deckhouse.io/pod-policy=privile
 - `STRICT` — режим разрешает только зашифрованный трафик.
 
 ```yaml
-kubectl -n test-istio-mtls create -f -<<EOF
+d8 k -n test-istio-mtls create -f -<<EOF
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
@@ -70,25 +70,25 @@ EOF
 > При использовании образов из публичных registry:
 
 ```bash
-kubectl -n test-istio-mtls create deployment webserver --image=docker.io/library/nginx:1.26-alpine --port 80
+d8 k -n test-istio-mtls create deployment webserver --image=docker.io/library/nginx:1.26-alpine --port 80
 ```
 
 > При использовании образа all-in-one-image (замените адрес образа на Ваш):
 
 ```bash
-kubectl -n test-istio-mtls create deployment webserver --image=registry.company.network/localrepo/all-in-one-image:0.1 --port 80 -- /bin/sh -c 'nginx -g "daemon off;"'
+d8 k -n test-istio-mtls create deployment webserver --image=registry.company.network/localrepo/all-in-one-image:0.1 --port 80 -- /bin/sh -c 'nginx -g "daemon off;"'
 ```
 
 Опубликуйте deployment:
 
 ```bash
-kubectl -n test-istio-mtls expose deployment webserver --port=80
+d8 k -n test-istio-mtls expose deployment webserver --port=80
 ```
 
 Получите адрес пода и узла, на котором он запущен, для запуска на данном узле tcpdump для анализа трафика:
 
 ```bash
-~ $ kubectl -n test-istio-mtls get pods -l app=webserver -o wide
+~ $ d8 k -n test-istio-mtls get pods -l app=webserver -o wide
 NAME                    READY   STATUS    RESTARTS   AGE   IP             NODE                                        NOMINATED NODE   READINESS GATES
 webserver-76d6c9b8c-9mdtb   2/2     Running   0          48m   10.111.1.122   test-worker-e36e4712-5948b-sp9t8   <none>           <none>
 ```
@@ -104,16 +104,16 @@ tcpdump -A -v -i any host 10.111.1.122 and port 80
 > При использовании образов из публичных registry:
 
 ```bash
-kubectl -n test-istio-mtls create deployment client --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
+d8 k -n test-istio-mtls create deployment client --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
 ```
 
 > При использовании образа all-in-one-image (замените адрес образа на Ваш):
 
 ```bash
-kubectl -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
+d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
 ```
 
-После создания пода сделайте запрос к сервису `webserver` с помощью `kubectl -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`.
+После создания пода сделайте запрос к сервису `webserver` с помощью `d8 k -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`.
 
 В `tcpdump` будет виден только зашифрованный трафик.
 
@@ -132,7 +132,7 @@ o[..P..'...;.i8...........
 Создайте пространство без лейбла `istio-injection=enabled` и выполните запрос к сервису `webserver.test-istio-mtls` (т.е. выполняется запрос из пода, который не является участником mesh-сети).
 
 ```bash
-kubectl create namespace test-istio-mtls-without-injection
+d8 k create namespace test-istio-mtls-without-injection
 ```
 
 Добавьте deployment:
@@ -140,16 +140,16 @@ kubectl create namespace test-istio-mtls-without-injection
 > При использовании образов из публичных registry:
 
 ```bash
-kubectl -n test-istio-mtls-without-injection create deployment alpine --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
+d8 k -n test-istio-mtls-without-injection create deployment alpine --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
 ```
 
 > При использовании образа all-in-one-image (замените адрес образа на Ваш):
 
 ```bash
-kubectl -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
+d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
 ```
 
-После создания пода сделайте запрос к сервису `webserver.test-istio-mtls` с помощью `kubectl -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
+После создания пода сделайте запрос к сервису `webserver.test-istio-mtls` с помощью `d8 k -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
 
 В `tcpdump` будет `plaint text` запросы и ответы вида:
 

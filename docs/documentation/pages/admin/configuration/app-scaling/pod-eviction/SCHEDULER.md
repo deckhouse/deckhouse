@@ -133,7 +133,7 @@ Main placement configuration options:
    Suppose you have a node named `kube-system-1` that is intended for monitoring services. Label the node:
 
    ```console
-   kubectl label node kube-system-1 node-role/monitoring=""
+   d8 k label node kube-system-1 node-role/monitoring=""
    ```
 
    Now, to deploy pods only on this node, add a `nodeSelector` to the Deployment:
@@ -148,7 +148,7 @@ Main placement configuration options:
    Suppose you have a node named `kube-frontend-1` that is dedicated exclusively to Ingress controllers. Apply a taint to the node:
 
    ```console
-   kubectl taint node kube-frontend-1 node-role/frontend="":NoExecute
+   d8 k taint node kube-frontend-1 node-role/frontend="":NoExecute
    ```
 
    Now, only pods with the appropriate toleration will be allowed to run on this node:

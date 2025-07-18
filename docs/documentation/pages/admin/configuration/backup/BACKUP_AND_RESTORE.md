@@ -34,7 +34,7 @@ To properly restore the cluster, follow these steps on the master node:
 1. Check the etcd version in the cluster (if the Kubernetes API is accessible):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
    ```
 
    If the command executes successfully, it will display the current etcd version.
@@ -126,7 +126,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
    ```shell
-   kubectl delete node <MASTER_NODE_NAME>
+   d8 k delete node <MASTER_NODE_NAME>
    ```
 
 1. Reboot all cluster nodes. Ensure that after the reboot all nodes are available and functioning correctly.
@@ -134,7 +134,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
 1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
@@ -168,10 +168,10 @@ BACKUP_OUTPUT_DIR="/tmp/etc_restore" # Directory to store exported objects (crea
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot file.
 FILTER="verticalpodautoscalers" # Filter for selecting object records.
 
-IMG=$(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
 
-kubectl delete po etcd-restore --force || true
-cat <<EOF | kubectl apply -f -
+d8 k delete po etcd-restore --force || true
+cat <<EOF | d8 k apply -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -201,16 +201,16 @@ spec:
   restartPolicy: Never
 EOF
 
-kubectl wait --for=condition=Ready pod etcd-restore
-kubectl cp  $ETCD_SNAPSHOT_PATH etcd-restore:/etcd-backup -c ubuntu
-kubectl exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
-kubectl exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+d8 k wait --for=condition=Ready pod etcd-restore
+d8 k cp  $ETCD_SNAPSHOT_PATH etcd-restore:/etcd-backup -c ubuntu
+d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
+d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
 
 mkdir -p $BACKUP_OUTPUT_DIR
-files=($(kubectl exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
+files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
 for file in "${files[@]}"
 do
-  OBJECT=$(kubectl exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
+  OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
   VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
   DIR=$(dirname "$file")
   FILE=$(basename "$file")
@@ -218,7 +218,7 @@ do
   echo "$VALUE" > "$BACKUP_OUTPUT_DIR/$DIR/$FILE.json"
   echo $BACKUP_OUTPUT_DIR/$DIR/$FILE.json
 done
-kubectl delete po etcd-restore --force
+d8 k delete po etcd-restore --force
 ```
 
 {% endofftopic %}
@@ -235,9 +235,9 @@ The steps below describe how to manually launch a temporary etcd instance, resto
      Substitute the actual etcd image version (matching your original cluster) into the template and create the Pod using the following commands:
 
      ```shell
-     IMG=$(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+     IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
      sed -i -e "s#ETCD_IMAGE#$IMG#" etcd.pod.yaml
-     kubectl create -f etcd.pod.yaml
+     d8 k create -f etcd.pod.yaml
      ```
 
      Example template:
@@ -272,10 +272,10 @@ The steps below describe how to manually launch a temporary etcd instance, resto
        restartPolicy: Never
       ```
 
-1. Copy the etcd snapshot to the temporary pod container. Use the `kubectl cp` command to upload the snapshot file (e.g., `etcd-snapshot.bin`) to the `ubuntu` container:
+1. Copy the etcd snapshot to the temporary pod container. Use the `d8 k cp` command to upload the snapshot file (e.g., `etcd-snapshot.bin`) to the `ubuntu` container:
 
    ```shell
-   kubectl cp etcd-snapshot.bin etcd-restore:/etcd-backup -c ubuntu
+   d8 k cp etcd-snapshot.bin etcd-restore:/etcd-backup -c ubuntu
    ```
 
    The backup file will now be accessible to the etcd container.
@@ -283,7 +283,7 @@ The steps below describe how to manually launch a temporary etcd instance, resto
 1. Restore data from the snapshot into a new directory. Run the following command inside the etcd container, specifying the snapshot path and a new data directory:
 
    ```shell
-   kubectl exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
+   d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
    ```
 
    After the command completes, the snapshot will be unpacked into the `./default.etcd_new` directory.
@@ -291,7 +291,7 @@ The steps below describe how to manually launch a temporary etcd instance, resto
 1. Start a second etcd instance on a non-default port using the restored data. To avoid conflicts with the running etcd instance in the cluster, use a different data directory and ports:
 
    ```shell
-   kubectl exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+   d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
    ```
 
    > **Warning.** In this example, the etcd process is started in the background directly from the command line. Use this method only for data recovery purposes.
@@ -305,10 +305,10 @@ The steps below describe how to manually launch a temporary etcd instance, resto
       FILTER="verticalpodautoscalers"
       BACKUP_OUTPUT_DIR="/tmp/etc_restore"
       mkdir -p $BACKUP_OUTPUT_DIR
-      files=($(kubectl exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
+      files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
       for file in "${files[@]}"
       do
-        OBJECT=$(kubectl exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
+        OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
         VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
         DIR=$(dirname "$file")
         FILE=$(basename "$file")
@@ -323,7 +323,7 @@ The steps below describe how to manually launch a temporary etcd instance, resto
 1. Delete the temporary etcd pod:
 
    ```shell
-   kubectl delete po etcd-restore --force
+   d8 k delete po etcd-restore --force
    ```
 
    Pod will be stopped, but the exported resources will remain available for further restoration in the main cluster.
@@ -343,7 +343,7 @@ To restore objects from exported JSON files, follow these steps:
 1. Create the objects in the cluster. To restore individual resources, run:
 
    ```shell
-   kubectl create -f <PATH_TO_FILE>.json
+   d8 k create -f <PATH_TO_FILE>.json
    ```
 
    You can specify either a single file or a directory path.
@@ -354,7 +354,7 @@ To restore objects from exported JSON files, follow these steps:
    find $BACKUP_OUTPUT_DIR -type f -name "*.json" -exec kubectl create -f {} \;
    ```
 
-   This will locate all `.json` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `kubectl create`.
+   This will locate all `.json` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `d8 k create`.
 
 After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the JSON files.
 

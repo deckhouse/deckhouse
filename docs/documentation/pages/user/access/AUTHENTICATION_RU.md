@@ -171,5 +171,5 @@ DKP позволяет настраивать аутентификацию ка�
    Используйте `clientID`, `clientSecret`, `redirectURIs`, а также адрес Dex как провайдера. Адрес Dex (`https://dex.<publicDomainTemplate>`) можно получить с помощью команды:
 
    ```console
-   kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+   d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    ```

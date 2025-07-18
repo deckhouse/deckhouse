@@ -127,7 +127,7 @@ Deckhouse Kubernetes Platform предоставляет гибкие механ
    Допустим, у нас есть узел `kube-system-1`, предназначенный для сервисов мониторинга. Добавим на него метку:
 
    ```console
-   kubectl label node kube-system-1 node-role/monitoring=""
+   d8 k label node kube-system-1 node-role/monitoring=""
    ```
 
    Теперь, чтобы развернуть поды **только** на этом узле, в Deployment добавляется nodeSelector:
@@ -142,7 +142,7 @@ Deckhouse Kubernetes Platform предоставляет гибкие механ
    Например, есть узел `kube-frontend-1`, который предназначен только для Ingress-контроллеров. Добавим на него taint:
 
    ```console
-   kubectl taint node kube-frontend-1 node-role/frontend="":NoExecute
+   d8 k taint node kube-frontend-1 node-role/frontend="":NoExecute
    ```
 
    Теперь на этом узле не будет запускаться ничего, кроме подов, у которых есть соответствующий toleration:

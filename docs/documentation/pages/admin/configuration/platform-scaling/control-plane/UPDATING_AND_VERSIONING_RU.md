@@ -18,7 +18,7 @@ lang: ru
 1. Откройте редактирование [ClusterConfiguration](/installing/configuration.html#clusterconfiguration):
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
      deckhouse-controller edit cluster-configuration
    ```
 
