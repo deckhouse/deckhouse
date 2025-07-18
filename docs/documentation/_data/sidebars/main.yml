@@ -38,6 +38,10 @@ entries:
                 ru: Custom Resources
               url: /cr.html
             - title:
+               en: Switching editions
+               ru: Переключение редакций
+              url: /admin/editions.html   
+            - title:
                 en: Access
                 ru: Доступ
               folders:
@@ -826,11 +830,7 @@ entries:
                 - title:
                     en: Short-term storage
                     ru: Кратковременное хранение
-                  url: /admin/configuration/logging/storage.html
-            - title:
-               en: Switching editions
-               ru: Переключение редакций
-              url: /admin/editions.html       
+                  url: /admin/configuration/logging/storage.html      
             - title:
                 en: Multitenancy
                 ru: Мультенантность
