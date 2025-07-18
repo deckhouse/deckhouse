@@ -481,52 +481,56 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### How to generate a correct self-signed certificate?
+### How to generate a self-signed certificate?
 
 When generating certificates manually, it is important to fill out all fields of the certificate request correctly to ensure that the final certificate is issued properly and can be validated across various services.  
 
 It is important to follow these guidelines:
 
-1. Specify domain names in the `SAN` (Subject Alternative Name) field  
+1. Specify domain names in the `SAN` (Subject Alternative Name) field.
 
-   The `SAN` field is a more modern and commonly used method for specifying the domain names covered by the certificate.  
+   The `SAN` field is a more modern and commonly used method for specifying the domain names covered by the certificate.
    Some services no longer consider the `CN` (Common Name) field as the source for domain names.
 
 2. Correctly fill out the `keyUsage`, `basicConstraints`, `extendedKeyUsage` fields, specifically:
    - `basicConstraints = CA:FALSE`  
 
      This field determines whether the certificate is an end-entity certificate or a certification authority (CA) certificate. CA certificates cannot be used as service certificates.
+
    - `keyUsage = digitalSignature, keyEncipherment`  
 
-     The `keyUsage` field limits the permissible uses of this key.  
-     `digitalSignature` allows the key to be used for signing digital messages and ensuring data integrity.  
-     `keyEncipherment` allows the key to be used for encrypting other keys, which is necessary for secure data exchange using `TLS` (Transport Layer Security).
+     The `keyUsage` field limits the permissible usage scenarios of this key:
+
+     - `digitalSignature`: Allows the key to be used for signing digital messages and ensuring data integrity.
+     - `keyEncipherment`: Allows the key to be used for encrypting other keys, which is necessary for secure data exchange using TLS (Transport Layer Security).
+
    - `extendedKeyUsage = serverAuth`  
 
-     The `extendedKeyUsage` field specifies additional key usage scenarios required by specific protocols or applications.  
-     `serverAuth` indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
+     The `extendedKeyUsage` field specifies additional key usage scenarios required by specific protocols or applications:
+
+     - `serverAuth`: Indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
 
 It is also recommended to:
 
-1. Issue the certificate for no more than 1 year (365 days)  
+1. Issue the certificate for no more than 1 year (365 days).
 
    The validity period of the certificate affects its security. A one-year validity ensures the cryptographic methods remain current and allows for timely certificate updates in case of threats. Furthermore, some modern browsers now reject certificates with a validity period longer than 1 year.
 
-2. Use robust cryptographic algorithms, such as elliptic curve algorithms (including `prime256v1`)  
+2. Use robust cryptographic algorithms, such as elliptic curve algorithms (including `prime256v1`).
 
    Elliptic curve algorithms (ECC) provide a high level of security with a smaller key size compared to traditional methods like RSA. This makes the certificates more efficient in terms of performance and secure in the long term.
 
-3. Do not specify domains in the `CN` (`Common Name`) field  
+3. Do not specify domains in the `CN` (Common Name) field.
   
-   Historically, the `CN` field was used to specify the primary domain name for which the certificate was issued. However, modern standards, such as `RFC 2818`, recommend using the `Subject Alternative Name (SAN)` field for this purpose.
-   If the certificate is intended for multiple domain names listed in the `SAN` field, specifying one of the domains additionally in `CN` can cause a validation error in some services when accessing domains not listed in `CN`.  
-   If non-domain-related information is specified in `CN` (e.g., an identifier or service name), the certificate will also extend to these names, which could be exploited for malicious purposes.
+   Historically, the `CN` field was used to specify the primary domain name for which the certificate was issued. However, modern standards, such as [RFC 2818](https://datatracker.ietf.org/doc/html/rfc2818), recommend using the `SAN` (Subject Alternative Name) field for this purpose.
+   If the certificate is intended for multiple domain names listed in the `SAN` field, specifying one of the domains additionally in `CN` can cause a validation error in some services when accessing domains not listed in `CN`.
+   If non-domain-related information is specified in `CN` (for example, an identifier or service name), the certificate will also extend to these names, which could be exploited for malicious purposes.
 
 #### Certificate generation example
 
 To generate a certificate, we'll use the `openssl` utility.
 
-1. Fill in the `cert.cnf` configuration file
+1. Fill in the `cert.cnf` configuration file:
 
    ```ini
    [ req ]
@@ -542,17 +546,17 @@ To generate a certificate, we'll use the `openssl` utility.
    L = London
    O = Example Company
    OU = IT Department
-   # CN = Do not specify the CN field
+   # CN = Do not specify the CN field.
 
    [ req_ext ]
    subjectAltName = @alt_names
 
    [ alt_names ]
-   # Specify all domain names
+   # Specify all domain names.
    DNS.1 = example.co.uk
    DNS.2 = www.example.co.uk
    DNS.3 = api.example.co.uk
-   # Specify IP addresses (if required)
+   # Specify IP addresses (if required).
    IP.1 = 192.0.2.1
    IP.2 = 192.0.4.1
 
@@ -567,24 +571,24 @@ To generate a certificate, we'll use the `openssl` utility.
    extendedKeyUsage = serverAuth
    subjectAltName = @alt_names
 
-   # Elliptic Curve Parameters
+   # Elliptic curve parameters.
    [ ec_params ]
    name = prime256v1
    ```
 
-2. Generate an elliptic curve key
+2. Generate an elliptic curve key:
 
    ```shell
    openssl ecparam -genkey -name prime256v1 -noout -out ec_private_key.pem
    ```
 
-3. Create a certificate signing request
+3. Create a certificate signing request:
 
    ```shell
    openssl req -new -key ec_private_key.pem -out example.csr -config cert.cnf
    ```
 
-4. Generate a self-signed certificate
+4. Generate a self-signed certificate:
 
    ```shell
    openssl x509 -req -in example.csr -signkey ec_private_key.pem -out example.crt -days 365 -extensions v3_req -extfile cert.cnf
