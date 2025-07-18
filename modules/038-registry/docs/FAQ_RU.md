@@ -5,19 +5,18 @@ description: ""
 
 ## Как подготовить Containerd V1?
 
-{% alert level="danger" %}
-При удалении [пользовательских конфигураций Auth](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) сервис containerd будет перезапущен.
-
-Новые Mirror Auth конфигурации, добавленные в `/etc/containerd/registry.d`, начнут применяться только после переключения на любой из `Managed` режимов registry (`Direct`, `Local`, `Proxy`).
-{% endalert %}
-
-Во время переключения на любой из `Managed` режимов (`Direct`, `Local`, `Proxy`) сервис `Containerd V1` будет перезапущен.
-
+Во время переключения на `Direct` режим, сервис `Containerd V1` будет перезапущен.
 Конфигурация авторизации `Containerd V1` будет изменена на Mirror Auth (`Containerd V2` использует данную конфигурацию по умолчанию).
+При переключении обратно на `Unmanaged` режим, останется новая конфигурация авторизации.
 
 Перед переключением необходимо убедиться, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
 
 Если конфигурации присутствуют, их необходимо удалить и создать новые конфигурации авторизации в директории `/etc/containerd/registry.d`. Пример:
+
+{% alert level="danger" %}
+- При удалении [пользовательских конфигураций Auth](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) сервис containerd будет перезапущен.
+- Новые Mirror Auth конфигурации, добавленные в `/etc/containerd/registry.d`, начнут применяться только после переключения на `Direct` режим.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -124,6 +123,4 @@ target_mode: Direct
 | `DeckhouseRegistrySwitchReady`    | Состояние переключения Deckhouse и Deckhouse компонентов на использование нового реестра. Значение `True` указывает, что Deckhouse успешно переключился на сконфигурированный реестр и готов к работе. |
 | `InClusterProxyReady`             | Состояние готовности In-Cluster Proxy. Проверяется, что In-Cluster Proxy успешно запущен и работает.                                                                                                   |
 | `CleanupInClusterProxy`           | Состояние очистки In-Cluster Proxy, если прокси не нужен для работы желаемого режима. Проверяется, что все ресурсы, связанные с In-Cluster Proxy, успешно удалены.                                     |
-| `NodeServicesReady`               | Состояние готовности сервисов на узлах. Проверяется, что все необходимые сервисы на узлах успешно запущены и работают.                                                                                 |
-| `CleanupNodeServices`             | Состояние очистки сервисов на узлах, если сервисы не нужны для работы желаемого режима. Проверяется, что все ресурсы, связанные с сервисами на узлах, успешно удалены.                                 |
 | `Ready`                           | Общее состояние готовности registry к работе в указанном режиме. Проверяется, что все предыдущие условия выполнены и модуль готов к работе.                                                            |

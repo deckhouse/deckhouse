@@ -5,29 +5,27 @@ description: ""
 
 ## Description
 
-The registry module is a component that implements an internal container image registry for Deckhouse.  
-The internal container image registry helps optimize image pulling and storage, providing high availability and fault tolerance for Deckhouse.  
+The registry module is a component that implements the internal container image registry of Deckhouse.
 
-The module supports several modes of operation: `Direct`, `Proxy`, `Local`, and `Unmanaged` (currently, only `Direct` and `Unmanaged` modes are supported).  
+The internal registry allows for optimizing the downloading and storage of images, and also ensures high availability and fault tolerance for Deckhouse.
 
-The `Direct`, `Proxy`, and `Local` modes (referred to as `Managed` modes) implement internal container image registry functionality. These modes allow the registry to be adapted to different usage scenarios.  
-In these modes, access to the internal registry always occurs via the fixed address:  
-`registry.d8-system.svc:5001/system/deckhouse`
-This fixed address eliminates the need to re-download images and restart components when registry parameters change or the mode is switched.
+The module supports multiple operation modes: `Direct` and `Unmanaged`.
 
-The `Unmanaged` mode allows operating without the internal registry. Within the cluster, image access occurs via the address specified during bootstrap or updated using the `helper change-registry` utility.
+`Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and external registries is done through the `Deckhouse` `ModuleConfig`. The switching process is automatic — see the [usage examples](./examples.html) for more information.
+
+`Unmanaged` — operates without using the internal registry. In this mode, access inside the cluster is performed via the address specified during cluster bootstrap, or via the [`helper change-registry`](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry) tool.
 
 {% alert level="info" %}
-To use the `Direct`, `Proxy`, or `Local` modes, the `Containerd` or `Containerd V2` CRI must be used on all nodes of the cluster.  
-For CRI setup, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) documentation.
+- The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration).
 {% endalert %}
 
-### Direct Mode
+### Direct Mode Architecture
 
-In Direct mode, registry requests are handled directly without intermediate caching.  
-Requests from the CRI to the registry are redirected using registry settings specified in the containerd configuration.  
+In Direct mode, registry requests are processed directly, without intermediate caching.
 
-For components that interact with the registry directly, such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others, requests are routed through an In-Cluster Proxy located on the control plane nodes.
+CRI requests to the registry are redirected based on its configuration, which is defined in the containerd `configuration`.
+
+For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the in-cluster proxy located on the control plane nodes.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../../images/registry-module/direct.png)

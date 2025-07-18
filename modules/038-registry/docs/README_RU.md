@@ -7,26 +7,25 @@ description: ""
 
 Модуль registry - компонент, реализующий внутренний реестр container образов Deckhouse.
 
-Внутренний реестр container образов позволяет оптимизировать загрузку и хранение образов, а также обеспечивает высокую доступность и отказоустойчивость Deckhouse.
+Внутренний реестр позволяет оптимизировать загрузку и хранение образов, а также обеспечивает высокую доступность и отказоустойчивость Deckhouse.
 
-Модуль реализует несколько режимов работы `Direct`, `Proxy`, `Local` и `Unmanaged` (на данный момент поддерживается режимы `Direct` и `Unmanaged`).
+Модуль реализует несколько режимов работы: `Direct` и `Unmanaged`.
 
-`Direct`, `Proxy` и `Local` (`Managed` режимы) - реализуют работу внутреннего реестра container образов. Данные режимы позволяют адаптировать реестр под различные сценарии использования. Обращение к внутреннему реестру в заданных режимах выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес позволяет избежать повторное скачивание образов и перезапуск компонентов, при изменение параметров реестра и смене режима.
+`Direct` - реализует работу внутреннего реестра container образов. Обращение к внутреннему реестру выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров реестра, позволяет избежать повторное скачивание образов и перезапуск компонентов. Переключение между режимами и внешними реестрами выполняется через `ModuleConfig` `Deckhouse`. Процесс переключения выполняется автоматически, для этого, ознакомтесь с [примерами использования](./examples.html).
 
-`Unmanaged` - реализует работу без использования внутреннего реестра. Обращение внутри кластера выполняется по адресу заданному при bootstrap кластера, или через `helper change-registry`.
+`Unmanaged` - реализует работу без использования внутреннего реестра. Обращение внутри кластера выполняется по адресу заданному при bootstrap кластера, или через [`helper change-registry`](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 
 {% alert level="info" %}
-Для работы в режимах `Direct`, `Proxy` и `Local` необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера.
-Для настройки CRI ознакомьтесь с конфигурацией [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration)
+- Для работы в режиме `Direct` необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration)
 {% endalert %}
 
-### Direct режим
+### Архитектура Direct режима
 
 В режиме Direct, запросы к реестру обрабатываются напрямую, без промежуточного кэширования.
 
 Перенаправление запросов к registry от CRI осуществляется при помощи его настроек, которые прописываются в конфигурации `containerd`.
 
-В случае компонентов, обращающихся к реестру напрямую, таких как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращения будут идти через In-Cluster Proxy, расположенный на узлах control plane.
+В случае компонентов, таких как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к реестру напрямую, запросы будут идти через in-cluster proxy, расположенный на узлах control plane.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../../images/registry-module/direct.png)

@@ -5,17 +5,18 @@ description: ""
 
 ## How to prepare Containerd V1?
 
+During the switch to `Direct` mode, the `Containerd V1` service will be restarted.  
+The `Containerd V1` authorization configuration will be updated to use Mirror Auth (`Containerd V2` uses this configuration by default).  
+When switching back to `Unmanaged` mode, the new authorization configuration will remain in place.
+
+Before switching, make sure that there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on the nodes with `Containerd V1` located in the `/etc/containerd/conf.d` directory.
+
+If such configurations are present, they must be removed and replaced with new Mirror Auth configurations in the `/etc/containerd/registry.d` directory. Example:
+
 {% alert level="danger" %}
-When removing [custom Auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth), the containerd service will be restarted.  
-New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to one of the `Managed` registry modes (`Direct`, `Local`, `Proxy`).
+- When deleting [custom Auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth), the containerd service will be restarted.
+- New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
-
-During the switch to any of the `Managed` modes (`Direct`, `Local`, `Proxy`), the `Containerd V1` service will be restarted.  
-The `Containerd V1` authorization configuration will be changed to Mirror Auth (this configuration is used by default in `Containerd V2`).
-
-Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on nodes with `Containerd V1` that are located in the `/etc/containerd/conf.d` directory.
-
-If such configurations exist, they must be deleted and replaced with new authorization configurations in the `/etc/containerd/registry.d` directory. Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -122,6 +123,4 @@ Description of conditions:
 | `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                   |
 | `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                   |
 | `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                       |
-| `NodeServicesReady`               | State of node services readiness. Verifies that all necessary services on the nodes have started and are operational.                                                            |
-| `CleanupNodeServices`             | State of cleaning up node services if they are not needed in the selected mode. Ensures all related resources have been removed.                                                 |
 | `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the module is ready to operate.                                        |
