@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -28,6 +29,37 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
+
+// dexAuthenticatorNameWithNamespace creates safe names for DexAuthenticator objects
+// following the same logic as dex_authenticator_name_with_namespace in _helpers.tpl
+func dexAuthenticatorNameWithNamespace(name, namespace string) string {
+	suffix := "dex-authenticator"
+	fullName := fmt.Sprintf("%s-%s-%s", name, namespace, suffix)
+
+	if len(fullName) <= 63 {
+		return fullName
+	}
+
+	// Generate hash from name-namespace combination
+	combinedName := fmt.Sprintf("%s-%s", name, namespace)
+	hasher := sha256.New()
+	hasher.Write([]byte(combinedName))
+	hash := fmt.Sprintf("%x", hasher.Sum(nil))[:8]
+
+	// Calculate maximum length for the truncated name
+	maxNameLength := 63 - len(suffix) - 1 - len(hash) - 1 // 63 - suffix - dash - hash - dash
+	if maxNameLength < 1 {
+		maxNameLength = 1
+	}
+
+	// Truncate combined name if necessary
+	truncatedName := combinedName
+	if len(combinedName) > maxNameLength {
+		truncatedName = combinedName[:maxNameLength]
+	}
+
+	return fmt.Sprintf("%s-%s-%s", truncatedName, hash, suffix)
+}
 
 type DexAuthenticator struct {
 	ID          string                 `json:"uuid"`
@@ -65,7 +97,8 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	namespace := obj.GetNamespace()
 
 	id := fmt.Sprintf("%s@%s", name, namespace)
-	encodedName := encoding.ToSha256Like(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
+	fullName := dexAuthenticatorNameWithNamespace(name, namespace)
+	encodedName := encoding.ToSha256Like(fullName)
 
 	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
 
