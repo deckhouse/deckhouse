@@ -84,7 +84,7 @@ if len(results) != 0:
 else:
     print("No changed module images found.")
 
-if len(dangerous_results != 0):
+if len(dangerous_results) != 0:
     print("Found possibly dangerous changes in following module images:")
     print(*dangerous_results, sep="\n")
     exit(1)
