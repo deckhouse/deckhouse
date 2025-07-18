@@ -1,4 +1,5 @@
 name: node-manager
+critical: true
 weight: 40
 subsystems:
   - infrastructure

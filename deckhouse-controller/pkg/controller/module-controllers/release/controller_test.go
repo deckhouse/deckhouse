@@ -67,7 +67,7 @@ var (
 
 	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode:    v1alpha1.UpdateModeAuto.String(),
+			Mode:    v1alpha2.UpdateModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
@@ -324,7 +324,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed patch release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -339,7 +339,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -354,7 +354,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Approved minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -645,7 +645,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersStack("", log.NewNop()),
+		exts:           extenders.NewExtendersStack(nil, "", log.NewNop()),
 	}
 
 	for _, option := range options {
@@ -842,6 +842,7 @@ func TestValidateModule(t *testing.T) {
 				Weight: 900,
 				Path:   filepath.Join("./testdata", name),
 			}
+
 			err := def.Validate(values, log.NewNop())
 			if !failed {
 				require.NoError(t, err, "%s: unexpected error: %v", name, err)
@@ -872,7 +873,7 @@ func TestValidateModule(t *testing.T) {
 	check("validation/virtualization", true, nil)
 }
 
-const repeatCount = 2
+const repeatCount = 3
 
 func repeatTest(fn func()) {
 	for range repeatCount {

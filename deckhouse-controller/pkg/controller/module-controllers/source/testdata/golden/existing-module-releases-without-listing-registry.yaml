@@ -124,6 +124,8 @@ metadata:
   resourceVersion: "1"
 spec:
   moduleName: parca
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.4.4
   weight: 900
 status:

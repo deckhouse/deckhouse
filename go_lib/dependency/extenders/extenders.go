@@ -33,16 +33,16 @@ import (
 type ExtendersStack struct {
 	DeckhouseVersion  *deckhouseversion.Extender
 	KubernetesVersion *kubernetesversion.Extender
-	Bootstrapped      *bootstrapped.Extender
 	ModuleDependency  *moduledependency.Extender
+	Bootstrapped      *bootstrapped.Extender
 }
 
-func NewExtendersStack(deckhouseVersion string, logger *log.Logger) *ExtendersStack {
+func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion string, logger *log.Logger) *ExtendersStack {
 	return &ExtendersStack{
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
-		Bootstrapped:      bootstrapped.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
+		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
 	}
 }
 
@@ -50,12 +50,16 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 	return []extenders.Extender{
 		b.DeckhouseVersion,
 		b.KubernetesVersion,
-		b.Bootstrapped,
 		b.ModuleDependency,
+		b.Bootstrapped,
 	}
 }
 
-func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) error {
+func (b *ExtendersStack) AddConstraints(module string, critical bool, requirements *v1alpha1.ModuleRequirements) error {
+	if !critical {
+		b.Bootstrapped.AddFunctionalModule(module)
+	}
+
 	if requirements == nil {
 		// no requirements
 		return nil
@@ -73,12 +77,6 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 		}
 	}
 
-	if len(requirements.Bootstrapped) > 0 {
-		if err := b.Bootstrapped.AddConstraint(module, requirements.Bootstrapped); err != nil {
-			return err
-		}
-	}
-
 	if len(requirements.ParentModules) > 0 {
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return err
@@ -91,7 +89,6 @@ func (b *ExtendersStack) AddConstraints(module string, requirements *v1alpha1.Mo
 func (b *ExtendersStack) DeleteConstraints(module string) {
 	b.DeckhouseVersion.DeleteConstraint(module)
 	b.KubernetesVersion.DeleteConstraint(module)
-	b.Bootstrapped.DeleteConstraint(module)
 	b.ModuleDependency.DeleteConstraint(module)
 }
 
@@ -126,7 +123,6 @@ func (b *ExtendersStack) IsExtendersField(field string) bool {
 	return slices.Contains([]string{
 		v1alpha1.KubernetesRequirementFieldName,
 		v1alpha1.DeckhouseRequirementFieldName,
-		v1alpha1.BootstrappedRequirementFieldName,
 		v1alpha1.ModuleDependencyRequirementFieldName,
 	}, field)
 }

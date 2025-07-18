@@ -1,5 +1,6 @@
 ---
 title: "Модуль monitoring-ping"
+description: "Мониторинг сетевого взаимодействия между узлами кластера Deckhouse Kubernetes Platform."
 ---
 
 ## Описание

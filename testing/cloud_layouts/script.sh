@@ -126,7 +126,7 @@ LogLevel quiet
 EOF
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config"
-  scp_command="scp -S /usr/bin/ssh -F /tmp/cloud-test-ssh-config"
+  scp_command="scp -F /tmp/cloud-test-ssh-config"
 }
 
 function abort_bootstrap_from_cache() {
@@ -369,7 +369,7 @@ function prepare_environment() {
 
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+        envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
@@ -437,7 +437,7 @@ function run-test() {
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
-    change_deckhouse_image "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}" || return $?
+    change_deckhouse_image "${IMAGES_REPO:-"dev-registry.deckhouse.io/sys/deckhouse-oss"}:${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
@@ -706,18 +706,15 @@ function bootstrap_static() {
     sleep 5
   done
 
-
-  tar -cvf $cwd/registry-mirror.tar $cwd/registry-mirror
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
-    $scp_command -i "$ssh_private_key_path" $cwd/registry-mirror.tar "$ssh_user@$bastion_ip:/tmp"
+    $scp_command -r -i "$ssh_private_key_path" $cwd/registry-mirror "$ssh_user@$bastion_ip:/tmp"
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
       apt-get update
       apt-get install -y docker.io docker-compose wget curl
 
-      tar -xvf /tmp/registry-mirror.tar
-      cd deckhouse/testing/cloud_layouts/Static/registry-mirror
+      cd /tmp/registry-mirror
       ./gen-auth-cfg.sh "${LOCAL_REGISTRY_MIRROR_PASSWORD}" "${LOCAL_REGISTRY_CLUSTER_PASSWORD}" > auth_config.yaml
       ./gen-ssl.sh
       env BASTION_INTERNAL_IP=${BASTION_INTERNAL_IP} envsubst '\$BASTION_INTERNAL_IP' < registry-config.tpl.yaml > registry-config.yaml

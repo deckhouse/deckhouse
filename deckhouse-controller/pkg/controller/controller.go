@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -70,6 +71,8 @@ const (
 
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
+
+	bootstrappedGlobalValue = "clusterIsBootstrapped"
 )
 
 type DeckhouseController struct {
@@ -165,7 +168,6 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
@@ -211,7 +213,21 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return module.GetVersion(), nil
 	})
 
-	exts := extenders.NewExtendersStack(version, logger.Named("extenders"))
+	bootstrappedHelper := func() (bool, error) {
+		value, ok := operator.ModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		if !ok {
+			return false, nil
+		}
+
+		bootstrapped, ok := value.(bool)
+		if !ok {
+			return false, errors.New("bootstrapped value not boolean")
+		}
+
+		return bootstrapped, nil
+	}
+
+	exts := extenders.NewExtendersStack(bootstrappedHelper, version, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {
