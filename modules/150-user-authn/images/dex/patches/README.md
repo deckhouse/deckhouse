@@ -23,7 +23,13 @@ Adding group entity to kubernetes authentication.
 
 ### 005-2fa.patch
 
-This patch adds support for two-factor authentication (2FA) in Dex. 
+This patch adds support for two-factor authentication (2FA) in Dex.
 It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
 
 Upstream PR: https://github.com/dexidp/dex/pull/3712
+
+### 006-oidc-httpclient-to-context.patch
+
+This patch fixes the issue with the `insecureSkipVerify` and `rootCAs` options which do not work in OIDC connector.
+
+Upstream PR: https://github.com/dexidp/dex/pull/4223
