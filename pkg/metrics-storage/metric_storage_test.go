@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 )
@@ -719,7 +720,7 @@ func TestMetricStorage_Handler(t *testing.T) {
 				assert.NotNil(t, handler)
 
 				// Test that handler responds
-				req := httptest.NewRequest("GET", "/metrics", nil)
+				req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 				w := httptest.NewRecorder()
 				handler.ServeHTTP(w, req)
 				assert.Equal(t, http.StatusOK, w.Code)
@@ -732,7 +733,7 @@ func TestMetricStorage_Handler(t *testing.T) {
 				assert.NotNil(t, handler)
 
 				// Test that handler responds
-				req := httptest.NewRequest("GET", "/metrics", nil)
+				req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 				w := httptest.NewRecorder()
 				handler.ServeHTTP(w, req)
 				assert.Equal(t, http.StatusOK, w.Code)
@@ -779,6 +780,7 @@ func TestMetricStorage_Collector(t *testing.T) {
 
 			// Drain the channel
 			for range desc {
+				continue
 			}
 
 			metrics := make(chan prometheus.Metric, 10)
@@ -789,6 +791,7 @@ func TestMetricStorage_Collector(t *testing.T) {
 
 			// Drain the channel
 			for range metrics {
+				continue
 			}
 		})
 	}
@@ -913,7 +916,7 @@ func TestMetricStorage_LabelMerging(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMetricStorage_ConcurrentAccess(t *testing.T) {
+func TestMetricStorage_ConcurrentAccess(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
 	// Test concurrent access to metrics
@@ -956,7 +959,7 @@ func TestMetricStorage_InvalidMetricNames(t *testing.T) {
 	}
 
 	for _, name := range invalidNames {
-		t.Run("invalid_name_"+name, func(t *testing.T) {
+		t.Run("invalid_name_"+name, func(_ *testing.T) {
 			// These operations should handle invalid names gracefully
 			storage.CounterAdd(name, 1.0, map[string]string{"test": "value"})
 			storage.GaugeSet(name, 1.0, map[string]string{"test": "value"})
@@ -980,7 +983,7 @@ func TestMetricStorage_ExtremeValues(t *testing.T) {
 	}
 
 	for i, value := range extremeValues {
-		t.Run("extreme_value", func(t *testing.T) {
+		t.Run("extreme_value", func(_ *testing.T) {
 			labels := map[string]string{"value_index": string(rune(i))}
 
 			storage.CounterAdd("extreme_counter", value, labels)
@@ -991,7 +994,7 @@ func TestMetricStorage_ExtremeValues(t *testing.T) {
 	}
 }
 
-func TestMetricStorage_ManyLabels(t *testing.T) {
+func TestMetricStorage_ManyLabels(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
 	// Test with many labels
@@ -1005,7 +1008,7 @@ func TestMetricStorage_ManyLabels(t *testing.T) {
 	storage.HistogramObserve("many_labels_histogram", 0.5, manyLabels, []float64{0.1, 0.5, 1.0})
 }
 
-func TestMetricStorage_EmptyAndNilMaps(t *testing.T) {
+func TestMetricStorage_EmptyAndNilMaps(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
 	// Test with nil labels
@@ -1087,6 +1090,9 @@ func BenchmarkMetricStorage_ApplyBatchOperations(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		storage.ApplyBatchOperations(ops, commonLabels)
+		err := storage.ApplyBatchOperations(ops, commonLabels)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }

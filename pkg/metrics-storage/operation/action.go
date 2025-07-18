@@ -24,8 +24,6 @@ const (
 	ActionGaugeSet
 	ActionHistogramObserve
 	ActionExpireMetrics
-	// action for counting overall
-	overallAction
 )
 
 // IsValid checks if the action is one of the valid actions
