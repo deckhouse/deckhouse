@@ -29,79 +29,79 @@ lang: ru
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
 
-   * Получите значение `CE_REGISTRY_PACKAGE_PROXY`:
+   Получите значение `CE_REGISTRY_PACKAGE_PROXY`:
 
-     ```shell
-     CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
-     ```
+   ```shell
+   CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
+   ```
 
-     Загрузите CE-образ Deckhouse по полученному значению:
+   Загрузите CE-образ DKP по полученному значению:
 
-     ```shell
-     crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
-     ```
+   ```shell
+   crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+   ```
 
-     Пример вывода:
+   Пример вывода:
 
-     ```console
-     Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
-     ```
+   ```console
+   Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
+   ```
 
-   * Получите значение `CE_MODULES`:
+   Получите значение `CE_MODULES`:
 
-     ```shell
-     CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-     ```
+   ```shell
+   CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   ```
 
-     Проверка:
+   Проверка:
 
-     ```shell
-     echo $CE_MODULES
-     ```
+   ```shell
+   echo $CE_MODULES
+   ```
 
-     Пример вывода:
+   Пример вывода:
 
-     ```console
-     common priority-class deckhouse external-module-manager registrypackages ...
-     ```
+   ```console
+   common priority-class deckhouse external-module-manager registrypackages ...
+   ```
 
-   * Получите значение `USED_MODULES`:
+   Получите значение `USED_MODULES`:
 
-     ```shell
-     USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-     ```
+   ```shell
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   ```
 
-     Проверка:
+   Проверка:
 
-     ```shell
-     echo $USED_MODULES
-     ```
+   ```shell
+   echo $USED_MODULES
+   ```
 
-     Пример вывода:
+   Пример вывода:
 
-     ```console
-     admission-policy-engine cert-manager chrony ...
-     ```
+   ```console
+   admission-policy-engine cert-manager chrony ...
+   ```
 
-   * Получите значение `MODULES_WILL_DISABLE`:
+   Получите значение `MODULES_WILL_DISABLE`:
 
-     ```shell
-     MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
-     ```
+   ```shell
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
+   ```
 
-     Проверка:
+   Проверка:
 
-     ```shell
-     echo $MODULES_WILL_DISABLE
-     ```
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
 
-     Пример вывода
+   Пример вывода
 
-     ```console
-     node-local-dns registry-packages-proxy
-     ```
+   ```console
+   node-local-dns registry-packages-proxy
+   ```
 
-     > Обратите внимание, если в `$MODULES_WILL_DISABLE` присутствует `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение описано в 8 пункте.
+   > Обратите внимание, если в `$MODULES_WILL_DISABLE` присутствует `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение описано в 8 пункте.
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CE.
 
@@ -111,7 +111,7 @@ lang: ru
    echo $MODULES_WILL_DISABLE
    ```
 
-   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере и вы готовы к их отключению.
+   Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере и вы готовы к их отключению.
 
    Отключите не поддерживаемые в DKP CE модули:
 
@@ -177,11 +177,11 @@ lang: ru
       | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   > Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
-   >
-   > ```shell
-   > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
-   > ```
+   Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
+   ```
 
 1. Удалите временный под DKP CE:
 
@@ -191,10 +191,10 @@ lang: ru
 
 ## Переключение DKP с CE на EE
 
-Вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
+Вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости.
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. В случае использования другого адреса реестра контейнеров, измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](./#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`.
 {% endalert %}
 
 Для переключения Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
@@ -208,8 +208,7 @@ lang: ru
 
 1. Cоздайте ресурс NodeGroupConfiguration для переходной авторизации в `registry.deckhouse.ru`:
 
-   ```shell
-   kubectl apply -f - <<EOF
+   ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -317,10 +316,10 @@ lang: ru
 
 1. Примените образ webhook-handler:
 
-  ```shell
-  HANDLER=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ee@$HANDLER
-  ```
+   ```shell
+   HANDLER=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ee@$HANDLER
+   ```
 
 1. Примените образ DKP EE:
 
@@ -383,10 +382,10 @@ lang: ru
 
 ## Переключение DKP с EE на SE
 
-Для переключения вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](hhttps://deckhouse.ru/products/kubernetes-platform), нажав на кнопку *Получить консультацию*.
+Для переключения вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/kubernetes-platform), нажав на кнопку *Получить консультацию*.
 
 {% alert level="info" %}
-В инструкции используется публичный адрес реестра контейнеров: `registry.deckhouse.ru`. Если вы используете другой адрес реестра, адаптируйте команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+В инструкции используется публичный адрес реестра контейнеров: `registry.deckhouse.ru`.
 
 В DKP SE не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` и ряда модулей.
 {% endalert %}
@@ -394,7 +393,7 @@ lang: ru
 Ниже описаны шаги для переключения кластера Deckhouse Enterprise Edition на Standard Edition:
 
 {% alert level="warning" %}
-Все команды выполняются на master-узле существующего кластера:
+Все команды выполняются на master-узле существующего кластера.
 {% endalert %}
 
 1. Подготовьте переменные с токеном лицензии:
@@ -406,8 +405,7 @@ lang: ru
 
 1. Cоздайте ресурс NodeGroupConfiguration для переходной авторизации в `registry.deckhouse.ru`:
 
-   ```shell
-   kubectl apply -f - <<EOF
+   ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -472,11 +470,11 @@ lang: ru
    kubectl run se-image --image=registry.deckhouse.ru/deckhouse/se/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
-   > Узнать текущую версию DKP можно при помощи команды:
-   >
-   > ```shell
-   > kubectl get deckhousereleases | grep Deployed
-   > ```
+   Узнать текущую версию DKP можно при помощи команды:
+
+   ```shell
+   kubectl get deckhousereleases | grep Deployed
+   ```
 
 1. После перехода пода в статус `Running` выполните следующие команды:
 
@@ -509,6 +507,8 @@ lang: ru
      ```shell
      echo $SE_MODULES
      ```
+
+     Пример вывода:
 
      ```console
      common priority-class deckhouse external-module-manager ...
@@ -554,9 +554,9 @@ lang: ru
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   Дождитесь, пока под DKP перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
+   Дождитесь, пока под DKP перейдёт в состояние `Ready`.
 
-1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
+1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
 
    ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -569,10 +569,10 @@ lang: ru
 
 1. Примените образ webhook-handler:
 
-  ```shell
-  HANDLER=$(kubectl exec se-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/se@$HANDLER
-  ```
+   ```shell
+   HANDLER=$(kubectl exec se-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/se@$HANDLER
+   ```
 
 1. Примените образ DKP SE:
 
@@ -583,13 +583,13 @@ lang: ru
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/se@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/se@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/se:$DECKHOUSE_VERSION
    ```
 
-   > Узнать текущую версию DKP можно при помощи команды:
-   >
-   > ```shell
-   > kubectl get deckhousereleases | grep Deployed
-   > ```
+   Узнать текущую версию DKP можно при помощи команды:
 
-1. Дождитесь перехода пода Deckhouse в статус `Ready` и [убедитесь в выполнении всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если во время обновления возникает ошибка `ImagePullBackOff`, подождите, пока под перезапустится автоматически.
+   ```shell
+   kubectl get deckhousereleases | grep Deployed
+   ```
+
+1. Дождитесь перехода пода DKP в статус `Ready`. Если во время обновления возникает ошибка `ImagePullBackOff`, подождите, пока под перезапустится автоматически.
 
    Проверьте статус пода DKP:
 
@@ -641,27 +641,34 @@ lang: ru
 ## Переключение DKP с EE на CSE
 
 {% alert level="warning" %}
-- Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry-cse.deckhouse.ru`. В случае использования другого адреса реестра контейнеров измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
-- В DKP CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
-- Миграция на DKP CSE возможна только с версии DKP EE 1.58, 1.64 или 1.67.
-- Актуальные версии DKP CSE: 1.58.2 для релиза 1.58, 1.64.1 для релиза 1.64 и 1.67.0 для релиза 1.67. Эти версии потребуется использовать далее для указания переменной `DECKHOUSE_VERSION`.
-- Переход поддерживается только между одинаковыми минорными версиями, например, с DKP EE 1.64 на DKP CSE 1.64. Переход с версии EE 1.58 на CSE 1.67 потребует промежуточной миграции: сначала на EE 1.64, затем на EE 1.67, и только после этого — на CSE 1.67. Попытки обновить версию на несколько релизов сразу могут привести к неработоспособности кластера.
-- Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27, DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
-- При переключении на DKP CSE возможна временная недоступность компонентов кластера.
+Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry-cse.deckhouse.ru`.
+
+В DKP CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
+
+Миграция на DKP CSE возможна только с версии DKP EE 1.58, 1.64 или 1.67.
+
+Актуальные версии DKP CSE: 1.58.2 для релиза 1.58, 1.64.1 для релиза 1.64 и 1.67.0 для релиза 1.67. Эти версии потребуется использовать далее для указания переменной `DECKHOUSE_VERSION`.
+
+Переход поддерживается только между одинаковыми минорными версиями, например, с DKP EE 1.64 на DKP CSE 1.64. Переход с версии EE 1.58 на CSE 1.67 потребует промежуточной миграции: сначала на EE 1.64, затем на EE 1.67, и только после этого — на CSE 1.67. Попытки обновить версию на несколько релизов сразу могут привести к неработоспособности кластера.
+
+Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27, DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
+
+При переключении на DKP CSE возможна временная недоступность компонентов кластера.
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
-1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого:
-   1. Выполните команду:
+1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого выполните команду:
 
-      ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
-      ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
 
-   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
-   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+
+1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+
+1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
