@@ -3,7 +3,7 @@
 
      {{.Content}}
 
-<script type="text/javascript" src='/assets/js/tile.js'></script>
+<script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
 {{ $lang := .Site.Language.Lang }}
 {{ $modulesChannelsData := .Site.Data.modules.channels }}
