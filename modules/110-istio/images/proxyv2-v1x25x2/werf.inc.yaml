@@ -39,18 +39,18 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+- image: libs/glibc-v2.41
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
-  after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  before: setup
+- image: libs/glibc-v2.41
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
-  after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  before: setup
+- image: libs/glibc-v2.41
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
-  after: setup
+  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -117,15 +117,15 @@ import:
   add: /src/proxy
   to: /src/proxy
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+- image: libs/glibc-v2.41
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+- image: libs/glibc-v2.41
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+- image: libs/glibc-v2.41
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
