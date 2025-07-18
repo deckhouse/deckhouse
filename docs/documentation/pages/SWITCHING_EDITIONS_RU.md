@@ -21,11 +21,11 @@ lang: ru
    kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
-   > Запускайте образ последней установленной версии DKP в кластере. Определить, какая версия сейчас установлена, можно командой:
-   >
-   > ```shell
-   > kubectl get deckhousereleases | grep Deployed
-   > ```
+   Запустите образ последней установленной версии DKP в кластере. Определить, какая версия сейчас установлена, можно командой:
+
+   ```shell
+   kubectl get deckhousereleases | grep Deployed
+   ```
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
 
@@ -276,11 +276,11 @@ lang: ru
    kubectl run ee-image --image=registry.deckhouse.ru/deckhouse/ee/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
-   > Запускайте образ последней установленной версии DKP в кластере, посмотреть можно командой:
-   >
-   > ```shell
-   > kubectl get deckhousereleases | grep Deployed
-   > ```
+   Запустите образ последней установленной версии DKP в кластере:
+
+   ```shell
+   kubectl get deckhousereleases | grep Deployed
+   ```
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
 
@@ -486,7 +486,7 @@ lang: ru
      SE_REGISTRY_PACKAGE_PROXY=$(kubectl exec se-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
      ```
 
-     Затем выполните команду:
+     Выполните ручную загрузку образа контейнера:
 
      ```shell
      sudo /opt/deckhouse/bin/crictl pull registry.deckhouse.ru/deckhouse/se@$SE_REGISTRY_PACKAGE_PROXY
@@ -539,13 +539,13 @@ lang: ru
      ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в SE-редакции.
-   Посмотреть список модулей, которые не поддерживаются SE-редакцией и будут отключены:
+   Проверьте список модулей, которые не поддерживаются SE-редакцией и будут отключены:
 
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
 
-   > Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется вами в кластере и вы готовы их отключить.
+   Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется вами в кластере и вы готовы их отключить.
 
    Отключите неподдерживаемые в SE-редакции модули:
 
@@ -591,7 +591,7 @@ lang: ru
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [убедитесь в выполнении всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если во время обновления возникает ошибка `ImagePullBackOff`, подождите, пока под перезапустится автоматически.
 
-   Посмотреть статус пода DKP:
+   Проверьте статус пода DKP:
 
    ```shell
    kubectl -n d8-system get po -l app=deckhouse
