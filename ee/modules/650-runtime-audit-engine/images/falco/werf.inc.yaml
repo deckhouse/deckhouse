@@ -144,7 +144,7 @@ shell:
   - mkdir -p /out/usr/share/falco/plugins
   {{- if $.DistroPackagesProxy }}
   # build in the closed env
-  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" src/k8smeta/test/CMakeLists.txt
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" /src/plugins/k8smeta/test/CMakeLists.txt
   {{- end }}
   - cd /src/plugins/json
   - make
