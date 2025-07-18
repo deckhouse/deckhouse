@@ -29,6 +29,10 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
 ### Adding a network
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` layout.
+{% endalert %}
+
 1. Go to the "Networking" tab and click "NEW":
 
    ![Adding a network, step 1](../../images/cloud-provider-vcd/network-setup/Screenshot.png)
@@ -59,6 +63,10 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
 ### Configuring DHCP
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` layout.
+{% endalert %}
+
 To provision nodes dynamically, enable the DHCP server for the internal network.
 
 {% alert level="info" %}
@@ -87,6 +95,10 @@ We recommend allocating the beginning of the network address range to system con
 
 ### Adding a vApp
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
 1. Switch to the "Data Centers" tab → "vApps" → "NEW" → "New vApp":
 
    ![Adding a vApp, step 1](../../images/cloud-provider-vcd/application-setup/Screenshot.png)
@@ -96,6 +108,10 @@ We recommend allocating the beginning of the network address range to system con
    ![Adding a vApp, step 2](../../images/cloud-provider-vcd/application-setup/Screenshot2.png)
 
 ### Adding a network to the vApp
+
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
 
 Once the vApp is created, connect the created internal network to it.
 
@@ -118,6 +134,10 @@ This address can be created by running MetalLB in L2 mode for dedicated frontend
 
 ### Configuring DNAT/SNAT rules on the edge gateway
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
 1. Navigate to the "Networking" tab → "Edge Gateways" and open the edge gateway:
 
    ![Configuring DNAT rules on the edge gateway, step 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
@@ -139,6 +159,10 @@ This address can be created by running MetalLB in L2 mode for dedicated frontend
    This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the internet.
 
 ### Configuring a firewall
+
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
 
 Once DNAT is configured, set up the firewall. Start by configuring the IP sets.
 
