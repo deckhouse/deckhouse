@@ -243,6 +243,15 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
+  "runtime-audit-engine": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/runtime-audit-engine/stable/"
+  },
   "sds-local-volume": {
     "editions": [
       "ce",
