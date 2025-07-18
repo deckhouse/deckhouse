@@ -5,4 +5,4 @@ cloud_type: selectel
 lang: ru
 ---
 
-{% include admin/integrations/openstack-based-connection.md %}
+{% include admin/integrations/openstack-based-connection-ru.md %}

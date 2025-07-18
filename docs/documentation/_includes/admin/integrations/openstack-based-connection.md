@@ -1,9 +1,13 @@
-Для управления ресурсами в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} с помощью Deckhouse Kubernetes Platform необходимо необходимо подключиться к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
+To manage resources in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} using Deckhouse Kubernetes Platform,
+you must connect to the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
-Перечень API-сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, доступ к которым необходим для развертывания, доступен в разделе [Настройки](./сonfiguration-and-layout-scheme.html#список-необходимых-сервисов).  
+The list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API services required for deployment
+is available in the [Configuration](./сonfiguration-and-layout-scheme.html#list-of-required-services) section.
 
-Доступы пользователя, необходимые для подключения к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API, находятся в openrc-файле (OpenStack RC file).
+The user credentials required to access the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API
+are provided in the OpenStack RC file (openrc file).
 
-Информация о получении openrc-файла с помощью стандартного веб-интерфейса {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и о способах его использования доступна [в документации {{ site.data.admin.cloud-types.types[page.cloud_type].name }}](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
+Instructions for downloading the openrc file via the standard web interface of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} and using it are available in the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} [documentation](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
 
-Если вы используете {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API cloud-провайдера, интерфейс получения openrc-файла может быть другим.
+If you’re using a cloud provider’s implementation of the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API,
+the process for obtaining the openrc file may differ.

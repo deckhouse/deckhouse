@@ -50,7 +50,7 @@ settings:
 
 Чтобы изменить размер тома (например, при нехватке дискового пространства), выполните следующие шаги:
 
-1. Измените параметр `spec.resources.requests.storage` в соответствующем объекте `PersistentVolumeClaim`. Операция выполняется автоматически и обычно занимает не более одной минуты. За ходом процесса можно наблюдать с помощью команды:
+1. Измените параметр `spec.resources.requests.storage` в соответствующем объекте PersistentVolumeClaim. Операция выполняется автоматически и обычно занимает не более одной минуты. За ходом процесса можно наблюдать с помощью команды:
 
    ```shell
    kubectl describe pvc <имя-claim>
@@ -73,10 +73,10 @@ metadata:
 
 - `service.beta.kubernetes.io/aws-load-balancer-type` — при значении none создаётся только Target Group, без самого LoadBalancer.
 - `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — применяется только в связке с `aws-load-balancer-type`: `none` и определяет протокол взаимодействия с Target Group. Поддерживаются следующие значения:
-  - tcp (значение по умолчанию);
-  - tls;
-  - http;
-  - https.
+  - `tcp` (значение по умолчанию);
+  - `tls`;
+  - `http`;
+  - `https`.
 
 {% alert level="info" %}
 При изменении значения этой аннотации `cloud-controller-manager` попытается пересоздать Target Group. Если она уже используется в связке с NLB или ALB, удалить её не удастся, и контроллер будет бесконечно повторять попытку. Чтобы избежать этого, необходимо вручную отсоединить балансировщик от группы.
@@ -98,7 +98,7 @@ metadata:
 
 Чтобы получить список текущих подсетей, используемых в установке DKP, выполните команду:
 
-```console
+```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
   -- deckhouse-controller module values cloud-provider-aws -o json | \
   jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
@@ -119,13 +119,13 @@ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
 
 Узнать `cluster_uuid` можно с помощью команды:
 
-```console
+```shell
 kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
 ```
 
 Узнать `prefix` можно с помощью команды:
 
-```console
+```shell
 kubectl -n kube-system get secret d8-cluster-configuration -o json | \
   jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
 ```

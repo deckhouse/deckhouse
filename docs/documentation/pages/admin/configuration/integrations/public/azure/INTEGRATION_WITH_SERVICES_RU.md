@@ -26,7 +26,7 @@ Deckhouse Kubernetes Platform (DKP) использует возможности 
 - Работают по оптимизированному маршруту через магистральную сеть Azure.
 - Упрощают контроль доступа и повышают безопасность.
 
-Список поддерживааемых Service Endpoints:
+Список поддерживаемых Service Endpoints:
 
 ```console
 Microsoft.AzureActiveDirectory

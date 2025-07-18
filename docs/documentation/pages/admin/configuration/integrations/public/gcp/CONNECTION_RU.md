@@ -28,11 +28,11 @@ Network Management Admin
 
 Роли можно присвоить на этапе создания Service Account либо [изменить](https://console.cloud.google.com/iam-admin/iam).
 
-Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке «Actions» нажмите  на три вертикальные точки и выберите «Manage keys». Затем нажмите «Add key» → «Create new key» → «Key type» → «JSON».
+Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке «Actions» нажмите на три вертикальные точки и выберите «Manage keys». Затем нажмите «Add key» → «Create new key» → «Key type» → «JSON».
 
-### Настройка через gcloud CLI
+### Настройка через Google Cloud CLI
 
-Установите и инициализируйте gcloud CLI, следуя [официальной инструкции](https://cloud.google.com/sdk/docs/install-sdk).
+Установите и инициализируйте Google Cloud CLI, следуя [официальной инструкции](https://cloud.google.com/sdk/docs/install-sdk).
 
 Для создания Service Account через интерфейс командной строки выполните следующие шаги:
 
@@ -87,7 +87,7 @@ Network Management Admin
 
 ## Использование созданного Service Account
 
-Полученный `service account key` указывается в секции `provider.serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"` ресурса [GCPClusterConfiguration](TODO).
+Полученный `service account key` указывается в секции `provider.serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"` ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration).
 
 Пример:
 

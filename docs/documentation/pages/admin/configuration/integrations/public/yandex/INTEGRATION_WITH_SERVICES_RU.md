@@ -83,19 +83,33 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
    Где:
 
-   - `sa-creds` — название `Secret`, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
+   - `sa-creds` — название Secret, содержащего авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
    - `key` — название ключа в поле `.data` секрета выше.
 
-1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
+1. Проверьте статус External Secrets Operator:
 
    ```shell
-   $ kubectl -n external-secrets get po
+   kubectl -n external-secrets get po
+   ```
+
+   Пример вывода:
+
+   ```console
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
+   ```
 
-   $ kubectl -n external-secrets get secretstores.external-secrets.io 
+   Проверьте статус созданного хранилища секретов:
+
+   ```shell
+   kubectl -n external-secrets get secretstores.external-secrets.io 
+   ```
+
+   Пример вывода:
+
+   ```console
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -143,7 +157,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
    В выводе команды будет содержаться значение ключа `password` секрета `lockbox-secret`, созданного ранее:
 
-   ```shell
+   ```console
    p@$$w0rd
    ```
 
@@ -155,10 +169,10 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `PrometheusRemoteWrite`:
+1. Создайте ресурс PrometheusRemoteWrite:
 
-   ```yaml
-   kubectl apply -f - <<< '
+   ```shell
+   kubectl apply -f - <<EOF
    
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
@@ -167,6 +181,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
    spec:
      url: <URL_ЗАПИСИ_МЕТРИК>
      bearerToken: <API_КЛЮЧ>
+   EOF
    ```
 
    Где:
@@ -174,7 +189,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
    - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](/modules/prometheus/cr.html#prometheusremotewrite).
 
 Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -182,7 +197,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `GrafanaAdditionalDatasource`:
+1. Создайте ресурс GrafanaAdditionalDatasource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -207,6 +222,6 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).

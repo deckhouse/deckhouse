@@ -5,4 +5,4 @@ cloud_type: vk
 lang: ru
 ---
 
-{% include admin/integrations/openstack-based-configuration.md %}
+{% include admin/integrations/openstack-based-configuration-ru.md %}

@@ -1,6 +1,8 @@
 ---
-title: Configuration and layout scheme
+title: Layouts and configuration
 permalink: en/admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
+cloud_type: vk
 lang: en
 ---
 
+{% include admin/integrations/openstack-based-configuration.md %}

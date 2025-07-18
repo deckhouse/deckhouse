@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре GCP и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
+Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Google Cloud Platform (GCP) и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
 
 DKP поддерживает две схемы размещения ресурсов в облаке GCP.
 
@@ -158,7 +158,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ```
 
 {% alert level="info" %}
-После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+После изменения параметров узлов необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
 {% endalert %}
 
 Пример конфигурации:
@@ -195,18 +195,18 @@ provider:
   serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
 
 | Тип | Репликация | Имя StorageClass |
 |---|---|---|
-| standard | none | pd-standard-not-replicated |
-| standard | regional | pd-standard-replicated |
-| balanced | none | pd-balanced-not-replicated |
-| balanced | regional | pd-balanced-replicated |
-| ssd | none | pd-ssd-not-replicated |
-| ssd | regional | pd-ssd-replicated |
+| standard | none | `pd-standard-not-replicated` |
+| standard | regional | `pd-standard-replicated` |
+| balanced | none | `pd-balanced-not-replicated` |
+| balanced | regional | `pd-balanced-replicated` |
+| ssd | none | `pd-ssd-not-replicated` |
+| ssd | regional | `pd-ssd-replicated` |
 
 Можно отфильтровать ненужные StorageClass'ы, для этого укажите их в параметре `exclude`.
 
@@ -231,7 +231,7 @@ provider:
 
 ### Установка дополнительных network tags на эфемерных узлах
 
-Необходимо указать параметр `additionalNetworkTags` для всех [`GCPInstanceClass`](cr.html#gcpinstanceclass) в кластере, которым нужны дополнительные network tags.
+Необходимо указать параметр `additionalNetworkTags` для всех ресурсов [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) в кластере, которым нужны дополнительные network tags.
 
 ### Добавление CloudStatic узлов в кластер
 

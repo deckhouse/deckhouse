@@ -135,11 +135,11 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/yandex/yandex-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/yandex/yandex-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/public/yandex/yandex-storage.html
                         - title:
@@ -155,7 +155,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/vk/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
                     - title:
@@ -167,7 +167,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/selectel/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
                     - title:
@@ -179,7 +179,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/ovh/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/ovh/сonfiguration-and-layout-scheme.html
                     - title:
@@ -191,7 +191,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/openstack/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
                     - title:
@@ -203,11 +203,11 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/amazon/amazon-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/amazon/amazon-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/public/amazon/amazon-storage.html
                         - title:
@@ -223,15 +223,15 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/azure/azure-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/azure/azure-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/public/azure/azure-storage.html
                         - title:
-                            en: Integration with Microsoft Azure
+                            en: Integration with Microsoft Azure services
                             ru: Интеграция с службами Microsoft Azure
                           url: /admin/integrations/public/azure/azure-services.html
                     - title:
@@ -243,7 +243,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/gcp/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
                 - title:
@@ -263,7 +263,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/vk/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
                     - title:
@@ -275,7 +275,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/openstack/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
                     - title:
@@ -287,15 +287,15 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/huaweicloud/huawei-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/huaweicloud/huawei-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/private/huaweicloud/huawei-storage.html
                         - title:
-                            en: Integration with Huawei Cloud
+                            en: Integration with Huawei Cloud services
                             ru: Интеграция с службами Huawei Cloud
                           url: /admin/integrations/private/huaweicloud/huawei-services.html
                     - title:
@@ -307,15 +307,15 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/dynamix/dynamix-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/dynamix/dynamix-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/private/dynamix/dynamix-storage.html
                         - title:
-                            en: Integration with Dynamix
+                            en: Integration with Dynamix services
                             ru: Интеграция с службами Dynamix
                           url: /admin/integrations/private/dynamix/dynamix-services.html
                 - title:
@@ -335,16 +335,16 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/vsphere/vsphere-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vsphere/vsphere-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/virtualization/vsphere/vsphere-storage.html
                         - title:
-                            en: Integration with vSphere
-                            ru: Интеграция с службами vSphere
+                            en: Integration with VMware vSphere services
+                            ru: Интеграция со службами VMware vSphere
                           url: /admin/integrations/virtualization/vsphere/vsphere-services.html
                     - title:
                         en: Integration with VMware Cloud Director
@@ -355,7 +355,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
                         - title:
-                            en: Configuration and layout scheme
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
                     - title:
@@ -375,16 +375,16 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/zvirt/zvirt-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/zvirt/zvirt-layout.html
                         - title:
-                            en: Storage, balancing and features
+                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/virtualization/zvirt/zvirt-storage.html
                         - title:
-                            en: Integration with zVirt
-                            ru: Интеграция с службами zVirt
+                            en: Integration with zVirt services
+                            ru: Интеграция со службами zVirt
                           url: /admin/integrations/virtualization/zvirt/zvirt-services.html
                 - title:
                     en: Hybrid cluster

@@ -23,7 +23,7 @@ lang: ru
 
 Чтобы проверить, запущены ли службы, выполните команды:
 
-```console
+```shell
 systemctl status cloud-config.service
 systemctl status cloud-final.service
 systemctl status cloud-init.service
@@ -36,7 +36,7 @@ systemctl status cloud-init.service
 
 Для создания сервисного аккаунта выполните команду:
 
-```console
+```shell
 yc iam service-account create --name deckhouse
 ```
 
@@ -57,7 +57,7 @@ name: deckhouse
 
 Для работы DKP с ресурсами облака назначьте сервисному аккаунту следующие роли:
 
-```console
+```shell
 yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
@@ -67,7 +67,7 @@ yc resource-manager folder add-access-binding --id <folderID> --role load-balanc
 
 Создайте JSON-файл с авторизацией для использования в конфигурации:
 
-```console
+```shell
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 
@@ -87,13 +87,13 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 
 Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в `externalIPAddresses`, `natInstanceExternalAddress` или для bastion-хоста), выполните команду:
 
-```console
+```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a
 ```
 
 Пример вывода команды:
 
-```yaml
+```console
 id: e9b4cfmmnc1mhgij75n7
 folder_id: b1gog0h9k05lhqe5d88l
 created_at: "2020-09-01T09:29:33Z"
