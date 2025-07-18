@@ -704,6 +704,7 @@ spec:
                   default: true
                   description: |
                     Enables validation for Ingress rules.
+                    > **Warning.** Enabling validation increases the load on the master nodes of the cluster.
                 annotationValidationEnabled:
                   type: boolean
                   default: false
@@ -1179,7 +1180,7 @@ spec:
                   type: boolean
                   description: |
                     Enables using the underscore symbol in headers.
-                    
+
                     Related resources:
 
                     - [On using the underscores in headers](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).

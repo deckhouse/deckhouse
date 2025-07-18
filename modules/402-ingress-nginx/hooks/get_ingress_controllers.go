@@ -22,6 +22,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type Controller struct {
@@ -119,8 +121,20 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
-	// Set spec.validationEnabled = false to resolve high resource utilization issue
-	spec["validationEnabled"] = false
+	// Set validationEnabled to false if suspended annotation is present
+	metadata, _, err := unstructured.NestedMap(obj.Object, "metadata")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get metadata from ingress controller: %v", err)
+	}
+	annotationsRaw, ok := metadata["annotations"]
+	if ok && annotationsRaw != nil {
+		annotations, ok := annotationsRaw.(map[string]interface{})
+		if ok {
+			if _, hasAnnotation := annotations[internal.IngressNginxControllerSuspendAnnotation]; hasAnnotation {
+				spec["validationEnabled"] = false
+			}
+		}
+	}
 
 	return Controller{Name: name, Spec: spec}, nil
 }

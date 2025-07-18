@@ -231,3 +231,19 @@
 
         3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
         `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding NGINX Ingress Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
+
+  - alert: NginxIngressValidationIsDisabled
+    expr: |
+      ingress_nginx_validation_suspended != 0
+    for: 3m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+      description: |-
+        Validation is disabled to reduce load on the master nodes, as it requires additional resources.
+        To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
+        from the `ingressnginxcontroller` resource.
