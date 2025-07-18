@@ -1,0 +1,111 @@
+- name: oom-kills
+  rules:
+  # Normalized metric compatible with old ebpf_exporter format but using new oom_kills_total
+  - record: oom_kills:normalized
+    expr: |-
+      oom_kills_total{job="oom-kills-exporter"}
+  
+  # Rate of OOM kills over the last 5 minutes
+  - record: oom_kills:rate5m
+    expr: |-
+      rate(oom_kills_total{job="oom-kills-exporter"}[5m])
+  
+  # Increase of OOM kills over different time windows
+  - record: oom_kills:increase1h
+    expr: |-
+      increase(oom_kills_total{job="oom-kills-exporter"}[1h])
+  
+  - record: oom_kills:increase24h
+    expr: |-
+      increase(oom_kills_total{job="oom-kills-exporter"}[24h])
+
+  # Alerts for OOM events
+  - alert: PodOOMKilled
+    expr: increase(oom_kills_total{job="oom-kills-exporter"}[5m]) > 0
+    for: 0m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: monitoring-kubernetes
+      d8_component: oom-kills-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "namespace,pod_name,container_name,node"
+      summary: >
+        Pod {{ $labels.pod_name }} in namespace {{ $labels.namespace }} was OOM killed
+      description: |
+        Container `{{ $labels.container_name }}` in pod `{{ $labels.pod_name }}` (namespace `{{ $labels.namespace }}`) on node `{{ $labels.node }}` was killed due to out-of-memory (OOM).
+        
+        This usually indicates that the container is trying to use more memory than its limit allows.
+        
+        **Recommended actions:**
+        
+        1. Check container memory limits and requests
+        2. Analyze application memory usage patterns  
+        3. Consider increasing memory limits if the usage is legitimate
+        4. Look for memory leaks in the application
+        
+        Pod UID: `{{ $labels.uid }}`
+
+  - alert: HighOOMKillRate
+    expr: rate(oom_kills_total{job="oom-kills-exporter"}[1h]) > 0.01
+    for: 5m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: monitoring-kubernetes
+      d8_component: oom-kills-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__high_oom_kill_rate: "HighOOMKillRateGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__high_oom_kill_rate: "HighOOMKillRateGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "namespace,pod_name,container_name,node"
+      summary: >
+        High OOM kill rate detected
+      description: |
+        There is a high rate of OOM kills happening in the cluster.
+        
+        **Current rate:** {{ printf "%.2f" $value }} OOM kills per second
+        
+        **Affected resources:**
+        - Namespace: `{{ $labels.namespace }}`
+        - Pod: `{{ $labels.pod_name }}`
+        - Container: `{{ $labels.container_name }}`
+        - Node: `{{ $labels.node }}`
+        
+        This might indicate:
+        1. Insufficient memory allocation for workloads
+        2. Memory pressure on nodes
+        3. Applications with memory leaks
+        4. Need for cluster capacity planning review
+
+  - alert: OOMKillsExporterDown
+    expr: up{job="oom-kills-exporter"} == 0
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: monitoring-kubernetes
+      d8_component: oom-kills-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: >
+        OOM kills exporter is down
+      description: |
+        The OOM kills exporter is not responding or is down.
+        
+        This means that OOM events are not being collected and monitored.
+        
+        **Impact:**
+        - No visibility into container OOM kills
+        - Missing important capacity planning signals
+        - Potential for unnoticed application issues
+        
+        **Recommended actions:**
+        1. Check the oom-kills-exporter daemonset status
+        2. Review pod logs for errors
+        3. Verify access to kernel logs on host nodes
+        4. Ensure hostPath volumes are properly mounted 
