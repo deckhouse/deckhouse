@@ -3,11 +3,14 @@ title: "How to configure?"
 permalink: en/
 ---
 
+## Deckhouse configuration
+
 Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
 
 <div markdown="0" style="height: 0;" id="deckhouse-configuration"></div>
 
 You can configure Deckhouse using:
+
 - **[Global settings](deckhouse-configure-global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
 - **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
 - **Custom resources.** Some modules are configured using the additional custom resources.
@@ -67,6 +70,46 @@ kubectl edit moduleconfig/upmeter
 ```
 
 Changes are applied automatically once the resource configuration is saved.
+
+### Modifying cluster configuration
+
+{% alert level="warning" %}
+To apply changes related to node configuration, you must run the `dhctl converge` command using the DKP installer.  
+This command synchronizes the actual node state with the specified configuration.
+{% endalert %}
+
+General cluster parameters are defined in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
+
+To modify these parameters, run the following command:
+
+```shell
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+```
+
+After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.
+Depending on the cluster size, this process may take some time.
+
+### Viewing current configuration
+
+DKP is managed through global settings, module configurations, and various custom resources.
+
+1. To view global settings, run:
+
+   ```shell
+   kubectl get mc global -o yaml
+   ```
+
+1. To view the status of all modules (available in Deckhouse version 1.47+):
+
+   ```shell
+   kubectl get modules
+   ```
+
+1. To view the configuration of the `user-authn` module:
+
+   ```shell
+   kubectl get moduleconfigs user-authn -o yaml
+   ```
 
 ## Configuring the module
 
@@ -172,6 +215,16 @@ To install Deckhouse with the `Minimal` module set, enable at least the followin
 * node-manager;
 * registry-packages-proxy;
 * terraform-manager, in a case of deploying a cloud cluster.
+
+### Accessing documentation for the current version
+
+The documentation for the running version of Deckhouse is available at `documentation.<cluster_domain>`,  
+where `<cluster_domain>` is the DNS name generated according to the template specified in the `modules.publicDomainTemplate` parameter of the global configuration.
+
+{% alert level="warning" %}
+Documentation is available only if the [documentation](modules/documentation/) module is enabled in the cluster.  
+It is enabled by default, except when using the [`Minimal` delivery bundle](modules/deckhouse/configuration.html#parameters-bundle).
+{% endalert %}
 
 ## Managing placement of Deckhouse components
 

@@ -339,3 +339,11 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
+
+### Доступ к контроллеру DKP в мультимастерном кластере
+
+В кластерах с несколькими master-узлами DKP запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру DKP можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+```
