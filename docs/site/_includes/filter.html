@@ -35,8 +35,8 @@
             articles.forEach(article => {
                 const tagElement = Array.from(article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')).map(tag => tag.textContent);
 
-                const shoulShow = selectedTags.length === 0 || selectedTags.some(tag => tagElement.includes(tag));
-                article.style.display = shoulShow ? 'flex' : 'none';
+                const shouldShow = selectedTags.length === 0 || selectedTags.every(tag => tagElement.includes(tag));
+                article.style.display = shouldShow ? 'flex' : 'none';
             });
 
             if(checkboxesChecked.length > 0) {
