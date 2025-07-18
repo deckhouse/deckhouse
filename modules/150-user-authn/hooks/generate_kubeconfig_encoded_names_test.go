@@ -52,7 +52,7 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 			Expect(f.ValuesGet("userAuthn.internal.kubeconfigEncodedNames").String()).To(MatchJSON(`[
-"te5pi3uczt54o", "te5pi3uczt54m"
+"0ad8a36e", "915d0453"
 ]`))
 		})
 	})

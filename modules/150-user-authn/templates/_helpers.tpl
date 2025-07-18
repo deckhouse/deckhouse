@@ -39,7 +39,7 @@ Usage:
   {{- if le (len $fullName) 63 }}
     {{- $fullName }}
   {{- else }}
-    {{- $hash := printf "%s%s" $name $suffix | fnvLikeDex | trunc 8 }}
+    {{- $hash := printf "%s%s" $name $suffix | sha256sum | trunc 8 }}
     {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}
@@ -61,7 +61,7 @@ Usage: {{ include "dex_authenticator_name_reverse" (list . $crd.name) }}
   {{- if le (len $fullName) 63 }}
     {{- $fullName }}
   {{- else }}
-    {{- $hash := $name | fnvLikeDex | trunc 8 }}
+    {{- $hash := $name | sha256sum | trunc 8 }}
     {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}
@@ -84,7 +84,7 @@ Usage: {{ include "dex_authenticator_name_with_namespace" (list . $crd.name $crd
   {{- if le (len $fullName) 63 }}
     {{- $fullName }}
   {{- else }}
-    {{- $hash := printf "%s-%s" $name $namespace | fnvLikeDex | trunc 8 }}
+    {{- $hash := printf "%s-%s" $name $namespace | sha256sum | trunc 8 }}
     {{- $maxNameLength := sub 63 (add (len $suffix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}

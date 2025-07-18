@@ -104,7 +104,7 @@ spec:
 				Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "v3uxb2xsm6rpy",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -120,7 +120,7 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "2tdjhlzzft2ae",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {},
   "allowAccessToKubernetes": false
@@ -172,7 +172,7 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "v3uxb2xsm6rpy",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -182,7 +182,7 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "2tdjhlzzft2ae",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {},
   "allowAccessToKubernetes": false
@@ -224,7 +224,7 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "v3uxb2xsm6rpy",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -234,7 +234,7 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "2tdjhlzzft2ae",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {
     "dexclient.deckhouse.io/allow-access-to-kubernetes": "true"
@@ -326,9 +326,9 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchUnorderedJSON(`
 [{
   "id": "dex-client-grafana@test-grafana",
-  "encodedID": "ir2hg5o6qquae",
+  "encodedID": "715d266f",
   "legacyID": "dex-client-grafana:test-grafana",
-  "legacyEncodedID": "fbgzyiywujn7a",
+  "legacyEncodedID": "d2436826",
   "name": "grafana",
   "namespace": "test-grafana",
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
@@ -339,9 +339,9 @@ spec:
 },
 {
   "id": "dex-client-opendistro@test",
-  "encodedID": "v3uxb2xsm6rpy",
+  "encodedID": "cb38d0ae",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "2tdjhlzzft2ae",
+  "legacyEncodedID": "41c22107",
   "name": "opendistro",
   "namespace": "test",
   "spec": {

@@ -90,7 +90,7 @@ spec:
 				Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
 [{
     "name": "admin",
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "spec": {
       "email": "admin@example.com",
       "groups": ["Gods"],
@@ -171,7 +171,7 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
 [{
   "name": "admin",
-  "encodedName": "b6leblem75up4",
+  "encodedName": "4ff2d0ab",
   "spec": {
     "email": "adminNext@example.com",
     "password": "password",
@@ -211,7 +211,7 @@ spec:
 [
   {
     "name": "admin",
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "spec": {
       "email": "admin@example.com",
       "password": "password",
@@ -221,7 +221,7 @@ spec:
   },
   {
     "name": "user",
-    "encodedName": "c3gvm7b6lxyww",
+    "encodedName": "b4c9a289",
     "spec": {
       "email": "user@example.com",
       "password": "passwordNext",
@@ -257,7 +257,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))
@@ -326,7 +326,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))
@@ -377,7 +377,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))
@@ -430,7 +430,7 @@ spec:
       ],
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))
@@ -468,7 +468,7 @@ status:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))
@@ -503,7 +503,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "gvy6ih7dduupk",
+    "encodedName": "258d8dc9",
     "status": {}
   }
 ]`))

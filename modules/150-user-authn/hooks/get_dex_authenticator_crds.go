@@ -65,7 +65,7 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	namespace := obj.GetNamespace()
 
 	id := fmt.Sprintf("%s@%s", name, namespace)
-	encodedName := encoding.ToFnvLikeDex(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
+	encodedName := encoding.ToSha256Like(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
 
 	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
 

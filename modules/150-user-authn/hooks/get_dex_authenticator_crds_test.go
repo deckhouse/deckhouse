@@ -82,7 +82,7 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@test",
-  "encodedName": "ntjxcdey3v45y",
+  "encodedName": "9a096589",
   "name": "test",
   "namespace": "test",
   "spec": {
@@ -151,7 +151,7 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@d8-dashboard",
-  "encodedName": "iluyx5wsfhyro",
+  "encodedName": "e422aa71",
   "name": "test",
   "namespace": "d8-dashboard",
   "spec": {
@@ -222,7 +222,7 @@ data:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@d8-monitoring",
-  "encodedName": "azro3bhrtkjow",
+  "encodedName": "13c2b776",
   "name": "test",
   "namespace": "d8-monitoring",
   "spec": {
