@@ -4,7 +4,7 @@
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ $crd.encodedName }}
+  name: {{ $crd.encodedName | quote }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
 id: {{ include "dex_authenticator_name_with_namespace" (list $context $crd.name $crd.namespace) }}
