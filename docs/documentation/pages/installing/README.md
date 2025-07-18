@@ -525,7 +525,7 @@ When using the [Nexus](https://github.com/sonatype/nexus-public) repository mana
 Setup Steps:
 
 1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse registry](https://registry.deckhouse.ru/):  
-   ![Create Proxy Docker Repository](images/registry/nexus/nexus-repository.png)
+   ![Create Proxy Docker Repository](../images/registry/nexus/nexus-repository.png)
 
 1. Fill out the repository creation form with the following values:
    * `Name`: the desired repository name, e.g., `d8-proxy`.
@@ -538,19 +538,19 @@ Setup Steps:
      * `Username`: `license-token`
      * `Password`: your Deckhouse Kubernetes Platform license key
 
-   ![Example repository settings 1](images/registry/nexus/nexus-repo-example-1.png)  
-   ![Example repository settings 2](images/registry/nexus/nexus-repo-example-2.png)  
-   ![Example repository settings 3](images/registry/nexus/nexus-repo-example-3.png)
+   ![Example repository settings 1](../images/registry/nexus/nexus-repo-example-1.png)  
+   ![Example repository settings 2](../images/registry/nexus/nexus-repo-example-2.png)  
+   ![Example repository settings 3](../images/registry/nexus/nexus-repo-example-3.png)
 
 1. Configure Nexus access control to allow DKP to access the created repository:
    * Create a **Nexus** role (`Administration` → `Security` → `Roles`) with the following privileges:  
      `nx-repository-view-docker-<repository>-browse` and `nx-repository-view-docker-<repository>-read`.
 
-     ![Create Nexus Role](images/registry/nexus/nexus-role.png)
+     ![Create Nexus Role](../images/registry/nexus/nexus-role.png)
 
    * Create a user (`Administration` → `Security` → `Users`) and assign them the role created above.
 
-     ![Create Nexus User](images/registry/nexus/nexus-user.png)
+     ![Create Nexus User](../images/registry/nexus/nexus-user.png)
 
      As a result, DKP images will be available at a URL like: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
@@ -565,7 +565,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
   * `Endpoint URL`: `https://registry.deckhouse.ru`.
   * Set `Access ID` and `Access Secret` (your Deckhouse Kubernetes Platform license key).
 
-    ![Registry Configuration](images/registry/harbor/harbor1.png)
+    ![Registry Configuration](../images/registry/harbor/harbor1.png)
 
 * Create a new project:
   * Navigate to `Projects → New Project`.
@@ -573,7 +573,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
   * `Access Level`: `Public`.
   * Enable `Proxy Cache` and select the registry created in the previous step.
 
-    ![Create New Project](images/registry/harbor/harbor2.png)
+    ![Create New Project](../images/registry/harbor/harbor2.png)
 
     As a result, DKP images will be available at a URL like: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
