@@ -37,15 +37,21 @@ masterNodeGroup:
 
 ## StandardWithNetwork
 
-When choosing this deployment scheme, you must ask your administrator for the type of network virtualization platform and specify it in the `edgeGateway.type` property. The deployment scheme supports `NSX-T` and `NSX-V`.
+When using this placement scheme, you must check with the administrator which network virtualization platform is in use and specify it in the `edgeGateway.type` parameter.  
+Two options are supported: `NSX-T` and `NSX-V`.
 
-If the Edge Gateway is based on NSX-T, a DHCP server will be automatically enabled in the created network for the nodes, providing IP addresses starting from the 30th address in the network up to the penultimate address (just before the broadcast address). The starting address for the IP address pool range can be configured via the `internalNetworkDHCPPoolStartAddress` property. If the Edge Gateway is provided by `NSX-V`, you must manually configure DHCP for the planned node network. Otherwise, nodes that are expected to obtain an address dynamically will not be able to do so.
+If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically enabled in the created network for the nodes.  
+It will assign IP addresses starting from the 30th address in the subnet up to the second-to-last (just before the broadcast address).  
+You can change the starting address of the DHCP pool using the `internalNetworkDHCPPoolStartAddress` parameter.
+
+If `NSX-V` is used, DHCP must be configured manually. Otherwise, nodes that rely on dynamic IP assignment will not be able to obtain an address.
 
 {% alert level="warning" %}
 It is not recommended to use dynamic addressing for the first master node in combination with `NSX-V`.
 {% endalert %}
 
 The deployment scheme assumes automated creation of NAT rules:
+
 - An SNAT rule for translating the addresses of the internal node network to the external address specified in the `edgeGateway.externalIP` property.
 - A DNAT rule for translating the external address and port, specified in the `edgeGateway.externalIP` and `edgeGateway.externalPort` properties, respectively, to the internal address of the first master node on port 22 using the `TCP` protocol for administrative access to the nodes via SSH.
 
@@ -60,12 +66,13 @@ If the Edge Gateway is provided by `NSX-T`, existing rules on the Edge Gateway w
 {% endalert %}
 
 The following rules will be created:
+
 - Allow any outgoing traffic
 - Allow incoming traffic over the `TCP` protocol on port 22 to enable SSH access to the cluster nodes
 - Allow any incoming traffic over the `ICMP` protocol
 - Allow incoming traffic over the `TCP` and `UDP` protocols on ports 30000–32767 for NodePort usage
 
-Example of the layout configuration using NSX-T:
+Example of the layout configuration using `NSX-T`:
 
 ```yaml
 ---
@@ -98,7 +105,7 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-Example of the layout configuration using NSX-V:
+Example of the layout configuration using `NSX-V`:
 
 ```yaml
 ---
