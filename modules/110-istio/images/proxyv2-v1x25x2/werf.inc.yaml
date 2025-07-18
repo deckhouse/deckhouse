@@ -211,18 +211,6 @@ import:
   add: /root/.ssh
   to: /root/.ssh
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
-  add: /lib64/libm.so.6
-  to: /lib64/libm.so.6
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
-  add: /lib64/libc.so.6
-  to: /lib64/libc.so.6
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
-  add: /lib64/ld-linux-x86-64.so.2
-  to: /lib64/ld-linux-x86-64.so.2
-  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
