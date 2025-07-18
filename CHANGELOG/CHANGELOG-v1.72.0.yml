@@ -1,0 +1,49 @@
+candi:
+  fixes:
+    - summary: Fix default AWS subnets tags for LB controller autodiscovery
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10138
+ci:
+  features:
+    - summary: Creating more detailed logs for analysis and speeding up platform build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14446
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix main network escaping for names with special symbols
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14328
+deckhouse:
+  features:
+    - summary: Separate queues for critical and functional modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13906
+deckhouse-controller:
+  features:
+    - summary: Implement metrics collector library.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14472
+    - summary: Deckhouse deployment upgrades now use Patch instead of Update
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14311
+docs:
+  fixes:
+    - summary: Fix the documentation header.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14391
+istio:
+  fixes:
+    - summary: Added api-proxy support for short-lived ServiceAccount tokens.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14137
+metallb:
+  fixes:
+    - summary: Fixed IP pool exhaustion on LoadBalancer deletion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14315
+node-manager:
+  fixes:
+    - summary: added placeholder for required field in `MachineDeployment` template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14531
+terraform-manager:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14507
+testing:
+  features:
+    - summary: >-
+        Added a validation test to ensure all Go hook ScheduleConfigs have a non-empty crontab
+        value.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14318
+
