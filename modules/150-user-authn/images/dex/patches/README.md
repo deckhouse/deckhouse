@@ -20,3 +20,9 @@ To avoid this, this patch makes refresh requests to declare and utilize their ow
 ### 004-static-user-groups.patch
 
 Adding group entity to kubernetes authentication.
+
+### 005-oidc-httpclient-to-context.patch
+
+This patch fixes the issue with the `insecureSkipVerify` and `rootCAs` options which do not work in OIDC connector.
+
+Upstream PR: https://github.com/dexidp/dex/pull/4223
