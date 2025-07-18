@@ -15,31 +15,42 @@
 package operation
 
 // MetricAction defines the supported metric operation types
-type MetricAction string
+type MetricAction int
 
 // Enum values for MetricAction
 const (
-	ActionCounterAdd          MetricAction = "c_add"
-	ActionOldCounterAdd       MetricAction = "add"
-	ActionGaugeAdd            MetricAction = "g_add"
-	ActionGaugeSet            MetricAction = "g_set"
-	ActionOldGaugeSet         MetricAction = "set"
-	ActionHistogramObserve    MetricAction = "h_observe"
-	ActionOldHistogramObserve MetricAction = "observe"
-	ActionExpireMetrics       MetricAction = "expire"
+	ActionCounterAdd MetricAction = iota
+	ActionGaugeAdd
+	ActionGaugeSet
+	ActionHistogramObserve
+	ActionExpireMetrics
+	// action for counting overall
+	overallAction
 )
 
 // IsValid checks if the action is one of the valid actions
 func (a MetricAction) IsValid() bool {
 	switch a {
-	case ActionOldGaugeSet, ActionCounterAdd, ActionHistogramObserve, ActionExpireMetrics:
+	case ActionCounterAdd, ActionGaugeAdd, ActionGaugeSet,
+		ActionHistogramObserve, ActionExpireMetrics:
 		return true
 	default:
 		return false
 	}
 }
 
-// String returns the string representation of the MetricAction
+var actionStrings = map[MetricAction]string{
+	ActionCounterAdd:       "CounterAdd",
+	ActionGaugeAdd:         "GaugeAdd",
+	ActionGaugeSet:         "GaugeSet",
+	ActionHistogramObserve: "HistogramObserve",
+	ActionExpireMetrics:    "ExpireMetrics",
+}
+
 func (a MetricAction) String() string {
-	return string(a)
+	if str, ok := actionStrings[a]; ok {
+		return str
+	}
+
+	return "Unknown"
 }

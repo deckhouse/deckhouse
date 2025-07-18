@@ -16,7 +16,6 @@ package operation
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -30,37 +29,7 @@ type MetricOperation struct {
 	Action  MetricAction
 }
 
-func (m MetricOperation) String() string {
-	parts := make([]string, 0)
-
-	if m.Group != "" {
-		parts = append(parts, "group="+m.Group)
-	}
-
-	if m.Name != "" {
-		parts = append(parts, "name="+m.Name)
-	}
-
-	if m.Action != "" {
-		parts = append(parts, "action="+m.Action.String())
-	}
-
-	if m.Value != nil {
-		parts = append(parts, fmt.Sprintf("value=%f", *m.Value))
-	}
-
-	if m.Buckets != nil {
-		parts = append(parts, fmt.Sprintf("buckets=%+v", m.Buckets))
-	}
-
-	if m.Labels != nil {
-		parts = append(parts, fmt.Sprintf("labels=%+v", m.Labels))
-	}
-
-	return "[" + strings.Join(parts, ", ") + "]"
-}
-
-func ValidateOperations(ops []MetricOperation) error {
+func ValidateOperations(ops ...MetricOperation) error {
 	var opsErrs *multierror.Error
 
 	for _, op := range ops {
@@ -77,41 +46,33 @@ func ValidateMetricOperation(op MetricOperation) error {
 	var opErrs *multierror.Error
 
 	if !op.Action.IsValid() {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("one of: 'action', 'set' or 'add' is required: %s", op))
+		opErrs = multierror.Append(opErrs, fmt.Errorf("one of: 'action', 'set' or 'add' is required: %s", op.Action.String()))
 	}
 
 	if op.Group == "" {
-		if op.Action != ActionOldGaugeSet && op.Action != ActionCounterAdd && op.Action != ActionHistogramObserve {
-			opErrs = multierror.Append(opErrs, fmt.Errorf("unsupported action '%s': %s", op.Action, op))
-		}
-	} else {
-		if op.Action != ActionExpireMetrics && op.Action != ActionOldGaugeSet && op.Action != ActionCounterAdd {
-			opErrs = multierror.Append(opErrs, fmt.Errorf("unsupported action '%s': %s", op.Action, op))
+		if op.Action == ActionExpireMetrics {
+			opErrs = multierror.Append(opErrs, fmt.Errorf("unsupported action '%s'", op.Action.String()))
 		}
 	}
 
 	if op.Name == "" && op.Group == "" {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required: %s", op))
+		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required: %s", op.Action.String()))
 	}
 
 	if op.Name == "" && op.Group != "" && op.Action != ActionExpireMetrics {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required when action is not 'expire': %s", op))
+		opErrs = multierror.Append(opErrs, fmt.Errorf("'name' is required when action is not 'expire': %s", op.Action.String()))
 	}
 
-	if op.Action == ActionOldGaugeSet && op.Value == nil {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'set': %s", op))
-	}
-
-	if op.Action == ActionCounterAdd && op.Value == nil {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'add': %s", op))
+	if (op.Action == ActionCounterAdd || op.Action == ActionGaugeAdd || op.Action == ActionGaugeSet) && op.Value == nil {
+		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action '%s'", op.Action.String()))
 	}
 
 	if op.Action == ActionHistogramObserve && op.Value == nil {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action 'observe': %s", op))
+		opErrs = multierror.Append(opErrs, fmt.Errorf("'value' is required for action '%s'", op.Action.String()))
 	}
 
 	if op.Action == ActionHistogramObserve && op.Buckets == nil {
-		opErrs = multierror.Append(opErrs, fmt.Errorf("'buckets' is required for action 'observe': %s", op))
+		opErrs = multierror.Append(opErrs, fmt.Errorf("'buckets' is required for action '%s'", op.Action.String()))
 	}
 
 	return opErrs.ErrorOrNil()

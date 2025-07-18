@@ -15,7 +15,7 @@
 package metricsstorage
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -262,7 +262,7 @@ func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, la
 		return nil
 	}
 
-	err := operation.ValidateOperations(ops)
+	err := operation.ValidateOperations(ops...)
 	if err != nil {
 		return err
 	}
@@ -299,42 +299,42 @@ func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, la
 
 // ApplyOperation applies the specified metric operation to the metric storage.
 //
-// It processes different types of metric operations:
-// - For ActionAdd: Increases a counter metric by the specified value
-// - For ActionSet: Sets a gauge metric to the specified value
-// - For ActionObserve: Records an observation in a histogram with the specified buckets
-//
 // The function merges operation-specific labels with common labels before applying the operation.
 //
-// Parameters:
-// - op: The MetricOperation to apply (containing action type, metric name, value, labels, etc.)
-// - commonLabels: Additional labels to apply to the metric
-//
-// If the MetricStorage instance is nil, the function returns without performing any operation.
-func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) {
+// If the MetricStorage instance is nil, the function returns error
+func (m *MetricStorage) ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) error {
 	if m == nil {
-		return
+		return errors.New("metric storage is nil")
 	}
 
+	err := operation.ValidateMetricOperation(op)
+	if err != nil {
+		return err
+	}
+
+	m.applyOperation(op, commonLabels)
+
+	return nil
+}
+
+func (m *MetricStorage) applyOperation(op operation.MetricOperation, commonLabels map[string]string) {
 	labels := labelspkg.MergeLabels(op.Labels, commonLabels)
 
-	if op.Action == operation.ActionCounterAdd && op.Value != nil {
-		m.CounterAdd(op.Name, *op.Value, labels)
-		return
+	if op.Group == "" {
+		op.Group = emptyUniqueGroup
 	}
 
-	if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
-		m.GaugeSet(op.Name, *op.Value, labels)
-		return
-	}
-
-	if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
-		m.GaugeSet(op.Name, *op.Value, labels)
-		return
-	}
-
-	if op.Action == operation.ActionHistogramObserve && op.Value != nil && op.Buckets != nil {
-		m.HistogramObserve(op.Name, *op.Value, labels, op.Buckets)
+	switch op.Action {
+	case operation.ActionCounterAdd:
+		m.groupedVault.CounterAdd(op.Group, op.Name, *op.Value, labels)
+	case operation.ActionGaugeAdd:
+		m.groupedVault.GaugeAdd(op.Group, op.Name, *op.Value, labels)
+	case operation.ActionGaugeSet:
+		m.groupedVault.GaugeSet(op.Group, op.Name, *op.Value, labels)
+	case operation.ActionHistogramObserve:
+		m.groupedVault.HistogramObserve(op.Group, op.Name, *op.Value, labels, op.Buckets)
+	case operation.ActionExpireMetrics:
+		m.groupedVault.ExpireGroupMetrics(op.Group)
 	}
 }
 
@@ -351,50 +351,20 @@ func (m *MetricStorage) applyGroupedOperations(group string, ops []operation.Met
 
 	// Apply metric operations one-by-one.
 	for _, op := range ops {
-		if op.Action == operation.ActionExpireMetrics {
-			m.groupedVault.ExpireGroupMetrics(group)
-			continue
-		}
-
-		labels := labelspkg.MergeLabels(op.Labels, commonLabels)
-
-		if op.Action == operation.ActionCounterAdd && op.Value != nil {
-			m.groupedVault.CounterAdd(group, op.Name, *op.Value, labels)
-		}
-
-		if op.Action == operation.ActionOldGaugeSet && op.Value != nil {
-			m.groupedVault.GaugeSet(group, op.Name, *op.Value, labels)
-		}
+		m.applyOperation(op, commonLabels)
 	}
 }
 
 // applyNonGroupedBatchOperations processes a batch of MetricOperations that are not grouped.
 // It applies each operation in the batch to the metric storage, adding the provided labels to each metric.
-func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOperation, labels map[string]string) error {
+func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOperation, commonLabels map[string]string) error {
 	if m == nil {
 		return nil
 	}
 
 	// Apply metric operations
-	for _, metricOp := range ops {
-		labels := labelspkg.MergeLabels(metricOp.Labels, labels)
-
-		if metricOp.Action == operation.ActionCounterAdd && metricOp.Value != nil {
-			m.groupedVault.CounterAdd(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
-			continue
-		}
-
-		if metricOp.Action == operation.ActionOldGaugeSet && metricOp.Value != nil {
-			m.groupedVault.GaugeSet(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels)
-			continue
-		}
-
-		if metricOp.Action == operation.ActionHistogramObserve && metricOp.Value != nil && metricOp.Buckets != nil {
-			m.groupedVault.HistogramObserve(emptyUniqueGroup, metricOp.Name, *metricOp.Value, labels, metricOp.Buckets)
-			continue
-		}
-
-		return fmt.Errorf("no operation in metric from module hook, name=%s", metricOp.Name)
+	for _, op := range ops {
+		m.applyOperation(op, commonLabels)
 	}
 
 	return nil

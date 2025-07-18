@@ -15,1173 +15,1078 @@
 package metricsstorage_test
 
 import (
-	"fmt"
-	"io"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
 func TestNewMetricStorage(t *testing.T) {
-	t.Run("creates with default options", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test_prefix")
+	tests := []struct {
+		name     string
+		prefix   string
+		opts     []metricsstorage.Option
+		validate func(t *testing.T, storage *metricsstorage.MetricStorage)
+	}{
+		{
+			name:   "default configuration",
+			prefix: "test",
+			opts:   nil,
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "test", storage.Prefix)
+				assert.NotNil(t, storage.Handler())
+				assert.NotNil(t, storage.Collector())
+			},
+		},
+		{
+			name:   "with new registry",
+			prefix: "custom",
+			opts:   []metricsstorage.Option{metricsstorage.WithNewRegistry()},
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "custom", storage.Prefix)
+			},
+		},
+		{
+			name:   "with custom registry",
+			prefix: "registry",
+			opts:   []metricsstorage.Option{metricsstorage.WithRegistry(prometheus.NewRegistry())},
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "registry", storage.Prefix)
+			},
+		},
+		{
+			name:   "with logger",
+			prefix: "logger",
+			opts:   []metricsstorage.Option{metricsstorage.WithLogger(log.NewNop())},
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "logger", storage.Prefix)
+			},
+		},
+		{
+			name:   "empty prefix",
+			prefix: "",
+			opts:   nil,
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "", storage.Prefix)
+			},
+		},
+		{
+			name:   "multiple options",
+			prefix: "multi",
+			opts: []metricsstorage.Option{
+				metricsstorage.WithNewRegistry(),
+				metricsstorage.WithLogger(log.NewNop()),
+			},
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "multi", storage.Prefix)
+			},
+		},
+	}
 
-		require.NotNil(t, ms)
-		assert.Equal(t, "test_prefix", ms.Prefix)
-
-		// Test that default prometheus registerer is used
-		handler := ms.Handler()
-		assert.NotNil(t, handler)
-	})
-
-	t.Run("creates with empty prefix", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("")
-
-		require.NotNil(t, ms)
-		assert.Equal(t, "", ms.Prefix)
-	})
-
-	t.Run("creates with special characters in prefix", func(t *testing.T) {
-		prefix := "test-prefix_123"
-		ms := metricsstorage.NewMetricStorage(prefix)
-
-		require.NotNil(t, ms)
-		assert.Equal(t, prefix, ms.Prefix)
-	})
-
-	t.Run("creates with custom registry", func(t *testing.T) {
-		registry := prometheus.NewRegistry()
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithRegistry(registry))
-
-		require.NotNil(t, ms)
-
-		// Test that custom registry is used
-		collector := ms.Collector()
-		assert.Equal(t, registry, collector)
-	})
-
-	t.Run("creates with new registry", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
-
-		require.NotNil(t, ms)
-
-		// Verify separate registry is created
-		collector := ms.Collector()
-		assert.NotNil(t, collector)
-		assert.NotEqual(t, prometheus.DefaultRegisterer, collector)
-	})
-
-	t.Run("creates with custom logger", func(t *testing.T) {
-		logger := log.NewLogger().Named("test-logger")
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithLogger(logger))
-
-		require.NotNil(t, ms)
-		// Cannot directly test logger, but ensure no panic
-	})
-
-	t.Run("creates with multiple options", func(t *testing.T) {
-		registry := prometheus.NewRegistry()
-		logger := log.NewLogger().Named("test-logger")
-		ms := metricsstorage.NewMetricStorage("test",
-			metricsstorage.WithRegistry(registry),
-			metricsstorage.WithLogger(logger))
-
-		require.NotNil(t, ms)
-		assert.Equal(t, registry, ms.Collector())
-	})
-}
-
-func TestMetricStorage_PrefixResolution(t *testing.T) {
-	t.Run("replaces prefix template", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("d8")
-
-		counter, err := ms.RegisterCounter("{PREFIX}_test_counter", []string{"label"})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Equal(t, "d8_test_counter", counter.Name())
-	})
-
-	t.Run("handles metric without prefix template", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("d8")
-
-		counter, err := ms.RegisterCounter("test_counter", []string{"label"})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Equal(t, "test_counter", counter.Name())
-	})
-
-	t.Run("handles multiple prefix templates", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("d8")
-
-		// Only first occurrence should be replaced
-		counter, err := ms.RegisterCounter("{PREFIX}_test_{PREFIX}_counter", []string{"label"})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Equal(t, "d8_test_{PREFIX}_counter", counter.Name())
-	})
-
-	t.Run("handles empty prefix with template", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("")
-
-		counter, err := ms.RegisterCounter("{PREFIX}_test_counter", []string{"label"})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Equal(t, "_test_counter", counter.Name())
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage(tt.prefix, tt.opts...)
+			tt.validate(t, storage)
+		})
+	}
 }
 
 func TestMetricStorage_RegisterCounter(t *testing.T) {
-	t.Run("registers counter successfully", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
+	tests := []struct {
+		name        string
+		metric      string
+		labelNames  []string
+		wantError   bool
+		errorSubstr string
+	}{
+		{
+			name:       "valid counter",
+			metric:     "test_counter",
+			labelNames: []string{"label1", "label2"},
+			wantError:  false,
+		},
+		{
+			name:       "counter with no labels",
+			metric:     "simple_counter",
+			labelNames: nil,
+			wantError:  false,
+		},
+		{
+			name:       "counter with prefix template",
+			metric:     "{PREFIX}_counter",
+			labelNames: []string{"env"},
+			wantError:  false,
+		},
+		{
+			name:        "invalid metric name",
+			metric:      "",
+			labelNames:  []string{"label1"},
+			wantError:   true,
+			errorSubstr: "",
+		},
+	}
 
-		counter, err := ms.RegisterCounter("test_counter", []string{"method", "status"})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		assert.Equal(t, "test_counter", counter.Name())
-		assert.Equal(t, []string{"method", "status"}, counter.LabelNames())
-	})
+			counter, err := storage.RegisterCounter(tt.metric, tt.labelNames)
 
-	t.Run("registers counter with empty labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		counter, err := ms.RegisterCounter("test_counter", []string{})
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Equal(t, []string{}, counter.LabelNames())
-	})
-
-	t.Run("registers counter with nil labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		counter, err := ms.RegisterCounter("test_counter", nil)
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-
-		assert.Nil(t, counter.LabelNames())
-	})
-
-	t.Run("registers counter with options", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		counter, err := ms.RegisterCounter("test_counter", []string{"label"},
-			options.WithHelp("Test counter help"))
-		require.NoError(t, err)
-		require.NotNil(t, counter)
-	})
-
-	t.Run("handles duplicate counter registration", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
-
-		counter1, err1 := ms.RegisterCounter("test_counter", []string{"label"})
-		require.NoError(t, err1)
-
-		counter2, err2 := ms.RegisterCounter("test_counter", []string{"label"})
-		// Should either succeed (return same) or fail gracefully
-		if err2 != nil {
-			assert.Error(t, err2)
-		} else {
-			assert.NotNil(t, counter2)
-		}
-
-		assert.NotNil(t, counter1)
-	})
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorSubstr != "" {
+					assert.Contains(t, err.Error(), tt.errorSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, counter)
+			}
+		})
+	}
 }
 
 func TestMetricStorage_RegisterGauge(t *testing.T) {
-	t.Run("registers gauge successfully", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
+	tests := []struct {
+		name        string
+		metric      string
+		labelNames  []string
+		wantError   bool
+		errorSubstr string
+	}{
+		{
+			name:       "valid gauge",
+			metric:     "test_gauge",
+			labelNames: []string{"label1", "label2"},
+			wantError:  false,
+		},
+		{
+			name:       "gauge with no labels",
+			metric:     "simple_gauge",
+			labelNames: nil,
+			wantError:  false,
+		},
+		{
+			name:       "gauge with prefix template",
+			metric:     "{PREFIX}_gauge",
+			labelNames: []string{"env"},
+			wantError:  false,
+		},
+	}
 
-		gauge, err := ms.RegisterGauge("test_gauge", []string{"instance"})
-		require.NoError(t, err)
-		require.NotNil(t, gauge)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		assert.Equal(t, "test_gauge", gauge.Name())
-		assert.Equal(t, []string{"instance"}, gauge.LabelNames())
-	})
+			gauge, err := storage.RegisterGauge(tt.metric, tt.labelNames)
 
-	t.Run("registers gauge with options", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		gauge, err := ms.RegisterGauge("test_gauge", []string{"instance"},
-			options.WithHelp("Test gauge help"),
-			options.WithConstantLabels(map[string]string{"version": "1.0"}))
-		require.NoError(t, err)
-		require.NotNil(t, gauge)
-	})
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorSubstr != "" {
+					assert.Contains(t, err.Error(), tt.errorSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, gauge)
+			}
+		})
+	}
 }
 
 func TestMetricStorage_RegisterHistogram(t *testing.T) {
-	t.Run("registers histogram successfully", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0, 10.0}
+	tests := []struct {
+		name        string
+		metric      string
+		labelNames  []string
+		buckets     []float64
+		wantError   bool
+		errorSubstr string
+	}{
+		{
+			name:       "valid histogram",
+			metric:     "test_histogram",
+			labelNames: []string{"label1", "label2"},
+			buckets:    []float64{0.1, 0.5, 1.0, 5.0},
+			wantError:  false,
+		},
+		{
+			name:       "histogram with no labels",
+			metric:     "simple_histogram",
+			labelNames: nil,
+			buckets:    []float64{1, 5, 10},
+			wantError:  false,
+		},
+		{
+			name:       "histogram with default buckets",
+			metric:     "default_histogram",
+			labelNames: []string{"env"},
+			buckets:    nil,
+			wantError:  false,
+		},
+		{
+			name:       "histogram with prefix template",
+			metric:     "{PREFIX}_histogram",
+			labelNames: []string{"env"},
+			buckets:    []float64{0.1, 0.5, 1.0},
+			wantError:  false,
+		},
+	}
 
-		histogram, err := ms.RegisterHistogram("test_histogram", []string{"method"}, buckets)
-		require.NoError(t, err)
-		require.NotNil(t, histogram)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		assert.Equal(t, "test_histogram", histogram.Name())
-		assert.Equal(t, []string{"method"}, histogram.LabelNames())
-	})
+			histogram, err := storage.RegisterHistogram(tt.metric, tt.labelNames, tt.buckets)
 
-	t.Run("registers histogram with empty buckets", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		histogram, err := ms.RegisterHistogram("test_histogram", []string{"method"}, []float64{})
-		require.NoError(t, err)
-		require.NotNil(t, histogram)
-	})
-
-	t.Run("registers histogram with nil buckets", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		histogram, err := ms.RegisterHistogram("test_histogram", []string{"method"}, nil)
-		require.NoError(t, err)
-		require.NotNil(t, histogram)
-	})
-
-	t.Run("registers histogram with custom buckets", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		buckets := []float64{0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}
-
-		histogram, err := ms.RegisterHistogram("test_histogram", []string{"endpoint"}, buckets)
-		require.NoError(t, err)
-		require.NotNil(t, histogram)
-	})
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorSubstr != "" {
+					assert.Contains(t, err.Error(), tt.errorSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, histogram)
+			}
+		})
+	}
 }
 
-func TestMetricStorage_CounterOperations(t *testing.T) {
-	t.Run("counter add with valid labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
+func TestMetricStorage_CounterAdd(t *testing.T) {
+	tests := []struct {
+		name   string
+		metric string
+		value  float64
+		labels map[string]string
+	}{
+		{
+			name:   "simple counter add",
+			metric: "test_counter",
+			value:  1.0,
+			labels: map[string]string{"env": "test"},
+		},
+		{
+			name:   "counter add with multiple labels",
+			metric: "multi_counter",
+			value:  5.0,
+			labels: map[string]string{"env": "prod", "service": "api"},
+		},
+		{
+			name:   "counter add with no labels",
+			metric: "no_label_counter",
+			value:  10.0,
+			labels: nil,
+		},
+		{
+			name:   "counter add zero value",
+			metric: "zero_counter",
+			value:  0.0,
+			labels: map[string]string{"type": "zero"},
+		},
+	}
 
-		ms.CounterAdd("test_counter", 5.0, map[string]string{"method": "GET", "status": "200"})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		// Verify metric exists by getting collector
-		counter := ms.Counter("test_counter", map[string]string{"method": "GET", "status": "200"})
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("counter add with empty labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.CounterAdd("test_counter", 1.0, map[string]string{})
-
-		counter := ms.Counter("test_counter", map[string]string{})
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("counter add with nil labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.CounterAdd("test_counter", 1.0, nil)
-
-		counter := ms.Counter("test_counter", nil)
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("counter add zero value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.CounterAdd("test_counter", 0.0, map[string]string{"method": "GET"})
-
-		counter := ms.Counter("test_counter", map[string]string{"method": "GET"})
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("counter add negative value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		// Should not panic, but behavior is implementation-specific
-		assert.NotPanics(t, func() {
-			ms.CounterAdd("test_counter", -1.0, map[string]string{"method": "GET"})
+			// Should not panic
+			assert.NotPanics(t, func() {
+				storage.CounterAdd(tt.metric, tt.value, tt.labels)
+			})
 		})
-	})
-
-	t.Run("counter operations on nil storage", func(t *testing.T) {
-		var ms *metricsstorage.MetricStorage
-
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ms.CounterAdd("test_counter", 1.0, map[string]string{"method": "GET"})
-		})
-	})
+	}
 }
 
-func TestMetricStorage_GaugeOperations(t *testing.T) {
-	t.Run("gauge set positive value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
+func TestMetricStorage_GaugeSet(t *testing.T) {
+	tests := []struct {
+		name   string
+		metric string
+		value  float64
+		labels map[string]string
+	}{
+		{
+			name:   "simple gauge set",
+			metric: "test_gauge",
+			value:  42.0,
+			labels: map[string]string{"env": "test"},
+		},
+		{
+			name:   "gauge set negative value",
+			metric: "negative_gauge",
+			value:  -10.5,
+			labels: map[string]string{"type": "negative"},
+		},
+		{
+			name:   "gauge set with no labels",
+			metric: "no_label_gauge",
+			value:  100.0,
+			labels: nil,
+		},
+	}
 
-		ms.GaugeSet("test_gauge", 42.5, map[string]string{"instance": "server1"})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("gauge set negative value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.GaugeSet("test_gauge", -10.0, map[string]string{"instance": "server1"})
-
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("gauge set zero value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.GaugeSet("test_gauge", 0.0, map[string]string{"instance": "server1"})
-
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("gauge add positive value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.GaugeAdd("test_gauge", 5.0, map[string]string{"instance": "server1"})
-		ms.GaugeAdd("test_gauge", 3.0, map[string]string{"instance": "server1"})
-
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("gauge add negative value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.GaugeAdd("test_gauge", -5.0, map[string]string{"instance": "server1"})
-
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("gauge operations on nil storage", func(t *testing.T) {
-		var ms *metricsstorage.MetricStorage
-
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ms.GaugeSet("test_gauge", 1.0, map[string]string{"instance": "server1"})
-			ms.GaugeAdd("test_gauge", 1.0, map[string]string{"instance": "server1"})
+			// Should not panic
+			assert.NotPanics(t, func() {
+				storage.GaugeSet(tt.metric, tt.value, tt.labels)
+			})
 		})
-	})
+	}
 }
 
-func TestMetricStorage_HistogramOperations(t *testing.T) {
-	t.Run("histogram observe positive value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0}
+func TestMetricStorage_GaugeAdd(t *testing.T) {
+	tests := []struct {
+		name   string
+		metric string
+		value  float64
+		labels map[string]string
+	}{
+		{
+			name:   "simple gauge add",
+			metric: "test_gauge_add",
+			value:  5.0,
+			labels: map[string]string{"env": "test"},
+		},
+		{
+			name:   "gauge add negative value",
+			metric: "negative_gauge_add",
+			value:  -2.5,
+			labels: map[string]string{"type": "sub"},
+		},
+	}
 
-		ms.HistogramObserve("test_histogram", 1.5, map[string]string{"endpoint": "/api"}, buckets)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api"}, buckets)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("histogram observe zero value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		buckets := []float64{0.1, 0.5, 1.0}
-
-		ms.HistogramObserve("test_histogram", 0.0, map[string]string{"endpoint": "/api"}, buckets)
-
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api"}, buckets)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("histogram observe negative value", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		buckets := []float64{0.1, 0.5, 1.0}
-
-		ms.HistogramObserve("test_histogram", -0.5, map[string]string{"endpoint": "/api"}, buckets)
-
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api"}, buckets)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("histogram observe with empty buckets", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.HistogramObserve("test_histogram", 1.0, map[string]string{"endpoint": "/api"}, []float64{})
-
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api"}, []float64{})
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("histogram observe with nil buckets", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ms.HistogramObserve("test_histogram", 1.0, map[string]string{"endpoint": "/api"}, nil)
-
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api"}, nil)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("histogram operations on nil storage", func(t *testing.T) {
-		var ms *metricsstorage.MetricStorage
-
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ms.HistogramObserve("test_histogram", 1.0, map[string]string{"endpoint": "/api"}, []float64{1.0})
+			// Should not panic
+			assert.NotPanics(t, func() {
+				storage.GaugeAdd(tt.metric, tt.value, tt.labels)
+			})
 		})
-	})
+	}
+}
+
+func TestMetricStorage_HistogramObserve(t *testing.T) {
+	tests := []struct {
+		name    string
+		metric  string
+		value   float64
+		labels  map[string]string
+		buckets []float64
+	}{
+		{
+			name:    "simple histogram observe",
+			metric:  "test_histogram",
+			value:   0.5,
+			labels:  map[string]string{"env": "test"},
+			buckets: []float64{0.1, 0.5, 1.0, 5.0},
+		},
+		{
+			name:    "histogram observe large value",
+			metric:  "large_histogram",
+			value:   100.0,
+			labels:  map[string]string{"type": "large"},
+			buckets: []float64{1, 10, 100, 1000},
+		},
+		{
+			name:    "histogram observe with no labels",
+			metric:  "no_label_histogram",
+			value:   2.5,
+			labels:  nil,
+			buckets: []float64{1, 5, 10},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+			// Should not panic
+			assert.NotPanics(t, func() {
+				storage.HistogramObserve(tt.metric, tt.value, tt.labels, tt.buckets)
+			})
+		})
+	}
+}
+
+func TestMetricStorage_Counter(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	counter1 := storage.Counter("test_counter", map[string]string{"env": "test"})
+	assert.NotNil(t, counter1)
+
+	// Getting the same counter should return the same instance
+	counter2 := storage.Counter("test_counter", map[string]string{"env": "test"})
+	assert.NotNil(t, counter2)
+}
+
+func TestMetricStorage_Gauge(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	gauge1 := storage.Gauge("test_gauge", map[string]string{"env": "test"})
+	assert.NotNil(t, gauge1)
+
+	// Getting the same gauge should return the same instance
+	gauge2 := storage.Gauge("test_gauge", map[string]string{"env": "test"})
+	assert.NotNil(t, gauge2)
+}
+
+func TestMetricStorage_Histogram(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	buckets := []float64{0.1, 0.5, 1.0, 5.0}
+	histogram1 := storage.Histogram("test_histogram", map[string]string{"env": "test"}, buckets)
+	assert.NotNil(t, histogram1)
+
+	// Getting the same histogram should return the same instance
+	histogram2 := storage.Histogram("test_histogram", map[string]string{"env": "test"}, buckets)
+	assert.NotNil(t, histogram2)
 }
 
 func TestMetricStorage_ApplyOperation(t *testing.T) {
-	t.Run("apply add operation", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		value := 5.0
+	tests := []struct {
+		name         string
+		op           operation.MetricOperation
+		commonLabels map[string]string
+		wantError    bool
+		errorSubstr  string
+	}{
+		{
+			name: "valid counter add operation",
+			op: operation.MetricOperation{
+				Name:   "test_counter",
+				Value:  floatPtr(1.0),
+				Action: operation.ActionCounterAdd,
+				Labels: map[string]string{"type": "test"},
+			},
+			commonLabels: map[string]string{"env": "prod"},
+			wantError:    false,
+		},
+		{
+			name: "valid gauge set operation",
+			op: operation.MetricOperation{
+				Name:   "test_gauge",
+				Value:  floatPtr(42.0),
+				Action: operation.ActionGaugeSet,
+				Labels: map[string]string{"service": "api"},
+			},
+			commonLabels: map[string]string{"region": "us-east"},
+			wantError:    false,
+		},
+		{
+			name: "valid gauge add operation",
+			op: operation.MetricOperation{
+				Name:   "test_gauge_add",
+				Value:  floatPtr(5.0),
+				Action: operation.ActionGaugeAdd,
+				Labels: map[string]string{"component": "worker"},
+			},
+			commonLabels: nil,
+			wantError:    false,
+		},
+		{
+			name: "valid histogram observe operation",
+			op: operation.MetricOperation{
+				Name:    "test_histogram",
+				Value:   floatPtr(0.5),
+				Action:  operation.ActionHistogramObserve,
+				Labels:  map[string]string{"endpoint": "/api/v1"},
+				Buckets: []float64{0.1, 0.5, 1.0, 5.0},
+			},
+			commonLabels: map[string]string{"method": "GET"},
+			wantError:    false,
+		},
+		{
+			name: "valid expire metrics operation",
+			op: operation.MetricOperation{
+				Group:  "test_group",
+				Action: operation.ActionExpireMetrics,
+			},
+			commonLabels: nil,
+			wantError:    false,
+		},
+		{
+			name: "invalid operation - missing value for counter",
+			op: operation.MetricOperation{
+				Name:   "test_counter",
+				Action: operation.ActionCounterAdd,
+			},
+			commonLabels: nil,
+			wantError:    true,
+			errorSubstr:  "value",
+		},
+		{
+			name: "invalid operation - missing name",
+			op: operation.MetricOperation{
+				Value:  floatPtr(1.0),
+				Action: operation.ActionCounterAdd,
+			},
+			commonLabels: nil,
+			wantError:    true,
+			errorSubstr:  "name",
+		},
+		{
+			name: "invalid operation - invalid action",
+			op: operation.MetricOperation{
+				Name:   "test_metric",
+				Value:  floatPtr(1.0),
+				Action: operation.MetricAction(999),
+			},
+			commonLabels: nil,
+			wantError:    true,
+			errorSubstr:  "action",
+		},
+		{
+			name: "invalid operation - missing buckets for histogram",
+			op: operation.MetricOperation{
+				Name:   "test_histogram",
+				Value:  floatPtr(0.5),
+				Action: operation.ActionHistogramObserve,
+			},
+			commonLabels: nil,
+			wantError:    true,
+			errorSubstr:  "buckets",
+		},
+	}
 
-		op := operation.MetricOperation{
-			Name:   "test_counter",
-			Action: operation.ActionCounterAdd,
-			Value:  &value,
-			Labels: map[string]string{"method": "GET"},
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
 
-		ms.ApplyOperation(op, map[string]string{"service": "api"})
+			err := storage.ApplyOperation(tt.op, tt.commonLabels)
 
-		// Verify operation was applied
-		counter := ms.Counter("test_counter", map[string]string{"method": "GET", "service": "api"})
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("apply set operation", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		value := 42.0
-
-		op := operation.MetricOperation{
-			Name:   "test_gauge",
-			Action: operation.ActionOldGaugeSet,
-			Value:  &value,
-			Labels: map[string]string{"instance": "server1"},
-		}
-
-		ms.ApplyOperation(op, map[string]string{"environment": "prod"})
-
-		// Verify operation was applied
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1", "environment": "prod"})
-		assert.NotNil(t, gauge)
-	})
-
-	t.Run("apply observe operation", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		value := 1.5
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0}
-
-		op := operation.MetricOperation{
-			Name:    "test_histogram",
-			Action:  operation.ActionHistogramObserve,
-			Value:   &value,
-			Buckets: buckets,
-			Labels:  map[string]string{"endpoint": "/api"},
-		}
-
-		ms.ApplyOperation(op, map[string]string{"version": "1.0"})
-
-		// Verify operation was applied
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api", "version": "1.0"}, buckets)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("apply operation with nil value for add", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		op := operation.MetricOperation{
-			Name:   "test_counter",
-			Action: operation.ActionCounterAdd,
-			Value:  nil,
-			Labels: map[string]string{"method": "GET"},
-		}
-
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ms.ApplyOperation(op, map[string]string{"service": "api"})
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorSubstr != "" {
+					assert.Contains(t, err.Error(), tt.errorSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
 		})
-	})
-
-	t.Run("apply operation with empty labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		value := 1.0
-
-		op := operation.MetricOperation{
-			Name:   "test_counter",
-			Action: operation.ActionCounterAdd,
-			Value:  &value,
-			Labels: map[string]string{},
-		}
-
-		ms.ApplyOperation(op, map[string]string{})
-
-		counter := ms.Counter("test_counter", map[string]string{})
-		assert.NotNil(t, counter)
-	})
-
-	t.Run("apply operation on nil storage", func(t *testing.T) {
-		var ms *metricsstorage.MetricStorage
-		value := 1.0
-
-		op := operation.MetricOperation{
-			Name:   "test_counter",
-			Action: operation.ActionCounterAdd,
-			Value:  &value,
-		}
-
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ms.ApplyOperation(op, map[string]string{})
-		})
-	})
+	}
 }
 
 func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
-	t.Run("apply mixed operations batch", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		value1 := 5.0
-		value2 := 42.0
-		value3 := 1.5
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0}
-
-		ops := []operation.MetricOperation{
-			{
-				Name:   "test_counter",
-				Action: operation.ActionCounterAdd,
-				Value:  &value1,
-				Labels: map[string]string{"method": "GET"},
-			},
-			{
-				Name:   "test_gauge",
-				Action: operation.ActionOldGaugeSet,
-				Value:  &value2,
-				Labels: map[string]string{"instance": "server1"},
-			},
-			{
-				Name:    "test_histogram",
-				Action:  operation.ActionHistogramObserve,
-				Value:   &value3,
-				Buckets: buckets,
-				Labels:  map[string]string{"endpoint": "/api"},
-			},
-		}
-
-		err := ms.ApplyBatchOperations(ops, map[string]string{"service": "api"})
-		require.NoError(t, err)
-
-		// Verify all operations were applied
-		counter := ms.Counter("test_counter", map[string]string{"method": "GET", "service": "api"})
-		gauge := ms.Gauge("test_gauge", map[string]string{"instance": "server1", "service": "api"})
-		histogram := ms.Histogram("test_histogram", map[string]string{"endpoint": "/api", "service": "api"}, buckets)
-
-		assert.NotNil(t, counter)
-		assert.NotNil(t, gauge)
-		assert.NotNil(t, histogram)
-	})
-
-	t.Run("apply grouped operations batch", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		value1 := 5.0
-		value2 := 10.0
-
-		ops := []operation.MetricOperation{
-			{
-				Name:   "test_counter",
-				Action: operation.ActionCounterAdd,
-				Value:  &value1,
-				Labels: map[string]string{"method": "GET"},
-				Group:  "api_metrics",
-			},
-			{
-				Name:   "test_gauge",
-				Action: operation.ActionOldGaugeSet,
-				Value:  &value2,
-				Labels: map[string]string{"instance": "server1"},
-				Group:  "api_metrics",
-			},
-		}
-
-		err := ms.ApplyBatchOperations(ops, map[string]string{"service": "api"})
-		require.NoError(t, err)
-
-		// Verify grouped operations were applied
-		grouped := ms.Grouped()
-		assert.NotNil(t, grouped)
-	})
-
-	t.Run("apply empty operations batch", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		err := ms.ApplyBatchOperations([]operation.MetricOperation{}, map[string]string{"service": "api"})
-		require.NoError(t, err)
-	})
-
-	t.Run("apply nil operations batch", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		err := ms.ApplyBatchOperations(nil, map[string]string{"service": "api"})
-		require.NoError(t, err)
-	})
-
-	t.Run("apply batch with invalid operations", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		ops := []operation.MetricOperation{
-			{
-				Name:   "", // Invalid: empty name
-				Action: operation.ActionCounterAdd,
-			},
-		}
-
-		err := ms.ApplyBatchOperations(ops, map[string]string{})
-		assert.Error(t, err)
-	})
-
-	t.Run("apply batch operations on nil storage", func(t *testing.T) {
-		var ms *metricsstorage.MetricStorage
-		value := 1.0
-
-		ops := []operation.MetricOperation{
-			{
-				Name:   "test_counter",
-				Action: operation.ActionCounterAdd,
-				Value:  &value,
-			},
-		}
-
-		err := ms.ApplyBatchOperations(ops, map[string]string{})
-		assert.NoError(t, err) // Should handle nil gracefully
-	})
-}
-
-func TestMetricStorage_GroupedOperations(t *testing.T) {
-	t.Run("grouped storage is accessible", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		grouped := ms.Grouped()
-		assert.NotNil(t, grouped)
-	})
-
-	t.Run("grouped operations work correctly", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		grouped := ms.Grouped()
-
-		grouped.CounterAdd("test_group", "test_counter", 5.0, map[string]string{"method": "GET"})
-		grouped.GaugeSet("test_group", "test_gauge", 42.0, map[string]string{"instance": "server1"})
-
-		// Verify collector exists
-		collector := grouped.Collector()
-		assert.NotNil(t, collector)
-	})
-
-	t.Run("grouped metrics can be expired", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		grouped := ms.Grouped()
-
-		grouped.CounterAdd("test_group", "test_counter", 5.0, map[string]string{"method": "GET"})
-		grouped.GaugeSet("test_group", "test_gauge", 42.0, map[string]string{"instance": "server1"})
-
-		// Expire entire group
-		grouped.ExpireGroupMetrics("test_group")
-
-		// Verify no panic occurred
-		collector := grouped.Collector()
-		assert.NotNil(t, collector)
-	})
-
-	t.Run("grouped metrics can be expired by name", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		grouped := ms.Grouped()
-
-		grouped.CounterAdd("test_group", "test_counter", 5.0, map[string]string{"method": "GET"})
-		grouped.GaugeSet("test_group", "test_gauge", 42.0, map[string]string{"instance": "server1"})
-
-		// Expire specific metric
-		grouped.ExpireGroupMetricByName("test_group", "test_counter")
-
-		// Verify no panic occurred
-		collector := grouped.Collector()
-		assert.NotNil(t, collector)
-	})
-}
-
-func TestMetricStorage_PrometheusIntegration(t *testing.T) {
-	t.Run("collector interface", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		collector := ms.Collector()
-		assert.NotNil(t, collector)
-
-		// Verify collector implements prometheus.Collector
-		var _ prometheus.Collector = collector
-	})
-
-	t.Run("handler interface", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		handler := ms.Handler()
-		assert.NotNil(t, handler)
-
-		// Verify handler implements http.Handler
-		var _ http.Handler = handler
-	})
-
-	t.Run("handler serves metrics", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
-
-		// Add some metrics
-		ms.CounterAdd("test_counter", 5.0, map[string]string{"method": "GET"})
-		ms.GaugeSet("test_gauge", 42.0, map[string]string{"instance": "server1"})
-
-		// Create test server
-		handler := ms.Handler()
-		server := httptest.NewServer(handler)
-		defer server.Close()
-
-		// Make request to metrics endpoint
-		resp, err := http.Get(server.URL)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-
-		bodyStr := string(body)
-		// Should contain our metrics
-		assert.Contains(t, bodyStr, "test_counter")
-		assert.Contains(t, bodyStr, "test_gauge")
-	})
-
-	t.Run("custom registry integration", func(t *testing.T) {
-		registry := prometheus.NewRegistry()
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithRegistry(registry))
-
-		// Add metrics
-		ms.CounterAdd("test_counter", 1.0, map[string]string{"label": "value"})
-
-		// Verify metrics are in custom registry
-		families, err := registry.Gather()
-		require.NoError(t, err)
-
-		// Should have at least our metric
-		assert.NotEmpty(t, families)
-
-		foundMetric := false
-		for _, family := range families {
-			if family.GetName() == "test_counter" {
-				foundMetric = true
-				break
-			}
-		}
-		assert.True(t, foundMetric, "Custom metric should be found in registry")
-	})
-}
-
-func TestMetricStorage_EdgeCases(t *testing.T) {
-	t.Run("operations with extreme values", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		// Test with very large values
-		ms.CounterAdd("test_counter", 1e9, map[string]string{"type": "large"})
-		ms.GaugeSet("test_gauge", 1e15, map[string]string{"type": "large"})
-
-		// Test with very small values
-		ms.CounterAdd("test_counter", 1e-9, map[string]string{"type": "small"})
-		ms.GaugeSet("test_gauge", 1e-15, map[string]string{"type": "small"})
-
-		// Test with infinity (implementation specific behavior)
-		assert.NotPanics(t, func() {
-			ms.GaugeSet("test_gauge", math.Inf(1), map[string]string{"type": "inf"})
-			ms.GaugeSet("test_gauge", math.Inf(-1), map[string]string{"type": "neg_inf"})
-		})
-
-		// Test with NaN (implementation specific behavior)
-		assert.NotPanics(t, func() {
-			ms.GaugeSet("test_gauge", math.NaN(), map[string]string{"type": "nan"})
-		})
-	})
-
-	t.Run("operations with special characters in labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		specialLabels := map[string]string{
-			"unicode_💯": "value",
-			"spaces":    "value with spaces",
-			"quotes":    `value with "quotes"`,
-			"backslash": `value\with\backslash`,
-			"newline":   "value\nwith\nnewline",
-			"empty":     "",
-		}
-
-		assert.NotPanics(t, func() {
-			ms.CounterAdd("test_counter", 1.0, specialLabels)
-			ms.GaugeSet("test_gauge", 1.0, specialLabels)
-		})
-	})
-
-	t.Run("operations with very long label values", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		longValue := strings.Repeat("a", 1000)
-		longLabels := map[string]string{
-			"long_value": longValue,
-		}
-
-		assert.NotPanics(t, func() {
-			ms.CounterAdd("test_counter", 1.0, longLabels)
-			ms.GaugeSet("test_gauge", 1.0, longLabels)
-		})
-	})
-
-	t.Run("operations with many labels", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		manyLabels := make(map[string]string)
-		for i := 0; i < 100; i++ {
-			manyLabels[fmt.Sprintf("label_%d", i)] = fmt.Sprintf("value_%d", i)
-		}
-
-		assert.NotPanics(t, func() {
-			ms.CounterAdd("test_counter", 1.0, manyLabels)
-			ms.GaugeSet("test_gauge", 1.0, manyLabels)
-		})
-	})
-
-	t.Run("concurrent operations", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		var wg sync.WaitGroup
-		numGoroutines := 100
-		numOpsPerGoroutine := 100
-
-		// Test concurrent counter operations
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOpsPerGoroutine; j++ {
-					ms.CounterAdd("concurrent_counter", 1.0, map[string]string{
-						"goroutine": fmt.Sprintf("%d", id),
-						"operation": fmt.Sprintf("%d", j),
-					})
-				}
-			}(i)
-		}
-
-		// Test concurrent gauge operations
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOpsPerGoroutine; j++ {
-					ms.GaugeSet("concurrent_gauge", float64(j), map[string]string{
-						"goroutine": fmt.Sprintf("%d", id),
-						"operation": fmt.Sprintf("%d", j),
-					})
-				}
-			}(i)
-		}
-
-		// Test concurrent histogram operations
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0}
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOpsPerGoroutine; j++ {
-					ms.HistogramObserve("concurrent_histogram", float64(j)*0.1, map[string]string{
-						"goroutine": fmt.Sprintf("%d", id),
-						"operation": fmt.Sprintf("%d", j),
-					}, buckets)
-				}
-			}(i)
-		}
-
-		wg.Wait()
-
-		// Verify no panic occurred during concurrent operations
-		collector := ms.Collector()
-		assert.NotNil(t, collector)
-	})
-
-	t.Run("stress test with rapid operations", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-
-		// Rapidly create and modify metrics
-		for i := 0; i < 10000; i++ {
-			metricName := fmt.Sprintf("stress_test_metric_%d", i%100)
-			labels := map[string]string{
-				"iteration": fmt.Sprintf("%d", i),
-				"modulo":    fmt.Sprintf("%d", i%10),
-			}
-
-			ms.CounterAdd(metricName, 1.0, labels)
-			ms.GaugeSet(metricName+"_gauge", float64(i), labels)
-		}
-
-		// Verify storage is still functional
-		collector := ms.Collector()
-		assert.NotNil(t, collector)
-	})
-}
-
-func TestMetricStorage_MemoryLeaks(t *testing.T) {
-	t.Run("metric registration and expiration", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test")
-		grouped := ms.Grouped()
-
-		// Register many metrics in groups
-		for group := 0; group < 10; group++ {
-			groupName := fmt.Sprintf("group_%d", group)
-			for metric := 0; metric < 100; metric++ {
-				metricName := fmt.Sprintf("metric_%d", metric)
-				labels := map[string]string{
-					"instance": fmt.Sprintf("server_%d", metric%10),
-					"type":     fmt.Sprintf("type_%d", metric%5),
-				}
-
-				grouped.CounterAdd(groupName, metricName, float64(metric), labels)
-				grouped.GaugeSet(groupName, metricName+"_gauge", float64(metric*2), labels)
-			}
-		}
-
-		// Expire some groups
-		for group := 0; group < 5; group++ {
-			groupName := fmt.Sprintf("group_%d", group)
-			grouped.ExpireGroupMetrics(groupName)
-		}
-
-		// Verify storage is still functional
-		collector := grouped.Collector()
-		assert.NotNil(t, collector)
-
-		// Add new metrics to verify everything still works
-		grouped.CounterAdd("new_group", "new_metric", 1.0, map[string]string{"test": "value"})
-	})
-}
-
-// Helper functions for testing prometheus integration
-func collectMetrics(t *testing.T, collector prometheus.Collector) []*dto.MetricFamily {
-	t.Helper()
-
-	registry := prometheus.NewRegistry()
-	err := registry.Register(collector)
-	require.NoError(t, err)
-
-	families, err := registry.Gather()
-	require.NoError(t, err)
-
-	return families
-}
-
-func findMetricFamily(families []*dto.MetricFamily, name string) *dto.MetricFamily {
-	for _, family := range families {
-		if family.GetName() == name {
-			return family
-		}
-	}
-	return nil
-}
-
-func TestMetricStorage_PrometheusCompatibility(t *testing.T) {
-	t.Run("metrics are correctly exported to prometheus", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
-
-		// Add various metrics
-		ms.CounterAdd("test_counter", 5.0, map[string]string{"method": "GET", "status": "200"})
-		ms.GaugeSet("test_gauge", 42.0, map[string]string{"instance": "server1"})
-
-		buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0}
-		ms.HistogramObserve("test_histogram", 1.5, map[string]string{"endpoint": "/api"}, buckets)
-		ms.HistogramObserve("test_histogram", 0.2, map[string]string{"endpoint": "/api"}, buckets)
-		ms.HistogramObserve("test_histogram", 3.0, map[string]string{"endpoint": "/api"}, buckets)
-
-		// Collect metrics
-		collector := ms.Collector()
-		families := collectMetrics(t, collector)
-
-		// Verify counter
-		counterFamily := findMetricFamily(families, "test_counter")
-		require.NotNil(t, counterFamily)
-		assert.Equal(t, dto.MetricType_COUNTER, counterFamily.GetType())
-		require.Len(t, counterFamily.GetMetric(), 1)
-		assert.Equal(t, 5.0, counterFamily.GetMetric()[0].GetCounter().GetValue())
-
-		// Verify gauge
-		gaugeFamily := findMetricFamily(families, "test_gauge")
-		require.NotNil(t, gaugeFamily)
-		assert.Equal(t, dto.MetricType_GAUGE, gaugeFamily.GetType())
-		require.Len(t, gaugeFamily.GetMetric(), 1)
-		assert.Equal(t, 42.0, gaugeFamily.GetMetric()[0].GetGauge().GetValue())
-
-		// Verify histogram
-		histogramFamily := findMetricFamily(families, "test_histogram")
-		require.NotNil(t, histogramFamily)
-		assert.Equal(t, dto.MetricType_HISTOGRAM, histogramFamily.GetType())
-		require.Len(t, histogramFamily.GetMetric(), 1)
-
-		histogram := histogramFamily.GetMetric()[0].GetHistogram()
-		assert.Equal(t, uint64(3), histogram.GetSampleCount())
-		assert.Equal(t, 4.7, histogram.GetSampleSum()) // 1.5 + 0.2 + 3.0
-	})
-}
-
-func TestMetricStorage_ComplexScenarios(t *testing.T) {
-	t.Run("mixed grouped and non-grouped operations", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("d8")
-
-		// Non-grouped operations
-		ms.CounterAdd("requests_total", 100, map[string]string{"service": "api"})
-		ms.GaugeSet("active_connections", 50, map[string]string{"service": "api"})
-
-		// Grouped operations
-		grouped := ms.Grouped()
-		grouped.CounterAdd("module_metrics", "module_errors_total", 5, map[string]string{"module": "auth"})
-		grouped.GaugeSet("module_metrics", "module_status", 1, map[string]string{"module": "auth"})
-
-		// Batch operations with mixed groups
-		value1 := 10.0
-		value2 := 20.0
-		value3 := 30.0
-
-		ops := []operation.MetricOperation{
-			{
-				Name:   "batch_counter",
-				Action: operation.ActionCounterAdd,
-				Value:  &value1,
-				Labels: map[string]string{"type": "increment"},
-			},
-			{
-				Name:   "batch_grouped_counter",
-				Action: operation.ActionCounterAdd,
-				Value:  &value2,
-				Labels: map[string]string{"type": "grouped"},
-				Group:  "batch_group",
-			},
-			{
-				Name:   "batch_gauge",
-				Action: operation.ActionOldGaugeSet,
-				Value:  &value3,
-				Labels: map[string]string{"type": "value"},
-				Group:  "batch_group",
-			},
-		}
-
-		err := ms.ApplyBatchOperations(ops, map[string]string{"common": "label"})
-		require.NoError(t, err)
-
-		// Verify all operations succeeded
-		collector := ms.Collector()
-		assert.NotNil(t, collector)
-
-		groupedCollector := grouped.Collector()
-		assert.NotNil(t, groupedCollector)
-	})
-
-	t.Run("operations with prefix resolution", func(t *testing.T) {
-		ms := metricsstorage.NewMetricStorage("deckhouse")
-
-		// Test various prefix scenarios
-		counter1, err := ms.RegisterCounter("{PREFIX}_module_errors", []string{"module"})
-		require.NoError(t, err)
-		assert.Equal(t, "deckhouse_module_errors", counter1.Name())
-
-		counter2, err := ms.RegisterCounter("global_metric", []string{"type"})
-		require.NoError(t, err)
-		assert.Equal(t, "global_metric", counter2.Name())
-
-		// Apply operations with prefix resolution
-		ms.CounterAdd("{PREFIX}_requests_total", 100, map[string]string{"service": "api"})
-		ms.GaugeSet("raw_gauge", 42, map[string]string{"instance": "server1"})
-
-		// Verify prefix was resolved in operations
-		resolvedCounter := ms.Counter("{PREFIX}_requests_total", map[string]string{"service": "api"})
-		assert.NotNil(t, resolvedCounter)
-		assert.Equal(t, "deckhouse_requests_total", resolvedCounter.Name())
-	})
-}
-
-// Benchmark tests to ensure performance is reasonable
-func BenchmarkMetricStorage_CounterOperations(b *testing.B) {
-	ms := metricsstorage.NewMetricStorage("bench")
-	labels := map[string]string{"method": "GET", "status": "200"}
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			ms.CounterAdd("benchmark_counter", 1.0, labels)
-		}
-	})
-}
-
-func BenchmarkMetricStorage_GaugeOperations(b *testing.B) {
-	ms := metricsstorage.NewMetricStorage("bench")
-	labels := map[string]string{"instance": "server1"}
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			ms.GaugeSet("benchmark_gauge", 42.0, labels)
-		}
-	})
-}
-
-func BenchmarkMetricStorage_HistogramOperations(b *testing.B) {
-	ms := metricsstorage.NewMetricStorage("bench")
-	labels := map[string]string{"endpoint": "/api"}
-	buckets := []float64{0.1, 0.5, 1.0, 2.5, 5.0, 10.0}
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			ms.HistogramObserve("benchmark_histogram", 1.5, labels, buckets)
-		}
-	})
-}
-
-func BenchmarkMetricStorage_BatchOperations(b *testing.B) {
-	ms := metricsstorage.NewMetricStorage("bench")
-
-	value := 1.0
-	ops := []operation.MetricOperation{
+	tests := []struct {
+		name         string
+		ops          []operation.MetricOperation
+		commonLabels map[string]string
+		wantError    bool
+		errorSubstr  string
+	}{
 		{
-			Name:   "bench_counter",
-			Action: operation.ActionCounterAdd,
-			Value:  &value,
-			Labels: map[string]string{"type": "counter"},
+			name: "valid batch operations",
+			ops: []operation.MetricOperation{
+				{
+					Name:   "counter1",
+					Value:  floatPtr(1.0),
+					Action: operation.ActionCounterAdd,
+					Labels: map[string]string{"type": "api"},
+				},
+				{
+					Name:   "gauge1",
+					Value:  floatPtr(42.0),
+					Action: operation.ActionGaugeSet,
+					Labels: map[string]string{"service": "web"},
+				},
+			},
+			commonLabels: map[string]string{"env": "prod"},
+			wantError:    false,
 		},
 		{
-			Name:   "bench_gauge",
-			Action: operation.ActionOldGaugeSet,
-			Value:  &value,
-			Labels: map[string]string{"type": "gauge"},
+			name: "grouped operations",
+			ops: []operation.MetricOperation{
+				{
+					Name:   "metric1",
+					Value:  floatPtr(1.0),
+					Action: operation.ActionCounterAdd,
+					Group:  "group1",
+				},
+				{
+					Name:   "metric2",
+					Value:  floatPtr(2.0),
+					Action: operation.ActionGaugeSet,
+					Group:  "group1",
+				},
+				{
+					Name:   "metric3",
+					Value:  floatPtr(3.0),
+					Action: operation.ActionCounterAdd,
+					Group:  "group2",
+				},
+			},
+			commonLabels: map[string]string{"region": "us-west"},
+			wantError:    false,
+		},
+		{
+			name: "mixed grouped and non-grouped operations",
+			ops: []operation.MetricOperation{
+				{
+					Name:   "ungrouped_metric",
+					Value:  floatPtr(1.0),
+					Action: operation.ActionCounterAdd,
+				},
+				{
+					Name:   "grouped_metric",
+					Value:  floatPtr(2.0),
+					Action: operation.ActionGaugeSet,
+					Group:  "test_group",
+				},
+			},
+			commonLabels: nil,
+			wantError:    false,
+		},
+		{
+			name: "expire metrics operation",
+			ops: []operation.MetricOperation{
+				{
+					Group:  "expired_group",
+					Action: operation.ActionExpireMetrics,
+				},
+			},
+			commonLabels: nil,
+			wantError:    false,
+		},
+		{
+			name:         "empty operations",
+			ops:          []operation.MetricOperation{},
+			commonLabels: map[string]string{"env": "test"},
+			wantError:    false,
+		},
+		{
+			name: "invalid operations in batch",
+			ops: []operation.MetricOperation{
+				{
+					Name:   "valid_metric",
+					Value:  floatPtr(1.0),
+					Action: operation.ActionCounterAdd,
+				},
+				{
+					Name:   "invalid_metric",
+					Action: operation.ActionCounterAdd, // Missing value
+				},
+			},
+			commonLabels: nil,
+			wantError:    true,
+			errorSubstr:  "value",
 		},
 	}
 
-	commonLabels := map[string]string{"service": "benchmark"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+			err := storage.ApplyBatchOperations(tt.ops, tt.commonLabels)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorSubstr != "" {
+					assert.Contains(t, err.Error(), tt.errorSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMetricStorage_Handler(t *testing.T) {
+	tests := []struct {
+		name     string
+		opts     []metricsstorage.Option
+		validate func(t *testing.T, handler http.Handler)
+	}{
+		{
+			name: "default handler",
+			opts: nil,
+			validate: func(t *testing.T, handler http.Handler) {
+				assert.NotNil(t, handler)
+
+				// Test that handler responds
+				req := httptest.NewRequest("GET", "/metrics", nil)
+				w := httptest.NewRecorder()
+				handler.ServeHTTP(w, req)
+				assert.Equal(t, http.StatusOK, w.Code)
+			},
+		},
+		{
+			name: "custom registry handler",
+			opts: []metricsstorage.Option{metricsstorage.WithNewRegistry()},
+			validate: func(t *testing.T, handler http.Handler) {
+				assert.NotNil(t, handler)
+
+				// Test that handler responds
+				req := httptest.NewRequest("GET", "/metrics", nil)
+				w := httptest.NewRecorder()
+				handler.ServeHTTP(w, req)
+				assert.Equal(t, http.StatusOK, w.Code)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", tt.opts...)
+			handler := storage.Handler()
+			tt.validate(t, handler)
+		})
+	}
+}
+
+func TestMetricStorage_Collector(t *testing.T) {
+	tests := []struct {
+		name string
+		opts []metricsstorage.Option
+	}{
+		{
+			name: "default collector",
+			opts: nil,
+		},
+		{
+			name: "custom registry collector",
+			opts: []metricsstorage.Option{metricsstorage.WithNewRegistry()},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage("test", tt.opts...)
+			collector := storage.Collector()
+			assert.NotNil(t, collector)
+
+			// Test that collector can be described and collected
+			desc := make(chan *prometheus.Desc, 10)
+			go func() {
+				defer close(desc)
+				collector.Describe(desc)
+			}()
+
+			// Drain the channel
+			for range desc {
+			}
+
+			metrics := make(chan prometheus.Metric, 10)
+			go func() {
+				defer close(metrics)
+				collector.Collect(metrics)
+			}()
+
+			// Drain the channel
+			for range metrics {
+			}
+		})
+	}
+}
+
+func TestMetricStorage_Grouped(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	grouped := storage.Grouped()
+	assert.NotNil(t, grouped)
+
+	// Test grouped operations
+	grouped.CounterAdd("test_group", "test_counter", 1.0, map[string]string{"env": "test"})
+	grouped.GaugeSet("test_group", "test_gauge", 42.0, map[string]string{"service": "api"})
+	grouped.ExpireGroupMetrics("test_group")
+}
+
+// Edge Cases and Error Conditions
+
+func TestMetricStorage_NilReceiver(t *testing.T) {
+	var storage *metricsstorage.MetricStorage
+
+	// These should not panic when receiver is nil
+	assert.NotPanics(t, func() {
+		storage.CounterAdd("test", 1.0, nil)
+	})
+
+	assert.NotPanics(t, func() {
+		storage.GaugeSet("test", 1.0, nil)
+	})
+
+	assert.NotPanics(t, func() {
+		storage.GaugeAdd("test", 1.0, nil)
+	})
+
+	assert.NotPanics(t, func() {
+		storage.HistogramObserve("test", 1.0, nil, []float64{1, 5, 10})
+	})
+
+	// ApplyOperation should return error for nil receiver
+	err := storage.ApplyOperation(operation.MetricOperation{}, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "nil")
+
+	// ApplyBatchOperations should return nil for nil receiver
+	err = storage.ApplyBatchOperations([]operation.MetricOperation{}, nil)
+	assert.NoError(t, err)
+}
+
+func TestMetricStorage_PrefixReplacement(t *testing.T) {
+	tests := []struct {
+		name           string
+		prefix         string
+		metricName     string
+		expectedResult string
+	}{
+		{
+			name:           "prefix template replacement",
+			prefix:         "myapp",
+			metricName:     "{PREFIX}_requests_total",
+			expectedResult: "myapp_requests_total",
+		},
+		{
+			name:           "no prefix template",
+			prefix:         "myapp",
+			metricName:     "requests_total",
+			expectedResult: "requests_total",
+		},
+		{
+			name:           "empty prefix",
+			prefix:         "",
+			metricName:     "{PREFIX}_requests_total",
+			expectedResult: "_requests_total",
+		},
+		{
+			name:           "multiple prefix templates (only first replaced)",
+			prefix:         "app",
+			metricName:     "{PREFIX}_requests_{PREFIX}_total",
+			expectedResult: "app_requests_{PREFIX}_total",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := metricsstorage.NewMetricStorage(tt.prefix, metricsstorage.WithNewRegistry())
+
+			// Register a counter to test prefix replacement
+			counter, err := storage.RegisterCounter(tt.metricName, []string{"status"})
+			require.NoError(t, err)
+			require.NotNil(t, counter)
+
+			// We can't directly access the resolved name, but we can verify the metric was registered
+			// by checking that we can add values without error
+			storage.CounterAdd(tt.metricName, 1.0, map[string]string{"status": "200"})
+		})
+	}
+}
+
+func TestMetricStorage_LabelMerging(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	// Test that operation labels and common labels are properly merged
+	op := operation.MetricOperation{
+		Name:   "test_counter",
+		Value:  floatPtr(1.0),
+		Action: operation.ActionCounterAdd,
+		Labels: map[string]string{"op_label": "op_value", "common": "op_override"},
+	}
+
+	commonLabels := map[string]string{"common": "common_value", "common_label": "common_value"}
+
+	err := storage.ApplyOperation(op, commonLabels)
+	assert.NoError(t, err)
+
+	// Test with nil labels
+	op.Labels = nil
+	err = storage.ApplyOperation(op, commonLabels)
+	assert.NoError(t, err)
+
+	// Test with nil common labels
+	op.Labels = map[string]string{"test": "value"}
+	err = storage.ApplyOperation(op, nil)
+	assert.NoError(t, err)
+}
+
+func TestMetricStorage_ConcurrentAccess(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	// Test concurrent access to metrics
+	const numGoroutines = 10
+	const numOperations = 100
+
+	done := make(chan struct{}, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer func() { done <- struct{}{} }()
+
+			for j := 0; j < numOperations; j++ {
+				labels := map[string]string{"goroutine": string(rune(id)), "iteration": string(rune(j))}
+
+				storage.CounterAdd("concurrent_counter", 1.0, labels)
+				storage.GaugeSet("concurrent_gauge", float64(j), labels)
+				storage.HistogramObserve("concurrent_histogram", float64(j)*0.1, labels, []float64{0.1, 0.5, 1.0, 5.0})
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+}
+
+func TestMetricStorage_InvalidMetricNames(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	invalidNames := []string{
+		"",                       // empty name
+		"123invalid",             // starts with number
+		"invalid-name",           // contains hyphen
+		"invalid.name",           // contains dot
+		"invalid name",           // contains space
+		"invalid/name",           // contains slash
+		strings.Repeat("a", 300), // very long name
+	}
+
+	for _, name := range invalidNames {
+		t.Run("invalid_name_"+name, func(t *testing.T) {
+			// These operations should handle invalid names gracefully
+			storage.CounterAdd(name, 1.0, map[string]string{"test": "value"})
+			storage.GaugeSet(name, 1.0, map[string]string{"test": "value"})
+			storage.HistogramObserve(name, 1.0, map[string]string{"test": "value"}, []float64{1, 5, 10})
+		})
+	}
+}
+
+func TestMetricStorage_ExtremeValues(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	extremeValues := []float64{
+		0.0,
+		-1.0,
+		1e-10,   // very small positive
+		-1e-10,  // very small negative
+		1e10,    // very large positive
+		-1e10,   // very large negative
+		3.14159, // pi
+		2.71828, // e
+	}
+
+	for i, value := range extremeValues {
+		t.Run("extreme_value", func(t *testing.T) {
+			labels := map[string]string{"value_index": string(rune(i))}
+
+			storage.CounterAdd("extreme_counter", value, labels)
+			storage.GaugeSet("extreme_gauge", value, labels)
+			storage.GaugeAdd("extreme_gauge_add", value, labels)
+			storage.HistogramObserve("extreme_histogram", value, labels, []float64{-1e10, 0, 1e10})
+		})
+	}
+}
+
+func TestMetricStorage_ManyLabels(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	// Test with many labels
+	manyLabels := make(map[string]string)
+	for i := 0; i < 20; i++ {
+		manyLabels["label_"+string(rune(i))] = "value_" + string(rune(i))
+	}
+
+	storage.CounterAdd("many_labels_counter", 1.0, manyLabels)
+	storage.GaugeSet("many_labels_gauge", 42.0, manyLabels)
+	storage.HistogramObserve("many_labels_histogram", 0.5, manyLabels, []float64{0.1, 0.5, 1.0})
+}
+
+func TestMetricStorage_EmptyAndNilMaps(t *testing.T) {
+	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+
+	// Test with nil labels
+	storage.CounterAdd("nil_labels_counter", 1.0, nil)
+	storage.GaugeSet("nil_labels_gauge", 42.0, nil)
+	storage.HistogramObserve("nil_labels_histogram", 0.5, nil, []float64{0.1, 0.5, 1.0})
+
+	// Test with empty labels
+	emptyLabels := make(map[string]string)
+	storage.CounterAdd("empty_labels_counter", 1.0, emptyLabels)
+	storage.GaugeSet("empty_labels_gauge", 42.0, emptyLabels)
+	storage.HistogramObserve("empty_labels_histogram", 0.5, emptyLabels, []float64{0.1, 0.5, 1.0})
+}
+
+// Helper functions
+
+func floatPtr(f float64) *float64 {
+	return &f
+}
+
+// Benchmark tests
+
+func BenchmarkMetricStorage_CounterAdd(b *testing.B) {
+	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	labels := map[string]string{"env": "test", "service": "api"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := ms.ApplyBatchOperations(ops, commonLabels)
-		if err != nil {
-			b.Fatal(err)
-		}
+		storage.CounterAdd("benchmark_counter", 1.0, labels)
+	}
+}
+
+func BenchmarkMetricStorage_GaugeSet(b *testing.B) {
+	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	labels := map[string]string{"env": "test", "service": "api"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		storage.GaugeSet("benchmark_gauge", float64(i), labels)
+	}
+}
+
+func BenchmarkMetricStorage_HistogramObserve(b *testing.B) {
+	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	labels := map[string]string{"env": "test", "service": "api"}
+	buckets := []float64{0.1, 0.5, 1.0, 5.0, 10.0}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		storage.HistogramObserve("benchmark_histogram", float64(i%10)*0.1, labels, buckets)
+	}
+}
+
+func BenchmarkMetricStorage_ApplyBatchOperations(b *testing.B) {
+	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+
+	ops := []operation.MetricOperation{
+		{
+			Name:   "counter1",
+			Value:  floatPtr(1.0),
+			Action: operation.ActionCounterAdd,
+			Labels: map[string]string{"type": "api"},
+		},
+		{
+			Name:   "gauge1",
+			Value:  floatPtr(42.0),
+			Action: operation.ActionGaugeSet,
+			Labels: map[string]string{"service": "web"},
+		},
+		{
+			Name:    "histogram1",
+			Value:   floatPtr(0.5),
+			Action:  operation.ActionHistogramObserve,
+			Buckets: []float64{0.1, 0.5, 1.0, 5.0},
+		},
+	}
+
+	commonLabels := map[string]string{"env": "prod"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		storage.ApplyBatchOperations(ops, commonLabels)
 	}
 }

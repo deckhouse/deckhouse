@@ -46,7 +46,7 @@ type Storage interface {
 	Registerer
 	Collector
 
-	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string)
+	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) error
 	ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error
 
 	Grouped() GroupedStorage
