@@ -6,8 +6,8 @@ rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platf
 rewrite ^/products/kubernetes-platform/gs$ /products/kubernetes-platform/gs/ permanent;
 rewrite ^/products/kubernetes-platform/guides$ /products/kubernetes-platform/guides/ permanent;
 rewrite ^/products/kubernetes-platform/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
-rewrite ^/modules/(.*)$ /products/kubernetes-platform/modules/$1 permanent;
-rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
+#rewrite ^/modules/(.*)$ /products/kubernetes-platform/modules/$1 permanent;
+#rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
 rewrite ^/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
 rewrite ^.*/documentation/v1/modules/490-virtualization/(examples|configuration|cr|faq).html(.*)$ /modules/virtualization/stable/$1.html$2 permanent;
 rewrite ^.*/documentation/v1/modules/490-virtualization/.*$ /modules/virtualization/stable/ permanent;
