@@ -14,7 +14,13 @@
 {{- if hasKey .nodeGroup.instanceClass "resourcePool" -}}
   {{- $_ := set $options "resourcePool" .nodeGroup.instanceClass.resourcePool -}}
 {{- end }}
-{{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- if .nodeGroup.instanceClass.mainNetwork }}
+  {{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- else if .Values.nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork }}
+  {{- $_ := set $options "mainNetwork" .Values.nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork -}}
+{{- else }}
+  {{- fail (printf "No mainNetwork provided neither in cloud provider configuration nor in VsphereInstanceClass %s" .nodeGroup.cloudInstances.classReference.name) -}}
+{{- end }}
 {{- if hasKey .nodeGroup.instanceClass "additionalNetworks" -}}
   {{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- end -}}
