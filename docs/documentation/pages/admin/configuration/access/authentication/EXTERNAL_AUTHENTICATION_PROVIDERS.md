@@ -7,16 +7,12 @@ Connecting an external authentication provider allows you to use a single set of
 
 DKP supports integration with the following external authentication providers and protocols:
 
-- [General integration workflow](#general-integration-workflow)
-  - [OIDC (OpenID Connect) integration](#oidc-openid-connect-integration)
-    - [Keycloak](#keycloak)
-    - [Blitz Identity Provider](#blitz-identity-provider)
-    - [Okta](#okta)
-  - [LDAP integration](#ldap-integration)
-  - [GitHub integration](#github-integration)
-  - [GitLab integration](#gitlab-integration)
-  - [Atlassian Crowd integration](#atlassiancrowd-integration)
-  - [Bitbucket Cloud Integration](#bitbucketcloud-integration)
+- [LDAP (for example, Active Directory)](#ldap-integration);
+- [OIDC (for example, Okta, Keycloak, Gluu, Blitz Identity Provider)](#oidc-openid-connect-integration);
+- [GitHub integration](#github-integration);
+- [GitLab integration](#gitlab-integration);
+- [Atlassian Crowd integration](#atlassiancrowd-integration);
+- [Bitbucket Cloud integration](#bitbucketcloud-integration).
 
 {% alert level="info" %}
 Password policies (such as complexity requirements, expiration, history, two-factor authentication, etc.) are fully controlled by the external authentication provider.  
