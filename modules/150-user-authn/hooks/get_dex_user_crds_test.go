@@ -90,13 +90,13 @@ spec:
 				Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
 [{
     "name": "admin",
+    "encodedName": "gvy6ih7dduupk",
     "spec": {
       "email": "admin@example.com",
       "groups": ["Gods"],
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
 }]`))
 
@@ -171,12 +171,12 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
 [{
   "name": "admin",
+  "encodedName": "b6leblem75up4",
   "spec": {
     "email": "adminNext@example.com",
     "password": "password",
     "userID": "admin"
   },
-  "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji",
   "status": {}
 }]`))
 				})
@@ -211,22 +211,22 @@ spec:
 [
   {
     "name": "admin",
+    "encodedName": "gvy6ih7dduupk",
     "spec": {
       "email": "admin@example.com",
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
   },
   {
     "name": "user",
+    "encodedName": "c3gvm7b6lxyww",
     "spec": {
       "email": "user@example.com",
       "password": "passwordNext",
       "userID": "user"
     },
-    "encodedName": "ovzwk4samv4gc3lqnrss4y3pnxf7fhheqqrcgji",
     "status": {}
   }
 ]`))
@@ -257,7 +257,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))
@@ -326,7 +326,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))
@@ -377,7 +377,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))
@@ -430,7 +430,7 @@ spec:
       ],
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))
@@ -468,7 +468,7 @@ status:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))
@@ -503,7 +503,7 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "encodedName": "gvy6ih7dduupk",
     "status": {}
   }
 ]`))

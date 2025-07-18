@@ -32,7 +32,9 @@ package template
 
 import (
 	"bytes"
+	"encoding/base32"
 	"encoding/json"
+	"hash/fnv"
 	"strings"
 	"text/template"
 
@@ -77,6 +79,7 @@ func FuncMap() template.FuncMap {
 		"toJson":        toJSON,
 		"fromJson":      fromJSON,
 		"fromJsonArray": fromJSONArray,
+		"fnvLikeDex":    fnvLikeDex,
 
 		// This is a placeholder for the "include" function, which is
 		// late-bound to a template. By declaring it here, we preserve the
@@ -196,4 +199,13 @@ func fromJSONArray(str string) []interface{} {
 		a = []interface{}{err.Error()}
 	}
 	return a
+}
+
+var fnvLetters = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+
+// fnvLikeDex computes FNV hash like ToFnvLikeDex function in go_lib/encoding
+func fnvLikeDex(input string) string {
+	hasher := fnv.New64()
+	hasher.Write([]byte(input))
+	return strings.TrimRight(fnvLetters.EncodeToString(hasher.Sum(nil)), "=")
 }

@@ -82,6 +82,7 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@test",
+  "encodedName": "ntjxcdey3v45y",
   "name": "test",
   "namespace": "test",
   "spec": {
@@ -104,7 +105,6 @@ spec:
     ]
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
   "credentials": {
     "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
@@ -151,6 +151,7 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@d8-dashboard",
+  "encodedName": "iluyx5wsfhyro",
   "name": "test",
   "namespace": "d8-dashboard",
   "spec": {
@@ -163,7 +164,6 @@ spec:
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
   "credentials": {
     "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
@@ -222,6 +222,7 @@ data:
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
   "uuid": "test@d8-monitoring",
+  "encodedName": "azro3bhrtkjow",
   "name": "test",
   "namespace": "d8-monitoring",
   "spec": {
@@ -234,7 +235,6 @@ data:
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
     "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
