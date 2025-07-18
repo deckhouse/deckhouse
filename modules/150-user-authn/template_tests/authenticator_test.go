@@ -269,8 +269,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			longServiceName := longName + "-dex-authenticator"
 			Expect(len(longServiceName)).To(BeNumerically(">", 63), fmt.Sprintf("Test setup error: long name '%s' should exceed 63 characters (length: %d)", longServiceName, len(longServiceName)))
 
-			longClientId := longName + "-" + longNamespace + "-dex-authenticator"
-			Expect(len(longClientId)).To(BeNumerically(">", 63), fmt.Sprintf("Test setup error: long client ID '%s' should exceed 63 characters (length: %d)", longClientId, len(longClientId)))
+			longClientID := longName + "-" + longNamespace + "-dex-authenticator"
+			Expect(len(longClientID)).To(BeNumerically(">", 63), fmt.Sprintf("Test setup error: long client ID '%s' should exceed 63 characters (length: %d)", longClientID, len(longClientID)))
 
 			// For now, just verify the test setup is correct
 			// The actual resource checking will be done after fixing the template rendering issue
