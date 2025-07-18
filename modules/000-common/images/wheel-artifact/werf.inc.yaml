@@ -3,6 +3,9 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir /wheels
