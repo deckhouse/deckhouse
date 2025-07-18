@@ -30,6 +30,17 @@ positive:
       mode: Direct
       direct:
         imagesRepo: registry.deckhouse.io/test
+        license: "somekey"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+        password: "p"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
   - registry:
       mode: Unmanaged
   values:
@@ -45,6 +56,33 @@ negative:
 #      windows:
 #        - from: '8:00'
 #          to: '13:00'
+  - registry:
+      mode: Unmanaged
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Direct
+  - registry:
+      mode: Direct
+      direct:
+        license: "somekey"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        password: "p"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        license: "key"
+        username: "u"
+        password: "p"
 
 # TODO(akraev): uncomment before release
 #  - registry:
