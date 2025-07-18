@@ -40,7 +40,7 @@ Usage:
     {{- $fullName }}
   {{- else }}
     {{- $hash := printf "%s%s" $name $suffix | sha256sum | trunc 8 }}
-    {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) }}
+    {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}
     {{- end }}
@@ -62,7 +62,7 @@ Usage: {{ include "dex_authenticator_name_reverse" (list . $crd.name) }}
     {{- $fullName }}
   {{- else }}
     {{- $hash := $name | sha256sum | trunc 8 }}
-    {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) }}
+    {{- $maxNameLength := sub 63 (add (len $prefix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}
     {{- end }}
@@ -85,35 +85,12 @@ Usage: {{ include "dex_authenticator_name_with_namespace" (list . $crd.name $crd
     {{- $fullName }}
   {{- else }}
     {{- $hash := printf "%s-%s" $name $namespace | sha256sum | trunc 8 }}
-    {{- $maxNameLength := sub 63 (add (len $suffix) 1 (len $hash) 1) }}
+    {{- $maxNameLength := sub 63 (add (len $suffix) 1 (len $hash) 1) | int }}
     {{- if lt $maxNameLength 1 }}
       {{- $maxNameLength = 1 }}
     {{- end }}
     {{- $combinedName := printf "%s-%s" $name $namespace }}
     {{- $truncatedName := $combinedName | trunc $maxNameLength }}
     {{- printf "%s-%s-%s" $truncatedName $hash $suffix }}
-  {{- end }}
-{{- end }}
-
-{{/*
-Helper function to create safe names with domain pattern (name-dex-authenticator.namespace.svc)
-Usage: {{ include "dex_authenticator_domain_name" (list . $crd.name $crd.namespace) }}
-*/}}
-{{- define "dex_authenticator_domain_name" }}
-  {{- $context := index . 0 }}
-  {{- $name := index . 1 }}
-  {{- $namespace := index . 2 }}
-  {{- $nameWithSuffix := printf "%s-dex-authenticator" $name }}
-  {{- $fullName := printf "%s.%s.svc" $nameWithSuffix $namespace }}
-  {{- if le (len $fullName) 63 }}
-    {{- $fullName }}
-  {{- else }}
-    {{- $hash := printf "%s-%s" $name $namespace | sha256sum | trunc 8 }}
-    {{- $maxNameLength := sub 63 (add (len $namespace) 1 4 1 (len $hash) 1 17) }}
-    {{- if lt $maxNameLength 1 }}
-      {{- $maxNameLength = 1 }}
-    {{- end }}
-    {{- $truncatedName := $name | trunc $maxNameLength }}
-    {{- printf "%s-%s-dex-authenticator.%s.svc" $truncatedName $hash $namespace }}
   {{- end }}
 {{- end }}
