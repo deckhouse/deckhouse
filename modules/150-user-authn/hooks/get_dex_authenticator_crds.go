@@ -61,6 +61,36 @@ func dexAuthenticatorNameWithNamespace(name, namespace string) string {
 	return fmt.Sprintf("%s-%s-%s", truncatedName, hash, suffix)
 }
 
+// dexAuthenticatorNameReverse creates safe names with reverse pattern (prefix-name)
+// following the same logic as dex_authenticator_name_reverse in _helpers.tpl
+func dexAuthenticatorNameReverse(name string) string {
+	prefix := "dex-authenticator"
+	fullName := fmt.Sprintf("%s-%s", prefix, name)
+
+	if len(fullName) <= 63 {
+		return fullName
+	}
+
+	// Generate hash from name
+	hasher := sha256.New()
+	hasher.Write([]byte(name))
+	hash := fmt.Sprintf("%x", hasher.Sum(nil))[:8]
+
+	// Calculate maximum length for the truncated name
+	maxNameLength := 63 - len(prefix) - 1 - len(hash) - 1 // 63 - prefix - dash - hash - dash
+	if maxNameLength < 1 {
+		maxNameLength = 1
+	}
+
+	// Truncate name if necessary
+	truncatedName := name
+	if len(name) > maxNameLength {
+		truncatedName = name[:maxNameLength]
+	}
+
+	return fmt.Sprintf("%s-%s-%s", prefix, truncatedName, hash)
+}
+
 type DexAuthenticator struct {
 	ID          string                 `json:"uuid"`
 	EncodedName string                 `json:"encodedName"`
@@ -180,7 +210,10 @@ func getDexAuthenticator(input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot convert dex authenticaor")
 		}
 
-		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]
+		// Use the same naming logic as in the template for secret name
+		secretName := dexAuthenticatorNameReverse(dexAuthenticator.Name)
+		secretID := fmt.Sprintf("%s@%s", secretName, dexAuthenticator.Namespace)
+		existedCredentials, ok := credentialsByID[secretID]
 		if !ok {
 			existedCredentials = Credentials{
 				AppDexSecret: pwgen.AlphaNum(20),
