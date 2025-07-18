@@ -103,4 +103,10 @@ resource "vcd_vapp_vm" "node" {
     }
 >>>>>>> 82fd6ae55c (add additionalMetadata to static instances)
   }
+
+  # stub metadata_entry for deleting metadata if field was deleted
+  dynamic "metadata_entry" {
+    for_each = length(local.additional_metadata) == 0 ? [1] : []
+    content {}
+  }
 }
