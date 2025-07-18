@@ -87,6 +87,16 @@ spec:
     - ru-central1-b
 ```
 
+## Modifying the cloud provider configuration in a cluster
+
+The configuration of the cloud provider used in a cloud or hybrid cluster is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
+
+Regardless of the cloud provider used, its settings can be modified using the following command:
+
+```shell
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
 ## NodeGroup autoscaling
 
 In Deckhouse Kubernetes Platform (DKP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.

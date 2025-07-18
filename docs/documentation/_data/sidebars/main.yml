@@ -830,7 +830,7 @@ entries:
                 - title:
                     en: Short-term storage
                     ru: Кратковременное хранение
-                  url: /admin/configuration/logging/storage.html      
+                  url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
                 ru: Мультенантность
@@ -993,7 +993,7 @@ entries:
                 - title:
                     en: Web interface for visualizing the cluster network stack
                     ru: Веб-интерфейс визуализации сетевого стека кластера
-                  url: /user/web/hubble.html    
+                  url: /user/web/hubble.html
         - title:
             en: Multitenancy
             ru: Мультитенантность

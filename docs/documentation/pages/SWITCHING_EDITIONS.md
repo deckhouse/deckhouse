@@ -665,19 +665,19 @@ A temporary disruption of cluster components may occur during the switch to DKP 
 
 To switch your Deckhouse Enterprise Edition cluster to Certified Security Edition, follow the steps below (all commands must be executed on a master node by a user with a configured `kubectl` context or with superuser pr
 
-1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого выполните команду:
+1.Configure the cluster to use the required Kubernetes version (see the note above regarding the available Kubernetes versions). To do this, run the following command:
 
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
-1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+1. Change the `kubernetesVersion` parameter to the desired value, for example, `"1.27"` (in quotes) for Kubernetes 1.27.
 
-1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+1. Save the changes. The cluster nodes will begin updating sequentially.
 
-1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+1. Wait for the update to complete. You can monitor the update progress using the `kubectl get no` command. The update is considered complete when the `VERSION` column for each node shows the updated version.
 
-1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+1. Prepare the license token variables and create a NodeGroupConfiguration resource to configure temporary authorization for access to `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -715,15 +715,15 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    EOF
    ```
 
-   Дождитесь завершения синхронизации и появления файла `/etc/containerd/conf.d/cse-registry.toml` на узлах.
+   Wait until the synchronization is complete and the `/etc/containerd/conf.d/cse-registry.toml` file appears on the nodes.
 
-   Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
+   You can monitor the synchronization status using the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
    ```shell
    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
    NAME     NODES   READY   UPTODATE
@@ -731,17 +731,216 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    worker   2       2       2
    ```
 
-   В журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
+   In the systemd log of the `bashible` service, the `Configuration is in sync, nothing to do` message should appear, indicating successful synchronization:
 
    ```shell
    journalctl -u bashible -n 5
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Successful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Run the following commands to start a temporary DKP CSE pod to retrieve the current image digests and module list:
+
+   ```shell
+   DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
+   # Например, DECKHOUSE_VERSION=v1.58.2
+   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
+
+   Once the pod reaches the `Running` status, execute the following commands:
+
+   ```shell
+   CSE_SANDBOX_IMAGE=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+   CSE_K8S_API_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+   CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   ```
+
+   Additional command required only when switching to DKP CSE version 1.64:
+
+   ```shell
+   CSE_DECKHOUSE_INIT_CONTAINER=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   ```
+
+1. Make sure that the modules currently used in the cluster are supported in DKP CSE.  
+   For example, in Deckhouse CSE 1.58 and 1.64, the `cert-manager` module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](deckhouse-configure-global.html#parameters-modules-https-mode) accordingly.
+
+   To display the list of modules that are not supported in DKP CSE and will be disabled, run:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   Review the list and make sure that the listed modules are not actively used in your cluster and that you are ready to disable them.
+
+   Disable the modules not supported in DKP CSE:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   The `earlyOOM` component is not supported in DKP CSE. Disable it using the [earlyOomEnabled](modules/node-manager/configuration.html#parameters-earlyoomenabled)) setting.
+
+   Wait for the DKP pod to reach the `Ready` status and for all tasks in the queue to complete:
+
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Verify that the disabled modules are now in the `Disabled` state:
+
+   ```shell
+   kubectl get modules
+   ```
+
+1. Create a NodeGroupConfiguration:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: cse-set-sha-images.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 50
+     content: |
+        _on_containerd_config_changed() {
+          bb-flag-set containerd-need-restart
+        }
+        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+        bb-sync-file /etc/containerd/conf.d/cse-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
+        [plugins]
+          [plugins."io.containerd.grpc.v1.cri"]
+            sandbox_image = "registry-cse.deckhouse.ru/deckhouse/cse@$CSE_SANDBOX_IMAGE"
+        EOF_TOML
+
+        sed -i 's|image: .*|image: registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+        sed -i 's|crictl pull .*|crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+   EOF
+   ```
+
+   Wait for `bashible` synchronization to complete on all nodes.
+
+   You can track the synchronization status by checking the `UPTODATE` value (the number of nodes in this state should match the total number of nodes (`NODES`) in the group):
+
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+   The following message should appear in the `bashible` systemd service logs on the nodes, indicating that the configuration is fully synchronized:
+
+   ```shell
+   journalctl -u bashible -n 5
+   ```
+
+   Example output:
+
+   ```console
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Successful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Update the secret for accessing the DKP CSE registry:
+
+   ```shell
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry-cse.deckhouse.ru \
+     --from-literal="path"=/deckhouse/cse \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+   ```
+
+1. Update the DKP image to use the DKP CSE image:
+
+   For DKP CSE version 1.58:
+
+   ```shell
+   kubectl -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
+
+   For DKP CSE versions 1.64 and 1.67:
+
+   ```shell
+   kubectl -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
+
+1. Wait for the DKP pod to reach the `Ready` status and for all tasks in the queue to complete. If the `ImagePullBackOff` error occurs, wait for the pod to automatically restart.
+
+   Check the DKP pod status:
+
+   ```shell
+   kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+   Check the DKP task queue:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Verify that no pods are using the EE registry image:
+
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   If the output contains pods from the `chrony` module, re-enable the module (it's disabled by default in DKP CSE):
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+1. Clean up temporary files, the NodeGroupConfiguration resource, and temporary variables:
+
+   ```shell
+   rm /tmp/cse-deckhouse-registry.yaml
+   kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+   kubectl delete pod cse-image
+   ```
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: del-temp-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 90
+     content: |
+       if [ -f /etc/containerd/conf.d/cse-registry.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-registry.toml
+       fi
+       if [ -f /etc/containerd/conf.d/cse-sandbox.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-sandbox.toml
+       fi
+   EOF
+   ```
+
+   After synchronization (track status by `UPTODATE` value for NodeGroup), delete the cleanup configuration:
+
+   ```shell
+   kubectl delete ngc del-temp-config.sh
    ```

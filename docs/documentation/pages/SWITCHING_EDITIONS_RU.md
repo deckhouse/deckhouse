@@ -758,14 +758,14 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    ```
 
-   > Дополнительная команда, которая необходима только при переключении на DKP CSE версии 1.64:
-   >
-   > ```shell
-   > CSE_DECKHOUSE_INIT_CONTAINER=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   > ```
+   Дополнительная команда, которая необходима только при переключении на DKP CSE версии 1.64:
+
+   ```shell
+   CSE_DECKHOUSE_INIT_CONTAINER=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
 
    Отобразить список модулей, которые не поддерживаются в DKP CSE и будут отключены, можно следующей командой:
 
@@ -773,7 +773,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    echo $MODULES_WILL_DISABLE
    ```
 
-   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
+   Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
 
    Отключите неподдерживаемые в DKP CSE модули:
 
@@ -782,7 +782,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   В DKP CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+   В DKP CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
 
    Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди.
 
@@ -798,8 +798,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Создайте NodeGroupConfiguration:
 
-   ```shell
-   kubectl apply -f - <<EOF
+   ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -827,7 +826,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    EOF
    ```
 
-   Дождитесь завершения синхронизации bashible на всех узлах.
+   Дождитесь завершения синхронизации `bashible` на всех узлах.
 
    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
@@ -835,7 +834,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
-   В журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
+   В журнале systemd-сервиса `bashible` на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
 
    ```shell
    journalctl -u bashible -n 5
@@ -877,7 +876,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    kubectl -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Посмотреть статус пода DKP:
 
@@ -908,12 +907,11 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    rm /tmp/cse-deckhouse-registry.yaml
-
    kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-
    kubectl delete pod cse-image
+   ```
 
-   kubectl apply -f - <<EOF
+   ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
