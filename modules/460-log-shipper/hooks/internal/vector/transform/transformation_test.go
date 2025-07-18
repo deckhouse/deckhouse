@@ -140,10 +140,49 @@ if exists(.examples) {
 				},
 			},
 		},
-		`if exists(.message) && is_string(.message) {
-  
-  .message = replace_with_regex(.message, r'password=\w+', "password=***")
-  .message = replace_with_regex(.message, r'token:\s*[\w\-]+', "token: ***")
+		`if exists(.message) {
+  if is_string(.message) {
+    # Direct string replacement
+    .message = replace_with_regex(.message, r'password=\w+', "password=***")
+    .message = replace_with_regex(.message, r'token:\s*[\w\-]+', "token: ***")
+  } else if is_object(.message) || is_array(.message) {
+    # Recursive replacement for objects and arrays
+    .message = map_values(.message, recursive: true) -> |value| {
+      if is_string(value) {
+        value = replace_with_regex(value, r'password=\w+', "password=***")
+        value = replace_with_regex(value, r'token:\s*[\w\-]+', "token: ***")
+      }
+      value
+    }
+  }
+}`,
+	},
+	{"Substitution for object field",
+		v1alpha1.TransformationSpec{
+			Action: v1alpha1.Substitution,
+			Substitution: v1alpha1.SubstitutionSpec{
+				Field: ".parsed_data",
+				Patterns: []v1alpha1.SubstitutionRule{
+					{
+						Pattern:     `secret_key=\w+`,
+						Replacement: "secret_key=***",
+					},
+				},
+			},
+		},
+		`if exists(.parsed_data) {
+  if is_string(.parsed_data) {
+    # Direct string replacement
+    .parsed_data = replace_with_regex(.parsed_data, r'secret_key=\w+', "secret_key=***")
+  } else if is_object(.parsed_data) || is_array(.parsed_data) {
+    # Recursive replacement for objects and arrays
+    .parsed_data = map_values(.parsed_data, recursive: true) -> |value| {
+      if is_string(value) {
+        value = replace_with_regex(value, r'secret_key=\w+', "secret_key=***")
+      }
+      value
+    }
+  }
 }`,
 	},
 }

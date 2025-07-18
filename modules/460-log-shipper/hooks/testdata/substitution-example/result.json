@@ -13,7 +13,7 @@
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.message) && is_string(.message) {\n  \n  .message = replace_with_regex(.message, r'password=\\w+', \"password=***\")\n  .message = replace_with_regex(.message, r'token:\\s*[\\w\\-]+', \"token: ***\")\n  .message = replace_with_regex(.message, r'api_key=[\\w\\-]+', \"api_key=***\")\n}",
+      "source": "if exists(.message) {\n  if is_string(.message) {\n    # Direct string replacement\n    .message = replace_with_regex(.message, r'password=\\w+', \"password=***\")\n    .message = replace_with_regex(.message, r'token:\\s*[\\w\\-]+', \"token: ***\")\n    .message = replace_with_regex(.message, r'api_key=[\\w\\-]+', \"api_key=***\")\n  } else if is_object(.message) || is_array(.message) {\n    # Recursive replacement for objects and arrays\n    .message = map_values(.message, recursive: true) -\u003e |value| {\n      if is_string(value) {\n        value = replace_with_regex(value, r'password=\\w+', \"password=***\")\n        value = replace_with_regex(value, r'token:\\s*[\\w\\-]+', \"token: ***\")\n        value = replace_with_regex(value, r'api_key=[\\w\\-]+', \"api_key=***\")\n      }\n      value\n    }\n  }\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_local_timezone": {
@@ -42,13 +42,17 @@
       "healthcheck": {
         "enabled": false
       },
-      "endpoint": "http://loki.loki:3100",
       "encoding": {
-        "codec": "text",
         "only_fields": [
           "message"
         ],
+        "codec": "text",
         "timestamp_format": "rfc3339"
+      },
+      "endpoint": "http://loki.loki:3100",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
       },
       "labels": {
         "container": "{{ container }}",
@@ -63,12 +67,8 @@
         "pod_owner": "{{ pod_owner }}",
         "stream": "{{ stream }}"
       },
-      "out_of_order_action": "rewrite_timestamp",
       "remove_label_fields": true,
-      "tls": {
-        "verify_certificate": true,
-        "verify_hostname": true
-      }
+      "out_of_order_action": "rewrite_timestamp"
     }
   }
 }

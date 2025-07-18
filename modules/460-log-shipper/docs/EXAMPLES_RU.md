@@ -1043,6 +1043,10 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
   transformations:
+  # Работает как со строковыми сообщениями, так и со структурированными логами после парсинга
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
   - action: Substitution
     substitution:
       field: .message
@@ -1054,6 +1058,8 @@ spec:
         - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
           replacement: 'api_key="***"'
 ```
+
+> **Примечание**: Substitution работает как со строковыми полями, так и со структурированными объектами/массивами. Если сначала применить `ParseMessage`, то замена будет рекурсивно искать строковые значения во всей структуре распарсенного объекта.
 
 ### Продвинутое скрытие чувствительных данных для финансовых приложений
 

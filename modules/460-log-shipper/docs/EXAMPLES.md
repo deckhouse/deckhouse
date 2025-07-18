@@ -1046,6 +1046,10 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
   transformations:
+  # Works with both string messages and structured logs after parsing
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
   - action: Substitution
     substitution:
       field: .message
@@ -1057,6 +1061,8 @@ spec:
         - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
           replacement: 'api_key="***"'
 ```
+
+> **Note**: Substitution works with both string fields and structured objects/arrays. If you apply `ParseMessage` first, the substitution will recursively search through all string values in the parsed object structure.
 
 ### Advanced sensitive data masking for financial applications
 
