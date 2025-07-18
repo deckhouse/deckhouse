@@ -623,4 +623,307 @@ spec:
 
 Более подробное описание параметров доступно [в ресурсе ClusterLogDestination](cr.html#clusterlogdestination).
 
+## Обеспечение безопасности логов с помощью трансформации Substitution
+
+Трансформация `Substitution` позволяет заменять чувствительные данные в логах с помощью регулярных выражений. Это критически важно для обеспечения безопасности данных и соответствия требованиям при хранении и анализе логов.
+
+### Базовое скрытие паролей и токенов
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: web-app-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: web-application
+  destinationRefs:
+  - secure-loki-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: secure-loki-destination
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  transformations:
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        - pattern: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
+          replacement: 'password="***"'
+        - pattern: 'token["\s]*[:=]["\s]*[\w\-\.]+'
+          replacement: 'token="***"'
+        - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
+          replacement: 'api_key="***"'
+```
+
+### Продвинутое скрытие чувствительных данных для финансовых приложений
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: payment-service-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          environment: production
+    labelSelector:
+      matchLabels:
+        service: payment-gateway
+  destinationRefs:
+  - compliant-log-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: compliant-log-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://elasticsearch.logging:9200
+    index: secure-logs-%F
+  transformations:
+  # Сначала парсим JSON логи
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 3
+  # Скрываем чувствительные финансовые данные
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        # Номера кредитных карт (различные форматы)
+        - pattern: '\b(?:\d[ -]*?){13,16}\b'
+          replacement: '****-****-****-****'
+        # CVV коды
+        - pattern: 'cvv["\s]*[:=]["\s]*\d{3,4}'
+          replacement: 'cvv="***"'
+        # Номера банковских счетов
+        - pattern: 'account["\s]*[:=]["\s]*\d{8,17}'
+          replacement: 'account="***СКРЫТО***"'
+        # Номера социального страхования
+        - pattern: '\b\d{3}-\d{2}-\d{4}\b'
+          replacement: '***-**-****'
+        # JWT токены
+        - pattern: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
+          replacement: 'JWT_TOKEN_HIDDEN'
+        # Email адреса в чувствительных контекстах
+        - pattern: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          replacement: 'email="user@domain.masked"'
+  # Удаляем отладочные поля
+  - action: DropLabels
+    dropLabels:
+      labels:
+        - .debug_info
+        - .internal_metadata
+```
+
+### Многоэтапный pipeline трансформаций для аудит-логов
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/audit/audit.log
+    - /var/log/app-audit/*.log
+  destinationRefs:
+  - secure-audit-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: secure-audit-destination
+spec:
+  type: Kafka
+  kafka:
+    bootstrapServers:
+    - kafka-cluster.monitoring:9092
+    topic: audit-logs-secure
+    encoding:
+      codec: JSON
+  transformations:
+  # Сначала парсим разные форматы логов
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+      string:
+        targetField: raw_message
+  # Затем скрываем чувствительные данные
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        # Токены аутентификации в аудит-логах
+        - pattern: 'Bearer [A-Za-z0-9._\-]+'
+          replacement: 'Bearer ***'
+        # ID сессий
+        - pattern: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
+          replacement: 'session="***SESSION_ID***"'
+        # IP адреса (если требуется приватность)
+        - pattern: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+          replacement: 'XXX.XXX.XXX.XXX'
+        # ID пользователей в чувствительных контекстах
+        - pattern: 'user_id["\s]*[:=]["\s]*\d+'
+          replacement: 'user_id="***"'
+        # Строки подключения к базам данных
+        - pattern: 'postgresql://[^@]+@[^/]+/\w+'
+          replacement: 'postgresql://***:***@***/**'
+        - pattern: 'mysql://[^@]+@[^/]+/\w+'
+          replacement: 'mysql://***:***@***/**'
+  # Очищаем и стандартизируем метки
+  - action: ReplaceKeys
+    replaceKeys:
+      source: "."
+      target: "_"
+      labels:
+        - .pod_labels
+  - action: DropLabels
+    dropLabels:
+      labels:
+        - .temporary_fields
+        - .debug_data
+```
+
+### Скрытие переменных окружения контейнеров
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: application-startup-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        component: microservice
+  destinationRefs:
+  - sanitized-loki-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: sanitized-loki-destination
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  transformations:
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        # Переменные окружения с секретами
+        - pattern: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          replacement: 'DATABASE_PASSWORD="***"'
+        - pattern: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
+          replacement: 'API_SECRET="***"'
+        - pattern: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
+          replacement: 'PRIVATE_KEY="***"'
+        - pattern: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          replacement: 'REDIS_PASSWORD="***"'
+        # Строки подключения
+        - pattern: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
+          replacement: 'postgres://***:***@***/**'
+        - pattern: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
+          replacement: 'redis://***:***@***/**'
+        # Пути к файлам с потенциально чувствительной информацией
+        - pattern: '/etc/ssl/private/[^\s"]+'
+          replacement: '/etc/ssl/private/***'
+        - pattern: '/opt/app/secrets/[^\s"]+'
+          replacement: '/opt/app/secrets/***'
+```
+
+### Комплексное скрытие данных для соответствия GDPR
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: gdpr-compliant-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          data-classification: personal
+  destinationRefs:
+  - gdpr-compliant-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: gdpr-compliant-destination
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.compliance:3100
+  transformations:
+  # Парсим структурированные логи
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 2
+  # Скрываем персональные данные для соответствия GDPR
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        # Email адреса пользователей
+        - pattern: 'user_email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          replacement: 'user_email="***@domain.masked"'
+        # Телефонные номера
+        - pattern: 'phone["\s]*[:=]["\s]*[\+]?[1-9]?[0-9]{7,14}'
+          replacement: 'phone="***-***-****"'
+        # Имена пользователей
+        - pattern: 'full_name["\s]*[:=]["\s]*"[^"]+"'
+          replacement: 'full_name="*** ***"'
+        - pattern: 'firstname["\s]*[:=]["\s]*"[^"]+"'
+          replacement: 'firstname="***"'
+        - pattern: 'lastname["\s]*[:=]["\s]*"[^"]+"'
+          replacement: 'lastname="***"'
+        # Адреса
+        - pattern: 'address["\s]*[:=]["\s]*"[^"]+"'
+          replacement: 'address="*** СКРЫТ ***"'
+        # Даты рождения
+        - pattern: 'birth_date["\s]*[:=]["\s]*"\d{4}-\d{2}-\d{2}"'
+          replacement: 'birth_date="****-**-**"'
+        # IP адреса (если считаются персональными данными)
+        - pattern: 'client_ip["\s]*[:=]["\s]*"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b"'
+          replacement: 'client_ip="XXX.XXX.XXX.XXX"'
+  # Удаляем технические поля
+  - action: DropLabels
+    dropLabels:
+      labels:
+        - .request_id
+        - .session_data
+        - .user_agent_details
+```
+
 {% endraw %}

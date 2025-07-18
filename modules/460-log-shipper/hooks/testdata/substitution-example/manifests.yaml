@@ -1,0 +1,31 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/app/application.log"]
+  destinationRefs:
+    - test-loki-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-loki-dest
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  transformations:
+  - action: Substitution
+    substitution:
+      field: .message
+      patterns:
+        - pattern: 'password=\w+'
+          replacement: 'password=***'
+        - pattern: 'token:\s*[\w\-]+'
+          replacement: 'token: ***'
+        - pattern: 'api_key=[\w\-]+'
+          replacement: 'api_key=***' 

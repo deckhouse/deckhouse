@@ -1,0 +1,74 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/app/application.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/destination/test-loki-dest/00_tf_substitution": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if exists(.message) && is_string(.message) {\n  \n  .message = replace_with_regex(.message, r'password=\\w+', \"password=***\")\n  .message = replace_with_regex(.message, r'token:\\s*[\\w\\-]+', \"token: ***\")\n  .message = replace_with_regex(.message, r'api_key=[\\w\\-]+', \"api_key=***\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/00_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/test-loki-dest": {
+      "type": "loki",
+      "inputs": [
+        "transform/destination/test-loki-dest/00_tf_substitution"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "endpoint": "http://loki.loki:3100",
+      "encoding": {
+        "codec": "text",
+        "only_fields": [
+          "message"
+        ],
+        "timestamp_format": "rfc3339"
+      },
+      "labels": {
+        "container": "{{ container }}",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
+      "out_of_order_action": "rewrite_timestamp",
+      "remove_label_fields": true,
+      "tls": {
+        "verify_certificate": true,
+        "verify_hostname": true
+      }
+    }
+  }
+}
