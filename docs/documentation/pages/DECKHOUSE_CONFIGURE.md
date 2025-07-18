@@ -267,5 +267,3 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (e.g., `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`).
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}
-
-

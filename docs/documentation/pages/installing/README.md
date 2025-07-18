@@ -690,7 +690,7 @@ You can check the current status of versions in the release channels at [release
    /home/user/d8-bundle
    ```
 
-1. На хост с доступом к хранилищу, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](deckhouse-cli/).
+1. On the host with access to the registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/).
 
 1. Copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/) on the host that has access to the target image registry.
 
@@ -822,7 +822,7 @@ Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (
    auth_param basic realm proxy
    acl authenticated proxy_auth REQUIRED
    http_access allow authenticated
-   # Укажите необходимый порт. Порт 3128 используется по умолчанию.
+   # Specify the required port. Port 3128 is used by default.
    http_port 3128
    ```
 

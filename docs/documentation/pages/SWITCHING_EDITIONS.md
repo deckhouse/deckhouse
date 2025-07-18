@@ -181,7 +181,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
       | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
+   If the `registry-packages-proxy` module was previously disabled, re-enable it:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
@@ -749,8 +749,8 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 1. Run the following commands to start a temporary DKP CSE pod to retrieve the current image digests and module list:
 
    ```shell
-   DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
-   # Например, DECKHOUSE_VERSION=v1.58.2
+   DECKHOUSE_VERSION=v<DECKHOUSE_VERSION_CSE>
+   # For example, DECKHOUSE_VERSION=v1.58.2
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
