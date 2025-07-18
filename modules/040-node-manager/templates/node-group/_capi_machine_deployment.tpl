@@ -35,6 +35,7 @@ metadata:
   {{- end }}
 spec:
   clusterName: {{ $context.Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
+  selector: {}
   template:
     metadata:
       {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 6 }}
