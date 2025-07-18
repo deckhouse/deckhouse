@@ -1,6 +1,6 @@
 ---
 title: "Switching editions"
-permalink: en/editions
+permalink: en/admin/editions.html
 ---
 
 ## Switching DKP from EE to CE
