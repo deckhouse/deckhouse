@@ -1,0 +1,31 @@
+cloud-provider-vcd:
+  fixes:
+    - summary: change VCD CCM checksum calculation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14229
+docs:
+  features:
+    - summary: Add command to view all falco audit rules to docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14177
+  fixes:
+    - summary: Updating documentation about Stronghold MFA methods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14249
+    - summary: Stronghold docs - added information about MFA
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14165
+    - summary: Removed port 22322 from setup docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14099
+multitenancy-manager:
+  fixes:
+    - summary: Fix rendering properties with additionalProperties.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14148
+node-manager:
+  features:
+    - summary: Added support for configuring private HTTP container registries in containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14155
+      impact: >-
+        Users can now configure containerd to pull images from private registries, easing
+        deployments in private environments.
+operator-trivy:
+  fixes:
+    - summary: Fix operator-trivy does not respect k8s 1.31+.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14162
+
