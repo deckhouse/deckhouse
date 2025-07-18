@@ -7,12 +7,12 @@ title: "The runtime-audit-engine module: FAQ"
 ## How to collect events
 
 Pods of `runtime-audit-engine` output all events to stdout.
-Those events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
+Those events can then be collected by [log-shipper-agents](../log-shipper/) and sent to any supported destination.
 
-Below is an example [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
+Below is an example [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: falco-events
@@ -21,8 +21,11 @@ spec:
   - xxxx
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-      - d8-runtime-audit-engine
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [d8-runtime-audit-engine]
   labelFilter:
   - operator: Regex
     values: ["\\{.*"] # to collect only JSON logs
@@ -32,7 +35,7 @@ spec:
 
 ## How to create an alert
 
-All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules) to enable alerts.
+All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../prometheus/cr.html#customprometheusrules) to enable alerts.
 
 Example:
 
@@ -53,7 +56,7 @@ spec:
           Check you events journal for details.
         summary: Falco detects a critical security incident
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}
@@ -71,7 +74,7 @@ The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#fa
 
 ```shell
 git clone github.com/deckhouse/deckhouse
-cd deckhouse/ee/modules/650-runtime-audit-engine/hack/far-converter
+cd deckhouse/ee/modules/runtime-audit-engine/hack/far-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 
