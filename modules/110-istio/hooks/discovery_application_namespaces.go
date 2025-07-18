@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -154,20 +157,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	var applicationNamespaces = make([]string, 0)
 	var applicationNamespacesToMonitor = make([]string, 0)
-	var namespacesSnapshots = make([]go_hook.FilterResult, 0)
+	var namespacesSnapshots = make([]pkg.Snapshot, 0)
 	var namespacesMap = make(map[string]IstioNamespaceFilterResult)
 
-	for _, ns := range input.Snapshots["all_namespaces"] {
-		nsInfo := ns.(IstioNamespaceFilterResult)
+	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioNamespaceFilterResult](input.NewSnapshots.Get("all_namespaces")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'all_namespaces' snapshot: %w", err)
+		}
+
 		namespacesMap[nsInfo.Name] = nsInfo
 	}
 
-	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_definite_revision"]...)
-	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_global_revision"]...)
-	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_global_rev"]...)
-	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_definite_rev"]...)
-	for _, ns := range namespacesSnapshots {
-		nsInfo := ns.(IstioNamespaceFilterResult)
+	namespacesSnapshots = append(namespacesSnapshots, input.NewSnapshots.Get("namespaces_definite_revision")...)
+	namespacesSnapshots = append(namespacesSnapshots, input.NewSnapshots.Get("namespaces_global_revision")...)
+	namespacesSnapshots = append(namespacesSnapshots, input.NewSnapshots.Get("istio_pod_global_rev")...)
+	namespacesSnapshots = append(namespacesSnapshots, input.NewSnapshots.Get("istio_pod_definite_rev")...)
+	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioNamespaceFilterResult](namespacesSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over namespace snapshots: %w", err)
+		}
+
 		if nsInfo.DeletionTimestampExists {
 			continue
 		}
