@@ -1,0 +1,13 @@
+ci:
+  fixes:
+    - summary: Fix listing of changed modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14532
+docs:
+  features:
+    - summary: Added documentation with recommendations for generating self-signed certificates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14494
+user-authn:
+  fixes:
+    - summary: fix dex oidc connector insecureSkipVerify and rootCAData options
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14524
+
