@@ -1558,7 +1558,6 @@ spec:
                         exclusive: {}
                 cri:
                   type: object
-                  x-doc-default: ContainerdV2
                   description: |
                     Container runtime parameters.
                   properties:
