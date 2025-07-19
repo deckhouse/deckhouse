@@ -50,7 +50,6 @@
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
 610-service-with-healthchecks   @apolovov
-650-runtime-audit-engine/       @name212 @sprait
 800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
