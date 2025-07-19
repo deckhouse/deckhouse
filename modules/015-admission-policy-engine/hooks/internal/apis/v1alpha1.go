@@ -73,6 +73,8 @@ type SecurityPolicySpec struct {
 			Driver string `json:"driver"`
 		} `json:"allowedFlexVolumes,omitempty"`
 		AllowedVolumes               []string           `json:"allowedVolumes,omitempty"`
+		AllowedServiceTypes          []string           `json:"allowedServiceTypes,omitempty"`
+		BlockWildcardDomains         bool               `json:"blockWildcardDomains,omitempty"`
 		ReadOnlyRootFilesystem       bool               `json:"readOnlyRootFilesystem,omitempty"`
 		AutomountServiceAccountToken *bool              `json:"automountServiceAccountToken,omitempty"`
 		AllowedClusterRoles          []string           `json:"allowedClusterRoles,omitempty"`
