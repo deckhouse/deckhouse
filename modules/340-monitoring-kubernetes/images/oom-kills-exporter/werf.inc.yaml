@@ -1,0 +1,33 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: common/src-artifact
+  add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o oom-kills-exporter ./cmd/oom-kills-exporter
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/oom-kills-exporter
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}
+  add: /src/oom-kills-exporter
+  to: /usr/local/bin/oom-kills-exporter
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/oom-kills-exporter"]
+    user: "64535:64535" 
