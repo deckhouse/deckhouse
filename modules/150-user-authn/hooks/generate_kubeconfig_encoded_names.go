@@ -48,7 +48,7 @@ func kubeconfigNamesHandler(input *go_hook.HookInput) error {
 	encodedNames := make([]string, 0, kubeconfigsLength)
 
 	for i := 0; i < kubeconfigsLength; i++ {
-		name := encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-generator-%d", i))
+		name := encoding.ToSha256Like(fmt.Sprintf("kubeconfig-generator-%d", i))
 		encodedNames = append(encodedNames, name)
 	}
 

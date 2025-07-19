@@ -17,7 +17,9 @@ limitations under the License.
 package encoding
 
 import (
+	"crypto/sha256"
 	"encoding/base32"
+	"fmt"
 	"hash/fnv"
 	"strings"
 )
@@ -25,6 +27,18 @@ import (
 var letters = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
 
 func ToFnvLikeDex(input string) string {
-	toDecodeString := []byte(input)
-	return strings.TrimRight(letters.EncodeToString(fnv.New64().Sum(toDecodeString)), "=")
+	hasher := fnv.New64()
+	hasher.Write([]byte(input))
+	return strings.TrimRight(letters.EncodeToString(hasher.Sum(nil)), "=")
+}
+
+// ToSha256Like generates a short hash using SHA256, compatible with Helm's sha256sum | trunc 8
+func ToSha256Like(input string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(input))
+	hash := fmt.Sprintf("%x", hasher.Sum(nil))
+	if len(hash) > 8 {
+		return hash[:8]
+	}
+	return hash
 }

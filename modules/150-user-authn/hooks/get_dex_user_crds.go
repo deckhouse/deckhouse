@@ -157,7 +157,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 		users = append(users, DexUserInternalValues{
 			Name:        dexUser.Name,
-			EncodedName: encoding.ToFnvLikeDex(strings.ToLower(dexUser.Spec.Email)),
+			EncodedName: encoding.ToSha256Like(strings.ToLower(dexUser.Spec.Email)),
 			Spec:        dexUser.Spec,
 			Status:      dexUser.Status,
 			ExpireAt:    expireAt,
