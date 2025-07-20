@@ -3,7 +3,7 @@
 <div class="breadcrumbs-container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
+      <li class="breadcrumbs__item"><a href="/modules/">{{ T "modules_list" | humanize }}</a></li>
     </ol>
   </div>
   <div class="breadcrumbs__right">
@@ -15,7 +15,7 @@
 
 <div class="layout-sidebar">
   <div class="layout-sidebar__sidebar">
-    {{- partial "sidebar" . }}
+    {{- partial "sidebar-module" . }}
   </div>
   <div class="layout-sidebar__content">
 
@@ -36,11 +36,11 @@
 {{- end}}
 
     <div class="docs docs-modules">
-    <div class="docs__wrap-title">
-        <h1 class="docs__title">{{ .Title }}</h1>
-    </div>
+      <div class="docs__wrap-title">
+          <h1 class="docs__title">{{ .Title }}</h1>
+      </div>
 
-    <div class="post-content">
+      <div class="post-content">
 
         {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
@@ -73,11 +73,10 @@
               {{- partial "module-resources" (dict "name" $moduleName "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
             {{- end }}
           {{- end }}
-
         {{- end }}
 
+      </div>
     </div>
-</div>
   </div>
 
   <div class="layout-sidebar__sidebar_right">

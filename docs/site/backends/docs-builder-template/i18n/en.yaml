@@ -3,9 +3,11 @@ search-placeholder: Search...
 modules: modules
 modules2: modules
 module: module
+module_versions: Module versions
 deckhouse: deckhouse
 documentation: documentation
 modules_documentation: Modules documentation
+modules_list: Modules list
 category: category
 core: core
 conversions_title: Conversions

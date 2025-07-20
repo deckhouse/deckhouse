@@ -3,9 +3,11 @@ search-placeholder: Поиск...
 modules: модули
 modules2: модулей
 module: модуль
+module_versions: Версии модуля
 deckhouse: deckhouse
 documentation: документация
 modules_documentation: Документация модулей
+modules_list: Список модулей
 category: категория
 core: ядро
 conversions_title: Конверсии
