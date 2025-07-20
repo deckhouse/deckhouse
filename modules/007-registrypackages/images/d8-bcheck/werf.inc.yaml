@@ -1,0 +1,142 @@
+{{- $version := "0.1" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromCacheVersion: "2025-07-22 17:17"
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    setup:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/d8-bcheck
+  stageDependencies:
+    setup:
+    - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - d8-bcheck
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "d8-bcheck": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+- image: libs/musl
+  add: /
+  to: /
+  before: install
+  includePaths:
+    - lib/ld-musl-x86_64.so.1
+    - usr/bin
+    - usr/lib
+    - usr/lib64
+    - usr/include
+- image: libs/zstd
+  add: /
+  to: /libs/zstd
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: libs/libuv
+  add: /
+  to: /libs/libuv
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: libs/zlib
+  add: /
+  to: /libs/zlib
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: tools/openssl
+  add: /
+  to: /tools/openssl
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: tools/elfutils
+  add: /
+  to: /tools/elfutils
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - apk add build-base rsync
+  install:
+  - |
+    if [[ -d /libs ]]; then
+        for lib in $(ls -1 /libs); do
+          cd /libs/${lib}
+          rsync -aulv * /
+        done
+      rm -rf /libs
+    fi
+  - |
+    if [[ -d /tools ]]; then
+      for tool in $(ls -1 /tools); do
+        cd /tools/${tool}
+        rsync -aulv * /
+      done
+      rm -rf /tools
+    fi
+  - ln -s /usr/lib/libuv.a /usr/lib/libuv_a.a
+  - cd /src/d8-bcheck
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /d8-bcheck d8-bcheck.go
+  - mv /src/scripts/* /

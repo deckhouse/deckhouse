@@ -422,3 +422,37 @@ spec:
           - fstec
           - auth_attempts
 {{- end }}
+
+{{- if index $ruleSet "D8Bcheck" -}}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: FalcoAuditRules
+metadata:
+  name: d8-bcheck
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+  rules:
+    - macro:
+        name: open_write
+        condition: >
+          (evt.type=open or evt.type=openat) and
+          fd.typechar='f' and
+          (evt.arg.flags contains O_RDONLY or
+          evt.arg.flags contains O_SYNC)
+
+    - macro:
+        name: bin_dir
+        condition: fd.directory=/opt/deckhouse/bin
+    - macro:
+        name: proc_name
+        condition: proc.name=d8-bcheck
+    - rule:
+        name: cannot_have_sign
+        desc: an attempt to write to any file below a set of binary directories
+        condition: evt.dir = < and open_write and bin_dir and proc_name
+        output: "Deckhouse binary %fd.name cannot have proper digital sign"
+        priority: Error
+        tags:
+          - integrity_check
+          - subscription_check
+  {{- end }}
