@@ -163,7 +163,12 @@ document.addEventListener("DOMContentLoaded", function() {
         if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
           return;
         }
-        newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
+        newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}`;
+
+        if(lineIndex < line.length) {
+          newHTML += `\n`;
+        }
+        
         lineIndex++;
       });
 
