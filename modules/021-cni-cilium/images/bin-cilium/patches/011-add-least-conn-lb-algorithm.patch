@@ -1,4 +1,4 @@
-From 9bb663307c273cf946371dd3c6b055164436741d Mon Sep 17 00:00:00 2001
+From c5ffcd13ffa8dd4f1880cd61a992940b382b5947 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -14,20 +14,18 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/annotation/k8s.go                   |   1 +
  pkg/datapath/linux/config/config.go     |  11 +
  pkg/datapath/maps/map.go                |   8 +
- pkg/datapath/types/lbmap.go             |   2 +-
  pkg/loadbalancer/loadbalancer.go        |  10 +-
  pkg/maps/ctmap/ctmap.go                 |  26 +++
  pkg/maps/ctmap/gc/gc.go                 |   7 +
  pkg/maps/ctmap/types.go                 |   4 +
- pkg/maps/lbmap/lbmap.go                 |  21 +-
- pkg/maps/lbmap/leastconn.go             | 159 +++++++++++++
+ pkg/maps/lbmap/lbmap.go                 |  13 ++
+ pkg/maps/lbmap/leastconn.go             | 165 ++++++++++++++
  pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
  pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
  pkg/metrics/features/metrics.go         |   1 +
  pkg/option/config.go                    |   3 +
- pkg/service/service.go                  |  22 +-
- pkg/testutils/mockmaps/lbmap.go         |   2 +-
- 22 files changed, 659 insertions(+), 18 deletions(-)
+ pkg/service/service.go                  |  11 +
+ 20 files changed, 651 insertions(+), 9 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -571,19 +569,6 @@ index dd14245598..2f99873283 100644
  	if !option.Config.EnableSessionAffinity {
  		maps = append(maps, lbmap.Affinity6MapName, lbmap.Affinity4MapName, lbmap.AffinityMatchMapName)
  	}
-diff --git a/pkg/datapath/types/lbmap.go b/pkg/datapath/types/lbmap.go
-index 742b0d8eb5..7efeedeb7b 100644
---- a/pkg/datapath/types/lbmap.go
-+++ b/pkg/datapath/types/lbmap.go
-@@ -16,7 +16,7 @@ type LBMap interface {
- 	UpsertService(*UpsertServiceParams) error
- 	UpsertMaglevLookupTable(uint16, map[string]*loadbalancer.Backend, bool) error
- 	IsMaglevLookupTableRecreated(bool) bool
--	DeleteService(loadbalancer.L3n4AddrID, int, bool, loadbalancer.SVCNatPolicy) error
-+	DeleteService(loadbalancer.L3n4AddrID, int, bool, bool, loadbalancer.SVCNatPolicy) error
- 	AddBackend(*loadbalancer.Backend, bool) error
- 	UpdateBackendWithState(*loadbalancer.Backend) error
- 	DeleteBackendByID(loadbalancer.BackendID) error
 diff --git a/pkg/loadbalancer/loadbalancer.go b/pkg/loadbalancer/loadbalancer.go
 index d6f2588624..c6862b3cdc 100644
 --- a/pkg/loadbalancer/loadbalancer.go
@@ -732,7 +717,7 @@ index 75761e70c1..93ce1550fb 100644
  	var sb strings.Builder
  
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 12686cec41..d9a56201af 100644
+index 12686cec41..70d220b69c 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -37,6 +37,7 @@ var (
@@ -743,15 +728,6 @@ index 12686cec41..d9a56201af 100644
  )
  
  // LBBPFMap is an implementation of the LBMap interface.
-@@ -194,7 +195,7 @@ func (lbmap *LBBPFMap) UpsertMaglevLookupTable(svcID uint16, backends map[string
- 	return nil
- }
- 
--func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev, ipv6 bool) error {
-+func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev, useLeastConn, ipv6 bool) error {
- 	var (
- 		svcKey    ServiceKey
- 		revNATKey RevNatKey
 @@ -221,6 +222,14 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
  				logfields.BackendSlot: svcKey.GetBackendSlot(),
  			}).WithError(err).Warn("Unable to delete service entry from BPF map")
@@ -761,38 +737,17 @@ index 12686cec41..d9a56201af 100644
 +			continue
 +		}
 +
-+		if useLeastConn && slot == 0 {
++		if IsLeastConnEnabled() && slot == 0 {
 +			deleteLeastConnServiceMap(svcKey)
 +		}
  	}
  
  	if useMaglev {
-@@ -235,17 +244,17 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
- }
- 
- // DeleteService removes given service from a BPF map.
--func (*LBBPFMap) DeleteService(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev bool,
-+func (*LBBPFMap) DeleteService(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev, useLeastConn bool,
- 	natPolicy loadbalancer.SVCNatPolicy) error {
- 	if svc.ID == 0 {
- 		return fmt.Errorf("Invalid svc ID 0")
- 	}
--	if err := deleteServiceProto(svc, backendCount, useMaglev,
-+	if err := deleteServiceProto(svc, backendCount, useMaglev, useLeastConn,
- 		svc.IsIPv6() || natPolicy == loadbalancer.SVCNatPolicyNat46); err != nil {
- 		return err
- 	}
- 	if natPolicy == loadbalancer.SVCNatPolicyNat46 {
--		if err := deleteServiceProto(svc, 0, false, false); err != nil {
-+		if err := deleteServiceProto(svc, 0, false, false, false); err != nil {
- 			return err
- 		}
- 	}
 @@ -639,6 +648,10 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
  		v.SetL7LBProxyPort(l7lbProxyPort)
  	}
  
-+	if loadBalancingAlgorithm != loadbalancer.SVCLoadBalancingAlgorithmLeastConn {
++	if IsLeastConnEnabled() && loadBalancingAlgorithm != loadbalancer.SVCLoadBalancingAlgorithmLeastConn {
 +		deleteLeastConnServiceMap(fe)
 +	}
 +
@@ -801,10 +756,10 @@ index 12686cec41..d9a56201af 100644
  
 diff --git a/pkg/maps/lbmap/leastconn.go b/pkg/maps/lbmap/leastconn.go
 new file mode 100644
-index 0000000000..6a6f39db06
+index 0000000000..4532ca86f0
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn.go
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,165 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
@@ -815,6 +770,7 @@ index 0000000000..6a6f39db06
 +	"github.com/cilium/cilium/pkg/ebpf"
 +	lb "github.com/cilium/cilium/pkg/loadbalancer"
 +	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/option"
 +	vbpf "github.com/cilium/ebpf"
 +	"github.com/sirupsen/logrus"
 +)
@@ -828,6 +784,11 @@ index 0000000000..6a6f39db06
 +	leastConnBackend4Map *LeastConnBackendMap
 +	backendCachedMap     map[LeastConnBackendKey]LeastConnBackendVal
 +)
++
++func IsLeastConnEnabled() bool {
++	return option.Config.LoadBalancerAlgorithmAnnotation ||
++		option.Config.NodePortAlg == option.NodePortAlgLeastConn
++}
 +
 +func InitLeastConnMaps() error {
 +	bckMap, err := NewLeastConnBackendMap(LeastConnBackend4MapName, LeastConnMapMaxEntries)
@@ -1093,32 +1054,20 @@ index e4390c0622..a4d5ee97a7 100644
  	DSRDispatchOption = "opt"
  
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index 52b2d9aa2b..e04318f9cc 100644
+index 52b2d9aa2b..fb2494991c 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
-@@ -179,6 +179,11 @@ func (svc *svcInfo) filterBackends(frontend lb.L3n4AddrID) bool {
- 	}
- }
- 
-+func (svc *svcInfo) useLeastConn() bool {
-+	return option.Config.LoadBalancerAlgorithmAnnotation ||
-+		option.Config.NodePortAlg == option.NodePortAlgLeastConn
-+}
-+
- func (svc *svcInfo) useMaglev() bool {
- 	// we need to check if LoadBalancerAlgorithmAnnotation is enabled otherwise load
- 	// balancer algorithm will not be populated in lb maps and this information
-@@ -1735,6 +1740,9 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
+@@ -1735,6 +1735,9 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
  			getScopedLog().WithField(logfields.BackendID, id).
  				Debug("Removing obsolete backend")
  		}
-+		if svc.useLeastConn() {
++		if lbmap.IsLeastConnEnabled() {
 +			lbmap.DeleteLeastConnBackendByID(id)
 +		}
  		s.lbmap.DeleteBackendByID(id)
  		s.TerminateUDPConnectionsToBackend(&be.L3n4Addr)
  	}
-@@ -1798,6 +1806,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
+@@ -1798,6 +1801,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
  			// size is limited, which can lead to connectivity disruptions.
  			id := b.ID
  			DeleteBackendID(id)
@@ -1126,7 +1075,7 @@ index 52b2d9aa2b..e04318f9cc 100644
  			if err := s.lbmap.DeleteBackendByID(id); err != nil {
  				// As the backends map is not expected to be updated during restore,
  				// the deletion call shouldn't fail. But log the error, just
-@@ -1848,6 +1857,7 @@ func (s *Service) deleteOrphanBackends() error {
+@@ -1848,6 +1852,7 @@ func (s *Service) deleteOrphanBackends() error {
  				Debug("Removing orphan backend")
  			// The b.ID is unique across IPv4/6, hence attempt
  			// to clean it from both maps, and ignore errors.
@@ -1134,64 +1083,26 @@ index 52b2d9aa2b..e04318f9cc 100644
  			DeleteBackendID(b.ID)
  			s.lbmap.DeleteBackendByID(b.ID)
  			delete(s.backendByHash, hash)
-@@ -1963,7 +1973,7 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
- 
- func (s *Service) deleteServiceLocked(svc *svcInfo) error {
- 	ipv6 := svc.frontend.L3n4Addr.IsIPv6() || svc.svcNatPolicy == lb.SVCNatPolicyNat46
--	obsoleteBackendIDs, obsoleteBackends := s.deleteBackendsFromCacheLocked(svc)
-+	obsoleteBackendIDs, obsoleteBackends := s.deleteBackendsFromCacheLocked(svc, svc.useLeastConn())
- 	scopedLog := log.WithFields(logrus.Fields{
- 		logfields.ServiceID: svc.frontend.ID,
- 		logfields.ServiceIP: svc.frontend.L3n4Addr,
-@@ -1972,7 +1982,7 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
- 	scopedLog.Debug("Deleting service")
- 
- 	if err := s.lbmap.DeleteService(svc.frontend, len(svc.backends),
--		svc.useMaglev(), svc.svcNatPolicy); err != nil {
-+		svc.useMaglev(), svc.useLeastConn(), svc.svcNatPolicy); err != nil {
- 		return err
- 	}
- 
-@@ -2105,6 +2115,9 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
+@@ -2105,6 +2110,9 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
  
  			obsoleteSVCBackendIDs = append(obsoleteSVCBackendIDs, backend.ID)
  			if s.backendRefCount.Delete(hash) {
-+				if svc.useLeastConn() {
++				if lbmap.IsLeastConnEnabled() {
 +					lbmap.DeleteLeastConnBackendByID(backend.ID)
 +				}
  				DeleteBackendID(backend.ID)
  				delete(s.backendByHash, hash)
  				obsoleteBackends = append(obsoleteBackends, backend)
-@@ -2117,12 +2130,15 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
- 	return newBackends, obsoleteBackends, obsoleteSVCBackendIDs, nil
- }
- 
--func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo) ([]lb.BackendID, []*lb.Backend) {
-+func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo, useLeastConn bool) ([]lb.BackendID, []*lb.Backend) {
- 	obsoleteBackendIDs := []lb.BackendID{}
- 	obsoleteBackends := []*lb.Backend{}
+@@ -2123,6 +2131,9 @@ func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo) ([]lb.BackendID, [
  
  	for hash, backend := range svc.backendByHash {
  		if s.backendRefCount.Delete(hash) {
-+			if useLeastConn {
++			if lbmap.IsLeastConnEnabled() {
 +				lbmap.DeleteLeastConnBackendByID(backend.ID)
 +			}
  			DeleteBackendID(backend.ID)
  			obsoleteBackendIDs = append(obsoleteBackendIDs, backend.ID)
  			obsoleteBackends = append(obsoleteBackends, backend.DeepCopy())
-diff --git a/pkg/testutils/mockmaps/lbmap.go b/pkg/testutils/mockmaps/lbmap.go
-index 6790db499d..c9ff83be05 100644
---- a/pkg/testutils/mockmaps/lbmap.go
-+++ b/pkg/testutils/mockmaps/lbmap.go
-@@ -104,7 +104,7 @@ func (*LBMockMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
- 	return true
- }
- 
--func (m *LBMockMap) DeleteService(addr lb.L3n4AddrID, backendCount int, maglev bool, natPolicy lb.SVCNatPolicy) error {
-+func (m *LBMockMap) DeleteService(addr lb.L3n4AddrID, backendCount int, maglev bool, leastConn bool, natPolicy lb.SVCNatPolicy) error {
- 	m.Lock()
- 	defer m.Unlock()
- 	svc, found := m.ServiceByID[uint16(addr.ID)]
 -- 
 2.34.1
 
