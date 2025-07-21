@@ -1049,14 +1049,22 @@ spec:
       sourceFormat: JSON
   - action: ReplaceValue
     replaceValue:
-      label: .message
+      label: .message.password
       patterns:
-        - source: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
-          target: 'password="***"'
-        - source: 'token["\s]*[:=]["\s]*[\w\-\.]+'
-          target: 'token="***"'
-        - source: 'api_key["\s]*[:=]["\s]*[\w\-]+'
-          target: 'api_key="***"'
+        - source: '[A-Za-z0-9!@#$%^&*()_+=-]+'
+          target: '***'
+  - action: ReplaceValue
+    replaceValue:
+      label: .message.token
+      patterns:
+        - source: '[\w\-\.]+'
+          target: '***'
+  - action: ReplaceValue
+    replaceValue:
+      label: .message.api_key
+      patterns:
+        - source: '["\s]*[\w\-]+'
+          target: '***'
 ```
 
 > **Примечание**: ReplaceValue работает как со строковыми полями, так и со структурированными объектами/массивами. Если сначала применить `ParseMessage`, то замена будет рекурсивно искать строковые значения во всей структуре распарсенного объекта.
@@ -1091,12 +1099,6 @@ spec:
     endpoint: http://elasticsearch.logging:9200
     index: secure-logs-%F
   transformations:
-  # Сначала парсим JSON логи
-  - action: ParseMessage
-    parseMessage:
-      sourceFormat: JSON
-      json:
-        depth: 3
   # Скрываем чувствительные финансовые данные
   - action: ReplaceValue
     replaceValue:
@@ -1105,21 +1107,39 @@ spec:
         # Номера кредитных карт (различные форматы)
         - source: '\b(?:\d[ -]*?){13,16}\b'
           target: '****-****-****-****'
-        # CVV коды
-        - source: 'cvv["\s]*[:=]["\s]*\d{3,4}'
-          target: 'cvv="***"'
-        # Номера банковских счетов
-        - source: 'account["\s]*[:=]["\s]*\d{8,17}'
-          target: 'account="***СКРЫТО***"'
-        # Номера социального страхования
-        - source: '\b\d{3}-\d{2}-\d{4}\b'
-          target: '***-**-****'
         # JWT токены
         - source: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
           target: 'JWT_TOKEN_HIDDEN'
+        # Номера социального страхования
+        - source: '\b\d{3}-\d{2}-\d{4}\b'
+          target: '***-**-****'
+  # Сначала парсим JSON логи
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 3
+        # CVV коды
+  - action: ReplaceValue
+    replaceValue:
+      label: .message.cvv
+      patterns:
+        - source: '\d{3,4}'
+          target: '***'
+        # Номера банковских счетов
+  - action: ReplaceValue
+    replaceValue:
+      label: .message.account
+      patterns:
+        - source: '\d{8,17}'
+          target: '***СКРЫТО***'
         # Email адреса в чувствительных контекстах
-        - source: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-          target: 'email="user@domain.masked"'
+  - action: ReplaceValue
+    replaceValue:
+      label: .message.email
+      patterns:
+        - source: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          target: 'user@domain.masked'
   # Удаляем отладочные поля
   - action: DropLabels
     dropLabels:
@@ -1157,18 +1177,6 @@ spec:
     encoding:
       codec: JSON
   transformations:
-  # Сначала парсим разные форматы логов
-  - action: ParseMessage
-    parseMessage:
-      sourceFormat: JSON
-  - action: ParseMessage
-    parseMessage:
-      sourceFormat: Klog
-  - action: ParseMessage
-    parseMessage:
-      sourceFormat: String
-      string:
-        targetField: raw_message
   # Затем скрываем чувствительные данные
   - action: ReplaceValue
     replaceValue:
@@ -1191,6 +1199,18 @@ spec:
           target: 'postgresql://***:***@***/**'
         - source: 'mysql://[^@]+@[^/]+/\w+'
           target: 'mysql://***:***@***/**'
+  # Сначала парсим разные форматы логов
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+      string:
+        targetField: raw_message
   # Очищаем и стандартизируем метки
   - action: ReplaceKeys
     replaceKeys:

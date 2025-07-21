@@ -90,16 +90,6 @@ if exists({{.spec.Label}}) {
 {{- range $pattern := $.spec.Patterns }}
     {{$.spec.Label}} = replace!({{$.spec.Label}}, r'{{$pattern.Source}}', "{{$pattern.Target}}")
 {{- end }}
-  } else if is_object({{.spec.Label}}) || is_array({{.spec.Label}}) {
-    # Recursive replacement for objects and arrays
-    {{$.spec.Label}} = map_values({{$.spec.Label}}, recursive: true) -> |value| {
-      if is_string(value) {
-{{- range $pattern := $.spec.Patterns }}
-        value = replace!(value, r'{{$pattern.Source}}', "{{$pattern.Target}}")
-{{- end }}
-      }
-      value
-    }
-  }
+  } 
 }
 `
