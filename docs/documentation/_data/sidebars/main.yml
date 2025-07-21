@@ -347,6 +347,22 @@ entries:
                             ru: Интеграция с службами vSphere
                           url: /admin/integrations/virtualization/vsphere/vsphere-services.html
                     - title:
+                        en: Integration with DVP
+                        ru: Интеграция с DVP
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/dvp/dvp-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/dvp/сonfiguration-and-layout-scheme.html
+                        - title:
+                            en: Integration with DVP
+                            ru: Интеграция с облаком DVP
+                          url: /admin/integrations/virtualization/dvp/dvp-services.html      
+                    - title:
                         en: Integration with VMware Cloud Director
                         ru: Интеграция с VMware Cloud Director
                       folders:
