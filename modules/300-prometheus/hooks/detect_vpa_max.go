@@ -81,7 +81,7 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 
 	var totalPodsCapacity int64
 
-	for node, err := range sdkobjectpatch.SnapshotIter[*Node](nodeSnap) {
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](nodeSnap) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'nodes' snapshot: %v", err)
 		}
