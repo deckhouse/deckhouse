@@ -24,7 +24,7 @@ tree /etc/containerd/registry.d
 
 Example hosts.toml configuration:
 
-```
+```toml
 [host]
   [host."https://registry.deckhouse.ru"]
     capabilities = ["pull", "resolve"]
