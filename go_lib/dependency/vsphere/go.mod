@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/go_lib/dependency/vsphere
 
-go 1.24.5
+go 1.23.8
 
 require (
 	github.com/gojuno/minimock/v3 v3.4.5
