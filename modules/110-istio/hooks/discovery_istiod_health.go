@@ -26,9 +26,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const isGlobalVersionIstiodReadyPath = "istio.internal.isGlobalVersionIstiodReady"
@@ -135,7 +136,6 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 
 	webhookSnaps := input.NewSnapshots.Get("istio_sidecar_injector_global_webhook")
 	if len(webhookSnaps) == 1 {
-
 		err := webhookSnaps[0].UnmarshalTo(&injectorGlobalFullVer)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal 'istio_sidecar_injector_global_webhook' snapshot: %w", err)

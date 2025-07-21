@@ -29,8 +29,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

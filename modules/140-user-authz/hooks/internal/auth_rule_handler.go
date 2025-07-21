@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 

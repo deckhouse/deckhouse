@@ -19,8 +19,6 @@ package hooks
 import (
 	"fmt"
 
-	"github.com/deckhouse/module-sdk/pkg"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,6 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

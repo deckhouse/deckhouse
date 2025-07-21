@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	"github.com/deckhouse/module-sdk/pkg"
+
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
