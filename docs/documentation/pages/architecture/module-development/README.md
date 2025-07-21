@@ -6,7 +6,7 @@ lang: en
 
 Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a [module source](../cr.html#modulesource). This section details what the DKP module is and how it works.
 
-There are four stages in the module lifecycle:
+Creating a module consists of the following stages:
 
 * **Development**: creating module code and its structure in the Git repository. The [**Module structure**](structure/) section outlines which components there are and in which directories they are located.
 * **Building**: creating a module artifact and pushing it to the container registry. The [**Building and publishing**](build/) section describes where images are stored in the registry and at what paths they are available.

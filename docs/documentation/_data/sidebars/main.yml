@@ -1102,8 +1102,8 @@ entries:
           url: /architecture/installation.html
           draft: true
         - title:
-            en: Module development
-            ru: Разработка модуля
+            en: Modules
+            ru: Модули
           folders:
             - title:
                 en: Description
@@ -1279,70 +1279,62 @@ entries:
       url: /release-notes.html
   # ------------- TEST -------------
     - title:
-        en: Projects (TEST)
-        ru: Проекты (ТЕСТ)
+        en: Projects (WIP)
+        ru: Проекты (WIP)
       folders:
         - title:
             en: Concepts
             ru: Концепции
           folders:
             - title:
+                en: Overview
+                ru: Обзор
+              url: /test/concepts/
+            - title:
                 en: Glossary
                 ru: Глоссарий
               url: /test/concepts/glossary.html
             - title:
-                en: Multitenancy
-                ru: Мультитенантность
-              folders:
-                - title:
-                    en: Projects
-                    ru: Проекты
-                  url: /test/concepts/multitenancy/projects.html
-                - title:
-                    en: Role Model
-                    ru: Ролевая модель
-                  url: /test/concepts/multitenancy/rbac.html
+                en: Projects
+                ru: Проекты
+              url: /test/concepts/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/concepts/rbac.html
         - title:
             en: Administration
             ru: Администрирование
           folders:
             - title:
-                en: Multitenancy
-                ru: Мультитенантность
-              folders:
-                - title:
-                    en: Projects
-                    ru: Проекты
-                  url: /test/admin/multitenancy/projects.html
-                - title:
-                    en: Role Model
-                    ru: Ролевая модель
-                  url: /test/admin/multitenancy/rbac.html
+                en: Projects
+                ru: Проекты
+              url: /test/admin/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/admin/rbac.html
         - title:
             en: Using
             ru: Использование
           folders:
             - title:
-                en: Multitenancy
-                ru: Мультитенантность
-              folders:
-                - title:
-                    en: Projects
-                    ru: Проекты
-                  url: /test/user/multitenancy/projects.html
+                en: Projects
+                ru: Проекты
+              url: /test/user/projects.html
         - title:
             en: Architecture
             ru: Архитектура
           folders:
             - title:
-                en: Multitenancy
-                ru: Мультитенантность
-              folders:
-                - title:
-                    en: Projects
-                    ru: Проекты
-                  url: /test/architecture/multitenancy/projects.html
-                - title:
-                    en: Role Model
-                    ru: Ролевая модель
-                  url: /test/architecture/multitenancy/rbac.html
+                en: Overview
+                ru: Обзор
+              url: /test/architecture/
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/architecture/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/architecture/rbac.html
