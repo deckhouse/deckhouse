@@ -22,7 +22,7 @@ type TransformationSpec struct {
 	ReplaceKeys  ReplaceKeysSpec      `json:"replaceKeys,omitempty"`
 	ParseMessage ParseMessageSpec     `json:"parseMessage,omitempty"`
 	DropLabels   DropLabelsSpec       `json:"dropLabels,omitempty"`
-	Substitution SubstitutionSpec     `json:"substitution,omitempty"`
+	ReplaceValue ReplaceValueSpec     `json:"replaceValue,omitempty"`
 }
 
 type TransformationAction string
@@ -31,7 +31,7 @@ const (
 	ReplaceKeys  TransformationAction = "ReplaceKeys"
 	ParseMessage TransformationAction = "ParseMessage"
 	DropLabels   TransformationAction = "DropLabels"
-	Substitution TransformationAction = "Substitution"
+	ReplaceValue TransformationAction = "ReplaceValue"
 )
 
 type ReplaceKeysSpec struct {
@@ -44,14 +44,14 @@ type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
 }
 
-type SubstitutionSpec struct {
-	Field    string             `json:"field"`
-	Patterns []SubstitutionRule `json:"patterns"`
+type ReplaceValueSpec struct {
+	Label    string             `json:"label"`
+	Patterns []ReplaceValueRule `json:"patterns"`
 }
 
-type SubstitutionRule struct {
-	Pattern     string `json:"pattern"`
-	Replacement string `json:"replacement"`
+type ReplaceValueRule struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 type ParseMessageSpec struct {
 	SourceFormat SourceFormat           `json:"sourceFormat"`

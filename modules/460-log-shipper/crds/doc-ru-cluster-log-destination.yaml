@@ -494,20 +494,20 @@ spec:
                               - .second
                         ```
 
-                      - `Substitution` — заменяет чувствительные данные в указанном поле с помощью регулярных выражений.
+                      - `ReplaceValue` — заменяет чувствительные данные в указанном поле с помощью регулярных выражений.
 
                         Пример:
 
                         ```yaml
                         transformations:
-                        - action: Substitution
-                          substitution:
-                            field: .message
+                        - action: ReplaceValue
+                          replaceValue:
+                            label: .message
                             patterns:
-                              - pattern: 'password=\w+'
-                                replacement: 'password=***'
-                              - pattern: 'token:\s*[\w\-]+'
-                                replacement: 'token: ***'
+                              - source: 'password=\w+'
+                                target: 'password=***'
+                              - source: 'token:\s*[\w\-]+'
+                                target: 'token: ***'
                         ```
 
                   items:
@@ -543,19 +543,19 @@ spec:
                         properties:
                           labels:
                             description: Список лейблов, которые необходимо удалить.
-                      substitution:
+                      replaceValue:
                         description: Замена чувствительных данных с помощью регулярных выражений.
                         properties:
-                          field:
-                            description: Поле, в котором выполняется замена.
+                          label:
+                            description: Лейбл, в котором выполняется замена.
                           patterns:
                             description: Список шаблонов для поиска и их замен.
                             items:
                               properties:
-                                pattern:
-                                  description: Регулярное выражение для поиска в поле.
-                                replacement:
-                                  description: Строка для замены всех совпадений шаблона.
+                                source:
+                                  description: Регулярное выражение для поиска в лейбле.
+                                target:
+                                  description: Строка для замены всех совпадений паттерна.
                 buffer:
                   description: Параметры буфера.
                   properties:

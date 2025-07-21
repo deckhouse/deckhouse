@@ -1014,9 +1014,9 @@ spec:
 
 Более подробное описание параметров доступно [в ресурсе ClusterLogDestination](cr.html#clusterlogdestination).
 
-## Обеспечение безопасности логов с помощью трансформации Substitution
+## Обеспечение безопасности логов с помощью трансформации ReplaceValue
 
-Трансформация `Substitution` позволяет заменять чувствительные данные в логах с помощью регулярных выражений. Это критически важно для обеспечения безопасности данных и соответствия требованиям при хранении и анализе логов.
+Трансформация `ReplaceValue` позволяет заменять чувствительные данные в логах с помощью регулярных выражений. Это критически важно для обеспечения безопасности данных и соответствия требованиям при хранении и анализе логов.
 
 ### Базовое скрытие паролей и токенов
 
@@ -1047,19 +1047,19 @@ spec:
   - action: ParseMessage
     parseMessage:
       sourceFormat: JSON
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
-        - pattern: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
-          replacement: 'password="***"'
-        - pattern: 'token["\s]*[:=]["\s]*[\w\-\.]+'
-          replacement: 'token="***"'
-        - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
-          replacement: 'api_key="***"'
+        - source: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
+          target: 'password="***"'
+        - source: 'token["\s]*[:=]["\s]*[\w\-\.]+'
+          target: 'token="***"'
+        - source: 'api_key["\s]*[:=]["\s]*[\w\-]+'
+          target: 'api_key="***"'
 ```
 
-> **Примечание**: Substitution работает как со строковыми полями, так и со структурированными объектами/массивами. Если сначала применить `ParseMessage`, то замена будет рекурсивно искать строковые значения во всей структуре распарсенного объекта.
+> **Примечание**: ReplaceValue работает как со строковыми полями, так и со структурированными объектами/массивами. Если сначала применить `ParseMessage`, то замена будет рекурсивно искать строковые значения во всей структуре распарсенного объекта.
 
 ### Продвинутое скрытие чувствительных данных для финансовых приложений
 
@@ -1098,28 +1098,28 @@ spec:
       json:
         depth: 3
   # Скрываем чувствительные финансовые данные
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Номера кредитных карт (различные форматы)
-        - pattern: '\b(?:\d[ -]*?){13,16}\b'
-          replacement: '****-****-****-****'
+        - source: '\b(?:\d[ -]*?){13,16}\b'
+          target: '****-****-****-****'
         # CVV коды
-        - pattern: 'cvv["\s]*[:=]["\s]*\d{3,4}'
-          replacement: 'cvv="***"'
+        - source: 'cvv["\s]*[:=]["\s]*\d{3,4}'
+          target: 'cvv="***"'
         # Номера банковских счетов
-        - pattern: 'account["\s]*[:=]["\s]*\d{8,17}'
-          replacement: 'account="***СКРЫТО***"'
+        - source: 'account["\s]*[:=]["\s]*\d{8,17}'
+          target: 'account="***СКРЫТО***"'
         # Номера социального страхования
-        - pattern: '\b\d{3}-\d{2}-\d{4}\b'
-          replacement: '***-**-****'
+        - source: '\b\d{3}-\d{2}-\d{4}\b'
+          target: '***-**-****'
         # JWT токены
-        - pattern: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
-          replacement: 'JWT_TOKEN_HIDDEN'
+        - source: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
+          target: 'JWT_TOKEN_HIDDEN'
         # Email адреса в чувствительных контекстах
-        - pattern: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-          replacement: 'email="user@domain.masked"'
+        - source: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          target: 'email="user@domain.masked"'
   # Удаляем отладочные поля
   - action: DropLabels
     dropLabels:
@@ -1170,27 +1170,27 @@ spec:
       string:
         targetField: raw_message
   # Затем скрываем чувствительные данные
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Токены аутентификации в аудит-логах
-        - pattern: 'Bearer [A-Za-z0-9._\-]+'
-          replacement: 'Bearer ***'
+        - source: 'Bearer [A-Za-z0-9._\-]+'
+          target: 'Bearer ***'
         # ID сессий
-        - pattern: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
-          replacement: 'session="***SESSION_ID***"'
+        - source: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
+          target: 'session="***SESSION_ID***"'
         # IP адреса (если требуется приватность)
-        - pattern: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
-          replacement: 'XXX.XXX.XXX.XXX'
+        - source: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+          target: 'XXX.XXX.XXX.XXX'
         # ID пользователей в чувствительных контекстах
-        - pattern: 'user_id["\s]*[:=]["\s]*\d+'
-          replacement: 'user_id="***"'
+        - source: 'user_id["\s]*[:=]["\s]*\d+'
+          target: 'user_id="***"'
         # Строки подключения к базам данных
-        - pattern: 'postgresql://[^@]+@[^/]+/\w+'
-          replacement: 'postgresql://***:***@***/**'
-        - pattern: 'mysql://[^@]+@[^/]+/\w+'
-          replacement: 'mysql://***:***@***/**'
+        - source: 'postgresql://[^@]+@[^/]+/\w+'
+          target: 'postgresql://***:***@***/**'
+        - source: 'mysql://[^@]+@[^/]+/\w+'
+          target: 'mysql://***:***@***/**'
   # Очищаем и стандартизируем метки
   - action: ReplaceKeys
     replaceKeys:
@@ -1230,29 +1230,29 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
   transformations:
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Переменные окружения с секретами
-        - pattern: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'DATABASE_PASSWORD="***"'
-        - pattern: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'API_SECRET="***"'
-        - pattern: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'PRIVATE_KEY="***"'
-        - pattern: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'REDIS_PASSWORD="***"'
+        - source: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'DATABASE_PASSWORD="***"'
+        - source: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
+          target: 'API_SECRET="***"'
+        - source: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
+          target: 'PRIVATE_KEY="***"'
+        - source: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'REDIS_PASSWORD="***"'
         # Строки подключения
-        - pattern: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
-          replacement: 'postgres://***:***@***/**'
-        - pattern: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
-          replacement: 'redis://***:***@***/**'
+        - source: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
+          target: 'postgres://***:***@***/**'
+        - source: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
+          target: 'redis://***:***@***/**'
         # Пути к файлам с потенциально чувствительной информацией
-        - pattern: '/etc/ssl/private/[^\s"]+'
-          replacement: '/etc/ssl/private/***'
-        - pattern: '/opt/app/secrets/[^\s"]+'
-          replacement: '/opt/app/secrets/***'
+        - source: '/etc/ssl/private/[^\s"]+'
+          target: '/etc/ssl/private/***'
+        - source: '/opt/app/secrets/[^\s"]+'
+          target: '/opt/app/secrets/***'
 ```
 
 ### Комплексное скрытие данных для соответствия GDPR
@@ -1288,32 +1288,32 @@ spec:
       json:
         depth: 2
   # Скрываем персональные данные для соответствия GDPR
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Email адреса пользователей
-        - pattern: 'user_email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-          replacement: 'user_email="***@domain.masked"'
+        - source: 'user_email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          target: 'user_email="***@domain.masked"'
         # Телефонные номера
-        - pattern: 'phone["\s]*[:=]["\s]*[\+]?[1-9]?[0-9]{7,14}'
-          replacement: 'phone="***-***-****"'
+        - source: 'phone["\s]*[:=]["\s]*[\+]?[1-9]?[0-9]{7,14}'
+          target: 'phone="***-***-****"'
         # Имена пользователей
-        - pattern: 'full_name["\s]*[:=]["\s]*"[^"]+"'
-          replacement: 'full_name="*** ***"'
-        - pattern: 'firstname["\s]*[:=]["\s]*"[^"]+"'
-          replacement: 'firstname="***"'
-        - pattern: 'lastname["\s]*[:=]["\s]*"[^"]+"'
-          replacement: 'lastname="***"'
+        - source: 'full_name["\s]*[:=]["\s]*"[^"]+"'
+          target: 'full_name="*** ***"'
+        - source: 'firstname["\s]*[:=]["\s]*"[^"]+"'
+          target: 'firstname="***"'
+        - source: 'lastname["\s]*[:=]["\s]*"[^"]+"'
+          target: 'lastname="***"'
         # Адреса
-        - pattern: 'address["\s]*[:=]["\s]*"[^"]+"'
-          replacement: 'address="*** СКРЫТ ***"'
+        - source: 'address["\s]*[:=]["\s]*"[^"]+"'
+          target: 'address="*** СКРЫТ ***"'
         # Даты рождения
-        - pattern: 'birth_date["\s]*[:=]["\s]*"\d{4}-\d{2}-\d{2}"'
-          replacement: 'birth_date="****-**-**"'
+        - source: 'birth_date["\s]*[:=]["\s]*"\d{4}-\d{2}-\d{2}"'
+          target: 'birth_date="****-**-**"'
         # IP адреса (если считаются персональными данными)
-        - pattern: 'client_ip["\s]*[:=]["\s]*"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b"'
-          replacement: 'client_ip="XXX.XXX.XXX.XXX"'
+        - source: 'client_ip["\s]*[:=]["\s]*"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b"'
+          target: 'client_ip="XXX.XXX.XXX.XXX"'
   # Удаляем технические поля
   - action: DropLabels
     dropLabels:

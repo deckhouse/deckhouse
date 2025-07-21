@@ -8,12 +8,12 @@
     }
   },
   "transforms": {
-    "transform/destination/test-loki-dest/00_tf_substitution": {
+    "transform/destination/test-loki-dest/00_tf_replaceValue": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.message) {\n  if is_string(.message) {\n    # Direct string replacement\n    .message = replace_with_regex(.message, r'password=\\w+', \"password=***\")\n    .message = replace_with_regex(.message, r'token:\\s*[\\w\\-]+', \"token: ***\")\n    .message = replace_with_regex(.message, r'api_key=[\\w\\-]+', \"api_key=***\")\n  } else if is_object(.message) || is_array(.message) {\n    # Recursive replacement for objects and arrays\n    .message = map_values(.message, recursive: true) -\u003e |value| {\n      if is_string(value) {\n        value = replace_with_regex(value, r'password=\\w+', \"password=***\")\n        value = replace_with_regex(value, r'token:\\s*[\\w\\-]+', \"token: ***\")\n        value = replace_with_regex(value, r'api_key=[\\w\\-]+', \"api_key=***\")\n      }\n      value\n    }\n  }\n}",
+      "source": "if exists(.message) {\n  if is_string(.message) {\n    # Direct string replacement\n    .message = replace!(.message, r'password=\\w+', \"password=***\")\n    .message = replace!(.message, r'token:\\s*[\\w\\-]+', \"token: ***\")\n    .message = replace!(.message, r'api_key=[\\w\\-]+', \"api_key=***\")\n  } else if is_object(.message) || is_array(.message) {\n    # Recursive replacement for objects and arrays\n    .message = map_values(.message, recursive: true) -\u003e |value| {\n      if is_string(value) {\n        value = replace!(value, r'password=\\w+', \"password=***\")\n        value = replace!(value, r'token:\\s*[\\w\\-]+', \"token: ***\")\n        value = replace!(value, r'api_key=[\\w\\-]+', \"api_key=***\")\n      }\n      value\n    }\n  }\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_local_timezone": {
@@ -37,7 +37,7 @@
     "destination/cluster/test-loki-dest": {
       "type": "loki",
       "inputs": [
-        "transform/destination/test-loki-dest/00_tf_substitution"
+        "transform/destination/test-loki-dest/00_tf_replaceValue"
       ],
       "healthcheck": {
         "enabled": false

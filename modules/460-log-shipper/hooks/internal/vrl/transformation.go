@@ -81,21 +81,21 @@ if exists({{$label}}) {
 {{- end }}
 `
 
-// Substitution replaces sensitive data patterns in specified field
+// ReplaceValue replaces sensitive data patterns in specified label
 // Works with strings, objects, and arrays recursively
-const Substitution Rule = `
-if exists({{.spec.Field}}) {
-  if is_string({{.spec.Field}}) {
+const ReplaceValue Rule = `
+if exists({{.spec.Label}}) {
+  if is_string({{.spec.Label}}) {
     # Direct string replacement
 {{- range $pattern := $.spec.Patterns }}
-    {{$.spec.Field}} = replace_with_regex({{$.spec.Field}}, r'{{$pattern.Pattern}}', "{{$pattern.Replacement}}")
+    {{$.spec.Label}} = replace!({{$.spec.Label}}, r'{{$pattern.Source}}', "{{$pattern.Target}}")
 {{- end }}
-  } else if is_object({{.spec.Field}}) || is_array({{.spec.Field}}) {
+  } else if is_object({{.spec.Label}}) || is_array({{.spec.Label}}) {
     # Recursive replacement for objects and arrays
-    {{$.spec.Field}} = map_values({{$.spec.Field}}, recursive: true) -> |value| {
+    {{$.spec.Label}} = map_values({{$.spec.Label}}, recursive: true) -> |value| {
       if is_string(value) {
 {{- range $pattern := $.spec.Patterns }}
-        value = replace_with_regex(value, r'{{$pattern.Pattern}}', "{{$pattern.Replacement}}")
+        value = replace!(value, r'{{$pattern.Source}}', "{{$pattern.Target}}")
 {{- end }}
       }
       value

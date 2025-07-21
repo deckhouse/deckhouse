@@ -42,8 +42,8 @@ func BuildModes(tms []v1alpha1.TransformationSpec) ([]apis.LogTransform, error) 
 			transformation, err = parseMessage(tm.ParseMessage)
 		case v1alpha1.DropLabels:
 			transformation, err = dropLabels(tm.DropLabels)
-		case v1alpha1.Substitution:
-			transformation, err = substitution(tm.Substitution)
+		case v1alpha1.ReplaceValue:
+			transformation, err = replaceValue(tm.ReplaceValue)
 		default:
 			return nil, fmt.Errorf("transformations action: %s not valid", tm.Action)
 		}
@@ -113,34 +113,34 @@ func dropLabels(d v1alpha1.DropLabelsSpec) (apis.LogTransform, error) {
 	return NewTransformation(vrlName, source), nil
 }
 
-func substitution(s v1alpha1.SubstitutionSpec) (apis.LogTransform, error) {
-	vrlName := "tf_substitution"
-	if s.Field == "" {
-		return nil, fmt.Errorf("transformations substitution: Field is empty")
+func replaceValue(s v1alpha1.ReplaceValueSpec) (apis.LogTransform, error) {
+	vrlName := "tf_replaceValue"
+	if s.Label == "" {
+		return nil, fmt.Errorf("transformations replaceValue: Label is empty")
 	}
 	if len(s.Patterns) == 0 {
-		return nil, fmt.Errorf("transformations substitution: Patterns are empty")
+		return nil, fmt.Errorf("transformations replaceValue: Patterns are empty")
 	}
 
-	// Validate field format
-	if !vectorLabelTemplate.MatchString(s.Field) {
-		return nil, fmt.Errorf("transformations substitution field: %s not valid", s.Field)
+	// Validate label format
+	if !vectorLabelTemplate.MatchString(s.Label) {
+		return nil, fmt.Errorf("transformations replaceValue label: %s not valid", s.Label)
 	}
 
 	// Validate patterns
 	for _, pattern := range s.Patterns {
-		if pattern.Pattern == "" {
-			return nil, fmt.Errorf("transformations substitution: Pattern cannot be empty")
+		if pattern.Source == "" {
+			return nil, fmt.Errorf("transformations replaceValue: Source cannot be empty")
 		}
 		// Test regex validity
-		if _, err := regexp.Compile(pattern.Pattern); err != nil {
-			return nil, fmt.Errorf("transformations substitution: invalid regex pattern '%s': %v", pattern.Pattern, err)
+		if _, err := regexp.Compile(pattern.Source); err != nil {
+			return nil, fmt.Errorf("transformations replaceValue: invalid regex source '%s': %v", pattern.Source, err)
 		}
 	}
 
-	source, err := vrl.Substitution.Render(vrl.Args{"spec": s})
+	source, err := vrl.ReplaceValue.Render(vrl.Args{"spec": s})
 	if err != nil {
-		return nil, fmt.Errorf("transformations substitution render error: %v", err)
+		return nil, fmt.Errorf("transformations replaceValue render error: %v", err)
 	}
 	return NewTransformation(vrlName, source), nil
 }

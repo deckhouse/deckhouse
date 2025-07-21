@@ -1017,9 +1017,9 @@ spec:
 
 More detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
 
-## Log Data Sanitization with Substitution
+## Log Data Sanitization with ReplaceValue
 
-The `Substitution` transformation allows you to replace sensitive data in logs using regular expressions. This is crucial for maintaining data security and compliance when storing and analyzing logs.
+The `ReplaceValue` transformation allows you to replace sensitive data in logs using regular expressions. This is crucial for maintaining data security and compliance when storing and analyzing logs.
 
 ### Basic password and token masking
 
@@ -1050,19 +1050,19 @@ spec:
   - action: ParseMessage
     parseMessage:
       sourceFormat: JSON
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
-        - pattern: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
-          replacement: 'password="***"'
-        - pattern: 'token["\s]*[:=]["\s]*[\w\-\.]+'
-          replacement: 'token="***"'
+        - source: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
+          target: 'password="***"'
+        - source: 'token["\s]*[:=]["\s]*[\w\-\.]+'
+          target: 'token="***"'
         - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
           replacement: 'api_key="***"'
 ```
 
-> **Note**: Substitution works with both string fields and structured objects/arrays. If you apply `ParseMessage` first, the substitution will recursively search through all string values in the parsed object structure.
+> **Note**: ReplaceValue works with both string fields and structured objects/arrays. If you apply `ParseMessage` first, the replacement will recursively search through all string values in the parsed object structure.
 
 ### Advanced sensitive data masking for financial applications
 
@@ -1101,28 +1101,28 @@ spec:
       json:
         depth: 3
   # Mask sensitive financial data
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Credit card numbers (various formats)
-        - pattern: '\b(?:\d[ -]*?){13,16}\b'
-          replacement: '****-****-****-****'
+        - source: '\b(?:\d[ -]*?){13,16}\b'
+          target: '****-****-****-****'
         # CVV codes
-        - pattern: 'cvv["\s]*[:=]["\s]*\d{3,4}'
-          replacement: 'cvv="***"'
+        - source: 'cvv["\s]*[:=]["\s]*\d{3,4}'
+          target: 'cvv="***"'
         # Bank account numbers
-        - pattern: 'account["\s]*[:=]["\s]*\d{8,17}'
-          replacement: 'account="***MASKED***"'
+        - source: 'account["\s]*[:=]["\s]*\d{8,17}'
+          target: 'account="***MASKED***"'
         # Social Security Numbers
-        - pattern: '\b\d{3}-\d{2}-\d{4}\b'
-          replacement: '***-**-****'
+        - source: '\b\d{3}-\d{2}-\d{4}\b'
+          target: '***-**-****'
         # JWT tokens
-        - pattern: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
-          replacement: 'JWT_TOKEN_HIDDEN'
+        - source: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
+          target: 'JWT_TOKEN_HIDDEN'
         # Email addresses in sensitive contexts
-        - pattern: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-          replacement: 'email="user@domain.masked"'
+        - source: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          target: 'email="user@domain.masked"'
   # Remove debug fields
   - action: DropLabels
     dropLabels:
@@ -1173,27 +1173,27 @@ spec:
       string:
         targetField: raw_message
   # Then sanitize sensitive data
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Authentication tokens in audit logs
-        - pattern: 'Bearer [A-Za-z0-9._\-]+'
-          replacement: 'Bearer ***'
+        - source: 'Bearer [A-Za-z0-9._\-]+'
+          target: 'Bearer ***'
         # Session IDs
-        - pattern: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
-          replacement: 'session="***SESSION_ID***"'
+        - source: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
+          target: 'session="***SESSION_ID***"'
         # IP addresses (if privacy required)
-        - pattern: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
-          replacement: 'XXX.XXX.XXX.XXX'
+        - source: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+          target: 'XXX.XXX.XXX.XXX'
         # User IDs in sensitive contexts
-        - pattern: 'user_id["\s]*[:=]["\s]*\d+'
-          replacement: 'user_id="***"'
+        - source: 'user_id["\s]*[:=]["\s]*\d+'
+          target: 'user_id="***"'
         # Database connection strings
-        - pattern: 'postgresql://[^@]+@[^/]+/\w+'
-          replacement: 'postgresql://***:***@***/**'
-        - pattern: 'mysql://[^@]+@[^/]+/\w+'
-          replacement: 'mysql://***:***@***/**'
+        - source: 'postgresql://[^@]+@[^/]+/\w+'
+          target: 'postgresql://***:***@***/**'
+        - source: 'mysql://[^@]+@[^/]+/\w+'
+          target: 'mysql://***:***@***/**'
   # Clean up and standardize labels
   - action: ReplaceKeys
     replaceKeys:
@@ -1233,29 +1233,29 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
   transformations:
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
         # Environment variables with secrets
-        - pattern: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'DATABASE_PASSWORD="***"'
-        - pattern: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'API_SECRET="***"'
-        - pattern: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'PRIVATE_KEY="***"'
-        - pattern: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
-          replacement: 'REDIS_PASSWORD="***"'
+        - source: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'DATABASE_PASSWORD="***"'
+        - source: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
+          target: 'API_SECRET="***"'
+        - source: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
+          target: 'PRIVATE_KEY="***"'
+        - source: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'REDIS_PASSWORD="***"'
         # Connection strings
-        - pattern: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
-          replacement: 'postgres://***:***@***/**'
-        - pattern: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
-          replacement: 'redis://***:***@***/**'
+        - source: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
+          target: 'postgres://***:***@***/**'
+        - source: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
+          target: 'redis://***:***@***/**'
         # File paths with potential sensitive info
-        - pattern: '/etc/ssl/private/[^\s"]+'
-          replacement: '/etc/ssl/private/***'
-        - pattern: '/opt/app/secrets/[^\s"]+'
-          replacement: '/opt/app/secrets/***'
+        - source: '/etc/ssl/private/[^\s"]+'
+          target: '/etc/ssl/private/***'
+        - source: '/opt/app/secrets/[^\s"]+'
+          target: '/opt/app/secrets/***'
 ```
 
 {% endraw %}

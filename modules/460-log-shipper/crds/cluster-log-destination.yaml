@@ -954,20 +954,20 @@ spec:
                               - .second
                         ```
 
-                      - `Substitution`: Replaces sensitive data patterns with specified replacement strings in the specified field.
+                      - `ReplaceValue`: Replaces sensitive data patterns with specified replacement strings in the specified label.
                             
                         Example:
 
                         ```yaml
                         transformations:
-                        - action: Substitution
-                          substitution:
-                            field: .message
+                        - action: ReplaceValue
+                          replaceValue:
+                            label: .message
                             patterns:
-                              - pattern: 'password=\w+'
-                                replacement: 'password=***'
-                              - pattern: 'token:\s*[\w\-]+'
-                                replacement: 'token: ***'
+                              - source: 'password=\w+'
+                                target: 'password=***'
+                              - source: 'token:\s*[\w\-]+'
+                                target: 'token: ***'
                         ```
 
                   items:
@@ -998,17 +998,17 @@ spec:
                           - dropLabels
                           - action
                       - properties:
-                          substitution: {}
+                          replaceValue: {}
                           action:
                             enum:
-                              - Substitution
+                              - ReplaceValue
                         required:
-                          - substitution
+                          - replaceValue
                           - action
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "Substitution"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "ReplaceValue"]
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
@@ -1111,17 +1111,17 @@ spec:
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
-                      substitution:
+                      replaceValue:
                         type: object
-                        description: "Replaces sensitive data patterns with specified replacement strings in the specified field."
+                        description: "Replaces sensitive data patterns with specified replacement strings in the specified label."
                         required:
-                          - field
+                          - label
                           - patterns
                         properties:
-                          field:
+                          label:
                             type: string
                             pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
-                            description: "Field in which to perform the substitution."
+                            description: "Label in which to perform the replacement."
                           patterns:
                             type: array
                             description: "List of patterns to search for and their replacements."
@@ -1129,15 +1129,15 @@ spec:
                             items:
                               type: object
                               required:
-                                - pattern
-                                - replacement
+                                - source
+                                - target
                               properties:
-                                pattern:
+                                source:
                                   type: string
-                                  description: "Regular expression pattern to search for in the field."
-                                replacement:
+                                  description: "Regular expression pattern to search for in the label."
+                                target:
                                   type: string
-                                  description: "String to replace all matches of the pattern."
+                                  description: "String to replace all matches of the source pattern."
                 buffer:
                   type: object
                   oneOf:

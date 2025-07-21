@@ -19,13 +19,13 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
   transformations:
-  - action: Substitution
-    substitution:
-      field: .message
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
       patterns:
-        - pattern: 'password=\w+'
-          replacement: 'password=***'
-        - pattern: 'token:\s*[\w\-]+'
-          replacement: 'token: ***'
-        - pattern: 'api_key=[\w\-]+'
-          replacement: 'api_key=***' 
+        - source: 'password=\w+'
+          target: 'password=***'
+        - source: 'token:\s*[\w\-]+'
+          target: 'token: ***'
+        - source: 'api_key=[\w\-]+'
+          target: 'api_key=***' 
