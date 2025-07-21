@@ -100,7 +100,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				enabledModules: tt.enabledModules,
 			}
 
-			exts := extenders.NewExtendersStack("v1.30.0", log.NewLogger())
+			exts := extenders.NewExtendersStack(nil, "v1.30.0", log.NewLogger())
 
 			logger := log.NewLogger()
 
