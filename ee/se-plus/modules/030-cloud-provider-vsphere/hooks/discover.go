@@ -134,15 +134,15 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
-	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.ZonedDataStores); err != nil {
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.ZonedDataStore) error {
-	storageClassStorageDomain := make(map[string]cloudDataV1.ZonedDataStore)
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore) error {
+	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
 
 	for _, vt := range zonedDataStores {
 		storageClassStorageDomain[getStorageClassName(vt.Name)] = vt

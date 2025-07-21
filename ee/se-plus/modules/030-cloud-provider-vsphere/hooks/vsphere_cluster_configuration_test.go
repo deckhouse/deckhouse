@@ -76,7 +76,7 @@ cloudProviderVsphere:
 		stateACloudDiscoveryData = `
 {
   "apiVersion":"deckhouse.io/v1",
-  "kind":"VsphereCloudDiscoveryData",
+  "kind":"VsphereCloudProviderDiscoveryData",
   "vmFolderPath":"test",
   "resourcePoolPath": "test",
   "zones": ["test"]

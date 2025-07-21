@@ -171,7 +171,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
-	discoveryData.ZonedDataStores = mergeZonedDataStores(discoveryData.ZonedDataStores, zonesDatastores.ZonedDataStores)
+	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -227,9 +227,9 @@ func mergeZones(discoveredZones, newZones []string) []string {
 	return res
 }
 
-func mergeZonedDataStores(discoveredZonedDataStores []v1.ZonedDataStore, newZonedDataStores []vsphere.ZonedDataStore) []v1.ZonedDataStore {
+func mergeDatastores(discoveredZonedDataStores []v1.VsphereDatastore, newZonedDataStores []vsphere.ZonedDataStore) []v1.VsphereDatastore {
 	zonedDataStores := append(discoveredZonedDataStores, vsphereZonedDataStoresToV1(newZonedDataStores)...)
-	res := make([]v1.ZonedDataStore, 0, len(zonedDataStores))
+	res := make([]v1.VsphereDatastore, 0, len(zonedDataStores))
 	resMap := make(map[string]struct{}, len(zonedDataStores))
 
 	for i := range zonedDataStores {
@@ -245,10 +245,10 @@ func mergeZonedDataStores(discoveredZonedDataStores []v1.ZonedDataStore, newZone
 	return res
 }
 
-func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.ZonedDataStore {
-	result := make([]v1.ZonedDataStore, 0, len(in))
+func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.VsphereDatastore {
+	result := make([]v1.VsphereDatastore, 0, len(in))
 	for i := range in {
-		result = append(result, v1.ZonedDataStore{
+		result = append(result, v1.VsphereDatastore{
 			Zones:         in[i].Zones,
 			InventoryPath: in[i].InventoryPath,
 			Name:          in[i].Name,

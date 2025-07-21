@@ -1,4 +1,4 @@
-kind: VsphereCloudDiscoveryData
+kind: VsphereCloudProviderDiscoveryData
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
@@ -11,13 +11,35 @@ apiVersions:
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
-        enum: [VsphereCloudDiscoveryData]
+        enum: [VsphereCloudProviderDiscoveryData]
       vmFolderPath:
         type: string
         minLength: 1
       resourcePoolPath:
         type: string
+      datacenter:
+        type: string
       zones:
         type: array
         items:
           type: string
+      datastores:
+        type: array
+        items:
+          type: object
+          required: [name]
+          properties:
+            zones:
+              type: array
+              items:
+                type: string
+            path:
+              type: string
+            name:
+              type: string
+              minLength: 1
+            datastoreType:
+              type: string
+            datastoreURL:
+              type: string
+        description: List of datastores
