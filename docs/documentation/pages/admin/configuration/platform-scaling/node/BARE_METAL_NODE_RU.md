@@ -23,10 +23,10 @@ lang: ru
 
    В спецификации этого ресурса укажите тип узлов `Static`. Для всех объектов NodeGroup в кластере автоматически создаётся скрипт `bootstrap.sh`, с помощью которого узлы добавляются в группы. Когда узлы добавляются вручную, необходимо скопировать этот скрипт на сервер и выполнить.
 
-   Скрипт можно получить в веб-интерфейсе Deckhouse на вкладке «Группы узлов → Скрипты» или командой `kubectl`:
+   Скрипт можно получить в веб-интерфейсе Deckhouse на вкладке «Группы узлов → Скрипты» или командой `d8 k`:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
+   d8 k -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
    ```
 
    Скрипт нужно раскодировать из Base64, а затем выполнить от `root`.
@@ -148,7 +148,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`:
 
    ```yaml
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -165,13 +165,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Измените лейбл `role` у существующего [StaticInstance](/modules/node-manager/cr.html#staticinstance) с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
 
    ```shell
-   kubectl label staticinstance static-worker-1 role=front --overwrite
+   d8 k label staticinstance static-worker-1 role=front --overwrite
    ```
 
 1. Обновите ресурс NodeGroup `worker`, уменьшив значение параметра `count` с `1` до `0`:
 
    ```shell
-   kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+   d8 k patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
    ```
 
 ### Ручная очистка статического узла
@@ -235,13 +235,13 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -257,8 +257,8 @@ spec:
 Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Применение изменений потребует некоторого времени.

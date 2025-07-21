@@ -49,10 +49,10 @@ spec:
   enabled: false
 ```
 
-You can view the list of `ModuleConfig` custom resources and the states of the corresponding modules (enabled/disabled) as well as their statuses using the `kubectl get moduleconfigs` command:
+You can view the list of `ModuleConfig` custom resources and the states of the corresponding modules (enabled/disabled) as well as their statuses using the `d8 k get moduleconfigs` command:
 
 ```shell
-$ kubectl get moduleconfigs
+$ d8 k get moduleconfigs
 NAME            ENABLED   VERSION   AGE     MESSAGE
 deckhouse       true      1         12h
 documentation   true      1         12h
@@ -66,7 +66,7 @@ To change the global Deckhouse configuration or module configuration, create or 
 For example, this command allows you to configure the `upmeter` module:
 
 ```shell
-kubectl edit moduleconfig/upmeter
+d8 k edit moduleconfig/upmeter
 ```
 
 Changes are applied automatically once the resource configuration is saved.
@@ -83,7 +83,7 @@ General cluster parameters are defined in the [ClusterConfiguration](installing/
 To modify these parameters, run the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.
@@ -96,19 +96,19 @@ DKP is managed through global settings, module configurations, and various custo
 1. To view global settings, run:
 
    ```shell
-   kubectl get mc global -o yaml
+   d8 k get mc global -o yaml
    ```
 
 1. To view the status of all modules (available in Deckhouse version 1.47+):
 
    ```shell
-   kubectl get modules
+   d8 k get modules
    ```
 
 1. To view the configuration of the `user-authn` module:
 
    ```shell
-   kubectl get moduleconfigs user-authn -o yaml
+   d8 k get moduleconfigs user-authn -o yaml
    ```
 
 ## Configuring the module
@@ -123,7 +123,7 @@ The module is configured using the `ModuleConfig` custom resource , whose name i
 - `spec.settings` — module settings. This field is optional if the `spec.enabled` field is used. For a description of the available settings, see *Settings* in the module's documentation.
 - `spec.enabled` — this optional field allows you to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default based on the [bundle in use](#module-bundles) if this parameter is not set.
 
-> Deckhouse doesn't modify `ModuleConfig` resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, kubectl, and other familiar tools for deploy.
+> Deckhouse doesn't modify ModuleConfig resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, `d8 k`, and other familiar tools for deploy.
 
 An example of a custom resource for configuring the `kube-dns` module:
 
@@ -164,12 +164,12 @@ spec:
   enabled: false
 ```
 
-To check the status of the module, run the `kubectl get moduleconfig <MODULE_NAME>` command:
+To check the status of the module, run the `d8 k get moduleconfig <MODULE_NAME>` command:
 
 Example:
 
 ```shell
-$ kubectl get moduleconfig user-authn
+$ d8 k get moduleconfig user-authn
 NAME         ENABLED   VERSION   AGE   MESSAGE
 user-authn   false     1         12h
 ```

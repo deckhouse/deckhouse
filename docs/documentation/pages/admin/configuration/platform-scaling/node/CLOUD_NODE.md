@@ -510,7 +510,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
    You can check this by running the following command:
 
    ```shell
-   kubectl -n d8-system get modules
+   d8 k -n d8-system get modules
    ```
 
    Or view it in the Deckhouse web interface.
@@ -559,7 +559,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
    You can view them by running:
 
    ```shell
-   kubectl get nodes
+   d8 k get nodes
    ```
 
    The list of newly created nodes is also available in the Deckhouse web interface.
@@ -587,7 +587,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Pre-configure the new node according to the specifics of your environment. For example:
@@ -647,16 +647,16 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    base64 -w0 caps-id
    ```
 
-   On any computer with `kubectl` configured to manage the cluster, create an environment variable with the value of the Base64-encoded private key you generated in the previous step:
+   On any computer with `d8 k` configured to manage the cluster, create an environment variable with the value of the Base64-encoded private key you generated in the previous step:
 
    ```shell
     CAPS_PRIVATE_KEY_BASE64=<BASE64-ENCODED PRIVATE KEY>
    ```
 
-   To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster), run the following command:
+   To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `d8 k` configured to manage the cluster), run the following command:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: SSHCredentials
    metadata:
@@ -690,7 +690,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    > The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -711,7 +711,7 @@ This example shows how you can use filters in the [StaticInstance](/modules/node
 
 1. Prepare the required resources (3 servers or virtual machines) and create the [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource the same way as on step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
 
-1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `d8 k` configured to manage the cluster):
 
    > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 

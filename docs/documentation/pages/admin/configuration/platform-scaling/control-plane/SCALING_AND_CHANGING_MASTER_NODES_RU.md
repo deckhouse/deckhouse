@@ -59,7 +59,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    - снимите лейблы `node-role.kubernetes.io/control-plane=""` и `node-role.kubernetes.io/master=""` со всех лишних master-узлов;
    - для **bare-metal кластеров**:
      - чтобы корректно исключить узлы из etcd:
-       - выполните команду `kubectl delete node <имя-узла>`;
+       - выполните команду `d8 k delete node <имя-узла>`;
        - выключите соответствующие виртуальные машины или серверы.
 
 {% alert level="warning" %}
@@ -81,9 +81,9 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. Снимите лейблы, чтобы узел больше не рассматривался как master:
 
    ```bash
-   kubectl label node <имя-узла> node-role.kubernetes.io/control-plane-
-   kubectl label node <имя-узла> node-role.kubernetes.io/master-
-   kubectl label node <имя-узла> node.deckhouse.io/group-
+   d8 k label node <имя-узла> node-role.kubernetes.io/control-plane-
+   d8 k label node <имя-узла> node-role.kubernetes.io/master-
+   d8 k label node <имя-узла> node.deckhouse.io/group-
    ```
 
 1. Удалите статические манифесты компонентов control plane, чтобы они больше не запускались на узле и лишние файлы PKI:
@@ -121,8 +121,8 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -175,7 +175,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. Убедитесь, что [`control-plane-manager`](/modules/control-plane-manager/) функционирует на узле.
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
 
@@ -208,8 +208,8 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -249,7 +249,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. Дождитесь появления необходимого количества master-узлов в статусе `Ready` и готовности всех экземпляров [`control-plane-manager`](/modules/control-plane-manager/):
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
 ## Уменьшение числа master-узлов в облачном кластере
@@ -272,8 +272,8 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -302,7 +302,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    Команда для снятия лейблов:
 
    ```bash
-   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
 1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
@@ -317,7 +317,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. Выполните `drain` для удаляемых узлов:
 
    ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
    ```
 
 1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
@@ -325,13 +325,13 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 1. Удалите в кластере поды, оставшиеся на удаленных узлах:
 
    ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
 1. Удалите в кластере объекты `Node` удаленных узлов:
 
    ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
+   d8 k delete node <MASTER-NODE-N-NAME>
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:

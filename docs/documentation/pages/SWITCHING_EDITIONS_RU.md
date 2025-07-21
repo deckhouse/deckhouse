@@ -24,7 +24,7 @@ lang: ru
    Запустите образ последней установленной версии DKP в кластере. Определить, какая версия сейчас установлена, можно командой:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
@@ -68,7 +68,7 @@ lang: ru
    Получите значение `USED_MODULES`:
 
    ```shell
-   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    ```
 
    Проверка:
@@ -161,7 +161,7 @@ lang: ru
    Проверка статуса пода DKP:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Проверка состояния очереди Deckhouse:
@@ -173,7 +173,7 @@ lang: ru
 1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
       | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
@@ -186,7 +186,7 @@ lang: ru
 1. Удалите временный под DKP CE:
 
    ```shell
-   kubectl delete pod ce-image
+   d8 k delete pod ce-image
    ```
 
 ## Переключение DKP с CE на EE
@@ -242,7 +242,7 @@ lang: ru
    Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Пример вывода:
@@ -278,7 +278,7 @@ lang: ru
    Запустите образ последней установленной версии DKP в кластере:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
@@ -335,7 +335,7 @@ lang: ru
    Проверка статуса пода DKP:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Проверка состояния очереди DKP:
@@ -347,16 +347,16 @@ lang: ru
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse CE:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
       | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    ```shell
-   kubectl delete ngc containerd-ee-config.sh
-   kubectl delete pod ee-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-ee-config.sh
+   d8 k delete pod ee-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -377,7 +377,7 @@ lang: ru
    После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```
 
 ## Переключение DKP с EE на SE
@@ -437,7 +437,7 @@ lang: ru
    Дождитесь появления файла `/etc/containerd/conf.d/se-registry.toml` на узлах и завершения синхронизации bashible. Чтобы отследить статус синхронизации, проверьте значение `UPTODATE` (число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Пример вывода:
@@ -473,7 +473,7 @@ lang: ru
    Узнать текущую версию DKP можно при помощи команды:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. После перехода пода в статус `Running` выполните следующие команды:
@@ -517,7 +517,7 @@ lang: ru
    * Получите значение `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+     USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Проверка:
@@ -586,7 +586,7 @@ lang: ru
    Узнать текущую версию DKP можно при помощи команды:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Дождитесь перехода пода DKP в статус `Ready`. Если во время обновления возникает ошибка `ImagePullBackOff`, подождите, пока под перезапустится автоматически.
@@ -594,7 +594,7 @@ lang: ru
    Проверьте статус пода DKP:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Проверить состояние очереди DKP:
@@ -606,15 +606,15 @@ lang: ru
 1. Проверьте, не осталось ли в кластере подов с адресом рееста для DKP EE:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   d8 k get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    ```shell
-   kubectl delete ngc containerd-se-config.sh
-   kubectl delete pod se-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-se-config.sh
+   d8 k delete pod se-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -635,7 +635,7 @@ lang: ru
    После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup), удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```
 
 ## Переключение DKP с EE на CSE
@@ -668,14 +668,14 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
 
-1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    ---
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
@@ -713,7 +713,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Пример вывода:
@@ -744,7 +744,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
    # Например, DECKHOUSE_VERSION=v1.58.2
-   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
    Как только под перейдёт в статус `Running`, выполните следующие команды:
@@ -793,7 +793,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
 
    ```shell
-   kubectl get modules
+   d8 k get modules
    ```
 
 1. Создайте NodeGroupConfiguration:
@@ -831,7 +831,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    В журнале systemd-сервиса `bashible` на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
@@ -867,13 +867,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Команда для DKP CSE версии 1.58:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
    Команда для DKP CSE версии 1.64 и 1.67:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
 1. Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
@@ -881,7 +881,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Посмотреть статус пода DKP:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Проверить состояние очереди DKP:
@@ -893,7 +893,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
@@ -907,8 +907,8 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    rm /tmp/cse-deckhouse-registry.yaml
-   kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-   kubectl delete pod cse-image
+   d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+   d8 k delete pod cse-image
    ```
 
    ```yaml
@@ -935,5 +935,5 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    После синхронизации (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```

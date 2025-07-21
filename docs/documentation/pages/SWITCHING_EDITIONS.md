@@ -27,7 +27,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
    To determine the currently installed version, use:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Once the pod enters the `Running` state, execute the following commands:
@@ -71,7 +71,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
    Retrieve the list of currently enabled embedded modules:
 
    ```shell
-   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    ```
 
    Verify the result:
@@ -165,7 +165,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
    Check the status of the DKP pod:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Check the DKP task queue:
@@ -177,7 +177,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
 1. Check if any pods in the cluster are still using the DKP EE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
       | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
@@ -190,7 +190,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
 1. Delete the temporary DKP CE pod:
 
    ```shell
-   kubectl delete pod ce-image
+   d8 k delete pod ce-image
    ```
 
 ## Switching DKP from CE to EE
@@ -247,7 +247,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    You can monitor the sync status using the `UPTODATE` column (the number of `UPTODATE` nodes should match the total number of nodes in the group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Example output:
@@ -283,7 +283,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    To verify which DKP version is currently deployed:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Once the pod reaches the `Running` state, execute the following commands:
@@ -341,7 +341,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    Check the status of the DKP pod:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Check the DKP task queue:
@@ -353,16 +353,16 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
 1. Check if any pods are still using the CE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
       | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Clean up temporary files, the NodeGroupConfiguration resource, and variables:
 
    ```shell
-   kubectl delete ngc containerd-ee-config.sh
-   kubectl delete pod ee-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-ee-config.sh
+   d8 k delete pod ee-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -383,7 +383,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    After Bashible synchronization (you can track it by the `UPTODATE` status of the NodeGroup), delete the temporary configuration resource:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```
 
 ## Switching DKP from EE to SE
@@ -443,7 +443,7 @@ All commands must be executed on the master node of the existing cluster.
    Wait until the file `/etc/containerd/conf.d/se-registry.toml` appears on the nodes and Bashible synchronization completes. You can track the synchronization status by checking the `UPTODATE` value (it should match the total number of nodes in each group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Example output:
@@ -479,7 +479,7 @@ All commands must be executed on the master node of the existing cluster.
    To check the currently installed DKP version:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Once the pod reaches the `Running` state, execute the following steps:
@@ -523,7 +523,7 @@ All commands must be executed on the master node of the existing cluster.
    * Retrieve the list of currently enabled embedded modules:
 
      ```shell
-     USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+     USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Check the result:
@@ -592,7 +592,7 @@ All commands must be executed on the master node of the existing cluster.
    You can check the currently installed DKP version with:
 
    ```shell
-   kubectl get deckhousereleases | grep Deployed
+   d8 k get deckhousereleases | grep Deployed
    ```
 
 1. Wait for the Deckhouse pod to reach the `Ready`.  
@@ -601,7 +601,7 @@ All commands must be executed on the master node of the existing cluster.
    To check the status of the DKP pod:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    To check the status of the Deckhouse queue:
@@ -613,15 +613,15 @@ All commands must be executed on the master node of the existing cluster.
 1. Make sure there are no running pods using the DKP EE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   d8 k get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Clean up temporary files, the NodeGroupConfiguration resource, and variables:
 
    ```shell
-   kubectl delete ngc containerd-se-config.sh
-   kubectl delete pod se-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-se-config.sh
+   d8 k delete pod se-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -642,7 +642,7 @@ All commands must be executed on the master node of the existing cluster.
    After bashible synchronization completes (indicated by `UPTODATE` in the NodeGroup status), delete the temporary NodeGroupConfiguration resource:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```
 
 ## Switching DKP from EE to CSE
@@ -675,14 +675,14 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 
 1. Save the changes. The cluster nodes will begin updating sequentially.
 
-1. Wait for the update to complete. You can monitor the update progress using the `kubectl get no` command. The update is considered complete when the `VERSION` column for each node shows the updated version.
+1. Wait for the update to complete. You can monitor the update progress using the `d8 k get no` command. The update is considered complete when the `VERSION` column for each node shows the updated version.
 
 1. Prepare the license token variables and create a NodeGroupConfiguration resource to configure temporary authorization for access to `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    ---
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
@@ -720,7 +720,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    You can monitor the synchronization status using the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Example output:
@@ -751,7 +751,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    ```shell
    DECKHOUSE_VERSION=v<DECKHOUSE_VERSION_CSE>
    # For example, DECKHOUSE_VERSION=v1.58.2
-   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
    Once the pod reaches the `Running` status, execute the following commands:
@@ -800,7 +800,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    Verify that the disabled modules are now in the `Disabled` state:
 
    ```shell
-   kubectl get modules
+   d8 k get modules
    ```
 
 1. Create a NodeGroupConfiguration:
@@ -838,7 +838,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    You can track the synchronization status by checking the `UPTODATE` value (the number of nodes in this state should match the total number of nodes (`NODES`) in the group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    The following message should appear in the `bashible` systemd service logs on the nodes, indicating that the configuration is fully synchronized:
@@ -874,13 +874,13 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    For DKP CSE version 1.58:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
    For DKP CSE versions 1.64 and 1.67:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
 1. Wait for the DKP pod to reach the `Ready` status and for all tasks in the queue to complete. If the `ImagePullBackOff` error occurs, wait for the pod to automatically restart.
@@ -888,7 +888,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    Check the DKP pod status:
 
    ```shell
-   kubectl -n d8-system get po -l app=deckhouse
+   d8 k -n d8-system get po -l app=deckhouse
    ```
 
    Check the DKP task queue:
@@ -900,7 +900,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 1. Verify that no pods are using the EE registry image:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
@@ -914,8 +914,8 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 
    ```shell
    rm /tmp/cse-deckhouse-registry.yaml
-   kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-   kubectl delete pod cse-image
+   d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+   kd8 k delete pod cse-image
    ```
 
    ```yaml
@@ -942,5 +942,5 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    After synchronization (track status by `UPTODATE` value for NodeGroup), delete the cleanup configuration:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```

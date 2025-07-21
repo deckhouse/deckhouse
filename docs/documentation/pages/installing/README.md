@@ -781,7 +781,7 @@ To switch the cluster to use an external registry, follow these steps:
 1. Check if any pods in the cluster are still using the original registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 

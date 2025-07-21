@@ -783,7 +783,7 @@ echo "$MYRESULTSTRING"
 1. Проверьте, не осталось ли в кластере подов с оригинальным адресом реестра:
 
   ```shell
-  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+  d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
     | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
   ```
 

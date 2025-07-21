@@ -50,10 +50,10 @@ spec:
   enabled: false
 ```
 
-Посмотреть список кастомных ресурсов `ModuleConfig`, состояние модулей (включен/выключен) и их статус можно с помощью команды `kubectl get moduleconfigs`:
+Посмотреть список кастомных ресурсов `ModuleConfig`, состояние модулей (включен/выключен) и их статус можно с помощью команды `d8 k get moduleconfigs`:
 
 ```shell
-$ kubectl get moduleconfigs
+$ d8 k get moduleconfigs
 NAME            ENABLED   VERSION   AGE     MESSAGE
 deckhouse       true      1         12h
 documentation   true      1         12h
@@ -67,7 +67,7 @@ upmeter         false     2         12h
 Например, чтобы отредактировать конфигурацию модуля `upmeter`, выполните следующую команду:
 
 ```shell
-kubectl edit moduleconfig/upmeter
+d8 k edit moduleconfig/upmeter
 ```
 
 После завершения редактирования изменения применяются автоматически.
@@ -83,7 +83,7 @@ kubectl edit moduleconfig/upmeter
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 После сохранения изменений DKP автоматически приведёт кластер в соответствие с новой конфигурацией. В зависимости от размеров кластера это может занять некоторое время.
@@ -95,19 +95,19 @@ DKP управляется с помощью глобальных настрое
 1. Для просмотра глобальных настроек выполните:
 
    ```shell
-   kubectl get mc global -o yaml
+   d8 k get mc global -o yaml
    ```
 
 1. Для просмотра состояния всех модулей (доступно для Deckhouse версии 1.47+):
 
    ```shell
-   kubectl get modules
+   d8 k get modules
    ```
 
 1. Для просмотра настроек модуля `user-authn`:
 
    ```shell
-   kubectl get moduleconfigs user-authn -o yaml
+   d8 k get moduleconfigs user-authn -o yaml
    ```
 
 ## Настройка модуля
@@ -122,7 +122,7 @@ DKP управляется с помощью глобальных настрое
 - `spec.settings` — настройки модуля. Необязательное поле, если используется поле `spec.enabled`. Описание возможных настроек можно найти в документации модуля в разделе *Настройки*;
 - `spec.enabled` — необязательное поле для явного [включения или отключения модуля](#включение-и-отключение-модуля). Если не задано, модуль может быть включен по умолчанию в одном из [наборов модулей](#наборы-модулей).
 
-> Deckhouse не изменяет кастомные ресурсы `ModuleConfig`. Это позволяет применять подход Infrastructure as Code (IaC) при хранении конфигурации. Другими словами, можно воспользоваться всеми преимуществами системы контроля версий для хранения настроек Deckhouse, использовать Helm, kubectl и другие привычные инструменты.
+> Deckhouse не изменяет кастомные ресурсы ModuleConfig. Это позволяет применять подход Infrastructure as Code (IaC) при хранении конфигурации. Другими словами, можно воспользоваться всеми преимуществами системы контроля версий для хранения настроек Deckhouse, использовать Helm, `d8 k` и другие привычные инструменты.
 
 Пример кастомного ресурса для настройки модуля `kube-dns`:
 
@@ -163,12 +163,12 @@ spec:
   enabled: false
 ```
 
-Проверить состояние модуля можно с помощью команды `kubectl get moduleconfig <ИМЯ_МОДУЛЯ>`.
+Проверить состояние модуля можно с помощью команды `d8 k get moduleconfig <ИМЯ_МОДУЛЯ>`.
 
 Пример:  
 
 ```shell
-$ kubectl get moduleconfig user-authn
+$ d8 k get moduleconfig user-authn
 NAME         ENABLED   VERSION   AGE   MESSAGE
 user-authn   false     1         12h
 ```
