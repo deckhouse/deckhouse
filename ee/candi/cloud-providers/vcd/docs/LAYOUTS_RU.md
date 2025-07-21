@@ -38,6 +38,8 @@ masterNodeGroup:
 
 ## StandardWithNetwork
 
+![Схема размещения StandardWithNetwork](../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+
 При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
 
 Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью параметра `internalNetworkDHCPPoolStartAddress`.
