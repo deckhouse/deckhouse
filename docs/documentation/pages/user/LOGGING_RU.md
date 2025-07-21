@@ -1,5 +1,5 @@
 ---
-title: Настройки логирования
+title: "Настройки логирования"
 permalink: ru/user/logging.html
 lang: ru
 ---

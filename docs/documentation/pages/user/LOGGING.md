@@ -1,5 +1,5 @@
 ---
-title: Logging settings
+title: "Logging settings"
 permalink: en/user/logging.html
 ---
 
