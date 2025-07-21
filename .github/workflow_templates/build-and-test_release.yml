@@ -108,16 +108,13 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  check_changelog:
-    name: Check changelog
-{!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 2 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
       - check_changelog
-    if: always() && needs.check_changelog.result != 'failure'
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"

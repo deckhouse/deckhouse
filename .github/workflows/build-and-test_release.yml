@@ -215,9 +215,10 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
+
+  # <template: check_changelog_template>
   check_changelog:
     name: Check changelog
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
 
@@ -226,28 +227,30 @@ jobs:
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
-      - name: Extract TAG version
+      - name: Check for tag
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/}"
-          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "Not a tag push, skipping changelog check."
+            exit 0
+          fi
 
-      - name: Check if changelog exists
-        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
           FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
+
           if [ ! -f "$FILE" ]; then
-            echo "❌ Changelog file $FILE not found"
+            echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
             exit 1
           else
-            echo "✅ Found $FILE"
+            echo "✅ Changelog file $FILE found."
           fi
   # </template: check_changelog_template>
+
 
   build_fe:
     name: Build FE
     needs:
       - git_info
       - check_changelog
-    if: always() && needs.check_changelog.result != 'failure'
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
