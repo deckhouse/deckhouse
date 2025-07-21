@@ -285,6 +285,16 @@ spec:
                         List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
+                    allowedGroups:
+                      type: array
+                      description: |
+                        A list of allowed groups (filter).
+
+                        The user token will contain a set intersection of groups from the provider and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                        The user token will contain all groups if the parameter is not set.
+                      items:
+                        type: string
                     promptType:
                       type: string
                       default: 'consent'
