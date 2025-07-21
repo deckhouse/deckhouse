@@ -180,7 +180,7 @@
         {{- if $provider.oidc.allowedGroups }}
         allowedGroups:
           {{- range $group := $provider.oidc.allowedGroups }}
-          - {{ allowedGroups | quote }}
+          - {{ $group | quote }}
           {{- end }}
         {{- end }}
         scopes:
