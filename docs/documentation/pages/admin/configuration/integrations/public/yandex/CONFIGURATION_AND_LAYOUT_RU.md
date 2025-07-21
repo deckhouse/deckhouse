@@ -255,7 +255,7 @@ kind: YandexClusterConfiguration
 Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 После внесения изменений их необходимо применить с помощью команды:
@@ -453,7 +453,7 @@ spec:
    Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
 
    ```bash
-   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+   d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 

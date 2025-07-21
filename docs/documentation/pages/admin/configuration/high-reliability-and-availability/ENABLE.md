@@ -31,7 +31,7 @@ you can, for example, check the number of `deckhouse` Pods in the `d8-system` na
 To do that, run the following command:
 
 ```shell
-sudo -i d8 k -n d8-system get po | grep deckhouse
+d8 k -n d8-system get po | grep deckhouse
 ```
 
 The number of `deckhouse` Pods in the output must be more than one:
@@ -88,7 +88,7 @@ For example, to verify the mode operation for the `deckhouse` module,
 check the number of corresponding Pods in the `d8-system` namespace by running the following command:
 
 ```shell
-sudo -i d8 k -n d8-system get po | grep deckhouse
+d8 k -n d8-system get po | grep deckhouse
 ```
 
 The number of `deckhouse` Pods in the output must be more than one:

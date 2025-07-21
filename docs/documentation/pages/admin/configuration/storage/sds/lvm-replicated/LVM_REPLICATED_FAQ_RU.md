@@ -207,15 +207,15 @@ lang: ru
 Чтобы вновь разрешить размещение ресурсов, выполните:
 
 ```shell
-alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor node set-property "worker-1" AutoplaceTarget
-kubectl uncordon "worker-1"
+d8 k uncordon "worker-1"
 ```
 
 Проверьте параметр `AutoplaceTarget` у всех узлов (поле `AutoplaceTarget` будет пустым у тех узлов, на которых разрешено размещать ресурсы LINSTOR):
 
 ```shell
-alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 
@@ -277,7 +277,7 @@ for exclusive open failed: wrong medium type, check device health
 Проверьте, где используется устройство, с помощью следующей команды:
 
 ```shell
-alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
@@ -314,7 +314,7 @@ dmesg | grep 'Remote failed to finish a request within'
 Операции, которые требуют ручного вмешательства, в модуле `sds-replicated-volume` частично или полностью автоматизированы. Поэтому модуль `sds-replicated-volume` ограничивает список разрешенных команд в LINSTOR. Например, автоматизировано создание Tie-Breaker, —  сам LINSTOR иногда их не создает для ресурсов с двумя репликами. Чтобы посмотреть список разрешённых команд, выполните:
 
 ```shell
-alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor --help
 ```
 
@@ -396,11 +396,11 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 1. Получите список секретов по метке, дешифруйте данные и поместите данные резервной копии в архив:
 
    ```shell
-   MOBJECTS=$(kubectl get rsmb -l "$LABEL_SELECTOR" --sort-by=.metadata.name -o jsonpath="{.items[*].metadata.name}")
+   MOBJECTS=$(d8 k get rsmb -l "$LABEL_SELECTOR" --sort-by=.metadata.name -o jsonpath="{.items[*].metadata.name}")
    
    for MOBJECT in $MOBJECTS; do
      echo "Process: $MOBJECT"
-     kubectl get rsmb "$MOBJECT" -o jsonpath="{.data}" | base64 --decode >> "$COMBINED"
+     d8 k get rsmb "$MOBJECT" -o jsonpath="{.data}" | base64 --decode >> "$COMBINED"
    done
    ```
 
@@ -493,7 +493,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 1. Убедитесь, что в бэкенде отсутствуют неисправные ресурсы. Команда должна выводить пустой список:
 
    ```shell
-   alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -569,7 +569,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 1. Измените алиас к команде `linstor` и проверьте ресурсы:
 
    ```shell
-   alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -615,7 +615,7 @@ StorageClass в данном модуле управляются через ре
 1. Убедитесь, что в кластере отсутствуют неисправные DRBD-ресурсы. Команда должна выводить пустой список:
 
    ```shell
-   alias linstor='kubectl -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -670,7 +670,7 @@ StorageClass в данном модуле управляются через ре
 1. Измените алиас к команде `linstor` и проверьте ресурсы DRBD:
 
    ```shell
-   alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 

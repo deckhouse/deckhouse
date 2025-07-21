@@ -172,5 +172,5 @@ To enable authentication for such an application, follow these steps:
    You can get the Dex URL (`https://dex.<publicDomainTemplate>`) using the following command:
 
    ```console
-   kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+   d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    ```

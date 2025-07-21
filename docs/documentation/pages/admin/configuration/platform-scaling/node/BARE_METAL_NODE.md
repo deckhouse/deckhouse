@@ -22,10 +22,10 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 
    In this resource, specify the `Static` node type. For all NodeGroup objects in the cluster, Deckhouse automatically generates a `bootstrap.sh` script used to add nodes to the group. When adding nodes manually, you need to copy this script to the server and run it.
 
-   You can obtain the script from the Deckhouse web interface under the “Node Groups → Scripts” tab or via the following `kubectl` command:
+   You can obtain the script from the Deckhouse web interface under the “Node Groups → Scripts” tab or via the following `d8 k` command:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
+   d8 k -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
    ```
 
    The script needs to be decoded from Base64 and then executed as `root`.
@@ -137,7 +137,7 @@ During the migration of static nodes between [NodeGroups](/modules/node-manager/
 1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
 
    ```yaml
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -155,13 +155,13 @@ During the migration of static nodes between [NodeGroups](/modules/node-manager/
    This will allow the new NodeGroup named `front` to manage this node:
 
    ```shell
-   kubectl label staticinstance static-worker-1 role=front --overwrite
+   d8 k label staticinstance static-worker-1 role=front --overwrite
    ```
 
 1. Update the `worker` NodeGroup resource by decreasing the `count` parameter from `1` to `0`:
 
    ```shell
-   kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+   d8 k patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
    ```
 
 ### Manual cleanup of a static node
@@ -225,13 +225,13 @@ You can also perform this operation using a patch:
 * To set `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * To set `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -249,8 +249,8 @@ The only option is to [delete the StaticInstance](#deleting-a-staticinstance) an
 To move an existing manually added static node from one NodeGroup to another, you need to update the group label on the node:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 It will take some time for the changes to take effect.

@@ -500,7 +500,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
    You can check this by running the following command:
 
    ```shell
-   kubectl -n d8-system get modules
+   d8 k -n d8-system get modules
    ```
 
    Or view it in the Deckhouse web interface.
@@ -549,7 +549,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
    You can view them by running:
 
    ```shell
-   kubectl get nodes
+   d8 k get nodes
    ```
 
    The list of newly created nodes is also available in the Deckhouse web interface.
@@ -577,7 +577,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Pre-configure the new node according to the specifics of your environment. For example:
@@ -646,7 +646,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster), run the following command:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: SSHCredentials
    metadata:
@@ -680,7 +680,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    > The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:

@@ -94,5 +94,5 @@ DKP позволяет:
 1. Примените созданный манифест с помощью следующей команды:
 
    ```shell
-   sudo -i d8 k apply -f pod-logging-config.yaml
+   d8 k apply -f pod-logging-config.yaml
    ```

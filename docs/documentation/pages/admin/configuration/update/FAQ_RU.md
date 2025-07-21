@@ -15,7 +15,7 @@ lang: ru
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 
 ```shell
-sudo -i d8 k annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+d8 k annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
 ```
 
 Пример ресурса с установленной аннотацией пропуска окон обновлений:
@@ -26,7 +26,7 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/apply-now: "true"
-...
+# ... остальная часть манифеста
 ```
 
 ## Как понять, что в кластере идет обновление?
@@ -43,7 +43,7 @@ metadata:
 Также вы можете проверить состояние релизов DKP в кластере, используя следующую команду:
 
 ```shell
-sudo -i d8 k get deckhouserelease
+d8 k get deckhouserelease
 ```
 
 Пример вывода:
@@ -61,7 +61,7 @@ v1.47.1    Deployed     4h12m
 Для проверки успешности обновления выведите состояние пода `deckhouse`:
 
 ```shell
-sudo -i d8 k -n d8-system get pods -l app=deckhouse
+d8 k -n d8-system get pods -l app=deckhouse
 ```
 
 Пример вывода:
@@ -80,7 +80,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 - Проверьте логи, используя следующую команду:
 
   ```shell
-  sudo -i d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+  d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
 - Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](https://deckhouse.ru/tech-support/).
@@ -91,7 +91,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 Как только на установленном в кластере канале обновления появляется новая версия DKP:
 
 - Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
-- Появляется новый кастомный ресурс [DeckhouseRelease](../../../reference/cr/deckhouserelease). Используйте команду `sudo -i d8 k get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
+- Появляется новый кастомный ресурс [DeckhouseRelease](../../../reference/cr/deckhouserelease). Используйте команду `d8 k get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
   - Установлен [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
   - Установлен автоматический режим обновлений и настроены [окна обновлений](configuration.html#окна-обновлений), интервал которых еще не наступил.
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса DeckhouseRelease будет соответствующее сообщение.
@@ -132,7 +132,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   Пример получения IP-адреса хранилища образов Deckhouse в поде `deckhouse`:
 
   ```shell
-  sudo -i d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.ru
+  d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.ru
   ```
 
   Пример вывода:

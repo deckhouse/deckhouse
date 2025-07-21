@@ -52,7 +52,7 @@ settings:
 Чтобы задать другой StorageClass по умолчанию, необходимо использовать глобальный параметр DKP `global.defaultClusterStorageClass`. Изменить его можно следующей командой:
 
 ```shell
-kubectl edit mc global
+d8 k edit mc global
 ```
 
 Если параметр `defaultClusterStorageClass` не указан, платформа будет определять StorageClass, используемый по умолчанию, в следующем порядке:
@@ -115,7 +115,7 @@ DKP позволяет подключать существующие вирту�
 1. Узнать актуальное значение `nodeNetworkCIDR` из кластера:
 
    ```shell
-   kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | \
+   d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | \
      jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
    ```
 

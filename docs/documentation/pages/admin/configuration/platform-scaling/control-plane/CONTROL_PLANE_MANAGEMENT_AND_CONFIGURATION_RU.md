@@ -42,14 +42,14 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 1. Используйте команду:
 
    ```bash
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
     deckhouse-controller module enable control-plane-manager
    ```
 
    или
 
    ```bash
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
      deckhouse-controller module disable control-plane-manager
    ```
 
@@ -89,13 +89,13 @@ spec:
 1. Убедитесь, что модуль включён:
 
    ```shell
-   kubectl get modules control-plane-manager
+   d8 k get modules control-plane-manager
    ```
 
 1. Проверьте состояние подов `control-plane-manager` (поды находятся в пространстве имён `kube-system` и имеют лейбл `app=d8-control-plane-manager`):
 
    ```shell
-   kubectl -n kube-system get pods -l app=d8-control-plane-manager -o wide
+   d8 k -n kube-system get pods -l app=d8-control-plane-manager -o wide
    ```
 
    Убедитесь, что все поды находятся в статусе `Running` (или `Completed`).
@@ -103,19 +103,19 @@ spec:
 1. Проверьте, что master-узлы в состоянии `Ready`:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane
+   d8 k get nodes -l node-role.kubernetes.io/control-plane
    ```
 
    Если требуется посмотреть более подробную информацию:
 
    ```shell
-   kubectl describe node <имя-узла>
+   d8 k describe node <имя-узла>
    ```
 
 1. Получите список очередей и активных заданий:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
     deckhouse-controller queue list
    ```
 

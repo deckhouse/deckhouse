@@ -68,7 +68,7 @@ DKP includes a number of templates for creating projects:
 To list all available parameters for a project template, run the following command:
 
 ```shell
-kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ### Creating a custom project template
@@ -81,7 +81,7 @@ To create a custom template:
 2. Save it to a separate file, for example, `my-project-template.yaml`, using the following command:
 
    ```shell
-   kubectl get projecttemplates default -o yaml > my-project-template.yaml
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
 3. Edit `my-project-template.yaml` to make necessary changes.
@@ -94,13 +94,13 @@ To create a custom template:
 5. Apply your new template with the following command:
 
    ```shell
-   kubectl apply -f my-project-template.yaml
+   d8 k apply -f my-project-template.yaml
    ```
 
 6. Ensure the new template is available with the following command:
 
    ```shell
-   kubectl get projecttemplates <NEW_TEMPLATE_NAME>
+   d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
 
 ## Creating a project

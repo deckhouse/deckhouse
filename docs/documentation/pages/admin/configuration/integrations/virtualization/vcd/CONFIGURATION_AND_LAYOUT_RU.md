@@ -48,7 +48,7 @@ masterNodeGroup:
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}
@@ -121,11 +121,11 @@ spec:
 
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
 
-1. На узле, где находится под, выполните команду `kubectl cordon <имя_узла>`.
+1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
 2. Удалите под.
 3. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
    > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполните команду `kubectl uncordon <имя_узла>`.
+4. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
 
 ### Требования к окружению
 

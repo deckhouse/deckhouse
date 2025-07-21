@@ -14,13 +14,13 @@ If you’re using the `user-authn` module, you can see the user’s name and gro
 (only logged during authorization) by running:
 
 ```shell
-kubectl -n d8-user-authn logs -l app=dex
+d8 k -n d8-user-authn logs -l app=dex
 ```
 
 {% endalert %}
 
 ```shell
-cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+cat  <<EOF | 2>&1 d8 k create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",
@@ -63,7 +63,7 @@ If **multitenancy** mode is enabled in the cluster,
 run an additional check to verify that the user has access to the namespace:
 
 ```shell
-cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",

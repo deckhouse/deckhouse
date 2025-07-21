@@ -12,7 +12,7 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
 1. Create a ServiceAccount in the `d8-service-accounts` namespace:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: v1
    kind: ServiceAccount
    metadata:
@@ -82,14 +82,14 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
      - Download the cluster’s CA certificate:
 
        ```shell
-       kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
+       d8 k get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
        ```
 
      - Generate the `cluster` section using the API server’s IP address:
 
        ```shell
-       kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-         --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+       d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+         --server=https://$(d8 k get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
          --certificate-authority=/tmp/ca.crt \
          --kubeconfig=$FILE_NAME
        ```
@@ -102,8 +102,8 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
      - Extract the CA certificate from the secret used for the `api.%s` domain:
 
        ```shell
-       kubectl -n d8-user-authn get secrets -o json \
-         $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+       d8 k -n d8-user-authn get secrets -o json \
+         $(d8 k -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
          | jq -rc '.data."ca.crt" // .data."tls.crt"' \
          | base64 -d > /tmp/ca.crt
        ```
@@ -111,8 +111,8 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
      - Generate the `cluster` section using the external domain and the CA:
 
        ```shell
-       kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+         --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
          --certificate-authority=/tmp/ca.crt \
          --kubeconfig=$FILE_NAME
        ```
@@ -121,23 +121,23 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
      - Generate the `cluster` section using the external domain:
 
        ```shell
-       kubectl config set-cluster $CLUSTER_NAME \
-         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       d8 k config set-cluster $CLUSTER_NAME \
+         --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
          --kubeconfig=$FILE_NAME
        ```
 
 1. Generate the `user` section with the token from the ServiceAccount secret in the `kubectl` configuration file:
 
    ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+   d8 k config set-credentials $USER_NAME \
+     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 
 1. Generate the context in the `kubectl` configuration file:
 
    ```shell
-   kubectl config set-context $CONTEXT_NAME \
+   d8 k config set-context $CONTEXT_NAME \
      --cluster=$CLUSTER_NAME --user=$USER_NAME \
      --kubeconfig=$FILE_NAME
    ```
@@ -145,7 +145,7 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
 1. Set the newly created context as the default:
 
    ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
 You can now use the generated `$FILE_NAME` kubeconfig file to connect to the Kubernetes cluster API from your CI/CD system, such as GitLab Runner or Jenkins.
