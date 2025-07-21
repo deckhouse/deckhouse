@@ -28,10 +28,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/go_lib/encoding"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/encoding"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 type expirePatch struct {

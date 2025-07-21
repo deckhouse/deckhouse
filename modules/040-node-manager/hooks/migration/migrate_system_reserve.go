@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
-	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
