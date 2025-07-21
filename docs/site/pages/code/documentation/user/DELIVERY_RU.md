@@ -1,6 +1,6 @@
 ---
 title: "Непрерывная сборка и поставка ПО (CI/CD)"
-permalink: ru/code/documentation/specifications/delivery.html
+permalink: ru/code/documentation/user/delivery.html
 lang: ru
 ---
 

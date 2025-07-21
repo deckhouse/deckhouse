@@ -1,6 +1,6 @@
 ---
 title: "Работа с кодовой базой и Code Review"
-permalink: ru/code/documentation/specifications/code-rewiew.html
+permalink: ru/code/documentation/user/code-review.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Управление репозиториями Git"
-permalink: ru/code/documentation/specifications/repositories.html
+permalink: ru/code/documentation/user/repositories.html
 lang: ru
 ---
 

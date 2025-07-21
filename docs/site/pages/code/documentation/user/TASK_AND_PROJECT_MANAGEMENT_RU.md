@@ -1,6 +1,6 @@
 ---
 title: "Управление задачами и проектами"
-permalink: ru/code/documentation/specifications/project-management.html
+permalink: ru/code/documentation/user/project-management.html
 lang: ru
 ---
 

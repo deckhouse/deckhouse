@@ -1,6 +1,6 @@
 ---
 title: "Управление пользователями, доступом и изменениями"
-permalink: ru/code/documentation/specifications/user-management.html
+permalink: ru/code/documentation/user/user-management.html
 lang: ru
 ---
 
