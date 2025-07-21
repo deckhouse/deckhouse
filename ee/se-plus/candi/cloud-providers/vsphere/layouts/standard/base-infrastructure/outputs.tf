@@ -4,7 +4,7 @@
 output "cloud_discovery_data" {
   value = {
     "apiVersion"       = "deckhouse.io/v1"
-    "kind"             = "VsphereCloudProviderDiscoveryData"
+    "kind"             = "VsphereCloudDiscoveryData"
     "vmFolderPath"     = var.providerClusterConfiguration.vmFolderPath
     "resourcePoolPath" = local.use_nested_resource_pool == true ? (local.base_resource_pool != "" ? join("/", [local.base_resource_pool, local.prefix]) : local.prefix) : ""
     "zones"            = var.providerClusterConfiguration.zones

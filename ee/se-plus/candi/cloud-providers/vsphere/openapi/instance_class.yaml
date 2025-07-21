@@ -86,7 +86,7 @@ spec:
                   description: |
                     Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
 
-                    By default, the value from `VsphereCloudProviderDiscoveryData` is used.
+                    By default, the value from `VsphereCloudDiscoveryData` is used.
                   x-doc-examples: ['rp-2012']
                   type: string
                 runtimeOptions:

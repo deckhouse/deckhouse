@@ -156,7 +156,7 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 // NotImplemented
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	discoveryData := &v1.VsphereCloudProviderDiscoveryData{}
+	discoveryData := &v1.VsphereCloudDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {

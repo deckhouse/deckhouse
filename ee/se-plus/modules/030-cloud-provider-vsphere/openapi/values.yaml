@@ -388,7 +388,7 @@ properties:
             enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
           kind:
             type: string
-            enum: [VsphereCloudProviderDiscoveryData]
+            enum: [VsphereCloudDiscoveryData]
           vmFolderPath:
             type: string
             minLength: 1

@@ -14,7 +14,7 @@
 
 package v1
 
-type VsphereCloudProviderDiscoveryData struct {
+type VsphereCloudDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
