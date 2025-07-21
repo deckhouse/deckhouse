@@ -26,6 +26,9 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Client interface
@@ -76,9 +79,20 @@ func NewClient(options ...Option) Client {
 		Dial:                  dialer.Dial,
 	}
 
+	otr := otelhttp.NewTransport(
+		tr,
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			return fmt.Sprintf("HTTP %s %s", operation, r.URL.String())
+		}),
+		otelhttp.WithFilter(func(request *http.Request) bool {
+			span := trace.SpanFromContext(request.Context())
+			return span.IsRecording()
+		}),
+	)
+
 	return &http.Client{
 		Timeout:   opts.timeout,
-		Transport: tr,
+		Transport: otr,
 	}
 }
 
