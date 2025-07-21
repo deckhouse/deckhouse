@@ -11,7 +11,7 @@ lang: ru
 1. Выключите модуль `kube-proxy`:
 
    ```shell
-   $ kubectl apply -f - << EOF
+   $ d8 k apply -f - << EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -24,7 +24,7 @@ lang: ru
 1. Включите модуль `cni-cilium`:
 
    ```shell
-   $ kubectl create -f - << EOF
+   $ d8 k create -f - << EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -40,7 +40,7 @@ lang: ru
 1. Убедитесь, что все агенты cilium в статусе Running:
 
    ```shell
-   $ kubectl get po -n d8-cni-cilium
+   $ d8 k get po -n d8-cni-cilium
    NAME                      READY STATUS  RESTARTS    AGE
    agent-5zzfv               2/2   Running 5 (23m ago) 26m
    agent-gqb2b               2/2   Running 5 (23m ago) 26m
@@ -60,7 +60,7 @@ lang: ru
 1. Выключите модуль `cni-flannel`:
 
    ```shell
-   $ kubectl apply -f - << EOF
+   $ d8 k apply -f - << EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -73,7 +73,7 @@ lang: ru
 1. Включите модуль `node-local-dns`:
 
    ```shell
-   $ kubectl apply -f - << EOF
+   $ d8 k apply -f - << EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -96,19 +96,19 @@ lang: ru
    В случае одного master-узла:
 
    ```shell
-   kubectl -n d8-system exec -it deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
    В случае мультимастерной инсталляции:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 2. Проверьте агенты cilium. Они должны быть в статусе Running:
 
    ```shell
-   $ kubectl get po -n d8-cni-cilium
+   $ d8 k get po -n d8-cni-cilium
    NAME        READY STATUS  RESTARTS    AGE
    agent-5zzfv 2/2   Running 5 (23m ago) 26m
    agent-gqb2b 2/2   Running 5 (23m ago) 26m
@@ -118,13 +118,13 @@ lang: ru
 3. Проверьте, что модуль `cni-flannel` выключен:
 
    ```shell
-   $ kubectl get modules | grep flannel
+   $ d8 k get modules | grep flannel
    cni-flannel                         35     Disabled    Embedded
    ```
 
 4. Проверьте, что модуль `node-local-dns` включен:
 
    ```shell
-   $ kubectl get modules | grep node-local-dns
+   $ d8 k get modules | grep node-local-dns
    node-local-dns                      350    Enabled     Embedded     Ready
    ```

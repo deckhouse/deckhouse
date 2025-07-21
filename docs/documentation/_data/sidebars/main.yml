@@ -999,16 +999,16 @@ entries:
             ru: Мониторинг
           folders:
             - title:
-                en: Monitoring
-                ru: Мониторинг
+                en: Overview
+                ru: Обзор
               url: /user/monitoring/
             - title:
                 en: Monitoring settings
                 ru: Настройки мониторинга
               url: /user/monitoring/app.html
         - title:
-            en: Collecting application logs
-            ru: Сбор логов из приложения
+            en: Logging settings
+            ru: Настройки логирования
           url: /user/logging.html
         - title:
             en: Using TLS certificates

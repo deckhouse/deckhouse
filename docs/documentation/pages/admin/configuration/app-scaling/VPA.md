@@ -19,7 +19,7 @@ VPA can operate in two modes:
 
 - Recommendations only, without modifying resources:
   - **Initial**: resource requests are set only at pod creation time, not during runtime.
-  - **Off**: VPA does not change resources automatically. However, it still provides recommendations, which can be viewed using the `kubectl describe vpa` command.
+  - **Off**: VPA does not change resources automatically. However, it still provides recommendations, which can be viewed using the `d8 k describe vpa` command.
 
 When VPA is enabled and configured appropriately, resource requests are set automatically based on Prometheus data. It is also possible to configure the system to only provide recommendations without applying any changes.
 
@@ -55,7 +55,7 @@ The [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module has no
 After creating a [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) resource, you can check VPA recommendations using the following command:
 
 ```console
-kubectl describe vpa my-app-vpa
+d8 k describe vpa my-app-vpa
 ```
 
 In the status section, you’ll see the following parameters:
@@ -88,7 +88,7 @@ In the status section, you’ll see the following parameters:
          value: system
     ```
 
-1. Apply the VPA configuration file using `kubectl apply -f <your-config-file-name>`.
+1. Apply the VPA configuration file using `d8 k apply -f <your-config-file-name>`.
 
 For more details on VPA resource limits configuration, see [the documentation](../../../user/configuration/app-scaling/vpa.html#how-vpa-interacts-with-limits).
 

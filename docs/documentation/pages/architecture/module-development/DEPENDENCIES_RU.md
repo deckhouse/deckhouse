@@ -39,7 +39,7 @@ requirements:
    Пример ресурса ModuleRelease, когда версия DKP не соответствует требованиям модуля:
 
    ```console
-   root@dev-master-0:~# kubectl get mr
+   root@dev-master-0:~# d8 k get mr
    ```
 
    Выводимая информация:
@@ -55,7 +55,7 @@ requirements:
    Пример ресурса DeckhouseRelease, когда версия DKP не соответствует требованиям модуля:
 
    ```console
-   root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
 
    Выводимая информация:
@@ -94,7 +94,7 @@ requirements:
    Пример ресурса ModuleRelease, когда версия Kubernetes не соответствует требованиям модуля:
 
    ```console
-   root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
+   root@dev-master-0:~# d8 k get modulereleases.deckhouse.io
    ```
 
    Выводимая информация:
@@ -111,7 +111,7 @@ requirements:
    Пример вывода при несовместимости модуля с новой версией Kubernetes:
 
    ```console
-   root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   root@dev-master-0:~# d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
    Выводимая информация:
@@ -133,7 +133,7 @@ requirements:
    Пример ресурса DeckhouseRelease, когда версия Kubernetes не соответствует требованиям модуля:
 
    ```console
-   root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
 
    Выводимая информация:

@@ -148,7 +148,7 @@ The service decides whether to re-run the scripts by comparing a unified checksu
 You can check the checksum with the following command:
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```
 
 The checksum comparison is performed by the service every minute.
@@ -341,7 +341,7 @@ spec:
 Check the logs with the following command:
 
 ```shell
-kubectl logs job/nvidia-cuda-test
+d8 k logs job/nvidia-cuda-test
 ```
 
 Example output:
@@ -393,7 +393,7 @@ spec:
 Check the logs with the following command:
 
 ```shell
-kubectl logs job/gpu-operator-test
+d8 k logs job/gpu-operator-test
 ```
 
 Example output:

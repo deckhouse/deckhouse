@@ -140,7 +140,7 @@ kind: AWSClusterConfiguration
 Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 После внесения изменений их необходимо применить с помощью команды:

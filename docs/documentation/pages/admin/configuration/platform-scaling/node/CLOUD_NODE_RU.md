@@ -500,7 +500,7 @@ spec:
    Это можно проверить с помощью команды:
 
    ```shell
-   kubectl -n d8-system get modules
+   d8 k -n d8-system get modules
    ```
 
    Или посмотреть в веб-интерфейсе Deckhouse.
@@ -547,7 +547,7 @@ spec:
 1. Готово — новые узлы появятся в кластере автоматически. Их можно увидеть выполнив команду:
 
    ```shell
-   kubectl get nodes
+   d8 k get nodes
    ```
 
    Также список новых узлов доступен в веб-интерфейсе Deckhouse.
@@ -573,7 +573,7 @@ Deckhouse Kubernetes Platform может работать поверх серв�
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения. Например:
@@ -648,7 +648,7 @@ Deckhouse Kubernetes Platform может работать поверх серв�
    Выполните следующую команду для создания в кластере ресурса [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) (здесь и далее также используйте `kubectl`, настроенный на управление кластером):
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: SSHCredentials
    metadata:
@@ -682,7 +682,7 @@ Deckhouse Kubernetes Platform может работать поверх серв�
    > Поле `labelSelector` в ресурсе NodeGroup является неизменным. Чтобы обновить `labelSelector`, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:

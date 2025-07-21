@@ -1,5 +1,5 @@
 ---
-title: "Мониторинг"
+title: "Обзор"
 permalink: ru/user/monitoring/
 lang: ru
 ---

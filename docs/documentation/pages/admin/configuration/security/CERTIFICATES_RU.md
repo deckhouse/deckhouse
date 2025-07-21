@@ -122,10 +122,10 @@ DKP экспортирует метрики в Prometheus, что позволя
 
 1. В пространстве имён `d8-cert-manager` создайте секрет с произвольным именем, содержащий данные файлов сертификатов.
 
-   - Пример создания секрета с помощью команды `kubectl`:
+   - Пример создания секрета с помощью команды `d8 k`:
 
      ```shell
-     kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
+     d8 k create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
      ```
 
    - Пример создания секрета из YAML-файла (содержимое файлов сертификатов должно быть закодировано в Base64):
@@ -181,15 +181,15 @@ DKP экспортирует метрики в Prometheus, что позволя
 1. Создайте ServiceAccount и скопируйте ссылку на его Secret:
 
    ```shell
-   kubectl create serviceaccount issuer
+   d8 k create serviceaccount issuer
      
-   ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+   ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
    ```
 
 1. Создайте ресурс Issuer:
 
    ```yaml
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: Issuer
    metadata:
@@ -213,7 +213,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 1. Создайте ресурс Certificate для получения TLS-сертификата, подписанного CA Vault:
 
    ```yaml
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:

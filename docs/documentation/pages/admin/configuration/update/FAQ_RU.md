@@ -26,7 +26,7 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/apply-now: "true"
-...
+# ... остальная часть манифеста
 ```
 
 ## Как понять, что в кластере идет обновление?
