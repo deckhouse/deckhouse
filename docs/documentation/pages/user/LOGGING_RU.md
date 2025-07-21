@@ -1,5 +1,5 @@
 ---
-title: Сбор логов из приложения
+title: "Настройки логирования"
 permalink: ru/user/logging.html
 lang: ru
 ---

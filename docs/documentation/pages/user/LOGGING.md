@@ -1,5 +1,5 @@
 ---
-title: Collecting application logs
+title: "Logging settings"
 permalink: en/user/logging.html
 ---
 
