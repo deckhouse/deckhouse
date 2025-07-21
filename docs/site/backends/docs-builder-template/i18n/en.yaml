@@ -3,9 +3,12 @@ search-placeholder: Search...
 modules: modules
 modules2: modules
 module: module
+module_versions: Module versions
 deckhouse: deckhouse
 documentation: documentation
 modules_documentation: Modules documentation
+modules_list: Modules list
+category: category
 core: core
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
@@ -46,8 +49,10 @@ module_alert_experimental_long: Experimental version. The functionality may unde
 module_alert_preview_long: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
 module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
 module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
+reset_filter: reset filter
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.
+show_more: Show more
 element_of_array: element of the array
 x-kubernetes-int-or-string: integer or string
 of_x-kubernetes-int-or-string: of integers or strings

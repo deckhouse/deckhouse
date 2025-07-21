@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('DOMContentLoaded', function () {
   const items = document.querySelectorAll('.button-tile');
   const button = document.querySelector('.tile__pagination');
-  const itemsPerPage = 120;
+  const itemsPerPage = 12;
   let count = 0;
 
   function hideAllItems() {
