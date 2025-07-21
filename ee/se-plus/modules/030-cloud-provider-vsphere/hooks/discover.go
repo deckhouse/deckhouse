@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -99,14 +100,21 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}
 
-			allowVolumeExpansion := true
-			if sc.AllowVolumeExpansion != nil {
-				allowVolumeExpansion = *sc.AllowVolumeExpansion
+			var zones []string
+			for _, t := range sc.AllowedTopologies {
+				for _, m := range t.MatchLabelExpressions {
+					if m.Key == "failure-domain.beta.kubernetes.io/zone" {
+						zones = append(zones, m.Values...)
+					}
+				}
 			}
+			slices.Sort(zones)
+			zones = slices.Compact(zones)
+
 			storageClasses = append(storageClasses, storageClass{
-				Name:                 sc.Name,
-				Type:                 sc.Parameters["type"],
-				AllowVolumeExpansion: allowVolumeExpansion,
+				Name:         sc.Name,
+				Zones:        zones,
+				DatastoreURL: sc.Parameters["DatastoreURL"],
 			})
 		}
 		input.Logger.Info("found vSphere storage classes using StorageClass snapshots", slog.Any("storage_classes", storageClasses))
@@ -144,8 +152,8 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore) error {
 	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
 
-	for _, vt := range zonedDataStores {
-		storageClassStorageDomain[getStorageClassName(vt.Name)] = vt
+	for _, ds := range zonedDataStores {
+		storageClassStorageDomain[getStorageClassName(ds.Name)] = ds
 	}
 
 	classExcludes, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude")
@@ -172,14 +180,12 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 
 	storageClasses := make([]storageClass, 0, len(zonedDataStores))
 	for name, domain := range storageClassStorageDomain {
-		allowVolumeExpansion := true
-		if s, ok := storageClassSnapshots[name]; ok && s.AllowVolumeExpansion != nil {
-			allowVolumeExpansion = *s.AllowVolumeExpansion
-		}
 		sc := storageClass{
-			Name:                 name,
-			Type:                 domain.Name,
-			AllowVolumeExpansion: allowVolumeExpansion,
+			Name:          name,
+			Path:          domain.InventoryPath,
+			Zones:         domain.Zones,
+			DatastoreType: domain.DatastoreType,
+			DatastoreURL:  domain.DatastoreURL,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -215,7 +221,9 @@ func getStorageClassName(value string) string {
 }
 
 type storageClass struct {
-	Name                 string `json:"name"`
-	Type                 string `json:"type"`
-	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+	Name          string   `json:"name"`
+	Path          string   `json:"path"`
+	Zones         []string `json:"zones"`
+	DatastoreType string   `json:"datastoreType"`
+	DatastoreURL  string   `json:"datastoreURL"`
 }
