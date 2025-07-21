@@ -1399,18 +1399,18 @@ spec:
 После применения ресурса настройки GRUB будут обновлены, и узлы кластера начнут последовательную перезагрузку для применения изменений.
 {% endalert %}
 
-### Как изменить container runtime на ContainerdV2 на узлах
+### Как изменить container runtime на ContainerdV2 на узлах?
 
 Миграцию на `ContainerdV2` можно выполнить одним из следующих способов:
 
-* Указав значение `ContainerdV2` для параметра [defaultCRI](../installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [spec.cri.type](../modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
-* Указав значение `ContainerdV2` для параметра [spec.cri.type](../modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) на `ContainerdV2` для конкретной группы узлов.
+* Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+* Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
 {% alert level="info" %}
 Миграция на `ContainerdV2` возможна при выполнении следующих условий:
 
-* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](../installing/configuration.html#clusterconfiguration-defaultcri).
-* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](../modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
+* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 {% endalert %}
 
 При миграции на `ContainerdV2` очищается папка `/var/lib/containerd`. Для `Containerd` используется папка `/etc/containerd/conf.d`. Для `ContainerdV2` используется `/etc/containerd/conf2.d`.
