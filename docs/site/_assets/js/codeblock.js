@@ -147,92 +147,94 @@ document.addEventListener("DOMContentLoaded", function() {
 
   preElement.forEach(pre => {
 
-    pre.classList.add('code__transfer');
-    const code = pre.querySelector('code');
+    if(!pre.querySelector('code.language-tree')) {
+      pre.classList.add('code__transfer');
+      const code = pre.querySelector('code');
 
-    const codeText = code.innerHTML;
-    const lines = codeText.split('\n');
+      const codeText = code.innerHTML;
+      const lines = codeText.split('\n');
 
-    let newHTML = '';
+      let newHTML = '';
 
-    let lineIndex = 1;
-    lines.forEach(line => {
-      const trimLine = line.trim();
+      let lineIndex = 1;
+      lines.forEach(line => {
+        const trimLine = line.trim();
 
-      if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
-        return;
-      }
-      newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
-      lineIndex++;
-    });
+        if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
+          return;
+        }
+        newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
+        lineIndex++;
+      });
 
-    code.innerHTML = newHTML;
+      code.innerHTML = newHTML;
 
-    const button = document.createElement('button');
-    button.classList.add('wrap__button');
+      const button = document.createElement('button');
+      button.classList.add('wrap__button');
 
-    const wrapIcon = document.createElement('img');
-    wrapIcon.src = '/images/wrap-button.svg';
-    wrapIcon.classList.add('wrap__icon');
-    wrapIcon.style.display = 'none';
+      const wrapIcon = document.createElement('img');
+      wrapIcon.src = '/images/wrap-button.svg';
+      wrapIcon.classList.add('wrap__icon');
+      wrapIcon.style.display = 'none';
 
-    const unwrapIcon = document.createElement('img');
-    unwrapIcon.src = '/images/unwrap-button.svg';
-    unwrapIcon.classList.add('wrap__icon');
+      const unwrapIcon = document.createElement('img');
+      unwrapIcon.src = '/images/unwrap-button.svg';
+      unwrapIcon.classList.add('wrap__icon');
 
-    button.appendChild(wrapIcon);
-    button.appendChild(unwrapIcon);
+      button.appendChild(wrapIcon);
+      button.appendChild(unwrapIcon);
 
-    code.classList.add('wrap');
-    pre.appendChild(button);
+      code.classList.add('wrap');
+      pre.appendChild(button);
 
-    let isWrapper = false;
+      let isWrapper = false;
 
-    button.classList.remove('show');
-
-    button.addEventListener('click', function() {
-      isWrapper = !isWrapper;
-      code.classList.toggle('wrap');
-
-      if(isWrapper) {
-        wrapIcon.style.display = 'inline';
-        unwrapIcon.style.display = 'none';
-      } else {
-        wrapIcon.style.display = 'none';
-        unwrapIcon.style.display = 'inline';
-      }
-    });
-
-    tippy(wrapIcon, {
-      placement: 'left',
-      arrow: false,
-      animation: 'scale',
-      theme: 'light',
-      content: texts.wrap,
-      hideOnClick: false,
-      delay: [300, 50],
-      offset: [0, 10],
-      duration: [300],
-    });
-
-    tippy(unwrapIcon, {
-      placement: 'left',
-      arrow: false,
-      animation: 'scale',
-      theme: 'light',
-      content: texts.unwrap,
-      hideOnClick: false,
-      delay: [300, 50],
-      offset: [0, 10],
-      duration: [300],
-    });
-
-    pre.addEventListener('mouseenter', () => {
-      button.classList.add('show');
-    });
-
-    pre.addEventListener('mouseleave', () => {
       button.classList.remove('show');
-    });
+
+      button.addEventListener('click', function() {
+        isWrapper = !isWrapper;
+        code.classList.toggle('wrap');
+
+        if(isWrapper) {
+          wrapIcon.style.display = 'inline';
+          unwrapIcon.style.display = 'none';
+        } else {
+          wrapIcon.style.display = 'none';
+          unwrapIcon.style.display = 'inline';
+        }
+      });
+
+      tippy(wrapIcon, {
+        placement: 'left',
+        arrow: false,
+        animation: 'scale',
+        theme: 'light',
+        content: texts.wrap,
+        hideOnClick: false,
+        delay: [300, 50],
+        offset: [0, 10],
+        duration: [300],
+      });
+
+      tippy(unwrapIcon, {
+        placement: 'left',
+        arrow: false,
+        animation: 'scale',
+        theme: 'light',
+        content: texts.unwrap,
+        hideOnClick: false,
+        delay: [300, 50],
+        offset: [0, 10],
+        duration: [300],
+      });
+
+      pre.addEventListener('mouseenter', () => {
+        button.classList.add('show');
+      });
+
+      pre.addEventListener('mouseleave', () => {
+        button.classList.remove('show');
+      });
+    }
   })
 })
