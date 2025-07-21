@@ -17,9 +17,9 @@ limitations under the License.
 package hooks
 
 import (
-	"errors"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -73,15 +73,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, calculateNodesCapacity)
 
 func calculateNodesCapacity(input *go_hook.HookInput) error {
-	nodeSnap, ok := input.Snapshots["nodes"]
-	if !ok {
-		return errors.New("no nodes snapshot found")
+	nodeSnap := input.NewSnapshots.Get("nodes")
+
+	if len(nodeSnap) == 0 {
+		return fmt.Errorf("no nodes snapshot found")
 	}
 
 	var totalPodsCapacity int64
 
-	for _, nodeS := range nodeSnap {
-		node := nodeS.(*Node)
+	for node, err := range sdkobjectpatch.SnapshotIter[*Node](nodeSnap) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'nodes' snapshot: %v", err)
+		}
+
 		totalPodsCapacity += node.Capacity
 	}
 

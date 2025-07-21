@@ -21,6 +21,7 @@ import (
 	"math"
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -93,8 +94,10 @@ func prometheusDisk(input *go_hook.HookInput) error {
 		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
 	}
 
-	for _, obj := range input.Snapshots["pvcs"] {
-		pvc := obj.(PersistentVolumeClaim)
+	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.NewSnapshots.Get("pvcs")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'pvcs' snapshot: %v", err)
+		}
 
 		if !highAvailability && !strings.HasSuffix(pvc.Name, "-0") {
 			continue

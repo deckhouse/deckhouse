@@ -151,7 +151,10 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	}
 
 	// External Alertmanagers by deprecated labeled services
-	deprecatedServiceDeclaredAlertmanagers := handleDeprecatedAlertmanagerServices(input)
+	deprecatedServiceDeclaredAlertmanagers, err := handleDeprecatedAlertmanagerServices(input)
+	if err != nil {
+		return fmt.Errorf("cannot handle deprecated alertmanager services: %v", err)
+	}
 	serviceDeclaredAlertmanagers = append(serviceDeclaredAlertmanagers, deprecatedServiceDeclaredAlertmanagers...)
 
 	input.Values.Set("prometheus.internal.alertmanagers.byAddress", addressDeclaredAlertmanagers)
@@ -161,15 +164,17 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	return nil
 }
 
-func handleDeprecatedAlertmanagerServices(input *go_hook.HookInput) []alertmanagerService {
-	snaps := input.Snapshots["alertmanager_deprecated_services"]
+func handleDeprecatedAlertmanagerServices(input *go_hook.HookInput) ([]alertmanagerService, error) {
+	snaps := input.NewSnapshots.Get("alertmanager_deprecated_services")
 	alertManagers := make([]alertmanagerService, 0, len(snaps))
-	for _, svc := range snaps {
-		alertManagerService := svc.(*alertmanagerService)
-		alertManagers = append(alertManagers, *alertManagerService)
+	for alertManagerService, err := range sdkobjectpatch.SnapshotIter[alertmanagerService](snaps) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iterate over 'alertmanager_deprecated_services' snapshot: %v", err)
+		}
+		alertManagers = append(alertManagers, alertManagerService)
 	}
 
-	return alertManagers
+	return alertManagers, nil
 }
 
 func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error) {
