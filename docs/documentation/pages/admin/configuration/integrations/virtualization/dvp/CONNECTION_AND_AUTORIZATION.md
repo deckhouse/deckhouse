@@ -52,4 +52,4 @@ EOF
 
 ## Generating a kubeconfig
 
-To generate a kubeconfig, follow the instructions in the [ServiceAccount authentication guide](../authorization/#service-account-authentication).
+To generate a kubeconfig, follow the instructions in the [ServiceAccount authentication guide](../../authorization/#service-account-authentication).
