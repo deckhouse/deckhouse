@@ -1,0 +1,6 @@
+name: vsphere-csi
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-vsphere
+stage: General Availability
