@@ -207,15 +207,19 @@ In this case, the entire process is even more straightforward than that of LetsE
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: example-com                          # the name of the certificate; you can use it to view the cert's status
+  name: example-com                          # Name of the certificate; you can use it to view the cert's status.
   namespace: default
 spec:
-  secretName: example-com-tls                # the name of the secret to store a private key and a certificate
+  secretName: example-com-tls                # Name of the secret to store a private key and a certificate.
   issuerRef:
-    kind: ClusterIssuer                      # the link to the certificate "issuer", see more below
+    kind: ClusterIssuer                      # Link to the ClusterIssuer.
     name: selfsigned
-  commonName: example.com                    # the main certificate domain
-  dnsNames:                                  # additional certificate domains (optional)
+  commonName: example.com                    # Main certificate domain.
+  dnsNames:                                  # Additional domain certificates. Requires at least a duplicate commonName record.
   - www.example.com
   - admin.example.com
 ```
+
+{% alert level="info" %}
+An example of creating a self-signed certificate manually, without using the `cert-manager`, is available in [FAQ](../../deckhouse-faq.html#how-to-generate-a-self-signed-certificate).
+{% endalert %}

@@ -44,6 +44,8 @@
 }
 
 .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
     color: #bbb;
     font-size: 14px;
     font-weight: normal;
@@ -802,6 +804,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding-bottom: 10px;
     margin-left: 30px;
     position: relative;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul > li::before {
@@ -883,6 +889,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs ol li {
     padding-bottom: 10px;
     margin-left: 30px;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
@@ -1156,7 +1166,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
   
     .code__transfer {
-      position: relative;
       padding-right: 70px;
       padding-left: 48px;
     }
@@ -2101,7 +2110,7 @@ select#contact-select {
     .wrap {
       white-space: pre-wrap;
       overflow-x: auto;
-      word-wrap: break-word;
+      word-break: normal;
     }
 
     button.wrap__button {

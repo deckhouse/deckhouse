@@ -1,6 +1,6 @@
 ---
 title: "Модуль istio"
-description: "Описание модуля istio Deckhouse Kubernetes Platform, включая задачи, которые он решает, архитектуру, а также особенности настройки и управления."
+description: "Организация сети service mesh в кластере Deckhouse Kubernetes Platform"
 webIfaces:
 - name: istio
 ---

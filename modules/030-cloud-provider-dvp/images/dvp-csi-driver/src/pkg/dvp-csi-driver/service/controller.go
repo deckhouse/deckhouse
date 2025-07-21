@@ -137,13 +137,8 @@ func (c *ControllerService) CreateVolume(
 		return nil, msg
 	}
 
-	diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
-	if err != nil {
-		klog.Error(err.Error())
-		return nil, err
-	}
 	result.Volume.VolumeId = disk.Name
-	result.Volume.CapacityBytes = diskCapacity
+	result.Volume.CapacityBytes = requiredSize
 	return result, nil
 }
 

@@ -17,22 +17,23 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 	"bashible-apiserver/pkg/apiserver"
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
-
-	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -54,6 +55,8 @@ func NewBashibleServerOptions(out, errOut io.Writer) *BashibleServerOptions {
 		StdErr: errOut,
 	}
 	o.RecommendedOptions.Etcd = nil
+	o.RecommendedOptions.Features.EnableProfiling = true
+
 	return o
 }
 
@@ -131,9 +134,16 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	}
 	serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 
+	ctrlManager, err := apiserver.NewCtrlManager()
+	if err != nil {
+		return nil, fmt.Errorf("error creating ctr manager: %w", err)
+	}
+
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
+		ExtraConfig: apiserver.ExtraConfig{
+			CtrlManager: ctrlManager,
+		},
 	}
 	return config, nil
 }
@@ -158,5 +168,22 @@ func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
 		},
 	)
 
-	return server.GenericAPIServer.PrepareRun().Run(stopCh)
+	// make context
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		<-stopCh
+		cancel()
+	}()
+
+	// run ApiServer and CtrManager
+	g, errCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return server.CtrlManager.Start(errCtx)
+	})
+	g.Go(func() error {
+		return server.GenericAPIServer.PrepareRun().Run(errCtx.Done())
+	})
+	return g.Wait()
 }

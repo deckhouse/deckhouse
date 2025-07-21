@@ -9,8 +9,8 @@ entries:
         ru: О платформе
       folders:
         - title:
-            en: Platform editions
-            ru: Редакции платформы
+            en: Editions
+            ru: Редакции
           url: /stronghold/documentation/about/editions.html
         - title:
             en: Update channels
@@ -294,8 +294,8 @@ entries:
                 ru: 2FA / MFA
               folders:
               - title:
-                  en: Multifactor.ru
-                  ru: Мультифактор.ру
+                  en: MULTIFACTOR Ldap Adapter
+                  ru: MULTIFACTOR Ldap Adapter
                 url: /stronghold/documentation/user/auth/mfa/multifactor.html
               - title:
                   en: TOTP

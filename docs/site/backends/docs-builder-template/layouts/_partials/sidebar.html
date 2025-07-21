@@ -125,16 +125,18 @@
   {{- $moduleName := index $_pathElements 1 }}
   {{- $moduleChannel := index $_pathElements 2 }}
   {{- if or ( ne $moduleName $sidebarItem.module ) ( ne $moduleChannel $sidebarItem.channel ) ( eq .File.TranslationBaseName "README" ) }}{{ continue }}{{ end }}
-
+  {{- $pageTitle := "" }}
+  {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
+    {{- $pageTitle = T (printf "moduleLinkTitle%s" .File.TranslationBaseName) }}
+  {{- else if .LinkTitle }}
+    {{- $pageTitle = strings.TrimSpace .LinkTitle }}
+  {{- else if .Title }}
+    {{- $pageTitle = strings.TrimSpace .Title }}
+  {{- end }}
+  {{- if not $pageTitle }}{{ continue }}{{ end }}
        <li class="sidebar__submenu-item {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
           <a href="{{ if .IsPage }}{{ replaceRE "/readme.html$" "/" .RelPermalink }}{{ else }}#{{ end }}">
-          {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
-            {{- T (printf "moduleLinkTitle%s" .File.TranslationBaseName) }}
-          {{- else if .LinkTitle }}
-            {{- .LinkTitle }}
-          {{- else if .Title }}
-            {{- .Title }}
-          {{- end }}
+          {{- $pageTitle -}}
           </a>
       </li>
   {{- end }}

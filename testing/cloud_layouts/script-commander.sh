@@ -167,7 +167,7 @@ function prepare_environment() {
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
+    cluster_template_id="22cb1387-f57c-463d-a43d-b5f0f506272a"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -298,6 +298,7 @@ function wait_alerts_resolve() {
   "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
   "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
   "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+  "ModuleConfigObsoleteVersion" # This alert is informational and should not block e2e tests
   "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
   "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
   )

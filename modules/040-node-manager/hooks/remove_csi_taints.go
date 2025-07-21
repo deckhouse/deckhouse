@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -92,15 +96,20 @@ type removeCSINode struct {
 
 func handleRemoveCSI(input *go_hook.HookInput) error {
 	nodes := make(map[string]bool)
-	snap := input.Snapshots["nodes"]
-	for _, sn := range snap {
-		node := sn.(removeCSINode)
+	snaps := input.NewSnapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[removeCSINode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
+
 		nodes[node.Name] = node.NeedPatch
 	}
 
-	snap = input.Snapshots["csinodes"]
-	for _, sn := range snap {
-		csiName := sn.(string)
+	snaps = input.NewSnapshots.Get("csinodes")
+	for csiName, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
 
 		needPatch, ok := nodes[csiName]
 		if !ok {

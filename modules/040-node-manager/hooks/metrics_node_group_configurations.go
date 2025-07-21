@@ -24,6 +24,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // Count user defined NodeGroupConfigurations, aggregate them by NodeGroups and export as metric
@@ -58,17 +60,19 @@ func filterNGConfigurations(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func handleNodeGroupConfigurations(input *go_hook.HookInput) error {
-	snap := input.Snapshots["configurations"]
+	snaps := input.NewSnapshots.Get("configurations")
 
 	input.MetricsCollector.Expire("node_group_configurations")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		return nil
 	}
-
 	countByNodeGroup := make(map[string]uint)
-	for _, sn := range snap {
-		ngc := sn.(nodeGroupConfigurationMetric)
+	for ngc, err := range sdkobjectpatch.SnapshotIter[nodeGroupConfigurationMetric](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'configurations' snapshots: %w", err)
+		}
+
 		for _, ng := range ngc.NodeGroups {
 			countByNodeGroup[ng]++
 		}

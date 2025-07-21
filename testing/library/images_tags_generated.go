@@ -352,6 +352,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 		"nodeFeatureDiscovery":     "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nvidiaDcgm":               "imageHash-nodeManager-nvidiaDcgm",
+		"nvidiaDcgmExporter":       "imageHash-nodeManager-nvidiaDcgmExporter",
 		"nvidiaDevicePlugin":       "imageHash-nodeManager-nvidiaDevicePlugin",
 		"nvidiaMigManager129":      "imageHash-nodeManager-nvidiaMigManager129",
 		"nvidiaMigManager130":      "imageHash-nodeManager-nvidiaMigManager130",
@@ -451,6 +453,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
+		"yq4451":                          "imageHash-registrypackages-yq4451",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":            "imageHash-runtimeAuditEngine-falco",

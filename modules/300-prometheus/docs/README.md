@@ -3,6 +3,7 @@ title: "The Prometheus monitoring module"
 type:
   - instruction
 search: prometheus
+description: "Monitoring of the Deckhouse Kubernetes Platform cluster using Prometheus and Grafana."
 webIfaces:
 - name: grafana
 ---
