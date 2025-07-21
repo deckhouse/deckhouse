@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -168,10 +169,9 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
 	}
 
-	discoveryData.StorageProfiles = mergeZonedDataStores(
-		discoveryData.StorageProfiles,
-		zonesDatastores.ZonedDataStores,
-	)
+	discoveryData.Datacenter = zonesDatastores.Datacenter
+	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
+	discoveryData.ZonedDataStores = mergeZonedDataStores(discoveryData.ZonedDataStores, zonesDatastores.ZonedDataStores)
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -211,30 +211,50 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 	return diskList.Volumes, nil
 }
 
-func mergeZonedDataStores(storageProfiles []v1.ZonedDataStore, discoveredZonedDataStores []vsphere.ZonedDataStore) []v1.ZonedDataStore {
-	result := make([]v1.ZonedDataStore, 0, len(storageProfiles))
+func mergeZones(discoveredZones, newZones []string) []string {
+	zones := append(discoveredZones, newZones...)
+	resMap := make(map[string]struct{}, len(zones))
+	res := make([]string, 0, len(zones))
 
-	discoveredZonedDataStoresMap := make(map[string]v1.ZonedDataStore)
-	for i := range discoveredZonedDataStores {
-		discoveredZonedDataStoresMap[discoveredZonedDataStores[i].Name] = v1.ZonedDataStore{
-			Zones:         discoveredZonedDataStores[i].Zones,
-			InventoryPath: discoveredZonedDataStores[i].InventoryPath,
-			Name:          discoveredZonedDataStores[i].Name,
-			DatastoreType: discoveredZonedDataStores[i].DatastoreType,
-			DatastoreURL:  discoveredZonedDataStores[i].DatastoreURL,
-		}
-		result = append(result, discoveredZonedDataStoresMap[discoveredZonedDataStores[i].Name])
-	}
-
-	for i := range storageProfiles {
-		if _, ok := discoveredZonedDataStoresMap[storageProfiles[i].Name]; !ok {
-			result = append(result, storageProfiles[i])
+	for i := range zones {
+		if _, found := resMap[zones[i]]; !found {
+			resMap[zones[i]] = struct{}{}
+			res = append(res, zones[i])
 		}
 	}
 
-	sort.SliceStable(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
+	slices.Sort(res)
+	return res
+}
+
+func mergeZonedDataStores(discoveredZonedDataStores []v1.ZonedDataStore, newZonedDataStores []vsphere.ZonedDataStore) []v1.ZonedDataStore {
+	zonedDataStores := append(discoveredZonedDataStores, vsphereZonedDataStoresToV1(newZonedDataStores)...)
+	res := make([]v1.ZonedDataStore, 0, len(zonedDataStores))
+	resMap := make(map[string]struct{}, len(zonedDataStores))
+
+	for i := range zonedDataStores {
+		if _, found := resMap[zonedDataStores[i].Name]; !found {
+			resMap[zonedDataStores[i].Name] = struct{}{}
+			res = append(res, zonedDataStores[i])
+		}
+	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].Name < res[j].Name
 	})
+	return res
+}
 
+func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.ZonedDataStore {
+	result := make([]v1.ZonedDataStore, 0, len(in))
+	for i := range in {
+		result = append(result, v1.ZonedDataStore{
+			Zones:         in[i].Zones,
+			InventoryPath: in[i].InventoryPath,
+			Name:          in[i].Name,
+			DatastoreType: in[i].DatastoreType,
+			DatastoreURL:  in[i].DatastoreURL,
+		})
+	}
 	return result
 }

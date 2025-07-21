@@ -18,8 +18,11 @@ type VsphereCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	StorageProfiles []ZonedDataStore `json:"storageProfiles,omitempty"`
+	Datacenter      string           `json:"datacenter"`
+	Zones           []string         `json:"zones"`
+	ZonedDataStores []ZonedDataStore `json:"datastores"`
 }
+
 type ZonedDataStore struct {
 	Zones         []string `json:"zones"`
 	InventoryPath string   `json:"path"`
