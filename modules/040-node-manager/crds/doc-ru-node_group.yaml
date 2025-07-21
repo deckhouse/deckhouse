@@ -252,7 +252,7 @@ spec:
                   properties:
                     type:
                       description: |
-                        Тип container runtime. 
+                        Тип container runtime.
 
                         Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` Secret'а `d8-cluster-configuration` в пространстве имен `kube-system`), которая создается при установке.
                     containerd:
