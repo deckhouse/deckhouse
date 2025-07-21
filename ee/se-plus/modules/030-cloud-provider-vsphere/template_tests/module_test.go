@@ -109,6 +109,7 @@ const moduleValuesB = `
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
       providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
         zones: ["aaa", "bbb"]
         datacenter: X1
       providerClusterConfiguration:
@@ -124,10 +125,6 @@ const moduleValuesB = `
         vmFolderPath: dev/test
         externalNetworkNames: ["aaa", "bbb"]
         internalNetworkNames: ["ccc", "ddd"]
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
-        zones:
-        - default
 `
 
 const moduleValuesC = `
@@ -147,6 +144,7 @@ const moduleValuesC = `
       providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
           server: myhost
@@ -169,8 +167,6 @@ const moduleValuesC = `
           user: user
           password: password
           host: 1.2.3.4
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
 `
 
 const moduleValuesD = `
@@ -190,6 +186,7 @@ const moduleValuesD = `
       providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
           server: myhost
@@ -216,8 +213,6 @@ const moduleValuesD = `
           - name: class1
             ipPoolName: pool2
             tcpAppProfileName: profile1
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
