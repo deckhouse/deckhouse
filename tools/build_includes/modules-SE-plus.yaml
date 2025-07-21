@@ -104,6 +104,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/se-plus/modules/030-vsphere-csi
+  to: /deckhouse/modules/030-vsphere-csi
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   stageDependencies:
