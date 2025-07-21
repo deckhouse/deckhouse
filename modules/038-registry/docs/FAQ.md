@@ -3,61 +3,142 @@ title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to prepare Containerd V1?
+## How to prepare Containerd V1
 
-During the switch to `Direct` mode, the `Containerd V1` service will be restarted.  
-The `Containerd V1` authorization configuration will be updated to use Mirror Auth (`Containerd V2` uses this configuration by default).  
-When switching back to `Unmanaged` mode, the new authorization configuration will remain in place.
+When switching to the `Direct` mode, the `Containerd V1` service will be restarted.  
+The authorization configuration will be switched to Mirror Auth (this configuration is used by default in `Containerd V2`).  
+After switching back to `Unmanaged`, the updated authorization configuration will remain unchanged.
 
-Before switching, make sure that there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) on the nodes with `Containerd V1` located in the `/etc/containerd/conf.d` directory.
+Example directory structure for Mirror Auth configuration:
 
-If such configurations are present, they must be removed and replaced with new Mirror Auth configurations in the `/etc/containerd/registry.d` directory. Example:
+```bash
+tree /etc/containerd/registry.d
+.
+├── registry.d8-system.svc:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
+```
+
+Example hosts.toml configuration:
+
+```toml
+[host]
+  [host."https://registry.deckhouse.ru"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+    ca = ["/path/to/ca.crt"]
+    [host."https://registry.deckhouse.ru".auth]
+      username = "username"
+      password = "password"
+      # If providing auth string:
+      auth = "<base64>"
+```
+
+Before switching, make sure there are no  
+[custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth)  
+present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
+
+If such configurations exist:
 
 {% alert level="danger" %}
-- When deleting [custom Auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth), the containerd service will be restarted.
+- After deleting [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
 - New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: custom-registry
-spec:
-  bundles:
-    - '*'
-  content: |
-    #!/bin/bash
-    REGISTRY_ADDRESS="registry.io"
-    REGISTRY_SCHEME="https"
-    host_toml=$(cat <<EOF
-    [host]
-      [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}"]
-        capabilities = ["pull", "resolve"]
-        skip_verify = true
-        ca = ["/path/to/ca.crt"]
-        [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}".auth]
-          username = "username"
-          password = "password"
-          # If auth string:
-          auth = "<base64>"
-    EOF
-    )
-    mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
-    echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
-  nodeGroups:
-    - '*'
-  weight: 0
-```
+1. Create new Mirror Auth configurations in the `/etc/containerd/registry.d` directory. Example:
 
-To verify the new configuration is working correctly, use the command:
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: NodeGroupConfiguration
+    metadata:
+      name: custom-registry
+    spec:
+      bundles:
+        - '*'
+      content: |
+        #!/bin/bash
+        REGISTRY_ADDRESS="registry.io"
+        REGISTRY_SCHEME="https"
+        host_toml=$(cat <<EOF
+        [host]
+          [host."https://registry.deckhouse.ru"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+            ca = ["/path/to/ca.crt"]
+            [host."https://registry.deckhouse.ru".auth]
+              username = "username"
+              password = "password"
+              # If providing auth string:
+              auth = "<base64>"
+        EOF
+        )
+        mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
+        echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
+      nodeGroups:
+        - '*'
+      weight: 0
+    ```
 
-```bash
-# for https:
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
-# for http:
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
-```
+    To test the configuration:
+
+    ```bash
+    # HTTPS:
+    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
+
+    # HTTP:
+    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
+    ```
+
+2. Delete auth configurations from the `/etc/containerd/conf.d` directory.
+
+---
+
+## How to switch back to the previous Containerd V1 auth configuration
+
+{% alert level="danger" %}
+- This switch is only possible from the `Unmanaged` mode.
+- When switching to the legacy `Containerd V1` auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.
+- [Custom auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
+{% endalert %}
+
+1. Switch the registry mode to `Unmanaged`.
+2. Check the switching status using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
+
+    ```yaml
+    ...
+    - lastTransitionTime: "..."
+      message: ""
+      reason: ""
+      status: "True"
+      type: Ready
+    hash: ..
+    mode: Unmanaged
+    target_mode: Unmanaged
+    ```
+
+3. Delete the secret registry-bashible-config:
+
+    ```bash
+    kubectl -n d8-system delete secret registry-bashible-config
+    ```
+
+4. After deleting the secret, wait for the auth configuration to switch back to the legacy one in `Containerd V1`.  
+   You can use [this guide](./faq.html#how-to-check-the-registry-mode-switch-status) to track the switch. Example output:
+
+    ```yaml
+    ...
+    - lastTransitionTime: "..."
+      message: ""
+      reason: ""
+      status: "True"
+      type: Ready
+    hash: ..
+    mode: Unmanaged
+    target_mode: Unmanaged
+    ```
 
 ## How to check the registry mode switch status?
 

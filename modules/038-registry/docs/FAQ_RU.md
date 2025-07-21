@@ -3,61 +3,142 @@ title: "Модуль registry: FAQ"
 description: ""
 ---
 
-## Как подготовить Containerd V1?
+## Как подготовить Containerd V1
 
-Во время переключения на `Direct` режим, сервис `Containerd V1` будет перезапущен.
-Конфигурация авторизации `Containerd V1` будет изменена на Mirror Auth (`Containerd V2` использует данную конфигурацию по умолчанию).
-При переключении обратно на `Unmanaged` режим, останется новая конфигурация авторизации.
+При переключении на режим `Direct`, сервис `Containerd V1` будет перезапущен.  
+Конфигурация авторизации будет изменена на Mirror Auth (данная конфигурация используется по умолчанию в `Containerd V2`).  
+После возврата в режим `Unmanaged`, обновлённая конфигурация авторизации останется без изменений.
 
-Перед переключением необходимо убедиться, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
-
-Если конфигурации присутствуют, их необходимо удалить и создать новые конфигурации авторизации в директории `/etc/containerd/registry.d`. Пример:
-
-{% alert level="danger" %}
-- При удалении [пользовательских конфигураций Auth](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) сервис containerd будет перезапущен.
-- Новые Mirror Auth конфигурации, добавленные в `/etc/containerd/registry.d`, начнут применяться только после переключения на `Direct` режим.
-{% endalert %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: custom-registry
-spec:
-  bundles:
-    - '*'
-  content: |
-    #!/bin/bash
-    REGISTRY_ADDRESS="registry.io"
-    REGISTRY_SCHEME="https"
-    host_toml=$(cat <<EOF
-    [host]
-      [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}"]
-        capabilities = ["pull", "resolve"]
-        skip_verify = true
-        ca = ["/path/to/ca.crt"]
-        [host."${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}".auth]
-          username = "username"
-          password = "password"
-          # If auth string:
-          auth = "<base64>"
-    EOF
-    )
-    mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
-    echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
-  nodeGroups:
-    - '*'
-  weight: 0
-```
-
-Для проверки работоспособности новой конфигурации воспользуйтесь командой:
+Пример структуры Mirror Auth-конфигурации:
 
 ```bash
-# для https:
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
-# для http:
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
+tree /etc/containerd/registry.d
+.
+├── registry.d8-system.svc:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
 ```
+
+Пример конфигурации файла `hosts.toml`:
+
+```toml
+[host]
+  [host."https://registry.deckhouse.ru"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+    ca = ["/path/to/ca.crt"]
+    [host."https://registry.deckhouse.ru".auth]
+      username = "username"
+      password = "password"
+      # If providing auth string:
+      auth = "<base64>"
+```
+
+Перед переключением убедитесь, что на узлах с `Containerd V1` отсутствуют  
+[пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry),  
+расположенные в директории `/etc/containerd/conf.d`.
+
+Если такие конфигурации существуют:
+
+{% alert level="danger" %}
+- После удаления [пользовательских конфигураций авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) из директории `/etc/containerd/conf.d`, сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
+- Новые Mirror Auth-конфигурации, добавленные в `/etc/containerd/registry.d`, вступят в силу только после перехода в режим `Direct`.
+{% endalert %}
+
+1. Создайте новые Mirror Auth-конфигурации в директории `/etc/containerd/registry.d`. Пример:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: NodeGroupConfiguration
+    metadata:
+      name: custom-registry
+    spec:
+      bundles:
+        - '*'
+      content: |
+        #!/bin/bash
+        REGISTRY_ADDRESS="registry.io"
+        REGISTRY_SCHEME="https"
+        host_toml=$(cat <<EOF
+        [host]
+          [host."https://registry.deckhouse.ru"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+            ca = ["/path/to/ca.crt"]
+            [host."https://registry.deckhouse.ru".auth]
+              username = "username"
+              password = "password"
+              # If providing auth string:
+              auth = "<base64>"
+        EOF
+        )
+        mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
+        echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
+      nodeGroups:
+        - '*'
+      weight: 0
+    ```
+
+    Для проверки новой конфигурации выполните:
+
+    ```bash
+    # HTTPS:
+    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
+
+    # HTTP:
+    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
+    ```
+
+2. Удалите auth-конфигурации из директории `/etc/containerd/conf.d`.
+
+---
+
+## Как переключиться на предыдущую конфигурацию авторизации Containerd V1
+
+{% alert level="danger" %}
+- Переключение возможно только в режиме `Unmanaged`.
+- При переключении на старую конфигурацию авторизации `Containerd V1`, пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
+- Добавить [пользовательские auth-конфигурации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) для старой схемы авторизации (в каталог `/etc/containerd/conf.d`) можно только после переключения на неё.
+{% endalert %}
+
+1. Перейдите в режим `Unmanaged`.
+2. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+
+    ```yaml
+    ...
+    - lastTransitionTime: "..."
+      message: ""
+      reason: ""
+      status: "True"
+      type: Ready
+    hash: ..
+    mode: Unmanaged
+    target_mode: Unmanaged
+    ```
+
+3. Удалите секрет `registry-bashible-config`:
+
+    ```bash
+    kubectl -n d8-system delete secret registry-bashible-config
+    ```
+
+4. После удаления дождитесь завершения переключения на старую конфигурацию авторизации в `Containerd V1`.  
+   Для отслеживания используйте [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+
+    ```yaml
+    ...
+    - lastTransitionTime: "..."
+      message: ""
+      reason: ""
+      status: "True"
+      type: Ready
+    hash: ..
+    mode: Unmanaged
+    target_mode: Unmanaged
+    ```
 
 ## Как посмотреть статус переключения режима registry?
 

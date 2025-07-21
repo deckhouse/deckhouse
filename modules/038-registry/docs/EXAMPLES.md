@@ -110,3 +110,5 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
     mode: Unmanaged
     target_mode: Unmanaged
     ```
+
+4. If you need to switch back to the previous `Containerd V1` auth configuration, refer to the [instruction](./faq.html#how-to-switch-back-to-the-previous-containerd-v1-auth-configuration).

@@ -110,3 +110,5 @@ description: ""
     mode: Unmanaged
     target_mode: Unmanaged
     ```
+
+4. При необходимости переключения на предыдущую auth конфигурацию `Containerd V1`, ознакомтесь с [инстукрцией](./faq.html#как-переключиться-на-предыдущую-конфигурацию-авторизации-containerd-v1)
