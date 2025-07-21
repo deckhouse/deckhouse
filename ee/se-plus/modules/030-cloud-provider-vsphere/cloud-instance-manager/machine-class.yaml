@@ -12,13 +12,7 @@ spec:
   rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | default 20 }}
   template: {{ .nodeGroup.instanceClass.template | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.template | quote }}
   virtualMachineFolder: {{ .Values.nodeManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
-  {{- if .nodeGroup.instanceClass.mainNetwork }}
   mainNetwork: {{ .nodeGroup.instanceClass.mainNetwork | quote }}
-  {{- else if .Values.nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork }}
-  mainNetwork: {{ .Values.nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork | quote }}
-  {{- else }}
-  {{ cat "No mainNetwork provided neither in cloud provider configuration nor in VsphereInstanceClass " .nodeGroup.cloudInstances.classReference.name | fail }}
-  {{- end }}
 {{- if .nodeGroup.instanceClass.additionalNetworks }}
   additionalNetworks:
   {{- range .nodeGroup.instanceClass.additionalNetworks }}
