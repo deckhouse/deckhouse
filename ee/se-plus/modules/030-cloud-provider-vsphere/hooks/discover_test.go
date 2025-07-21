@@ -134,8 +134,8 @@ cloudProviderVsphere:
 
 		It("Should discover all volumeTypes and no default", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.vsphereDiscoveryData.datacenter").String()).To(Equal(`DCTEST`))
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.vsphereDiscoveryData.zones").String()).To(MatchJSON(`["ZONE-TEST"]`))
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.datacenter").String()).To(Equal(`DCTEST`))
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["ZONE-TEST"]`))
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
   {

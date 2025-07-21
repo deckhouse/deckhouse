@@ -43,7 +43,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", providerDiscoveryData.Object)
+	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
 })

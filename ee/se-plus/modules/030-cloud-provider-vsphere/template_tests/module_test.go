@@ -70,7 +70,7 @@ const moduleValuesA = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         datacenter: X1
         zones: ["aaa", "bbb"]
       providerClusterConfiguration:
@@ -108,7 +108,7 @@ const moduleValuesB = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
       providerClusterConfiguration:
@@ -144,7 +144,7 @@ const moduleValuesC = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
       providerClusterConfiguration:
@@ -187,7 +187,7 @@ const moduleValuesD = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
       providerClusterConfiguration:
