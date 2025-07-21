@@ -1,4 +1,4 @@
 ---
-title: "Architecture of monitoring in the Deckhouse Kubernetes Platform"
+title: "Overview"
 permalink: en/user/monitoring/
 ---
