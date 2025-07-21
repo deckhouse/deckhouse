@@ -10,7 +10,6 @@ import (
 	"errors"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -44,14 +43,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	var discoveryData v1.VsphereCloudDiscoveryData
-	if providerDiscoveryData != nil {
-		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
-		if err != nil {
-			return err
-		}
-	}
-	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
 })
