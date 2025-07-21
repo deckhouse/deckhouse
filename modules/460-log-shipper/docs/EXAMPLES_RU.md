@@ -764,7 +764,7 @@ spec:
   transformations:
   - action: ParseMessage
     parseMessage:
-      sourseFormat: JSON
+      sourceFormat: JSON
   - action: ParseMessage
     parseMessage:
       sourceFormat: Klog
@@ -791,7 +791,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
   }
 }
 {... "message": {
-  "level" : "{ "severity": "info" }",
+  "level" : "{ \"severity\": \"info\" }",
   "msg" : "fetching.module.release"
   }
 }
@@ -1018,6 +1018,10 @@ spec:
 
 Трансформация `ReplaceValue` позволяет заменять чувствительные данные в логах с помощью регулярных выражений. Это критически важно для обеспечения безопасности данных и соответствия требованиям при хранении и анализе логов.
 
+> Перед применением трансформации `ReplaceValue` к полю `message` или его вложенным полям
+> необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
+> Если `ReplaceValue` применяется к строковому полю `message`, трансформация должна выполняться перед `ParseMessage`.
+
 ### Базовое скрытие паролей и токенов
 
 ```yaml
@@ -1099,7 +1103,13 @@ spec:
     endpoint: http://elasticsearch.logging:9200
     index: secure-logs-%F
   transformations:
-  # Скрываем чувствительные финансовые данные
+  # Сначала парсим JSON логи
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 3
+  # Скрываем чувствительные финансовые данные в строковых сообщениях (до парсинга)
   - action: ReplaceValue
     replaceValue:
       label: .message
@@ -1113,27 +1123,19 @@ spec:
         # Номера социального страхования
         - source: '\b\d{3}-\d{2}-\d{4}\b'
           target: '***-**-****'
-  # Сначала парсим JSON логи
-  - action: ParseMessage
-    parseMessage:
-      sourceFormat: JSON
-      json:
-        depth: 3
-        # CVV коды
+  # Скрываем чувствительные данные в структурированных объектах (после парсинга)
   - action: ReplaceValue
     replaceValue:
       label: .message.cvv
       patterns:
         - source: '\d{3,4}'
           target: '***'
-        # Номера банковских счетов
   - action: ReplaceValue
     replaceValue:
       label: .message.account
       patterns:
         - source: '\d{8,17}'
           target: '***СКРЫТО***'
-        # Email адреса в чувствительных контекстах
   - action: ReplaceValue
     replaceValue:
       label: .message.email

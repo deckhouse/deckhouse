@@ -767,7 +767,7 @@ spec:
   transformations:
   - action: ParseMessage
     parseMessage:
-      sourseFormat: JSON
+      sourceFormat: JSON
   - action: ParseMessage
     parseMessage:
       sourceFormat: Klog
@@ -794,7 +794,7 @@ Transformed result:
   }
 }
 {... "message": {
-  "level" : "{ "severity": "info" }",
+  "level" : "{ \"severity\": \"info\" }",
   "msg" : "fetching.module.release"
   }
 }
@@ -1020,6 +1020,10 @@ More detailed description of the parameters is available in the [ClusterLogDesti
 ## Log Data Sanitization with ReplaceValue
 
 The `ReplaceValue` transformation allows you to replace sensitive data in logs using regular expressions. This is crucial for maintaining data security and compliance when storing and analyzing logs.
+
+> To apply the `ReplaceValue` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+> If `ReplaceValue` is applied to a string `message` field, the transformation should be executed before `ParseMessage`.
 
 ### Basic password and token masking
 
