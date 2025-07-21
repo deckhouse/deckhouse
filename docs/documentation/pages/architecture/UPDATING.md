@@ -1,5 +1,5 @@
 ---
-title: Release channels
+title: Updating
 permalink: en/architecture/updating.html
 ---
 
@@ -44,7 +44,7 @@ When switching to a more stable channel (for example, from `Alpha` to `EarlyAcce
 1. DKP fetches release data from the `EarlyAccess` channel.
 1. It compares this data with existing DeckhouseRelease custom resources in the cluster.
    - If the cluster contains newer releases with `Pending` status (not yet applied),
-     they will be removed, since they haven’t been published to the new channel.
+     they will be **removed**, since they haven’t been published to the new channel.
    - If newer releases have already been marked as `Deployed`(installed successfully),
      the switch won’t take effect immediately.
      DKP will remain on the current release until a newer version becomes available in the `EarlyAccess` channel.
@@ -65,7 +65,7 @@ they do not affect the operation of applications running in the cluster.
 In most cases, no additional maintenance window is required.
 
 DKP supports the latest five minor Kubernetes versions.
-A full list of supported versions is available in the [Reference section](TODO).
+A full list of supported versions is available in the [corresponding table](../supported_versions.html#kubernetes).
 
 ### Patch version updates
 
@@ -78,24 +78,24 @@ The process is fully automated by the platform.
 ### Automatic minor version updates
 
 To automatically update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify [`kubernetesVersion: Automatic`](../reference/cr/clusterconfiguration/#clusterconfiguration-kubernetesversion) in the ClusterConfiguration resource.
+specify [`kubernetesVersion: Automatic`](../reference/cr.html#clusterconfiguration-kubernetesversion) in the ClusterConfiguration resource.
 DKP will select the default Kubernetes version at the time of the update.
 
 ### Manual minor version updates
 
 To manually update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify the target version in the [`kubernetesVersion`](../reference/cr/clusterconfiguration/#clusterconfiguration-kubernetesversion) parameter of the ClusterConfiguration resource.
+specify the target version in the [`kubernetesVersion`](../reference/cr.html#clusterconfiguration-kubernetesversion) parameter of the ClusterConfiguration resource.
 For example, `kubernetesVersion: 1.30`.
 
 ```shell
-sudo -i d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.
 To track the upgrade progress, check the Kubernetes version in the output of the node description command:
 
 ```shell
-sudo -i d8 k get nodes
+d8 k get nodes
 ```
 
 ### Process of control plane component updates
@@ -121,7 +121,7 @@ After the control plane has been updated, node updates begin:
 1. The Bashible API Server updates the kubelet version in the scripts for all NodeGroups.
 1. Nodes in different NodeGroups are updated in parallel,
    but within each NodeGroup, they are updated sequentially (one by one).
-1. Each NodeGroup’s update settings are taken into account:
+1. Each NodeGroup's update settings are taken into account:
    - Manual or automatic update mode.
    - Update windows.
    - Whether Pods should be evicted before updating, etc.
@@ -131,7 +131,7 @@ After the control plane has been updated, node updates begin:
 
 ## Retrieving the changelog
 
-Each new version of DKP includes a *changelog* — a detailed list of changes,
+Each new version of DKP includes a *changelog*, which is a detailed list of changes,
 including new features, bug fixes, component updates, and important compatibility notes.
 
 You can find the changelog for a specific DKP version in the [Deckhouse release list on GitHub](https://github.com/deckhouse/deckhouse/releases).
@@ -156,8 +156,8 @@ All major changes are listed in the **zero patch release** (for example, `v1.68.
 Before updating to a new minor version (for example, `v1.68`):
 
 1. Review the changelog for the corresponding version.
-2. Check if the changes affect your infrastructure.
-3. Adjust the cluster configuration if needed.
+1. Check if the changes affect your infrastructure.
+1. Adjust the cluster configuration if needed.
 
 ## Checking dependencies before update
 
