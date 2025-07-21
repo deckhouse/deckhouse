@@ -426,7 +426,14 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 			// Put instanceClass.spec into values.
 			ngForValues["instanceClass"] = instanceClassSpec
-
+			if specMap, ok := instanceClassSpec.(map[string]interface{}); ok {
+				if _, exists := specMap["mainNetwork"]; !exists {
+					if val, ok := input.Values.GetOk("nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork"); ok {
+						specMap["mainNetwork"] = val.String()
+					}
+				}
+				ngForValues["instanceClass"] = specMap
+			}
 			var zones []string
 			if nodeGroup.Spec.CloudInstances.Zones != nil {
 				zones = nodeGroup.Spec.CloudInstances.Zones
