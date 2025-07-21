@@ -26,6 +26,9 @@ When publishing a new version of the module to the [update channel](../../deckho
 During its life cycle, a module may be at any of the following stages:
 
 - **Experimental** refers t to an experimental version. The module functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+  > **Important**. Modules at the `Experimental` stage are not installed by default.
+  > To install them, set set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
+  > This flag is set via the `DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES` environment variable.
 - **Preview** refers to a preliminary version. The module functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
 - **General Availability (GA)** refers to a generally available version. The module is ready to be used in production environments.
 - **Deprecated** refers to a module version that has been deprecated.
@@ -85,7 +88,6 @@ Depending on the stage of the module lifecycle and the release channel from whic
 </table>
 
 - **Experiments** — Functionality checks, experiments, and testing;
-**Important**: Modules at the `Experimental` stage are not installed by default. To install them, the `allowExperimentalModules` flag must be set to true. This flag is set via the `DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES` environment variable.
 - **Beta testing** — Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production;
 - **Limited use** — Development environments, pilot projects, low-impact production environments;
 - **Production use** — Production environments and those equivalent to them;
