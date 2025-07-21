@@ -474,7 +474,6 @@ import:
   before: install
 shell:
   setup:
-  # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx # ???
   - /tmp/apps/chmod 1777 /tmp
   - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
   - /tmp/apps/mkdir -p /var/log
