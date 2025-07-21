@@ -3,3 +3,4 @@ critical: true
 subsystems:
   - infrastructure
 namespace: d8-local-path-provisioner
+weight: 31
