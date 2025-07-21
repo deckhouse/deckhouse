@@ -3,7 +3,7 @@ title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to prepare Containerd V1
+## How to prepare Containerd V1?
 
 When switching to the `Direct` mode, the `Containerd V1` service will be restarted.  
 The authorization configuration will be switched to Mirror Auth (this configuration is used by default in `Containerd V2`).  
@@ -96,7 +96,7 @@ If such configurations exist:
 
 ---
 
-## How to switch back to the previous Containerd V1 auth configuration
+## How to switch back to the previous Containerd V1 auth configuration?
 
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
