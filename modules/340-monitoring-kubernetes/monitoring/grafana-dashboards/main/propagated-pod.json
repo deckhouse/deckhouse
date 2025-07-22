@@ -891,7 +891,7 @@
           "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "OOM killed",
+                        "legendFormat": "OOM killed - {{container_name}}",
           "refId": "T"
         },
         {
@@ -1347,7 +1347,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (container) (increase(oom_kills:normalized{namespace=\"$namespace\", pod=\"$pod\"}[$__rate_interval]))",
+                        "expr": "sum by (container_name) (increase(oom_kills_total{namespace=\"$namespace\", pod_name=\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
