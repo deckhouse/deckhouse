@@ -1,6 +1,6 @@
 ---
 title: "The log-shipper module"
-description: Collecting logs in the Kubernetes cluster using the log-shipper Deckhouse module. Log sending topologies, log filtering, and log metadata enrichment.
+description: Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.
 ---
 
 The module deploys log collector agents on nodes in the cluster.

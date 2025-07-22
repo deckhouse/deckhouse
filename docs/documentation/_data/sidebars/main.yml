@@ -1042,30 +1042,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/service-with-healthchecks/examples.html
-            - title:
-                en: static-routing-manager
-                ru: static-routing-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/static-routing-manager/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/static-routing-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/static-routing-manager/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/static-routing-manager/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг

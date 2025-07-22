@@ -127,6 +127,9 @@ function prepare_environment() {
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
+  FLANT_AUTH_B64=$(echo -n "$FLANT_REGISTRY_USER:$FLANT_REGISTRY_PASSWORD" | base64 -w0)
+  FLANT_CONFIG_JSON="{\"auths\":{\"$FLANT_REGISTRY_HOST\":{\"username\":\"$FLANT_REGISTRY_USER\",\"password\":\"$FLANT_REGISTRY_PASSWORD\",\"auth\":\"$FLANT_AUTH_B64\"}}}"
+  FLANT_DOCKERCFG_B64=$(echo "$FLANT_CONFIG_JSON" | base64 -w0)
   case "$PROVIDER" in
   "Yandex.Cloud")
     CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
@@ -145,7 +148,8 @@ function prepare_environment() {
       \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
     }"
     ;;
 
@@ -161,13 +165,14 @@ function prepare_environment() {
       \"serviceAccountJson\": \"${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
     }"
     ;;
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
+    cluster_template_id="22cb1387-f57c-463d-a43d-b5f0f506272a"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -178,7 +183,8 @@ function prepare_environment() {
       \"awsSecretKey\": \"${LAYOUT_AWS_SECRET_ACCESS_KEY}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
     }"
     ;;
 
@@ -197,7 +203,8 @@ function prepare_environment() {
       \"tenantId\": \"${LAYOUT_AZURE_TENANT_ID}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
     }"
     ;;
 
@@ -298,6 +305,7 @@ function wait_alerts_resolve() {
   "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
   "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
   "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+  "ModuleConfigObsoleteVersion" # This alert is informational and should not block e2e tests
   "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
   "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
   )
@@ -587,11 +595,6 @@ function run-test() {
   wait_upmeter_green || return $?
 
   check_resources_state_results || return $?
-
-  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
-    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
-    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
-  fi
 
   wait_alerts_resolve || return $?
 
