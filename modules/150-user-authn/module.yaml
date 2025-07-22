@@ -4,3 +4,4 @@ stage: "General Availability"
 subsystems:
   - security
 namespace: d8-user-authn
+weight: 150

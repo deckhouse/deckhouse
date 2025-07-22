@@ -125,3 +125,7 @@ linters-settings:
   module:
     conversions:
       disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.bundles.items"
