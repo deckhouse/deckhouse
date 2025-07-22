@@ -147,7 +147,7 @@ shell:
   - rm -rf /usr/local
   - /build.sh
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-abseil-dev
+image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
 from: dev-registry.deckhouse.io/base_images@sha256:ba05eb87026e03684f98cd53356dc269cea28ce6938ee67d1fc9e2e5a2686e3d
 final: false
 ---
@@ -201,7 +201,7 @@ import:
   add: /d8-curl
   to: /chroot/usr/bin/curl
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-abseil-dev
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
   add: /usr/lib
   to: /chroot/lib64
   includePaths:
