@@ -7,7 +7,7 @@
 021-cni-cilium/                 @apolovov
 025-static-routing-manager/     @apolovov
 030-cloud-provider-*/           @aleksey-su
-031-local-path-provisioner/     @AleksZimin
+031-local-path-provisioner/     @AleksZimin @duckhawk
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
 036-kube-proxy/                 @apolovov
@@ -56,7 +56,7 @@
 bashible-apiserver/             @name212 @sprait
 candi/                          @name212 @sprait
 cloud-controller-manager/       @aleksey-su
-csi/                            @AleksZimin
+csi/                            @AleksZimin @duckhawk
 deckhouse-controller/           @yalosev @ldmonster
 dhctl/                          @name212 @sprait
 docs/                           @z9r5
