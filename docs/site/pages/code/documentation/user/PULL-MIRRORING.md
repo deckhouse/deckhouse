@@ -4,7 +4,6 @@ menuTitle: Pull Mirroring
 force_searchable: true
 description: Configuring pull mirroring in a repository
 permalink: en/code/documentation/user/pull-mirroring.html
-lang: en
 weight: 50
 ---
 
