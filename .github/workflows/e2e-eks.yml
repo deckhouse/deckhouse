@@ -4292,6 +4292,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -4519,6 +4520,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -4552,6 +4554,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -4595,11 +4598,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4613,9 +4614,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -4640,11 +4638,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -4731,6 +4727,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -4755,11 +4752,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4864,6 +4859,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -5091,6 +5087,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -5124,6 +5121,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5167,11 +5165,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5185,9 +5181,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -5212,11 +5205,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -5303,6 +5294,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -5327,11 +5319,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5436,6 +5426,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -5663,6 +5654,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -5696,6 +5688,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5739,11 +5732,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5757,9 +5748,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -5784,11 +5772,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -5875,6 +5861,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -5899,11 +5886,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6008,6 +5993,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -6235,6 +6221,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -6268,6 +6255,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -6311,11 +6299,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6329,9 +6315,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -6356,11 +6339,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -6447,6 +6428,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -6471,11 +6453,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6580,6 +6560,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -6807,6 +6788,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -6840,6 +6822,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -6883,11 +6866,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6901,9 +6882,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -6928,11 +6906,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -7019,6 +6995,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -7043,11 +7020,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -7152,6 +7127,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -7379,6 +7355,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -7412,6 +7389,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -7455,11 +7433,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -7473,9 +7449,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -7500,11 +7473,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -7591,6 +7562,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -7615,11 +7587,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -7724,6 +7694,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -7951,6 +7922,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -7984,6 +7956,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -8027,11 +8000,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -8045,9 +8016,6 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -8072,11 +8040,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -8163,6 +8129,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -8187,11 +8154,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \

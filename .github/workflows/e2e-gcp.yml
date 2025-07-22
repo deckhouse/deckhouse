@@ -2941,6 +2941,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -3092,6 +3093,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -3123,6 +3125,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3138,9 +3141,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3222,6 +3222,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3234,9 +3235,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3320,6 +3318,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -3471,6 +3470,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -3502,6 +3502,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3517,9 +3518,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3601,6 +3599,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3613,9 +3612,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3699,6 +3695,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -3850,6 +3847,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -3881,6 +3879,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3896,9 +3895,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3980,6 +3976,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3992,9 +3989,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4078,6 +4072,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -4229,6 +4224,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -4260,6 +4256,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -4275,9 +4272,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4359,6 +4353,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -4371,9 +4366,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4457,6 +4449,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -4608,6 +4601,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -4639,6 +4633,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -4654,9 +4649,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4738,6 +4730,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -4750,9 +4743,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4836,6 +4826,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -4987,6 +4978,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -5018,6 +5010,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5033,9 +5026,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5117,6 +5107,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -5129,9 +5120,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5215,6 +5203,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: GCP
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
@@ -5366,6 +5355,7 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: GCP
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
@@ -5397,6 +5387,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5412,9 +5403,6 @@ jobs:
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5496,6 +5484,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -5508,9 +5497,6 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
