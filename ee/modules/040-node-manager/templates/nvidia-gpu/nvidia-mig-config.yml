@@ -978,7 +978,7 @@ data:
     exit_success
   prestop.sh: |
     #!/usr/bin/bash
-    while ! stat /processing > /dev/null 2>&1; do
+    while stat /processing > /dev/null 2>&1; do
       sleep 1
     done
     kubectl uncordon "${NODE_NAME}"
