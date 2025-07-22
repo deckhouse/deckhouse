@@ -18,6 +18,9 @@ package orchestrator
 
 import (
 	"crypto/x509"
+	"fmt"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
@@ -59,4 +62,19 @@ type Inputs struct {
 type Values struct {
 	Hash  string `json:"hash,omitempty"`
 	State State  `json:"state,omitempty"`
+}
+
+func (p Params) Validate() error {
+	switch p.Mode {
+	case registry_const.ModeUnmanaged:
+		return nil
+	case registry_const.ModeDirect:
+		return validation.ValidateStruct(&p,
+			validation.Field(&p.ImagesRepo, validation.Required),
+			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),
+			validation.Field(&p.UserName, validation.When(p.Password != "", validation.Required)),
+			validation.Field(&p.Password, validation.When(p.UserName != "", validation.Required)),
+		)
+	}
+	return fmt.Errorf("Unknown registry mode")
 }

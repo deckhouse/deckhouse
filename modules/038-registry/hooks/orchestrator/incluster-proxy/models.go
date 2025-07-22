@@ -167,7 +167,7 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 		Password:       params.Upstream.Password,
 		HashedPassword: cfg.Upstream.User.HashedPassword,
 	}
-	if err := processUserPasswordHash(log, &upstreamUser); err != nil {
+	if _, err := processUserPasswordHash(log, &upstreamUser); err != nil {
 		return fmt.Errorf("cannot process Upstream User password hash: %w", err)
 	}
 
