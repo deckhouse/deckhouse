@@ -1520,13 +1520,14 @@ spec:
                         - Exclusive
                     mig:
                       type: object
+                      required: [partedConfig]
                       properties:
                         partedConfig:
                           type: string
                           pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          x-examples: "all-1g.5gb"
                           description: |
                             Selected parted-config for MIG.
-                          x-doc-default: all-1g.5gb
                     timeSlicing:
                       description: |
                         Time-slicing parameters.
@@ -1548,7 +1549,8 @@ spec:
                         sharing:
                           enum: [TimeSlicing]
                         timeSlicing: {}
-                    - properties:
+                    - required: [mig]
+                      properties:
                         sharing:
                           enum: [MIG]
                         mig: {}
