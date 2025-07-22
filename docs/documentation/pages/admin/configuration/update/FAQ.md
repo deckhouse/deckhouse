@@ -6,10 +6,10 @@ permalink: en/admin/configuration/update/faq.html
 ## How can I apply an update immediately, bypassing update windows, canary releases, and manual update mode?
 
 To apply a Deckhouse Kubernetes Platform (DKP) update immediately,
-add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](../../../reference/cr/deckhouserelease) resource.
+add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource.
 
 {% alert level="warning" %}
-This will bypass update windows, [canary release settings](../../../user/canary-deployment.html), and the [manual cluster update mode](configuration.html#manual-update-approval).
+This will bypass update windows, [canary release settings](../../../user/network/canary-deployment.html), and the [manual cluster update mode](configuration.html#manual-update-approval).
 The update will be applied immediately after the annotation is set.
 {% endalert %}
 
@@ -87,7 +87,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- Collect debug information and contact DKP technical support.
+- Collect debug information and contact [DKP technical support](https://deckhouse.ru/tech-support/).
 - Ask for help from the [community](https://deckhouse.io/community/).
 
 ## How can I know when a new DKP version is available for the cluster?
@@ -95,7 +95,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 As soon as a new version appears on the configured release channel:
 
 - The `DeckhouseReleaseIsWaitingManualApproval` alert will appear if the cluster is in [manual update mode](configuration.html#manual-update-approval).
-- A new [DeckhouseRelease](../../../reference/cr/deckhouserelease) custom resource will be created.
+- A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) custom resource will be created.
   To see the list of releases, run `d8 k get deckhousereleases`.
   If the new version is in `Pending` state, it means it hasn’t been installed yet. Possible reasons:
   - [Manual update mode](configuration.html#manual-update-approval) is enabled.
@@ -103,17 +103,17 @@ As soon as a new version appears on the configured release channel:
   - Automatic update mode is enabled and update windows are not scheduled,
     but the update is delayed by a random period to reduce load on the container image registry.
     The `status.message` field of the DeckhouseRelease resource will show a corresponding message.
-  - The [`update.notification.minimalNotificationTime`](../../../reference/mc/deckhouse/#parameters-update-notification-minimalnotificationtime) parameter is set, and the delay period hasn’t elapsed.
+  - The [`update.notification.minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the delay period hasn’t elapsed.
 
 ## How can I receive information about upcoming updates in advance?
 
 You can get information about upcoming minor DKP version updates on the release channel in one of the following ways:
 
 - Enable [manual update mode](configuration.html#manual-update-approval).
-  A new [DeckhouseRelease](../../../reference/cr/deckhouserelease) resource and the DeckhouseReleaseIsWaitingManualApproval alert will appear when a new version is available.
-- Enable [automatic update mode](configuration.html#automatic-update-mode) and set a delay using the [`minimalNotificationTime`](../../../reference/mc/deckhouse/#parameters-update-notification-minimalnotificationtime) parameter.
-  A new [DeckhouseRelease](../../../reference/cr/deckhouserelease) resource will appear when a new version is available.
-  If you also set a webhook URL in the [`update.notification.webhook`](../../../reference/mc/deckhouse/#parameters-update-notification-webhook) parameter,
+  A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource and the DeckhouseReleaseIsWaitingManualApproval alert will appear when a new version is available.
+- Enable [automatic update mode](configuration.html#automatic-update-mode) and set a delay using the [`minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter.
+  A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource will appear when a new version is available.
+  If you also set a webhook URL in the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter,
   a notification will be sent about the upcoming update.
 
 ## How can I check DKP versions available in different release channels?

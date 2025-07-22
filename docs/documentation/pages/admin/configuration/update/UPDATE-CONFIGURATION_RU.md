@@ -6,7 +6,7 @@ lang: ru
 
 Deckhouse Kubernetes Platform (DKP) поддерживает гибкий механизм обновлений. Вы можете выбрать [канал обновлений](/products/kubernetes-platform/documentation/v1/architecture/updating.html#каналы-обновлений) и настроить режим установки новых версий. Каналы обновлений помогают сбалансировать скорость получения новых функций и стабильность.
 
-Настроив режим обновлений, можно включить автоматическую установку новых версий или управлять ею вручную, а также задать окна обновлений – допустимые интервалы времени для выполнения обновлений. Такая настройка исключает установку в неподходящее время и обеспечивает контроль над переходом на новые релизы.
+Настроив режим обновлений, можно включить автоматическую установку новых версий или управлять ею вручную, а также задать окна обновлений — допустимые интервалы времени для выполнения обновлений. Такая настройка исключает установку в неподходящее время и обеспечивает контроль над переходом на новые релизы.
 
 {% alert level="info" %}
 Актуальная информация о версиях DKP на разных каналах обновлений доступна на сайте [releases.deckhouse.ru](https://releases.deckhouse.ru).
@@ -28,7 +28,7 @@ d8 k get mc deckhouse -o yaml | grep releaseChannel
 
 ## Смена канала обновлений
 
-Чтобы сменить канал обновлений, укажите его название в [параметре `settings.releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) модуля `deckhouse`.
+Чтобы сменить канал обновлений, укажите его название в [параметре `settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse`.
 
 Пример конфигурации с каналом `Stable`:
 
@@ -78,11 +78,11 @@ spec:
 
 ### Автоматическое обновление
 
-Автоматический режим активируется при указании параметра [`releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) в конфигурации модуля `deckhouse`.
+Автоматический режим активируется при указании параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) в конфигурации модуля `deckhouse`.
 При выполнении этого условия:
 
 1. DKP раз в минуту проверяет канал обновлений на наличие нового релиза.
-1. При появлении нового релиза DKP скачивает его в кластер и создает [кастомный ресурс DeckhouseRelease](../../../reference/cr/deckhouserelease).
+1. При появлении нового релиза DKP скачивает его в кластер и создает [кастомный ресурс DeckhouseRelease](../../../reference/cr.html#deckhouserelease).
 1. После появления кастомного ресурса DeckhouseRelease в кластере
    DKP выполняет обновление на соответствующую версию согласно установленным параметрам обновления
    (по умолчанию — автоматически, в любое время).
@@ -109,7 +109,7 @@ d8 k get deckhousereleases
   но для применения патч-версий и минорных версий потребуется [ручное подтверждение](#ручное-подтверждение-обновлений).
   
   Чтобы установить режим ручного подтверждения обновлений,
-  задайте значение `Manual` для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
+  задайте значение `Manual` для [параметра `settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
 
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
@@ -133,7 +133,7 @@ d8 k get deckhousereleases
   но не будет обновляться до версии `v1.71.*` без ручного подтверждения.
 
   Чтобы установить режим автоматического обновления для патч-версий,
-  задайте значение `AutoPatch` для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
+  задайте значение `AutoPatch` для [параметра `settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) в настройках модуля `deckhouse` с помощью следующей команды:
 
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
@@ -147,7 +147,7 @@ d8 k get deckhousereleases
   ```
 
 - Установить тег необходимой версии DKP для Deployment `deckhouse`
-  и удалить [параметр `releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+  и удалить [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
   В этом случае DKP останется на указанной версии
   и никакая информация о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
@@ -168,7 +168,7 @@ d8 k get deckhousereleases
 
 - Включен режим подтверждения обновлений DKP.
 
-  Это значит, что для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) модуля `deckhouse` задано значение `Manual`
+  Это значит, что для [параметра `settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) модуля `deckhouse` задано значение `Manual`
   (подтверждение как патч-версии, так и минорной версии DKP) или `AutoPatch` (подтверждение минорной версии DKP).
 
   Для подтверждения обновления выполните следующую команду, указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
@@ -181,7 +181,7 @@ d8 k get deckhousereleases
   которые могут привести к кратковременному простою в работе системных компонентов.
 
   Это значит,
-  что для [параметра `spec.disruptions.approvalMode`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-approvalmode) у соответствующего ресурса NodeGroup задано значение `Manual`.
+  что для [параметра `spec.disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) у соответствующего ресурса NodeGroup задано значение `Manual`.
 
   Для обновления узлов в такой группе установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел.
 
@@ -207,8 +207,8 @@ DKP позволяет задавать *окна обновлений* — вр
 
 Управлять окнами обновлений DKP можно следующими способами:
 
-- **для общего управления обновлениями** используйте [параметр `update.windows`](../../../reference/mc/deckhouse/#parameters-update-windows) модуля `deckhouse`;
-- **для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов**, используйте параметры [`disruptions.automatic.windows`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-automatic-windows) и [`disruptions.rollingUpdate.windows`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-rollingupdate-windows) ресурса NodeGroup.
+- **для общего управления обновлениями** используйте [параметр `update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) модуля `deckhouse`;
+- **для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов**, используйте параметры [`disruptions.automatic.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [`disruptions.rollingUpdate.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) ресурса NodeGroup.
 
 #### Примеры конфигурации
 

@@ -3,31 +3,25 @@ title: Overview
 permalink: en/admin/configuration/update/
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports a flexible update mechanism
-that helps balance the speed of receiving new features with cluster stability.
+Deckhouse Kubernetes Platform (DKP) includes a built-in update management mechanism
+for both the platform itself and Kubernetes cluster components.
+To roll out new versions consistently and safely, DKP uses a five-channel update system
+ranging from the newest and unstable (Alpha) to the most thoroughly tested (Rock Solid).
+Each new version gradually moves through these channels,
+helping identify issues early and ensuring stability in production environments.
+For details on each channel, refer to the [Architecture](../../../architecture/updating.html#release-channels) section.
 
-A brief overview of the key features:
+You can configure the update process.
+Both automatic and manual modes are supported, as well as update windows and other parameters.
+See [Update configuration](configuration.html#update-modes) for details.
 
-- [Choosing an update mode](configuration.html#update-modes).
-  DKP supports three update modes, allowing you to manage not only manual and fully automatic updates,
-  but also the application of patch versions.
+An alerting system is used to track the update status and quickly report any issues.
+For more information, refer to [Notification settings](notifications.html).
 
-- [Configuring update windows](configuration.html#update-windows).
-  You can specify the days of the week and time periods
-  during which the platform will perform automatic updates according to the selected update mode.
+The following features are supported:
 
-- [Flexible switching between release channels](../../../architecture/updating.html#release-channels).
-  Switching between release channels does not result in a version downgrade.
-  You can switch to a more stable channel or one where new features are delivered earlier.
-
-- [Receiving release notifications](notifications.html#configuring-notifications).
-  DKP allows you to configure a webhook to receive automatic notifications when a new version becomes available.
-
-- [Receiving the changelog](../../../architecture/updating.html#retrieving-the-changelog).
-  Each DKP release includes a changelog that is available both in the cluster and in the release notification.
-
-- [Dependency awareness during updates](../../../architecture/updating.html#checking-dependencies-before-update).
-  DKP takes dependencies specified in the release version into account when updating.
-  This prevents updates when there are version conflicts between cluster components or resources.
-
-Thanks to these features, you can update DKP safely and in a timely manner, avoiding downtime and compatibility issues.
+- [Release notifications](notifications.html#configuring-notifications): DKP can send release notifications via webhooks.
+- [Retrieving the changelog](../../../architecture/updating.html#retrieving-the-changelog):
+  Each DKP release includes a changelog, available both in the cluster and as part of the release notification.
+- [Checking dependencies before update](../../../architecture/updating.html#checking-dependencies-before-update):
+  Checks for component dependencies before proceeding with an update to prevent conflicts.

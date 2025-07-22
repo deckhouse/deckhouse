@@ -29,7 +29,7 @@ This helps avoid disruptions and ensures the cluster remains stable after the up
 ## Configuring notifications
 
 To enable notifications via a configured webhook,
-specify the following parameters in the [`update.notification`](../../../reference/mc/deckhouse/#parameters-update-notification) section of the `deckhouse` module:
+specify the following parameters in the [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) section of the `deckhouse` module:
 
 - `update.notification.webhook`: URL for sending notifications.
   A POST request with update information is sent as soon as a new minor version appears on the selected release channel,
