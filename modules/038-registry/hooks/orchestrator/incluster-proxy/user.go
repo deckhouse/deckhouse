@@ -24,29 +24,24 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
-func processUserPasswordHash(log go_hook.Logger, user *users.User) (bool, error) {
+func processUserPasswordHash(log go_hook.Logger, user *users.User) error {
 	log = log.With("action", "ProcessUserPasswordHash", "username", user.UserName)
 
 	switch {
-	case user.Password == "" && user.HashedPassword == "":
-		// No password provided, nothing to do
-		return false, nil
-
-	case user.Password == "" && user.HashedPassword != "":
-		log.Warn("Password is empty but hash exists; clearing invalid hash")
+	case user.Password == "":
 		user.HashedPassword = ""
-		return true, nil
+		return nil
 
 	case user.IsPasswordHashValid():
 		// Valid hash already present, no update needed
-		return false, nil
+		return nil
 
 	default:
 		log.Warn("Password hash is invalid; generating new hash")
 		if err := user.UpdatePasswordHash(); err != nil {
-			return false, fmt.Errorf("failed to update password hash for user %q: %w", user.UserName, err)
+			return fmt.Errorf("failed to update password hash for user %q: %w", user.UserName, err)
 		}
 		log.Info("New password hash generated")
-		return true, nil
+		return nil
 	}
 }

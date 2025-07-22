@@ -30,10 +30,10 @@ func TestProcessUserPasswordHash(t *testing.T) {
 	logger := log.NewLogger()
 
 	type testCase struct {
-		name        string
-		user        users.User
-		wantHashed  bool
-		wantNewHash bool
+		name            string
+		user            users.User
+		expectedHashed  bool
+		expectedNewHash bool
 	}
 
 	tests := []testCase{
@@ -44,18 +44,18 @@ func TestProcessUserPasswordHash(t *testing.T) {
 				Password:       "password",
 				HashedPassword: "$2a$10$UajCvgsxk0bk1kkR8Dfhhuy.jkJXMx3rTUgOJEp3SZM/Z4ThQwn2C",
 			},
-			wantHashed:  true,
-			wantNewHash: false,
+			expectedHashed:  true,
+			expectedNewHash: false,
 		},
 		{
-			name: "not empty password and not empty hash", // -> should replace hash
+			name: "not empty password and not empty invalid hash", // -> should replace hash
 			user: users.User{
 				UserName:       "user",
 				Password:       "password",
 				HashedPassword: "123",
 			},
-			wantHashed:  true,
-			wantNewHash: true,
+			expectedHashed:  true,
+			expectedNewHash: true,
 		},
 		{
 			name: "empty password and empty hash", // -> nothing should happen
@@ -64,8 +64,8 @@ func TestProcessUserPasswordHash(t *testing.T) {
 				Password:       "",
 				HashedPassword: "",
 			},
-			wantHashed:  false,
-			wantNewHash: false,
+			expectedHashed:  false,
+			expectedNewHash: false,
 		},
 		{
 			name: "not empty password and empty hash", // -> should hash new password
@@ -74,8 +74,8 @@ func TestProcessUserPasswordHash(t *testing.T) {
 				Password:       "password",
 				HashedPassword: "",
 			},
-			wantHashed:  true,
-			wantNewHash: true,
+			expectedHashed:  true,
+			expectedNewHash: true,
 		},
 		{
 			name: "empty password and not empty hash", // -> should clear existing hash
@@ -84,19 +84,24 @@ func TestProcessUserPasswordHash(t *testing.T) {
 				Password:       "",
 				HashedPassword: "123",
 			},
-			wantHashed:  false,
-			wantNewHash: true,
+			expectedHashed:  false,
+			expectedNewHash: true,
 		},
 	}
 
-	assertHashProcessing := func(t *testing.T, user *users.User, expectedHashed bool, expectedNewHash bool, context string) {
+	assertHashProcessing := func(t *testing.T, user *users.User, expectedHashed, expectedNewHash bool, context string) {
 		t.Helper()
 
-		newHash, err := processUserPasswordHash(logger, user)
+		prevHash := user.HashedPassword
+		err := processUserPasswordHash(logger, user)
 
 		require.NoError(t, err, "%s: expected no error", context)
-		assert.Equal(t, expectedHashed, user.HashedPassword != "", "%s: unexpected HashedPassword state", context)
-		assert.Equal(t, expectedNewHash, newHash, "%s: unexpected newHash flag", context)
+
+		isHashed := user.HashedPassword != ""
+		isNewHash := prevHash != user.HashedPassword
+
+		assert.Equalf(t, expectedHashed, isHashed, "%s: expected hashed=%v, got %v", context, expectedHashed, isHashed)
+		assert.Equalf(t, expectedNewHash, isNewHash, "%s: expected newHash=%v, got %v", context, expectedNewHash, isNewHash)
 	}
 
 	for _, tt := range tests {
@@ -106,10 +111,10 @@ func TestProcessUserPasswordHash(t *testing.T) {
 			user := tt.user
 
 			// First run: initial hash processing
-			assertHashProcessing(t, &user, tt.wantHashed, tt.wantNewHash, "first run")
+			assertHashProcessing(t, &user, tt.expectedHashed, tt.expectedNewHash, "first run")
 
-			// Second run: should be idempotent (no new hash should be generated)
-			assertHashProcessing(t, &user, tt.wantHashed, false, "second run")
+			// Second run: should be idempotent
+			assertHashProcessing(t, &user, tt.expectedHashed, false, "second run")
 		})
 	}
 }
