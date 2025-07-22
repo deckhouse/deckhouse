@@ -1,0 +1,628 @@
+{
+  "admission-policy-engine": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;use signature verification policies for container images and the ability to&nbsp;prohibit the launch of&nbsp;containers with vulnerabilities",
+        "ru": "Ограничение на&nbsp;возможность использования политик проверки подписи образов контейнеров и&nbsp;возможность установки запрета на&nbsp;запуск контейнеров с&nbsp;уязвимостями"
+      }
+    },
+    "path": "modules/admission-policy-engine/"
+  },
+  "cert-manager": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cert-manager/"
+  },
+  "chrony": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/chrony/"
+  },
+  "cilium-hubble": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cilium-hubble/"
+  },
+  "cloud-provider-aws": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cloud-provider-aws/"
+  },
+  "cloud-provider-azure": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cloud-provider-azure/"
+  },
+  "cloud-provider-dvp": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cloud-provider-dvp/"
+  },
+  "cloud-provider-dynamix": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-dynamix/"
+  },
+  "cloud-provider-gcp": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cloud-provider-gcp/"
+  },
+  "cloud-provider-huaweicloud": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-huaweicloud/"
+  },
+  "cloud-provider-openstack": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-openstack/"
+  },
+  "cloud-provider-vcd": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-vcd/"
+  },
+  "cloud-provider-vsphere": {
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-vsphere/"
+  },
+  "cloud-provider-yandex": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cloud-provider-yandex/"
+  },
+  "cloud-provider-zvirt": {
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-zvirt/"
+  },
+  "cni-cilium": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;configure fault tolerant Egress Gateways",
+        "ru": "Ограничение на&nbsp;возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
+      }
+    },
+    "path": "modules/cni-cilium/"
+  },
+  "cni-flannel": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cni-flannel/"
+  },
+  "cni-simple-bridge": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/cni-simple-bridge/"
+  },
+  "commander": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/commander/stable/"
+  },
+  "commander-agent": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "path": ""
+  },
+  "console": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
+      }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/console/stable/"
+  },
+  "control-plane-manager": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/control-plane-manager/"
+  },
+  "csi-ceph": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
+  },
+  "csi-hpe": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-hpe/stable/"
+  },
+  "csi-huawei": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-huawei/stable/"
+  },
+  "csi-nfs": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
+  },
+  "csi-s3": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-s3/stable/"
+  },
+  "csi-scsi-generic": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/"
+  },
+  "csi-yadro-tatlin-unified": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/"
+  },
+  "dashboard": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/dashboard/"
+  },
+  "deckhouse": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/deckhouse/"
+  },
+  "deckhouse-tools": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/deckhouse-tools/"
+  },
+  "delivery-kit": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
+  },
+  "descheduler": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/descheduler/"
+  },
+  "documentation": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/documentation/"
+  },
+  "extended-monitoring": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/extended-monitoring/"
+  },
+  "ingress-nginx": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/ingress-nginx/"
+  },
+  "istio": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;federation and multicluster features",
+        "ru": "Ограничение на&nbsp;использование федерации и&nbsp;мультикластерной конфигурации"
+      }
+    },
+    "path": "modules/istio/"
+  },
+  "keepalived": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/keepalived/"
+  },
+  "kube-dns": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/kube-dns/"
+  },
+  "kube-proxy": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/kube-proxy/"
+  },
+  "local-path-provisioner": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/local-path-provisioner/"
+  },
+  "log-shipper": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/log-shipper/"
+  },
+  "loki": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/loki/"
+  },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
+  "metallb": {
+    "editionMinimumAvailable": "se",
+    "editionsWithRestrictions": [
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;the BGP load balancer for services",
+        "ru": "Ограничение на&nbsp;использование BGP-балансировщика для сервисов"
+      }
+    },
+    "path": "modules/metallb/"
+  },
+  "monitoring-custom": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/monitoring-custom/"
+  },
+  "monitoring-deckhouse": {
+    "editionMinimumAvailable": "ce",
+    "path": ""
+  },
+  "monitoring-kubernetes": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/monitoring-kubernetes/"
+  },
+  "monitoring-kubernetes-control-plane": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/monitoring-kubernetes-control-plane/"
+  },
+  "monitoring-ping": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/monitoring-ping/"
+  },
+  "multitenancy-manager": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/multitenancy-manager/"
+  },
+  "namespace-configurator": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/namespace-configurator/"
+  },
+  "network-gateway": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/network-gateway/"
+  },
+  "network-policy-engine": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/network-policy-engine/"
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
+  },
+  "node-local-dns": {
+    "editionMinimumAvailable": "be",
+    "path": "modules/node-local-dns/"
+  },
+  "node-manager": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/node-manager/"
+  },
+  "observability": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
+  },
+  "observability-platform": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
+  },
+  "okmeter": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/okmeter/"
+  },
+  "openvpn": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/openvpn/"
+  },
+  "operator-argo": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
+  },
+  "operator-prometheus": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/operator-prometheus/"
+  },
+  "operator-trivy": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/operator-trivy/"
+  },
+  "pod-reloader": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/pod-reloader/"
+  },
+  "prometheus": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/prometheus/"
+  },
+  "prometheus-metrics-adapter": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/prometheus-metrics-adapter/"
+  },
+  "prometheus-pushgateway": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/prometheus-pushgateway/"
+  },
+  "registry-packages-proxy": {
+    "editionMinimumAvailable": "ce",
+    "path": ""
+  },
+  "runtime-audit-engine": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/runtime-audit-engine/"
+  },
+  "sds-local-volume": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
+      }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/"
+  },
+  "sds-node-configurator": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/"
+  },
+  "sds-replicated-volume": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
+      }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/"
+  },
+  "secret-copier": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/secret-copier/"
+  },
+  "secrets-store-integration": {
+    "editionFullyAvailable": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
+  },
+  "service-with-healthchecks": {
+    "editionMinimumAvailable": "ee",
+    "path": "modules/service-with-healthchecks/"
+  },
+  "snapshot-controller": {
+    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
+  },
+  "stronghold (CE)": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "stronghold (EE)": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      },
+      "cse-lite": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      },
+      "cse-pro": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      }
+    },
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "terraform-manager": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/terraform-manager/"
+  },
+  "upmeter": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/upmeter/"
+  },
+  "user-authn": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/user-authn/"
+  },
+  "user-authz": {
+    "editionFullyAvailable": [
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;namespace filtering in&nbsp;the role-based access model",
+        "ru": "Ограничение на&nbsp;использование фильтрации по&nbsp;пространствам имен в&nbsp;ролевой модели доступа"
+      }
+    },
+    "path": "modules/user-authz/"
+  },
+  "vertical-pod-autoscaler": {
+    "editionMinimumAvailable": "ce",
+    "path": "modules/vertical-pod-autoscaler/"
+  },
+  "virtualization": {
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/virtualization/stable/"
+  }
+}

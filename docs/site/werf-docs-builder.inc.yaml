@@ -14,6 +14,10 @@ import:
   add: /export/embedded_modules.json
   to: /app/hugo/data/dkp/embedded_modules.json
   before: setup
+- image: d8-docs-artifacts
+  add: /srv/jekyll-data/documentation/_data/modules/all.json
+  to: /app/hugo/data/dkp/embedded_modules_editions.json
+  before: setup
 imageSpec:
   config:
     workingDir: "/app"

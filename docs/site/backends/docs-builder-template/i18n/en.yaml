@@ -10,6 +10,8 @@ modules_documentation: Modules documentation
 modules_list: Modules list
 category: category
 core: core
+community_edition_en: community edition
+commercial_editions_en: commercial editions
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
 conversion_from_version: Updates from version
