@@ -15,7 +15,6 @@ import (
 	"strings"
 	"unicode"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -23,6 +22,8 @@ import (
 	storage "k8s.io/api/storage/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	objectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
@@ -95,7 +96,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
-		for sc, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
+		for sc, err := range objectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}
@@ -169,7 +170,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 	}
 
 	storageClassSnapshots := make(map[string]storage.StorageClass)
-	sclasses, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
+	sclasses, err := objectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
