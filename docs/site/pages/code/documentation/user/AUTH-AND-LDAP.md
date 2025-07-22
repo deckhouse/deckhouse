@@ -149,7 +149,7 @@ Assigns access rights to users based on the group name (`cn`):
 
 #### How group membership is defined
 
-Group members are determined from the following group attributes. The value of each attribute is expected to be an array of user DNs:
+Group members are determined from the following group attributes. The value of each attribute is expected to be an array of user DN:
 
 - `member`
 - `uniquemember`
