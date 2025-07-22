@@ -45,6 +45,7 @@ module.exports = ({ github, context, core }) => {
 
     const job = jobs[0];
     core.info(`Job status: ${job.status} | Job conclusion ${job.conclusion}`);
+    core.info(`Job url: ${job.html_url}`);
 
     if (
       job.conclusion === githubActions.CONCLUSION_STATUS_FAILURE ||
