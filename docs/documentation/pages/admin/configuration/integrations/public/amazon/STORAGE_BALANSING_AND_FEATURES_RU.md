@@ -98,13 +98,8 @@ metadata:
 
 Чтобы получить список текущих подсетей, используемых в установке DKP, выполните команду:
 
-<<<<<<< HEAD
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
-=======
-```console
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse \
->>>>>>> b4f09145f7 (docs: Added info for Keycloak in new structure, replaced sudo -i and kubectl to d8 k in new structure)
   -- deckhouse-controller module values cloud-provider-aws -o json | \
   jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```
