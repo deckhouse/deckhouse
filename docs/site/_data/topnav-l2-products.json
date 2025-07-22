@@ -29,6 +29,12 @@
           "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
+        },
+        {
+          "title": "Modules",
+          "url": "/modules/",
+          "target": "",
+          "rel": ""
         }
       ]
     },
@@ -205,6 +211,12 @@
         {
           "title": "Руководства",
           "url": "/products/kubernetes-platform/guides/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Модули",
+          "url": "/modules/",
           "target": "",
           "rel": ""
         }
