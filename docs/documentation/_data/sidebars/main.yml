@@ -963,32 +963,32 @@ entries:
                 ru: Веб-интерфейсы
               folders:
                 - title:
-                    en: Grafana web interface
-                    ru: Веб-интерфейс Grafana
+                    en: Grafana
+                    ru: Grafana
                   url: /user/web/grafana.html
                 - title:
-                    en: Alert management web UI
-                    ru: Веб-интерфейс управления алертами
+                    en: Alert management
+                    ru: Управление алертами
                   url: /user/web/alertmanager.html
                 - title:
-                    en: Kubeconfig generator web UI
-                    ru: Веб-интерфейс генератора kubeconfig
+                    en: Kubeconfig generator
+                    ru: Генератор kubeconfig
                   url: /user/web/kubeconfig.html
                 - title:
-                    en: Console web interface
-                    ru: Веб-интерфейс Console
+                    en: Console
+                    ru: Console
                   url: /user/web/console.html
                 - title:
-                    en: Web interface for downloading Deckhouse utilities
-                    ru: Веб-интерфейс загрузки утилит Deckhouse
+                    en: Downloading Deckhouse utilities
+                    ru: Загрузка утилит Deckhouse
                   url: /user/web/deckhouse-tools.html
                 - title:
-                    en: Stronghold web interface
-                    ru: Веб-интерфейс Stronghold
+                    en: Stronghold
+                    ru: Stronghold
                   url: /user/web/stronghold.html
                 - title:
-                    en: Web interface for visualizing the cluster network stack
-                    ru: Веб-интерфейс визуализации сетевого стека кластера
+                    en: Visualizing cluster network stack
+                    ru: Визуализация сетевого стека кластера
                   url: /user/web/hubble.html
         - title:
             en: Multitenancy
