@@ -117,7 +117,7 @@ lang: ru
 
    ```shell
    echo $MODULES_WILL_DISABLE |
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    Пример результата выполнения:
@@ -167,7 +167,7 @@ lang: ru
    Проверка состояния очереди Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
@@ -180,7 +180,7 @@ lang: ru
    Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
+   d8 platform module enable registry-packages-proxy
    ```
 
 1. Удалите временный под DKP CE:
@@ -341,7 +341,7 @@ lang: ru
    Проверка состояния очереди DKP:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse CE:
@@ -551,7 +551,7 @@ lang: ru
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    Дождитесь, пока под DKP перейдёт в состояние `Ready`.
@@ -600,7 +600,7 @@ lang: ru
    Проверить состояние очереди DKP:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом рееста для DKP EE:
@@ -661,7 +661,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого выполните команду:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
@@ -779,7 +779,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    В DKP CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
@@ -787,7 +787,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -887,7 +887,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Проверить состояние очереди DKP:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
@@ -900,7 +900,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в DKP CSE этот модуль по умолчанию выключен):
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   d8 platform module enable chrony
    ```
 
 1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:

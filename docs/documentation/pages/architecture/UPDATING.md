@@ -88,7 +88,7 @@ specify the target version in the [`kubernetesVersion`](../reference/cr/clusterc
 For example, `kubernetesVersion: 1.30`.
 
 ```shell
-d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.

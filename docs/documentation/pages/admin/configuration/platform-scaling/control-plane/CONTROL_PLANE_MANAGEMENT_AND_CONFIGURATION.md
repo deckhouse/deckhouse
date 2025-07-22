@@ -41,15 +41,13 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
 1. Using the command:
 
    ```bash
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-     deckhouse-controller module enable control-plane-manager
+   d8 platform module enable control-plane-manager
    ```
 
    or to disable:
 
    ```bash
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-     deckhouse-controller module disable control-plane-manager
+   d8 platform module disable control-plane-manager
    ```  
   
 1. Via the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/):
@@ -114,8 +112,7 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 1. Get the list of queues and active tasks:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-    deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    Example output:

@@ -368,7 +368,7 @@ module-two                   Available   False     False
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  d8 platform module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.

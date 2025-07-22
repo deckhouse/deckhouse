@@ -135,7 +135,7 @@ The static cluster settings are stored in the [StaticClusterConfiguration](insta
 To modify the static cluster parameters, run the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 platform edit static-cluster-configuration
 ```
 
 ## Moving a static node between NodeGroups

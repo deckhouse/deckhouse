@@ -42,15 +42,13 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 1. Используйте команду:
 
    ```bash
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-    deckhouse-controller module enable control-plane-manager
+   d8 platform module enable control-plane-manager
    ```
 
    или
 
    ```bash
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-     deckhouse-controller module disable control-plane-manager
+   d8 platform module disable control-plane-manager
    ```
 
 1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
@@ -115,8 +113,7 @@ spec:
 1. Получите список очередей и активных заданий:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- \
-    deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    Пример вывода:

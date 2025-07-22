@@ -120,7 +120,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
 
    ```shell
    echo $MODULES_WILL_DISABLE |
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    Example output:
@@ -171,7 +171,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
    Check the DKP task queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Check if any pods in the cluster are still using the DKP EE registry address:
@@ -184,7 +184,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
    If the `registry-packages-proxy` module was previously disabled, re-enable it:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
+   d8 platform module enable registry-packages-proxy
    ```
 
 1. Delete the temporary DKP CE pod:
@@ -347,7 +347,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    Check the DKP task queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Check if any pods are still using the CE registry address:
@@ -557,7 +557,7 @@ All commands must be executed on the master node of the existing cluster.
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    Wait for the DKP pod to reach the `Ready` state.
@@ -607,7 +607,7 @@ All commands must be executed on the master node of the existing cluster.
    To check the status of the Deckhouse queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Make sure there are no running pods using the DKP EE registry address:
@@ -668,7 +668,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 1.Configure the cluster to use the required Kubernetes version (see the note above regarding the available Kubernetes versions). To do this, run the following command:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` parameter to the desired value, for example, `"1.27"` (in quotes) for Kubernetes 1.27.
@@ -786,7 +786,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    The `earlyOOM` component is not supported in DKP CSE. Disable it using the [earlyOomEnabled](modules/node-manager/configuration.html#parameters-earlyoomenabled)) setting.
@@ -794,7 +794,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    Wait for the DKP pod to reach the `Ready` status and for all tasks in the queue to complete:
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    Verify that the disabled modules are now in the `Disabled` state:
@@ -894,7 +894,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    Check the DKP task queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Verify that no pods are using the EE registry image:
@@ -907,7 +907,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    If the output contains pods from the `chrony` module, re-enable the module (it's disabled by default in DKP CSE):
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   d8 platform module enable chrony
    ```
 
 1. Clean up temporary files, the NodeGroupConfiguration resource, and temporary variables:

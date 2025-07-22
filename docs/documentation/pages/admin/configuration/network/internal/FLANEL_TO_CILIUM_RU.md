@@ -96,13 +96,13 @@ lang: ru
    В случае одного master-узла:
 
    ```shell
-   d8 k -n d8-system exec -it deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    В случае мультимастерной инсталляции:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 2. Проверьте агенты cilium. Они должны быть в статусе Running:

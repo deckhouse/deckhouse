@@ -251,7 +251,7 @@ lang: ru
    или проверьте состояние очереди DKP:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 ## Миграция ModuleUpdatePolicy на версию v1alpha2

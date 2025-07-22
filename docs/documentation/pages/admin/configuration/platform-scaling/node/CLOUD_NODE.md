@@ -94,7 +94,7 @@ The configuration of the cloud provider used in a cloud or hybrid cluster is sto
 Regardless of the cloud provider used, its settings can be modified using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 ## NodeGroup autoscaling
