@@ -668,9 +668,13 @@ status:
   startsAt: "2023-05-10T13:43:09Z"
 ```
 
+{% endraw %}
+
 {% alert level="info" %}
-The presence of a special alert `DeadMansSwitch` in the cluster indicates that Prometheus is working.
+The presence of a special alert `MissingDeadMansSwitch` in the cluster indicates problems in the performance of the monitoring components.
 {% endalert %}
+
+{% raw %}
 
 ## How do I add additional endpoints to a scrape config?
 
