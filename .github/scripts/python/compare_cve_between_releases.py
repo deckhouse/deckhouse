@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
 
 # Copyright 2025 Flant JSC
 #
@@ -14,77 +16,78 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#!/usr/bin/env python3
+
 import argparse
 import os
+import time
 import requests
 from packaging.version import Version
-from dotenv import load_dotenv
+from requests.exceptions import RequestException
 
-load_dotenv()
 
 # ENV
 DD_URL = os.getenv("DEFECTDOJO_URL")
 DD_API_KEY = os.getenv("DEFECTDOJO_API_KEY")
 REGISTRY_URL = os.getenv("REGISTRY_URL")
-REGISTRY_IMAGE = os.getenv("REGISTRY_IMAGE")
 REGISTRY_USERNAME = os.getenv("REGISTRY_USERNAME")
 REGISTRY_PASSWORD = os.getenv("REGISTRY_PASSWORD")
 
 HEADERS = {"Authorization": f"Token {DD_API_KEY}"}
 
+MAX_RETRIES = 8
+RETRY_BACKOFF = 2  # seconds
+
 
 def get_registry_tags():
-    url = f"https://{REGISTRY_URL}/v2/{REGISTRY_IMAGE}/tags/list"
-    response = requests.get(
+    url = f"https://{REGISTRY_URL}/v2/deckhouse/fe/tags/list"
+
+    def retryable_get(*args, **kwargs):
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                return requests.get(*args, timeout=80, **kwargs)
+            except RequestException as e:
+                if attempt == MAX_RETRIES:
+                    raise RuntimeError(f"❌ Registry request failed after {MAX_RETRIES} attempts: {e}")
+                print(f"⚠️ Registry request failed (attempt {attempt}), retrying in {RETRY_BACKOFF}s...")
+                time.sleep(RETRY_BACKOFF)
+
+    response = retryable_get(
         url,
-        headers={"User-Agent": "python-cve-checker/1.0", "Accept": "application/json"},
-        timeout=10
+        headers={"User-Agent": "python-cve-checker/1.0", "Accept": "application/json"}
     )
 
     if response.status_code != 401 or "WWW-Authenticate" not in response.headers:
         response.raise_for_status()
-        return response.json().get("tags", [])
+        return [t for t in response.json().get("tags", []) if isinstance(t, str)]
 
     auth_header = response.headers["WWW-Authenticate"]
-    if not auth_header.startswith("Bearer"):
-        raise RuntimeError("Unsupported authentication scheme (expected Bearer)")
-
-    auth_parts = {}
-    for part in auth_header[len("Bearer "):].split(","):
-        key, value = part.strip().split("=")
-        auth_parts[key] = value.strip('"')
-
-    realm = auth_parts["realm"]
-    service = auth_parts.get("service")
-    scope = auth_parts.get("scope")
+    auth_parts = dict(part.strip().split("=") for part in auth_header[7:].split(","))
+    realm = auth_parts["realm"].strip('"')
+    service = auth_parts.get("service", "").strip('"')
+    scope = auth_parts.get("scope", "").strip('"')
 
     token_params = {"service": service}
     if scope:
         token_params["scope"] = scope
 
-    token_response = requests.get(
+    token_response = retryable_get(
         realm,
         params=token_params,
         auth=(REGISTRY_USERNAME, REGISTRY_PASSWORD),
-        headers={"User-Agent": "python-cve-checker/1.0", "Accept": "application/json"},
-        timeout=10
+        headers={"User-Agent": "python-cve-checker/1.0", "Accept": "application/json"}
     )
     token_response.raise_for_status()
     token = token_response.json().get("token")
     if not token:
         raise RuntimeError("Bearer token not returned by registry")
 
-    final_response = requests.get(
+    final_response = retryable_get(
         url,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": "python-cve-checker/1.0",
-            "Accept": "application/json"
-        },
-        timeout=30
+        headers={"Authorization": f"Bearer {token}", "User-Agent": "python-cve-checker/1.0", "Accept": "application/json"}
     )
     final_response.raise_for_status()
-    return final_response.json().get("tags", [])
+    return [t for t in final_response.json().get("tags", []) if isinstance(t, str)]
 
 
 def filter_patch_tags(tags, minor_version):
@@ -144,52 +147,99 @@ def diff_findings(curr, prev):
     return added, fixed, unchanged
 
 
+def auto_compare(tags):
+    def is_valid_patch(t):
+        return isinstance(t, str) and t.startswith("v") and t.count(".") == 2
+
+    def get_minor(t):
+        return ".".join(t.lstrip("v").split(".")[:2])
+
+    valid_tags = [t for t in tags if is_valid_patch(t)]
+    minors = sorted(set(get_minor(t) for t in valid_tags), key=Version)
+
+    if len(minors) < 2:
+        raise RuntimeError("❌ Not enough minor versions to compare")
+
+    latest_minor = minors[-1]
+    prev_minor = minors[-2]
+
+    latest_patches = filter_patch_tags(valid_tags, latest_minor)
+    prev_patches = filter_patch_tags(valid_tags, prev_minor)
+
+    if not latest_patches or not prev_patches:
+        raise RuntimeError("❌ Cannot determine latest patches for two minor versions")
+
+    return latest_patches[-1], prev_patches[-1]
+
+
+def resolve_tags(tags, version, prev_version):
+    def find_latest_patch(minor): return filter_patch_tags(tags, minor)[-1]
+
+    patch_tags = [t for t in tags if isinstance(t, str) and t.count(".") == 2 and t.startswith("v")]
+    if not patch_tags:
+        raise RuntimeError("❌ No valid patch tags found")
+
+    if version.count(".") == 2:
+        curr_tag = f"v{version}"
+    else:
+        curr_tag = find_latest_patch(version)
+
+    if prev_version:
+        if prev_version.count(".") == 2:
+            prev_tag = f"v{prev_version}"
+        else:
+            prev_tag = find_latest_patch(prev_version)
+    else:
+        minor = ".".join(curr_tag.lstrip("v").split(".")[:2])
+        patches = filter_patch_tags(tags, minor)
+        idx = patches.index(curr_tag)
+        if idx == 0:
+            raise RuntimeError("❌ No previous patch version available.")
+        prev_tag = patches[idx - 1]
+
+    return curr_tag, prev_tag
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--version", required=True, help="X.Y or X.Y.Z")
-    parser.add_argument("--prev-version", help="Optional previous version in X.Y.Z format")
+    """
+    Compare CVEs between two Deckhouse releases using DefectDojo.
+
+    Usage examples:
+      python compare_cve_between_releases.py --version 1.70
+          → Compare last two patch versions of minor 1.70
+
+      python compare_cve_between_releases.py --version 1.70 --prev-version 1.69
+          → Compare latest patch of 1.70 vs latest patch of 1.69
+
+      python compare_cve_between_releases.py --version 1.70.12 --prev-version 1.69.4
+          → Compare exact patch versions 1.70.12 vs 1.69.4
+
+      python compare_cve_between_releases.py --auto-compare-minors
+          → Automatically detect two most recent minor releases and compare their latest patches
+    """
+    parser = argparse.ArgumentParser(
+        description="Compare CVEs between two Deckhouse image releases using DefectDojo.\n\n"
+                    "Examples:\n"
+                    "  python compare_cve_between_releases.py --version 1.70\n"
+                    "  python compare_cve_between_releases.py --version 1.70 --prev-version 1.69\n"
+                    "  python compare_cve_between_releases.py --version 1.70.12 --prev-version 1.69.4\n"
+                    "  python compare_cve_between_releases.py --auto-compare-minors",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument("--version", help="X.Y or X.Y.Z")
+    parser.add_argument("--prev-version", help="Optional previous version in X.Y or X.Y.Z format")
+    parser.add_argument("--auto-compare-minors", action="store_true", help="Compare latest patches of last two minor releases")
     args = parser.parse_args()
 
     tags = get_registry_tags()
 
-    if args.version.count(".") == 1:
-        patch_tags = filter_patch_tags(tags, args.version)
-        if not patch_tags:
-            print(f"❌ No tags found for minor version {args.version}")
-            return
-        curr_tag = patch_tags[-1]
-
-        if args.prev_version:
-            prev_tag = f"v{args.prev_version}"
-            if prev_tag not in patch_tags:
-                print(f"❌ Provided prev-version {prev_tag} not found in registry.")
-                return
-        else:
-            if len(patch_tags) < 2:
-                print("❌ Not enough patch versions for comparison.")
-                return
-            prev_tag = patch_tags[-2]
-
+    if args.auto_compare_minors:
+        curr_tag, prev_tag = auto_compare(tags)
     else:
-        curr_tag = f"v{args.version}"
-        minor = ".".join(args.version.split(".")[:2])
-        patch_tags = filter_patch_tags(tags, minor)
-
-        if curr_tag not in patch_tags:
-            print(f"❌ Current tag {curr_tag} not found in registry.")
+        if not args.version:
+            print("❌ Provide --version or use --auto-compare-minors")
             return
-
-        if args.prev_version:
-            prev_tag = f"v{args.prev_version}"
-            if prev_tag not in patch_tags:
-                print(f"❌ Provided prev-version {prev_tag} not found in registry.")
-                return
-        else:
-            idx = patch_tags.index(curr_tag)
-            if idx == 0:
-                print("❌ No previous patch version available.")
-                return
-            prev_tag = patch_tags[idx - 1]
+        curr_tag, prev_tag = resolve_tags(tags, args.version, args.prev_version)
 
     print(f"🟢 Current version: {curr_tag}")
     print(f"🟡 Previous version: {prev_tag}")
