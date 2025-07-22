@@ -38,8 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -793,47 +791,12 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	if len(depl.Spec.Template.Spec.Containers) == 0 {
 		return ErrDeploymentContainerIsNotFound
 	}
-	// depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-	// client
-	k8sClient, _ := r.dc.GetK8sClient()
-	gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	dcClient := k8sClient.Dynamic().Resource(gvr).Namespace(depl.Namespace)
-	// get
-	dcDepl, err := dcClient.Get(ctx, depl.Name, metav1.GetOptions{})
+	err = r.client.Patch(ctx, depl, client.Apply, client.FieldOwner(fieldOwner), client.ForceOwnership)
 	if err != nil {
-		return fmt.Errorf("get deployment for release %s: %w", dr.Spec.Version, err)
+		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
 	}
-	r.logger.Warn("debug dc deployment before", slog.String("release", dr.Spec.Version), slog.Any("dc_depl", dcDepl))
-	// extract containers
-	containers, found, err := unstructured.NestedSlice(dcDepl.Object, "spec", "template", "spec", "containers")
-	if err != nil || !found || containers == nil {
-		return fmt.Errorf("deployment containers not found or error in spec for release %s: %w", dr.Spec.Version, err)
-	}
-	// set image
-	if err := unstructured.SetNestedField(containers[0].(map[string]interface{}), r.registrySecret.ImageRegistry+":"+dr.Spec.Version, "image"); err != nil {
-		return fmt.Errorf("set image for deployment of release %s: %w", dr.Spec.Version, err)
-	}
-	if err := unstructured.SetNestedField(dcDepl.Object, containers, "spec", "template", "spec", "containers"); err != nil {
-		return fmt.Errorf("set image for deployment of release %s: %w", dr.Spec.Version, err)
-	}
-	r.logger.Warn("debug dc deployment before update", slog.String("release", dr.Spec.Version), slog.String("image", containers[0].(map[string]interface{})["image"].(string)))
-	// update
-	dcDepl, err = dcClient.Update(ctx, dcDepl, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("update release deployment %s: %w", dr.Spec.Version, err)
-	}
-	// debug
-	containers, found, err = unstructured.NestedSlice(dcDepl.Object, "spec", "template", "spec", "containers")
-	if err != nil || !found || containers == nil {
-		return fmt.Errorf("deployment containers not found or error in spec for release %s: %w", dr.Spec.Version, err)
-	}
-	r.logger.Warn("release deployment updated", slog.String("release", dr.Spec.Version), slog.String("image", containers[0].(map[string]interface{})["image"].(string)))
-
-	// err = r.client.Patch(ctx, depl, client.Apply, client.FieldOwner(fieldOwner), client.ForceOwnership)
-	// if err != nil {
-	// 	return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
-	// }
 
 	return nil
 }
