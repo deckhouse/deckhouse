@@ -619,7 +619,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
-When using the registry module, changing the registry address and parameters must be done through the [registry module](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+When using the `registry` module, changing the registry address and parameters must be done through the [registry module](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -857,7 +857,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
-When using the registry module, switching between editions is only possible in `Unmanaged` mode.  
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
 To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 
@@ -1033,7 +1033,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-pla
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
 {% alert level="warning" %}
-When using the registry module, switching between editions is only possible in `Unmanaged` mode.  
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
 To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 

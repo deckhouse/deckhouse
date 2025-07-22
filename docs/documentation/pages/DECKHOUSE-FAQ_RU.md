@@ -621,7 +621,7 @@ echo "$MYRESULTSTRING"
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
-При использовании модуля registry, смена адреса и параметров реестра выполняется через [модуль registry](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+При использовании модуля `registry` смена адреса и параметров реестра выполняется через [модуль registry](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -859,7 +859,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
-При использовании модуля registry переключение между редакциями выполняется только в режиме `Unmanaged`.  
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
 Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 
@@ -1039,7 +1039,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CSE?
 
 {% alert level="warning" %}
-При использовании модуля registry переключение между редакциями выполняется только в режиме `Unmanaged`.  
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
 Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
 {% endalert %}
 

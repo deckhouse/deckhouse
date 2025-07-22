@@ -929,7 +929,7 @@ spec:
 ### Как добавить авторизацию в дополнительный registry?
 
 {% alert level="warning" %}
-Если используется модуль registry, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
 {% endalert %}
 
 Разверните скрипт `NodeGroupConfiguration`:
@@ -981,7 +981,7 @@ spec:
 ### Как настроить сертификат для дополнительного registry?
 
 {% alert level="warning" %}
-Если используется модуль registry, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
 {% endalert %}
 
 {% alert level="info" %}

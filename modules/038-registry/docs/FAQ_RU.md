@@ -5,9 +5,9 @@ description: ""
 
 ## Как подготовить Containerd V1?
 
-При переключении на режим `Direct`, сервис `Containerd V1` будет перезапущен.  
+При переключении на режим `Direct` сервис `Containerd V1` будет перезапущен.  
 Конфигурация авторизации будет изменена на Mirror Auth (данная конфигурация используется по умолчанию в `Containerd V2`).  
-После возврата в режим `Unmanaged`, обновлённая конфигурация авторизации останется без изменений.
+После возврата в режим `Unmanaged` обновлённая конфигурация авторизации останется без изменений.
 
 Пример структуры Mirror Auth-конфигурации:
 
@@ -37,14 +37,13 @@ tree /etc/containerd/registry.d
       auth = "<base64>"
 ```
 
-Перед переключением убедитесь, что на узлах с `Containerd V1` отсутствуют  
-[пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry),  
-расположенные в директории `/etc/containerd/conf.d`.
+Перед переключением убедитесь, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
 
 Если такие конфигурации существуют:
 
 {% alert level="danger" %}
 - После удаления [пользовательских конфигураций авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) из директории `/etc/containerd/conf.d`, сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
+
 - Новые Mirror Auth-конфигурации, добавленные в `/etc/containerd/registry.d`, вступят в силу только после перехода в режим `Direct`.
 {% endalert %}
 
@@ -92,23 +91,24 @@ tree /etc/containerd/registry.d
     ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
     ```
 
-2. Удалите auth-конфигурации из директории `/etc/containerd/conf.d`.
-
----
+1. Удалите auth-конфигурации из директории `/etc/containerd/conf.d`.
 
 ## Как переключиться на предыдущую конфигурацию авторизации Containerd V1?
 
 {% alert level="danger" %}
 - Переключение возможно только в режиме `Unmanaged`.
-- При переключении на старую конфигурацию авторизации `Containerd V1`, пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
+- При переключении на старую конфигурацию авторизации `Containerd V1` пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
 - Добавить [пользовательские auth-конфигурации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) для старой схемы авторизации (в каталог `/etc/containerd/conf.d`) можно только после переключения на неё.
 {% endalert %}
 
+Чтобы переключиться на предыдущую конфигурацию авторизации Containerd V1, выполните следующие шаги:
+
 1. Перейдите в режим `Unmanaged`.
-2. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+
+1. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
     ```yaml
-    ...
+    # ...
     - lastTransitionTime: "..."
       message: ""
       reason: ""
@@ -119,17 +119,17 @@ tree /etc/containerd/registry.d
     target_mode: Unmanaged
     ```
 
-3. Удалите секрет `registry-bashible-config`:
+1. Удалите секрет `registry-bashible-config`:
 
     ```bash
     kubectl -n d8-system delete secret registry-bashible-config
     ```
 
-4. После удаления дождитесь завершения переключения на старую конфигурацию авторизации в `Containerd V1`.  
+1. После удаления дождитесь завершения переключения на старую конфигурацию авторизации в `Containerd V1`.  
    Для отслеживания используйте [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
     ```yaml
-    ...
+    # ...
     - lastTransitionTime: "..."
       message: ""
       reason: ""

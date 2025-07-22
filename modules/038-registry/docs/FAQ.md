@@ -37,9 +37,7 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no  
-[custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth)  
-present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
@@ -92,7 +90,7 @@ If such configurations exist:
     ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
     ```
 
-2. Delete auth configurations from the `/etc/containerd/conf.d` directory.
+1. Delete auth configurations from the `/etc/containerd/conf.d` directory.
 
 ---
 
@@ -105,10 +103,11 @@ If such configurations exist:
 {% endalert %}
 
 1. Switch the registry mode to `Unmanaged`.
-2. Check the switching status using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
+
+1. Check the switching status using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
 
     ```yaml
-    ...
+    # ...
     - lastTransitionTime: "..."
       message: ""
       reason: ""
@@ -119,17 +118,18 @@ If such configurations exist:
     target_mode: Unmanaged
     ```
 
-3. Delete the secret registry-bashible-config:
+1. Delete the secret registry-bashible-config:
 
     ```bash
     kubectl -n d8-system delete secret registry-bashible-config
     ```
 
-4. After deleting the secret, wait for the auth configuration to switch back to the legacy one in `Containerd V1`.  
+1. After deleting the secret, wait for the auth configuration to switch back to the legacy one in `Containerd V1`.
+
    You can use [this guide](./faq.html#how-to-check-the-registry-mode-switch-status) to track the switch. Example output:
 
     ```yaml
-    ...
+    # ...
     - lastTransitionTime: "..."
       message: ""
       reason: ""

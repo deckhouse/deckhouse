@@ -919,7 +919,7 @@ spec:
 ### How to add additional registry auth?
 
 {% alert level="warning" %}
-If the registry module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
+If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
 {% endalert %}
 
 Deploy `NodeGroupConfiguration` script:
@@ -972,7 +972,7 @@ spec:
 ### How to configure a certificate for an additional registry?
 
 {% alert level="warning" %}
-If the registry module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
+If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
 {% endalert %}
 
 {% alert level="info" %}
