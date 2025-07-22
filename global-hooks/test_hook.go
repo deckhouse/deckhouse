@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "test_hook",
 			ApiVersion: "v1",
-			Kind:       "Pods",
+			Kind:       "Pod",
 			FilterFunc: applyTestHookFilter,
 		},
 	},
