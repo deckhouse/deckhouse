@@ -246,20 +246,20 @@ import:
   - libabsl_time_zone.so*
   - libabsl_time.so*
   before: install
-# - image: tools/openssl
-#   add: /
-#   to: /chroot
-#   includePaths:
-#   - usr/lib/libcrypto.so*
-#   - usr/lib/libssl.so*
-#   # - lib/ld-musl-x86_64.so.1
-#   before: install
-# - image: libs/zlib
-#   add: /
-#   to: /chroot
-#   includePaths:
-#   - usr/lib/libz.so*
-#   before: install
+- image: tools/openssl
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libcrypto.so*
+  - usr/lib/libssl.so*
+  - lib/ld-musl-x86_64.so.1
+  before: install
+- image: libs/zlib
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libz.so*
+  before: install
 # - image: libs/glibc
 #   add: /
 #   to: /chroot
@@ -368,9 +368,9 @@ shell:
   - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
   - cp -a /lib64/libcrypt.so* /chroot/lib64
   - cp -a /lib64/libpcre2-8.so* /chroot/lib64
-  - cp -a /lib64/libssl.so* /chroot/lib64
-  - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
-  - cp -a /usr/lib64/libz.so* /chroot/lib64
+  # - cp -a /lib64/libssl.so* /chroot/lib64
+  # - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
+  # - cp -a /usr/lib64/libz.so* /chroot/lib64
   - cp -a /usr/lib64/libm.so* /chroot/lib64
   - cp -a /usr/lib64/libc.so* /chroot/lib64
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
