@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/flant/shell-operator/pkg/metric"
 )
 
 const (
@@ -101,17 +101,12 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 		return nil, err
 	}
 
-	migratedModulesCheck, err := newMigratedModulesCheck(k8sclient, metricStorage, logger)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Checker[v1alpha1.DeckhouseRelease]{
 		fns: []Check[v1alpha1.DeckhouseRelease]{
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
+			newMigratedModulesCheck(k8sclient, metricStorage, logger),
 			k8sCheck,
-			migratedModulesCheck,
 		},
 		logger: logger,
 	}, nil
@@ -358,13 +353,13 @@ type migratedModulesCheck struct {
 	logger        *log.Logger
 }
 
-func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) (*migratedModulesCheck, error) {
+func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
 		name:          "migrated modules check",
 		k8sclient:     k8sclient,
 		metricStorage: metricStorage,
 		logger:        logger,
-	}, nil
+	}
 }
 
 func (c *migratedModulesCheck) GetName() string {
@@ -375,10 +370,9 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
-		return nil // No migrated modules to check
+		return nil
 	}
 
-	// Split comma-separated modules list
 	modules := strings.Split(migratedModules, ",")
 	for i, module := range modules {
 		modules[i] = strings.TrimSpace(module)
@@ -389,37 +383,29 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	}
 
 	c.logger.Debug("Checking migrated modules", "modules", modules)
-
-	// Get all ModuleSources
 	moduleSources := &v1alpha1.ModuleSourceList{}
 	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
 		return fmt.Errorf("failed to list ModuleSources: %w", err)
 	}
 
-	// Check each migrated module in all available sources
 	for _, moduleName := range modules {
 		found := false
-		
+
 		for _, source := range moduleSources.Items {
 			if c.isModuleAvailableInSource(moduleName, &source) {
 				found = true
-				c.logger.Debug("Migrated module found in source", "module", moduleName, "source", source.Name)
+				c.logger.Debug("Migrated module found in source", "module", moduleName, "sourceName", source.Name)
 				break
 			}
 		}
 
 		if !found {
 			c.logger.Warn("Migrated module not found in any ModuleSource registry", "module", moduleName)
-			
-			// Generate Prometheus alert (level 6)
 			c.setMigratedModuleNotFoundAlert(moduleName)
-			
-			// Block further installation
 			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
-		} else {
-			// Clear alert if module is found
-			c.clearMigratedModuleNotFoundAlert(moduleName)
 		}
+
+		c.clearMigratedModuleNotFoundAlert(moduleName)
 	}
 
 	c.logger.Debug("All migrated modules found in registries")
@@ -446,7 +432,7 @@ func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string)
 		"severity":    "6",
 		"alert_type":  "migrated_module_missing",
 	})
-	
+
 	// Log the alert for debugging
 	c.logger.Error("ALERT: Migrated module not found in registry", "module", moduleName, "severity", "6")
 }
