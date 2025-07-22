@@ -34,8 +34,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "module-configs",
-			ApiVersion: "deckhouse.io/v1",
+			Name:       "moduleconfigs",
+			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse"},
@@ -59,7 +59,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 	input.Logger.Info("check_deckhouse_edition hook handled")
 
 	// check moduleConfig spec.settings.licence.edition
-	moduleConfigs := input.NewSnapshots.Get("module-configs")
+	moduleConfigs := input.NewSnapshots.Get("moduleconfigs")
 	mcSlice := set.NewFromSnapshot(moduleConfigs).Slice()
 	for _, mc := range mcSlice {
 		if validateEdition(mc) {
