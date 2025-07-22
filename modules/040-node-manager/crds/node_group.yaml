@@ -204,9 +204,9 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -808,7 +808,7 @@ spec:
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1567,13 +1567,9 @@ spec:
                       description: |
                         Container runtime type.
 
-                        If not specified, the value `defaultCRI` from the initial cluster configuration (the `cluster-configuration.yaml` parameter from the `d8-cluster-configuration` Secret in the `kube-system` namespace) is used.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, nodes in a group must meet the following requirements:
-
-                        - Support for `CgroupsV2`.
-                        - Linux kernel version `5.8` or newer.
-                        - Systemd version `244` or newer.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1597,6 +1593,14 @@ spec:
                         ContainerdV2 runtime parameters.
 
                         If used, `cri.type` must be set to `ContainerdV2`.
+
+                        When using `ContainerdV2`, `CgroupsV2` will be used (providing improved security and resource management).
+
+                        To use `ContainerdV2` as a container runtime, the nodes in the group must meet the following requirements:
+
+                        - Support for `CgroupsV2`.
+                        - Linux kernel version `5.8` or newer.
+                        - Systemd version `244` or newer.
                       properties:
                         maxConcurrentDownloads:
                           type: integer

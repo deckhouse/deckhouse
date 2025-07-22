@@ -10,7 +10,7 @@ apiVersions:
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 platform edit cluster-configuration
       ```
     properties:
       apiVersion:
@@ -114,5 +114,5 @@ apiVersions:
               Список IP и доменных имен, для которых проксирование не применяется.
 
               Для настройки wildcard-доменов используйте написание вида ".example.com".
-              
+
               > **Внимание.** Если в кластере предполагается взаимодействие подов с сервисами, размещенными в сети узлов кластера, то укажите список подсетей, которые используются на узлах.
