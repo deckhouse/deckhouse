@@ -59,7 +59,7 @@ spec:
     insecureSkipEmailVerified: true
     issuer: https://issue.example.com
     allowedGroups:
-	- not-slu-gif-ed
+    - not-slu-gif-ed
     scopes:
     - profile
     - email

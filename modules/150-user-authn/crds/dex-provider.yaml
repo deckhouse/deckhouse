@@ -288,11 +288,11 @@ spec:
                     allowedGroups:
                       type: array
                       description: |
-                        A list of allowed groups (filter).
+                        A list of groups that the user must have in order to log in.
 
-                        The user token will contain a set intersection of groups from the provider and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+                        If the list contains a group that the user does not have, the authorization will not be considered successful.
 
-                        The user token will contain all groups if the parameter is not set.
+                        If the parameter is omitted, there will be no filter by group.
                       items:
                         type: string
                     promptType:
