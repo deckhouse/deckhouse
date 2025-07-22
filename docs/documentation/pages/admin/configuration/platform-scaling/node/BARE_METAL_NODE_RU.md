@@ -129,6 +129,16 @@ lang: ru
 
 После создания группы узлов появится скрипт для добавления серверов в группу. DKP будет ожидать появления требуемого числа объектов StaticInstance, подходящих по лейблам. Как только такой объект появится, DKP использует указанный IP и параметры для подключения по SSH, выполнит скрипт `bootstrap.sh` и добавит сервер в группу.
 
+## Изменение конфигурации статического кластера
+
+Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration).
+
+Чтобы изменить параметры статического кластера, выполните команду:
+
+```shell
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+```
+
 ## Перемещение статического узла между NodeGroup
 
 {% alert level="warning" %}

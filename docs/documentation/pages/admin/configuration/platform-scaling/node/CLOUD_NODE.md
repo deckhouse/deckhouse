@@ -87,6 +87,16 @@ spec:
     - ru-central1-b
 ```
 
+## Modifying the cloud provider configuration in a cluster
+
+The configuration of the cloud provider used in a cloud or hybrid cluster is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
+
+Regardless of the cloud provider used, its settings can be modified using the following command:
+
+```shell
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
 ## NodeGroup autoscaling
 
 In Deckhouse Kubernetes Platform (DKP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
@@ -637,13 +647,13 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    base64 -w0 caps-id
    ```
 
-   On any computer with `kubectl` configured to manage the cluster, create an environment variable with the value of the Base64-encoded private key you generated in the previous step:
+   On any computer with `d8 k` configured to manage the cluster, create an environment variable with the value of the Base64-encoded private key you generated in the previous step:
 
    ```shell
     CAPS_PRIVATE_KEY_BASE64=<BASE64-ENCODED PRIVATE KEY>
    ```
 
-   To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster), run the following command:
+   To create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster (note that from this point on, you have to use `d8 k` configured to manage the cluster), run the following command:
 
    ```shell
    d8 k create -f - <<EOF
@@ -701,7 +711,7 @@ This example shows how you can use filters in the [StaticInstance](/modules/node
 
 1. Prepare the required resources (3 servers or virtual machines) and create the [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource the same way as on step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
 
-1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `d8 k` configured to manage the cluster):
 
    > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
 

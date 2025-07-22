@@ -219,3 +219,25 @@ metadata:
 Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию `staticInstances`. Это позволяет DKP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
 
 > В [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типами Static и CloudStatic можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DKP использует это значение для контроля состояния и автоматизации.
+
+## Запуск DKP на произвольном узле
+
+Для запуска DKP на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`. Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+
+{% alert level="warning" %}
+Используйте для запуска DKP только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска DKP группы узлов (`NodeGroup`), содержащей только один узел.
+{% endalert %}
+
+Пример конфигурации модуля:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
+```

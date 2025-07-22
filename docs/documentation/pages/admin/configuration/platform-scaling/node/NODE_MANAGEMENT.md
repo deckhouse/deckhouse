@@ -218,3 +218,25 @@ Configuration specifics:
 If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
 
 > In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DKP uses this value for state monitoring and automation.
+
+## Running DKP on an arbitrary node
+
+To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
+
+{% alert level="warning" %}
+Only use nodes of type **CloudStatic** or **Static** to run DKP. Avoid using a `NodeGroup` that contains only a single node for running DKP.
+{% endalert %}
+
+Example module configuration:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
+```
