@@ -276,7 +276,7 @@ properties:
     properties:
       edition:
         type: string
-        enum: ["ce", "be", "fe", "ee", "se", "se-plus"]
+        enum: ["CE", "BE", "FE", "EE", "SE"] # add se-PLUS
         x-examples: ["Community"]
         # description: 
         default: "Community"
