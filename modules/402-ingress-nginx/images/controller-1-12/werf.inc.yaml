@@ -153,7 +153,7 @@ final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-22.02"
+# fromCacheVersion: "2025-07-22.02"
 final: false
 mount:
 - from: build_dir
@@ -202,71 +202,76 @@ import:
   to: /chroot/usr/bin/curl
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
-  add: /usr/lib
-  to: /chroot/lib64
+  add: /usr
+  to: /chroot
   includePaths:
-  - libabsl_base.so*
-  - libabsl_city.so*
-  - libabsl_cord_internal.so*
-  - libabsl_cord.so*
-  - libabsl_cordz_functions.so*
-  - libabsl_cordz_handle.so*
-  - libabsl_cordz_info.so*
-  - libabsl_crc_cord_state.so*
-  - libabsl_crc_internal.so*
-  - libabsl_crc32c.so*
-  - libabsl_debugging_internal.so*
-  - libabsl_demangle_internal.so*
-  - libabsl_exponential_biased.so*
-  - libabsl_hash.so*
-  - libabsl_int128.so*
-  - libabsl_low_level_hash.so*
-  - libabsl_malloc_internal.so*
-  - libabsl_random_internal_platform.so*
-  - libabsl_random_internal_pool_urbg.so*
-  - libabsl_random_internal_randen_hwaes_impl.so*
-  - libabsl_random_internal_randen_hwaes.so*
-  - libabsl_random_internal_randen_slow.so*
-  - libabsl_random_internal_randen.so*
-  - libabsl_random_internal_seed_material.so*
-  - libabsl_random_seed_gen_exception.so*
-  - libabsl_raw_hash_set.so*
-  - libabsl_raw_logging_internal.so*
-  - libabsl_spinlock_wait.so*
-  - libabsl_stacktrace.so*
-  - libabsl_status.so*
-  - libabsl_statusor.so*
-  - libabsl_str_format_internal.so*
-  - libabsl_strerror.so*
-  - libabsl_strings_internal.so*
-  - libabsl_strings.so*
-  - libabsl_symbolize.so*
-  - libabsl_synchronization.so*
-  - libabsl_throw_delegate.so*
-  - libabsl_time_zone.so*
-  - libabsl_time.so*
+  - lib/libabsl_base.so*
+  - lib/libabsl_city.so*
+  - lib/libabsl_cord_internal.so*
+  - lib/libabsl_cord.so*
+  - lib/libabsl_cordz_functions.so*
+  - lib/libabsl_cordz_handle.so*
+  - lib/libabsl_cordz_info.so*
+  - lib/libabsl_crc_cord_state.so*
+  - lib/libabsl_crc_internal.so*
+  - lib/libabsl_crc32c.so*
+  - lib/libabsl_debugging_internal.so*
+  - lib/libabsl_demangle_internal.so*
+  - lib/libabsl_exponential_biased.so*
+  - lib/libabsl_hash.so*
+  - lib/libabsl_int128.so*
+  - lib/libabsl_low_level_hash.so*
+  - lib/libabsl_malloc_internal.so*
+  - lib/libabsl_random_internal_platform.so*
+  - lib/libabsl_random_internal_pool_urbg.so*
+  - lib/libabsl_random_internal_randen_hwaes_impl.so*
+  - lib/libabsl_random_internal_randen_hwaes.so*
+  - lib/libabsl_random_internal_randen_slow.so*
+  - lib/libabsl_random_internal_randen.so*
+  - lib/libabsl_random_internal_seed_material.so*
+  - lib/libabsl_random_seed_gen_exception.so*
+  - lib/libabsl_raw_hash_set.so*
+  - lib/libabsl_raw_logging_internal.so*
+  - lib/libabsl_spinlock_wait.so*
+  - lib/libabsl_stacktrace.so*
+  - lib/libabsl_status.so*
+  - lib/libabsl_statusor.so*
+  - lib/libabsl_str_format_internal.so*
+  - lib/libabsl_strerror.so*
+  - lib/libabsl_strings_internal.so*
+  - lib/libabsl_strings.so*
+  - lib/libabsl_symbolize.so*
+  - lib/libabsl_synchronization.so*
+  - lib/libabsl_throw_delegate.so*
+  - lib/libabsl_time_zone.so*
+  - lib/libabsl_time.so*
   before: install
 - image: tools/openssl
-  add: /
+  add: /usr
   to: /chroot
   includePaths:
-  - usr/lib/libcrypto.so*
-  - usr/lib/libssl.so*
-  - lib/ld-musl-x86_64.so.1
+  - lib/libcrypto.so*
+  - lib/libssl.so*
   before: install
-- image: libs/zlib
-  add: /
-  to: /chroot
-  includePaths:
-  - usr/lib/libz.so*
-  before: install
-# - image: libs/glibc
-#   add: /
-#   to: /chroot
+# - image: tools/openssl
+#   add: /lib
+#   to: /chroot/lib
 #   includePaths:
-#   - usr/lib64/libc.so*
-#   - usr/lib64/ld-linux-x86-64.so*
+#   - ld-musl-x86_64.so*
 #   before: install
+- image: libs/zlib
+  add: /usr
+  to: /chroot
+  includePaths:
+  - lib/libz.so*
+  before: install
+- image: libs/glibc
+  add: /usr
+  to: /chroot
+  includePaths:
+  - lib64/libc.so*
+  - lib64/ld-linux-x86-64.so*
+  before: install
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -365,14 +370,14 @@ shell:
 
 
   # For NGINX
-  - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
+  # - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
   - cp -a /lib64/libcrypt.so* /chroot/lib64
-  - cp -a /lib64/libpcre2-8.so* /chroot/lib64
+  - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
   # - cp -a /lib64/libssl.so* /chroot/lib64
   # - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
   # - cp -a /usr/lib64/libz.so* /chroot/lib64
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  - cp -a /usr/lib64/libc.so* /chroot/lib64
+  # - cp -a /usr/lib64/libc.so* /chroot/lib64
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
@@ -422,7 +427,7 @@ shell:
   - cp -a /lib64/libcares.so* /chroot/lib64
   - cp -a /lib64/libcom_err.so* /chroot/lib64
   - cp -a /lib64/libcurl.so* /chroot/lib64
-  - cp -a /lib64/libffi.so* /chroot/lib64
+  - cp -a /lib64/libffi.so* /chroot/lib64 # !
   - cp -a /lib64/libgcrypt.so* /chroot/lib64
   - cp -a /lib64/libgmp.so* /chroot/lib64
   - cp -a /lib64/libgnutls.so* /chroot/lib64
@@ -437,8 +442,8 @@ shell:
   - cp -a /lib64/libidn2.so* /chroot/lib64
   - cp -a /lib64/libk5crypto.so* /chroot/lib64
   - cp -a /lib64/libkeyutils.so* /chroot/lib64
-  - cp -a /lib64/libkrb5.so* /chroot/lib64
-  - cp -a /lib64/libkrb5support.so* /chroot/lib64
+  - cp -a /lib64/libkrb5.so* /chroot/lib64 # !
+  - cp -a /lib64/libkrb5support.so* /chroot/lib64 # !
   - cp -a /lib64/liblber.so* /chroot/lib64
   - cp -a /lib64/libldap.so* /chroot/lib64
   - cp -a /lib64/liblua-5.3.so* /chroot/lib64
@@ -450,7 +455,7 @@ shell:
   - cp -a /lib64/libngtcp2.so* /chroot/lib64
   - cp -a /lib64/libntlm.so* /chroot/lib64
   - cp -a /lib64/libp11-kit.so* /chroot/lib64
-  - cp -a /lib64/libpcre.so* /chroot/lib64
+  - cp -a /lib64/libpcre.so* /chroot/lib64 # !
   - cp -a /lib64/libprotobuf.so* /chroot/lib64
   - cp -a /lib64/libpsl.so* /chroot/lib64
   - cp -a /lib64/libre2.so* /chroot/lib64
@@ -472,7 +477,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-22.02"
+# fromCacheVersion: "2025-07-22.02"
 mount:
 - from: build_dir
   to: /tmp/apps
