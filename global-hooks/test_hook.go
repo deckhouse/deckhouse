@@ -37,7 +37,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, runTestHook)
 
 func applyTestHookFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj, nil
+	pod := v1core.Pod{}
+	err := sdk.FromUnstructured(obj, &pod)
+	if err != nil {
+		return nil, err
+	}
+	return pod, nil
 }
 
 func runTestHook(input *go_hook.HookInput) error {
