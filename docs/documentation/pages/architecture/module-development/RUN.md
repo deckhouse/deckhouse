@@ -363,7 +363,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 - Run the command below (specify the name of the module):
 
   ```shell
-  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  d8 platform module enable <MODULE_NAME>
   ```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..

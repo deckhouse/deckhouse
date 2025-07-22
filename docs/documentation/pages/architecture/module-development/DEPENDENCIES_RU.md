@@ -111,7 +111,7 @@ requirements:
    Пример вывода при несовместимости модуля с новой версией Kubernetes:
 
    ```console
-   root@dev-master-0:~# d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   root@dev-master-0:~# d8 platform edit cluster-configuration
    ```
 
    Выводимая информация:

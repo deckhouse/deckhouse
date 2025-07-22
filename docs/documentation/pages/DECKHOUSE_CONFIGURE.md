@@ -83,7 +83,7 @@ General cluster parameters are defined in the [ClusterConfiguration](installing/
 To modify these parameters, run the following command:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.

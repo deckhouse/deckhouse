@@ -18,8 +18,7 @@ lang: ru
 1. Откройте редактирование [ClusterConfiguration](/installing/configuration.html#clusterconfiguration):
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
-     deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Установите желаемую версию Kubernetes (`kubernetesVersion`):

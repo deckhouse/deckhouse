@@ -83,7 +83,7 @@ d8 k edit moduleconfig/upmeter
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 После сохранения изменений DKP автоматически приведёт кластер в соответствие с новой конфигурацией. В зависимости от размеров кластера это может занять некоторое время.

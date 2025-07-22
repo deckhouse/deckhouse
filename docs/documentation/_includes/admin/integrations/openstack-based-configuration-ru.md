@@ -363,7 +363,7 @@ provider:
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}

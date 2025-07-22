@@ -266,7 +266,7 @@ kind: YandexClusterConfiguration
 To edit this resource in a running cluster, execute the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 After making changes, apply them using the following command:

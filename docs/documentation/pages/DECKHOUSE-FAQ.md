@@ -313,7 +313,7 @@ On the other hand, when accessing `registry.deckhouse.io` **from a Kubernetes po
 To view the status of all Deckhouse job queues, run the following command:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 platform queue list
 ```
 
 Example of the output (queues are empty):
@@ -328,7 +328,7 @@ Summary:
 To view the status of the `main` Deckhouse task queue, run the following command:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 platform queue main
 ```
 
 Example of the output (38 tasks in the `main` queue):
@@ -825,7 +825,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -837,7 +837,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -847,7 +847,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 platform edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
@@ -1023,10 +1023,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
-In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
+In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `d8 platform queue list`):
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 platform queue list
 ```
 
 ## How do I upgrade the Kubernetes version in a cluster?
@@ -1036,7 +1036,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

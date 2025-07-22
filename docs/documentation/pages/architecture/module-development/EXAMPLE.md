@@ -250,7 +250,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
   or check the status of the DKP queue:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 ## Migration of ModuleUpdatePolicy to version v1alpha2

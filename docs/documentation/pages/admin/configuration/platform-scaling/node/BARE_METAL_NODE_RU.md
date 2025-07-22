@@ -136,7 +136,7 @@ lang: ru
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 platform edit static-cluster-configuration
 ```
 
 ## Перемещение статического узла между NodeGroup

@@ -54,7 +54,7 @@ DKP поддерживает подключение следующих внеш�
    Включите модуль через CLI:
 
    ```shell
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
+   d8 platform module enable user-authn
    ```
 
 1. Настройте модуль `user-authn`.

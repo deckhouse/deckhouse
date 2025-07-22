@@ -95,7 +95,7 @@ spec:
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 ## Автомасштабирование группы узлов

@@ -17,8 +17,7 @@ The control plane update process in DKP is fully automated.
 1. Open the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) editor:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- \
-     deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Set the target Kubernetes version using the `kubernetesVersion` field:

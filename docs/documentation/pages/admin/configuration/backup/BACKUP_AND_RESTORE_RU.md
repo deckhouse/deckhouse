@@ -135,7 +135,7 @@ lang: ru
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 platform queue main
    ```
 
 1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
