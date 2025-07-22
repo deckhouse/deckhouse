@@ -1,3 +1,17 @@
+// Copyright 2021 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package hooks
 
 import (
@@ -7,50 +21,56 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/api/core/v1"
+	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/test/read-pods",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "pods",
+			Name:       "test_hook",
 			ApiVersion: "v1",
-			Kind:       "Pod",
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				pod := v1.Pod{}
-				err := sdk.FromUnstructured(obj, &pod)
-				if err != nil {
-					return nil, err
-				}
-				return pod, nil
-			},
+			Kind:       "Pods",
+			FilterFunc: applyTestHookFilter,
 		},
 	},
-}, func(input *go_hook.HookInput) error {
-	pods, err := sdkobjectpatch.UnmarshalToStruct[v1.Pod](input.NewSnapshots, "pods")
+}, runTestHook)
+
+func applyTestHookFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	pod := v1core.Pod{}
+	err := sdk.FromUnstructured(obj, &pod)
+	if err != nil {
+		return nil, err
+	}
+	return pod, nil
+}
+
+func runTestHook(input *go_hook.HookInput) error {
+	fmt.Println("[TEST HOOK] get pods")
+	pods, err := sdkobjectpatch.UnmarshalToStruct[v1core.Pod](input.NewSnapshots, "test_hook")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal pods: %w", err)
 	}
-	fmt.Printf("[test_hook] Pods in cluster: %d\n", len(pods))
-
+	fmt.Println("[TEST HOOK] len of pods", len(pods))
 	for _, pod := range pods {
 		patch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
-					"test-hook": "true",
+					"test-hook/self-trigger": fmt.Sprintf("%s", time.Now().UnixNano()),
 				},
 			},
 		}
-		fmt.Printf("[test_hook] Patching pod %s in namespace %s\n", pod.Name, pod.Namespace)
-		input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", pod.Namespace, pod.Name)
+		input.PatchCollector.PatchWithMerge(
+			patch,
+			"v1",
+			"Pod",
+			pod.GetNamespace(),
+			pod.GetName(),
+		)
+		fmt.Println("[TEST HOOK] patched pod", pod.GetName())
 	}
-
-	fmt.Printf("[test_hook] Patched %d pods\n", len(pods))
-
-	fmt.Printf("[test_hook] Sleeping for 60 seconds\n")
+	fmt.Println("[TEST HOOK] sleep for 60 seconds")
 	time.Sleep(60 * time.Second)
-	fmt.Printf("[test_hook] Waking up\n")
+	fmt.Println("[TEST HOOK] wakey wakey")
 	return nil
-})
+}
