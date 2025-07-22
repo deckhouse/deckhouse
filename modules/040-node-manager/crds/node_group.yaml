@@ -1553,7 +1553,8 @@ spec:
                       properties:
                         sharing:
                           enum: [MIG]
-                        mig: {}
+                        mig:
+                          required: [partedConfig]
                     - properties:
                         sharing:
                           enum: [Exclusive]
