@@ -105,8 +105,8 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 		fns: []Check[v1alpha1.DeckhouseRelease]{
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
-			newMigratedModulesCheck(k8sclient, metricStorage, logger),
 			k8sCheck,
+			newMigratedModulesCheck(k8sclient, metricStorage, logger),
 		},
 		logger: logger,
 	}, nil
