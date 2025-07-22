@@ -35,7 +35,7 @@ resource "aws_security_group_rule" "lb-to-node" {
   from_port                = 0
   to_port                  = 65535
   security_group_id        = aws_security_group.node.id
-  source_security_group_id = aws_security_group.loadbalancer.id
+  source_security_group_id = aws_security_group.loadbalancer[0].id
 }
 
 resource "aws_security_group_rule" "node-to-node" {
@@ -57,17 +57,19 @@ resource "aws_security_group_rule" "to-node-icmp" {
 }
 
 resource "aws_security_group" "loadbalancer" {
+  count  = var.disable_default_security_group ? 0 : 1
   name   = "${var.prefix}-loadbalancer"
   vpc_id = var.vpc_id
   tags   = var.tags
 }
 
 resource "aws_security_group_rule" "allow-all-incoming-traffic-to-loadbalancer" {
+  count             = var.disable_default_security_group ? 0 : 1
   type              = "ingress"
   protocol          = "-1"
   from_port         = 0
   to_port           = 65535
-  security_group_id = aws_security_group.loadbalancer.id
+  security_group_id = aws_security_group.loadbalancer[0].id
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
@@ -76,7 +78,7 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
   protocol                 = "-1"
   from_port                = 0
   to_port                  = 65535
-  security_group_id        = aws_security_group.loadbalancer.id
+  security_group_id        = aws_security_group.loadbalancer[0].id
   source_security_group_id = aws_security_group.node.id
 }
 
