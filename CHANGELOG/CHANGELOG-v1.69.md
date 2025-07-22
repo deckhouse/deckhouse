@@ -69,6 +69,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** Added support for configuring private HTTP container registries in containerd. [#14155](https://github.com/deckhouse/deckhouse/pull/14155)
+    Users can now configure containerd to pull images from private registries, easing deployments in private environments.
  - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
  - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
@@ -98,6 +100,7 @@
  - **[cloud-provider-dynamix]** Fixed the Terraform `cloudConfig` decoding. [#12493](https://github.com/deckhouse/deckhouse/pull/12493)
  - **[cloud-provider-huaweicloud]** Fixed `EIP` creation in `cloud-controller-manager`. [#12046](https://github.com/deckhouse/deckhouse/pull/12046)
  - **[cloud-provider-openstack]** Fixed empty metadata fields. [#12179](https://github.com/deckhouse/deckhouse/pull/12179)
+ - **[cloud-provider-vcd]** change VCD CCM checksum calculation [#14229](https://github.com/deckhouse/deckhouse/pull/14229)
  - **[cloud-provider-vcd]** Add a hook to set `legacyMode` based on the detected `VCD API` version [#13015](https://github.com/deckhouse/deckhouse/pull/13015)
  - **[cloud-provider-vcd]** Fixed creation of PersistentVolumeClaim. [#12909](https://github.com/deckhouse/deckhouse/pull/12909)
  - **[cloud-provider-vcd]** Implemented a hack to migrate etcd disk to VCD independent disk to prevent deletion of etcd data. [#12651](https://github.com/deckhouse/deckhouse/pull/12651)
@@ -153,6 +156,7 @@
     In L2 mode, the Public IP address will not be marked as free in the pool after deleting the LoadBalancer Service. As a temporary fix, you can restart the MetalLB controller pods.
  - **[metallb]** Fixed deprecated CRD addresspools.metallb.io deletion. [#13553](https://github.com/deckhouse/deckhouse/pull/13553)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
+ - **[multitenancy-manager]** Fix rendering properties with additionalProperties. [#14148](https://github.com/deckhouse/deckhouse/pull/14148)
  - **[network-gateway]** Fix python path [#13574](https://github.com/deckhouse/deckhouse/pull/13574)
  - **[node-manager]** fixed update for static clusters [#13962](https://github.com/deckhouse/deckhouse/pull/13962)
  - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
@@ -161,6 +165,7 @@
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
  - **[node-manager]** Added validation of `instanceClass` deletion for being used by a NodeGroup. [#11830](https://github.com/deckhouse/deckhouse/pull/11830)
+ - **[operator-trivy]** Fix operator-trivy does not respect k8s 1.31+. [#14162](https://github.com/deckhouse/deckhouse/pull/14162)
  - **[operator-trivy]** Add proxy env variables support to the trivy server. [#13036](https://github.com/deckhouse/deckhouse/pull/13036)
  - **[prometheus]** enable WAL for the grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13063](https://github.com/deckhouse/deckhouse/pull/13063)
     the grafana deployment will be rollout restarted
