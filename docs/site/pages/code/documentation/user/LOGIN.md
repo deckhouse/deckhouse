@@ -1,5 +1,4 @@
 ---
 title: "Login"
-permalink: en/code/documentation/user/login.html 
-lang: en
+permalink: en/code/documentation/user/login.html
 ---
