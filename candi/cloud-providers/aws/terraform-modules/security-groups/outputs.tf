@@ -17,7 +17,7 @@ output "additional_security_groups" {
 }
 
 output "load_balancer_security_group" {
-  value = aws_security_group.loadbalancer.id
+  value = aws_security_group.loadbalancer[0].id
 }
 
 output "security_group_id_node" {
