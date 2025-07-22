@@ -1524,7 +1524,6 @@ spec:
                         partedConfig:
                           type: string
                           pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
-                          x-examples: ["all-1g.5gb"]
                           description: |
                             Selected parted-config for MIG.
                     timeSlicing:
