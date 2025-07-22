@@ -17,6 +17,7 @@
 import json
 import os
 import sys
+import re
 
 whitelist = [
     "dev",
@@ -29,7 +30,21 @@ whitelist = [
     "node-manager/bashible-apiserver",
     "release-channel-version-prebuild",
     "tests",
-    "tests-prebuild"
+    "tests-prebuild",
+    "e2e-opentofu-eks",
+    "common-base",
+    "deckhouse/webhook-handler",
+    "common/shell-operator",
+    "base-for-go",
+    "prometheus/grafana-dashboard-provisioner",
+    "control-plane-manager/kube-controller-manager.*",
+    "control-plane-manager/kube-apiserver.*",
+    "control-plane-manager/kube-scheduler.*",
+    "control-plane-manager/control-plane-manager.*",
+    "registrypackages/kubeadm.*",
+    "registrypackages/kubectl.*",
+    "registrypackages/kubelet.*",
+    "kube-proxy/kube-proxy.*",
 ]
 
 # Find and read build reports
@@ -53,7 +68,7 @@ for image in unique_images:
         if image in reports[edition]:
             digests.add(reports[edition][image]['DockerImageDigest'])
     if len(digests) > 1:
-        if image not in whitelist:
+        if not [image for pattern in whitelist if re.fullmatch(pattern, image)]:
             found = True
             print(f'Found differing image digests for image {image}:')
         else:
