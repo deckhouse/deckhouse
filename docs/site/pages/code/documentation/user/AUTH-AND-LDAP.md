@@ -109,7 +109,7 @@ main:
       default: 'default-program',
     },
     top_level_group: "LdapGroups",
-    name_mask: "(?<=-)[A-z0-9А-я]*$",
+    name_mask: "(?<=-)[A-z0-9]*$",
     owner: "root",
     role_mapping: [
       { by_name: '.*-project_manager-.*', gitlab_role: 'maintainer' },
