@@ -390,6 +390,10 @@ apiVersions:
         type: string
         description: |
           A public key for accessing nodes.
+      disableDefaultSecurityGroup:
+        type: boolean
+        description: |
+          If `true`, the default security group will not be created.
       sshAllowList:
         type: array
         items:
