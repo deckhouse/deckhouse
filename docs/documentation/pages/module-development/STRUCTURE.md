@@ -346,6 +346,98 @@ properties:
       English description. Markdown markup.</code>
 ```
 
+#### x-deckhouse-validations (CEL validations)
+
+When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
+
+When using CEL validations, keep the following features in mind:
+
+- Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
+- All parameters at the current level are available in expressions via the `self` variable.
+- Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
+- Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
+- If there are multiple validation errors, the user will see all messages from the corresponding rules.
+
+##### Examples of complex rules
+
+Below are examples of complex validation rules described in CEL:
+
+- Checking whether the parameter value falls within the range:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas must be between minReplicas and maxReplicas"
+  ```
+
+- Checking for the presence of a key:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "The key 'Available' must be present"
+  ```
+
+- Checking that exactly one of two lists is non-empty:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Exactly one of the lists must be non-empty"
+  ```
+
+- Checking a value by regular expression:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "All values must contain only letters"
+  ```
+
+##### Scalar and array value validation
+
+Validation of scalar values and arrays has the following features:
+
+- If the property is a scalar (e.g., number or string), then in the CEL expression `self` will be that value.
+- If the property is an array, then `self` will be an array, and you can use methods like `.size()`, `.all()`, `.exists()`, etc.
+
+Example for an array:
+
+```yaml
+type: object
+properties:
+  items:
+    type: array
+    items:
+      type: string
+    x-deckhouse-validations:
+      - expression: "self.size() > 0"
+        message: "The items list must not be empty"
+```
+
+##### Validation of additionalProperties (map)
+
+For objects with additionalProperties (map), you can validate keys and values using methods like `.all(key, ...)`, `.exists(key, ...)`, etc.
+
+Example:
+
+```yaml
+type: object
+properties:
+  mymap:
+    type: object
+    additionalProperties:
+      type: integer
+    x-deckhouse-validations:
+      - expression: "self.all(key, self[key] > 0)"
+        message: "All values in mymap must be greater than 0"
+```
+
 ### values.yaml
 
 This file is required for validating the source data when rendering templates without using extra Helm chart functions.
@@ -432,7 +524,6 @@ Parameters that can be used in `module.yaml`:
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
 - `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
 - `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
-  - `bootstrapped` — *Boolean.* Dependency on the [cluster installation status](../dependencies/#cluster-installation-status-dependency) (only for built-in DKP modules).
   - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
@@ -462,7 +553,6 @@ descriptions:
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
-    bootstrapped: true
 disable:
   confirmation: true
   message: "Disabling this module will delete all resources, created by the module."

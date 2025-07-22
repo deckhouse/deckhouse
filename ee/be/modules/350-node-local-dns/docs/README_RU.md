@@ -1,5 +1,6 @@
 ---
 title: "Модуль node-local-dns"
+description: "Кэширующий DNS-сервер на каждом узле кластера Deckhouse Kubernetes Platform."
 ---
 
 ## Описание модуля

@@ -481,6 +481,119 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
+### How to generate a self-signed certificate?
+
+When generating certificates manually, it is important to fill out all fields of the certificate request correctly to ensure that the final certificate is issued properly and can be validated across various services.  
+
+It is important to follow these guidelines:
+
+1. Specify domain names in the `SAN` (Subject Alternative Name) field.
+
+   The `SAN` field is a more modern and commonly used method for specifying the domain names covered by the certificate.
+   Some services no longer consider the `CN` (Common Name) field as the source for domain names.
+
+2. Correctly fill out the `keyUsage`, `basicConstraints`, `extendedKeyUsage` fields, specifically:
+   - `basicConstraints = CA:FALSE`  
+
+     This field determines whether the certificate is an end-entity certificate or a certification authority (CA) certificate. CA certificates cannot be used as service certificates.
+
+   - `keyUsage = digitalSignature, keyEncipherment`  
+
+     The `keyUsage` field limits the permissible usage scenarios of this key:
+
+     - `digitalSignature`: Allows the key to be used for signing digital messages and ensuring data integrity.
+     - `keyEncipherment`: Allows the key to be used for encrypting other keys, which is necessary for secure data exchange using TLS (Transport Layer Security).
+
+   - `extendedKeyUsage = serverAuth`  
+
+     The `extendedKeyUsage` field specifies additional key usage scenarios required by specific protocols or applications:
+
+     - `serverAuth`: Indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
+
+It is also recommended to:
+
+1. Issue the certificate for no more than 1 year (365 days).
+
+   The validity period of the certificate affects its security. A one-year validity ensures the cryptographic methods remain current and allows for timely certificate updates in case of threats. Furthermore, some modern browsers now reject certificates with a validity period longer than 1 year.
+
+2. Use robust cryptographic algorithms, such as elliptic curve algorithms (including `prime256v1`).
+
+   Elliptic curve algorithms (ECC) provide a high level of security with a smaller key size compared to traditional methods like RSA. This makes the certificates more efficient in terms of performance and secure in the long term.
+
+3. Do not specify domains in the `CN` (Common Name) field.
+  
+   Historically, the `CN` field was used to specify the primary domain name for which the certificate was issued. However, modern standards, such as [RFC 2818](https://datatracker.ietf.org/doc/html/rfc2818), recommend using the `SAN` (Subject Alternative Name) field for this purpose.
+   If the certificate is intended for multiple domain names listed in the `SAN` field, specifying one of the domains additionally in `CN` can cause a validation error in some services when accessing domains not listed in `CN`.
+   If non-domain-related information is specified in `CN` (for example, an identifier or service name), the certificate will also extend to these names, which could be exploited for malicious purposes.
+
+#### Certificate generation example
+
+To generate a certificate, we'll use the `openssl` utility.
+
+1. Fill in the `cert.cnf` configuration file:
+
+   ```ini
+   [ req ]
+   default_bits       = 2048
+   default_md         = sha256
+   prompt             = no
+   distinguished_name = dn
+   req_extensions     = req_ext
+
+   [ dn ]
+   C = GB
+   ST = London
+   L = London
+   O = Example Company
+   OU = IT Department
+   # CN = Do not specify the CN field.
+
+   [ req_ext ]
+   subjectAltName = @alt_names
+
+   [ alt_names ]
+   # Specify all domain names.
+   DNS.1 = example.co.uk
+   DNS.2 = www.example.co.uk
+   DNS.3 = api.example.co.uk
+   # Specify IP addresses (if required).
+   IP.1 = 192.0.2.1
+   IP.2 = 192.0.4.1
+
+   [ v3_ca ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+
+   [ v3_req ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+   subjectAltName = @alt_names
+
+   # Elliptic curve parameters.
+   [ ec_params ]
+   name = prime256v1
+   ```
+
+2. Generate an elliptic curve key:
+
+   ```shell
+   openssl ecparam -genkey -name prime256v1 -noout -out ec_private_key.pem
+   ```
+
+3. Create a certificate signing request:
+
+   ```shell
+   openssl req -new -key ec_private_key.pem -out example.csr -config cert.cnf
+   ```
+
+4. Generate a self-signed certificate:
+
+   ```shell
+   openssl x509 -req -in example.csr -signkey ec_private_key.pem -out example.crt -days 365 -extensions v3_req -extfile cert.cnf
+   ```
+
 ### Manually uploading Deckhouse Kubernetes Platform, vulnerability scanner DB and Deckhouse modules to private registry
 
 {% alert level="warning" %}
@@ -532,7 +645,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 
    Additional configuration options for the `d8 mirror` family of commands are available as environment variables:
     - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
-    - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`).  The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
+    - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`). The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
     - `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
     - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
     - `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
@@ -880,146 +993,146 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
-    > Skip this step if switching to Deckhouse CE.
+   > Skip this step if switching to Deckhouse CE.
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: containerd-$NEW_EDITION-config.sh
-    spec:
-      nodeGroups:
-      - '*'
-      bundles:
-      - '*'
-      weight: 30
-      content: |
-        _on_containerd_config_changed() {
-          bb-flag-set containerd-need-restart
-        }
-        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-        mkdir -p /etc/containerd/conf.d
-        bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-        [plugins]
-          [plugins."io.containerd.grpc.v1.cri"]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-              [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
-                auth = "$AUTH_STRING"
-        EOF_TOML
-    EOF
-    ```
+   ```shell
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-$NEW_EDITION-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+   EOF
+   ```
 
-    Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
+   Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
-    ```shell
-    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-    ```
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
 
-    Example output:
+   Example output:
 
-    ```console
-    NAME     NODES   READY   UPTODATE
-    master   1       1       1
-    worker   2       2       2
-    ```
+   ```console
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
 
-    Also, a message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
+   Also, a message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
 
-    ```shell
-    journalctl -u bashible -n 5
-    ```
+   ```shell
+   journalctl -u bashible -n 5
+   ```
 
-    Example output:
+   Example output:
 
-    ```console
-    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-    ```
+   ```console
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
 
 1. Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
 
-    ```shell
-    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-    kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
-    ```
+   ```shell
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
+   ```
 
 1. Once the pod is in `Running` state, execute the following commands:
 
-    ```shell
-    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-    USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
-    ```
+   ```shell
+   NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
+   ```
 
 1. Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
 
-    ```shell
-    echo $MODULES_WILL_DISABLE
-    ```
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
 
-    > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
+   > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
 
-    Disable the modules not supported by the new edition:
+   Disable the modules not supported by the new edition:
 
-    ```shell
-    echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-    ```
+   ```shell
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   ```
 
-    Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
+   Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
 
 1. Execute the `deckhouse-controller helper change-registry` command from the Deckhouse pod with the new edition parameters:
 
-    To switch to BE/SE/SE+/EE editions:
+   To switch to BE/SE/SE+/EE editions:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
-    ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+   ```
 
-    To switch to CE edition:
+   To switch to CE edition:
 
-    ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
-    ```
+   ```shell
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
+   ```
 
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
-    ```shell
-    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-    ```
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
-    > Skip this step if switching to Deckhouse CE.
+   > Skip this step if switching to Deckhouse CE.
 
-    ```shell
-    kubectl delete ngc containerd-$NEW_EDITION-config.sh
-    kubectl delete pod $NEW_EDITION-image
-    kubectl apply -f - <<EOF
-        apiVersion: deckhouse.io/v1alpha1
-        kind: NodeGroupConfiguration
-        metadata:
-          name: del-temp-config.sh
-        spec:
-          nodeGroups:
-          - '*'
-          bundles:
-          - '*'
-          weight: 90
-          content: |
-            if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-              rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-            fi
-    EOF
-    ```
+   ```shell
+   kubectl delete ngc containerd-$NEW_EDITION-config.sh
+   kubectl delete pod $NEW_EDITION-image
+   kubectl apply -f - <<EOF
+       apiVersion: deckhouse.io/v1alpha1
+       kind: NodeGroupConfiguration
+       metadata:
+         name: del-temp-config.sh
+       spec:
+         nodeGroups:
+         - '*'
+         bundles:
+         - '*'
+         weight: 90
+         content: |
+           if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+             rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+           fi
+   EOF
+   ```
 
-    After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
+   After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
-    ```shell
-    kubectl delete ngc del-temp-config.sh
-    ```
+   ```shell
+   kubectl delete ngc del-temp-config.sh
+   ```
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 

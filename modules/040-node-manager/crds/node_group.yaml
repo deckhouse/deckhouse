@@ -424,13 +424,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
-                  deprecated: true
+                  x-doc-deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
@@ -1558,7 +1558,6 @@ spec:
                         exclusive: {}
                 cri:
                   type: object
-                  x-doc-default: ContainerdV2
                   description: |
                     Container runtime parameters.
                   properties:
@@ -1710,7 +1709,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of existing `staticInstances` to bootstrap and add to the cluster.
+                          The number of existing `staticInstances` to bootstrap and add to the cluster. In a NodeGroup of type Static or CloudStatic, you can explicitly specify the number of nodes using this parameter. This sets the expected number of nodes — DKP uses this value for state control and automation purposes.
                       type: integer
                       minimum: 0
                       default: 0
@@ -1727,7 +1726,7 @@ spec:
                   properties:
                     quickShutdown:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
@@ -1797,7 +1796,6 @@ spec:
                           description: |
                             Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
                         notHeldResources:
-                          deprecated: true
                           x-doc-deprecated: true
                           description: |
                             Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
@@ -1937,7 +1935,7 @@ spec:
                       description: |
                         This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
-                      deprecated: true
+                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |

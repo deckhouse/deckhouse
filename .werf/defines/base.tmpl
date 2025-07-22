@@ -262,6 +262,10 @@ shell:
   {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
   # link /run directory to /var/run
   - ln -s /var/run /run
+  # add link from bash to bash
+  - ln -s /bin/bash /bin/sh
+  # add link from vim to vi
+  - ln -s /usr/bin/vim /usr/bin/vi
 imageSpec:
   config:
     env: { "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
