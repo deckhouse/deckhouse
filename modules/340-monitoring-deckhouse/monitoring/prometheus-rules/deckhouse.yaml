@@ -567,3 +567,44 @@
         ```
 
         Provided error: {{ $labels.error }}
+
+  - alert: D8DeckhouseMigratedModuleNotFound
+    expr: d8_migrated_module_not_found == 1
+    for: 30m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module_name"
+      summary: Migrated module {{ $labels.module_name }} not found in registry.
+      description: |
+        The migrated module `{{ $labels.module_name }}` specified in DeckhouseRelease was not found in any available ModuleSource registry.
+        
+        This may indicate:
+        - The module source registry is not properly configured
+        - The module has not been published to the registry yet
+        - There is a network issue preventing access to the registry
+        
+        Please check:
+        1. ModuleSource configurations: `kubectl get modulesources`
+        2. Registry accessibility and credentials
+        3. Module availability in the configured registries
+        
+        To investigate, run the following commands:
+        
+        ```bash
+        # Check ModuleSource status
+        kubectl get modulesources -o yaml
+        
+        # Check available modules in all sources
+        deckhouse-controller registry get modules
+        
+        # Check Deckhouse logs for more details
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
