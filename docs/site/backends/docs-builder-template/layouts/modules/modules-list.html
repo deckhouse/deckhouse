@@ -29,7 +29,7 @@
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
 {{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
-{{ $modulesEditions := merge .Site.Data.modules_all .Site.Data.dkp.embedded_modules_editions }}
+{{ $modulesEditions := .Site.Data.modules_all }}
 {{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{ $ctx := $ }}
 
@@ -88,18 +88,41 @@
             <div class="button-tile__tags">
 
               {{/* add commercial or community edition tag */}}
-              {{ $editionTagTitle := T "commercial_editions_en" }}
-              {{ if isset $modulesEditions .module }}
-                {{ $embeddedModuleEditions := index $modulesEditions .module }}
+              {{ $tags := .tags }}
+
+              {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
+              {{ $editionTagTitle := "" }}
+
+              {{ $moduleEditionsData := slice }}
+
+              {{ if gt (where $embeddedModulesList "module" .module | len ) 0 }}
+                {{ $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
                 {{ if or
-                     (eq (index $embeddedModuleEditions "editionMinimumAvailable") "ce")
-                     (in (index $embeddedModuleEditions "editionsWithRestrictions") "ce")
-                     (in (index $embeddedModuleEditions "editions") "ce")
+                   (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                   (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                   (in (index $moduleEditionsData "editions") "ce")
                 }}
                   {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
+                {{ end }}
+              {{ else if isset $modulesEditions .module }}
+                {{ $moduleEditionsData := index $modulesEditions .module }}
+                {{ if or
+                     (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                     (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                     (in (index $moduleEditionsData "editions") "ce")
+                }}
+                  {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
                 {{ end }}
               {{ end }}
-              {{ $tags := .tags | append $editionTagTitle }}
+
+              {{ if gt ($editionTagTitle | len ) 0 }}
+                {{ $tags = $tags | append $editionTagTitle }}
+              {{ end }}
+
               {{ range $tags }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
               {{end}}
