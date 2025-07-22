@@ -95,6 +95,9 @@
           {{- end }}
         {{- end }}
       {{- end }}
+        {{- if $provider.gitlab.rootCAData }}
+        rootCAData: {{ $provider.gitlab.rootCAData | b64enc }}
+        {{- end }}
 
       {{- if eq $provider.type "BitbucketCloud" }}
     - type: bitbucket-cloud
