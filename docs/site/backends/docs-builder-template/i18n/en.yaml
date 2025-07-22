@@ -4,6 +4,7 @@ modules: modules
 modules2: modules
 module: module
 module_versions: Module versions
+module_version: Module version
 deckhouse: deckhouse
 documentation: documentation
 modules_documentation: Modules documentation

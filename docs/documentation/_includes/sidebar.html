@@ -6,10 +6,11 @@
   {%- else %}
       <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
         {% if page.sidebar == 'embedded-modules' %}
-           <p><strong>{{ page['moduleName'] }}</strong></p>
+           <div><strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
         {% endif %}
           <div class="channel-menu submenu-parent">
 
+          {% if site.mode == 'module' %}
             <!-- documentation-section-badge -->
             <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
             <div class="submenu-container">
@@ -21,6 +22,7 @@
                 </li>
               </ul>
             </div>
+          {%- endif %}
           </div>
 
           {% unless site.mode == 'module' %}
