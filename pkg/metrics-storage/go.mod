@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/pkg/metrics-storage
 
-go 1.24.3
+go 1.23.8
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
