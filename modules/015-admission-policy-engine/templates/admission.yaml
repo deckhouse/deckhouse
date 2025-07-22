@@ -16,7 +16,8 @@ spec:
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
     - name: 'exclude-existing-label'
-      expression: "object.metadata.labels['security.deckhouse.io/skip-pss-check'] != oldObject.metadata.labels['security.deckhouse.io/skip-pss-check']"
+      expression: "has(object.metadata.labels) && ('security.deckhouse.io/skip-pss-check' in object.metadata.labels) &&
+       object.metadata.labels['security.deckhouse.io/skip-pss-check'] != oldObject.metadata.labels['security.deckhouse.io/skip-pss-check']"
   validations:
     - expression: >-
         (!has(object.metadata.labels) ||
