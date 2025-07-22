@@ -23,7 +23,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				if err != nil {
 					return nil, err
 				}
-				return obj, nil
+				return pod, nil
 			},
 		},
 	},
