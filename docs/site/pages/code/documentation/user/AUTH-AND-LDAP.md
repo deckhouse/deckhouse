@@ -3,16 +3,16 @@ title: "OmniAuth & LDAP"
 menuTitle: OmniAuth and LDAP setup
 force_searchable: true
 description: guidelines on setting up OmniAuth and LDAP
-permalink: ru/code/documentation/user/oauth-and-ldap.html
-lang: ru
+permalink: en/code/documentation/user/oauth-and-ldap.html
+lang: en
 weight: 45
 ---
 
-# OmniAuth Configuration
+## OmniAuth Configuration
 
 Configuration mostly relies on the one documented in the [official documentation](https://docs.gitlab.com/integration/omniauth/). However, Deckhouse Code brings some extension over it described in sections below.
 
-## OpenID Connect (OIDC)
+### OpenID Connect (OIDC)
 
 For OIDC integration, the following new parameters have been added:
 
@@ -25,7 +25,7 @@ For OIDC integration, the following new parameters have been added:
 - **`groups_attribute`**: The attribute name used to retrieve user groups.  
   **Default:** `'groups'`.
 
-### Example Configuration
+### Example OIDC Configuration
 
 Section is under `spec.appConfig.omniauth.`
 
@@ -52,7 +52,7 @@ For SAML integration, the following new parameters have been added:
 - **`groups_attribute`**: The attribute name used to retrieve user groups.  
   **Default:** `'Groups'`.
 
-### Example Configuration
+### Example SAML Configuration
 
 Section is under `spec.appConfig.omniauth.`
 
@@ -65,10 +65,10 @@ providers:
       - 'admin'
     groups_attribute: 'gitlab_group'
 ```
+
 > **Note:** for oidc and SAML If a user belongs to `admin_groups` but is not present in `allowed_groups`, they will not be able to log in. In such cases, `admin_groups` will not be considered, and the user will not be granted administrative privileges.
 
-
-# LDAP Syncronization
+## LDAP Syncronization
 
 Performs synchronization of users, groups, and group access rights with the LDAP server. By default it happens once per hour.
 
@@ -80,13 +80,13 @@ cron_jobs:
     cron: "0 * * * *"
 ```
 
-## LDAP Server-Side Limits
+### LDAP Server-Side Limits
 
 During synchronization, queries are made for all users and groups specified in the configuration file.
 The synchronization task automatically uses pagination if needed.
 However, if the LDAP server has a limit on the maximum number of records returned, it may lead to unexpected user access being blocked or removed.
 
-## Example LDAP Provider Configuration
+### Example LDAP Provider Configuration
 
 Section is located under `spec.appConfig.ldap.`
 
@@ -119,7 +119,7 @@ main:
   }
 ```
 
-## Group and Access Rights Synchronization
+### Group and Access Rights Synchronization
 
 Creates GitLab groups and assigns user roles based on records retrieved from the LDAP server.  
 Can be configured with the following parameters:
@@ -147,8 +147,7 @@ Assigns access rights to users based on the group name (`cn`):
 
 > Deckhouse Code leverages basic roles from Gitlab
 
-
-### How group membership is defined
+#### How group membership is defined
 
 Group members are determined from the following group attributes. The value of each attribute is expected to be an array of user DNs:
 
@@ -158,7 +157,7 @@ Group members are determined from the following group attributes. The value of e
 - `memberuid`
 - `submember`
 
-## User Synchronization
+### User Synchronization
 
 Locks and unlocks users and updates their name and email based on data from the LDAP server.
 
@@ -166,7 +165,7 @@ Optional parameters:
 
 `sync_name` - if `true`, the user's name will be updated from LDAP data
 
-### Troubleshooting synchronization
+#### Troubleshooting synchronization
 
 If a previous synchronization job did not complete correctly, Redis may retain a record indicating the job is still running.  
 This prevents a new job from starting because concurrency is set to 1.

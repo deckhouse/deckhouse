@@ -27,10 +27,6 @@ entries:
           en: Monitoring and control
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
-      - title:
-          en: Maintenance
-          ru: Обслуживание
-        url: /code/documentation/admin/configuration/maintenance.html
   - title:
       en: User guide
       ru: Руководство пользователя
@@ -68,8 +64,8 @@ entries:
           ru: Управление пользователями, доступом и изменениями
         url: /code/documentation/user/user-management.html
       - title:
-          en: API and webhooks
-          ru: API и вебхуки
+          en: API
+          ru: API
         url: /code/documentation/user/api.html
       - title:
           en: Pull Mirroring

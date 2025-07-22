@@ -14,6 +14,7 @@ weight: 50
 > in the GitLab documentation.
 
 ### Enabling Wiki at the Group Level
+
 On the group page, go to `Settings → General → Permissions and group features → Wiki access level`.
 
 Available options:
@@ -28,6 +29,7 @@ Default value — **Enabled**.
 To open the group Wiki, go to the group page and select `Plan → Wiki`.
 
 ### Roles and Wiki Access
+
 Access level is determined by the user's membership role in the group:
 
 | Role                             | Actions                                                                                                     |
@@ -45,11 +47,13 @@ Access level is determined by the user's membership role in the group:
 
 - Create hierarchical page structures using `/` (slash) in page names.  
   Example:
+
   ```text
   devops/ci-pipelines
   devops/kubernetes
   product/design
   ```
+
   This creates folder-like navigation and helps organize content.
 
 ---
@@ -89,9 +93,11 @@ Access level is determined by the user's membership role in the group:
 
 - Each Wiki is a dedicated Git repository.
 - Clone via SSH or HTTPS:
+
   ```bash
   git clone git@code.example.com:groupname/wiki.git
   ```
+
 - Full access to `.md` files, branches, history — ideal for local editing, backup, or automation.
 
 ---

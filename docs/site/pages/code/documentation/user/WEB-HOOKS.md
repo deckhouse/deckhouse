@@ -22,9 +22,11 @@ They allow you to automatically send HTTP requests when events occur in the syst
 - Automatic retries in case of connection failures.
 
 ## Project Webhooks
+
 - Available in the GitLab CE version.
 
 ## Group Webhooks
+
 To add a webhook to a group, go to the group page and click **Settings => Webhooks**.  
 Then, select the events that will trigger the webhook. Group webhooks support all project events, and additionally:
 - Member events
@@ -32,17 +34,23 @@ Then, select the events that will trigger the webhook. Group webhooks support al
 - Subgroup events
 
 ### Events
+
 If the user does not have a public email specified, the email will be received as `"[REDACTED]"`.
 
 #### Member Events
+
 Triggered when members of a group or project are created, removed, or modified.
 
 ##### Creation
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Member Hook
 ```
+
 Body:
+
 ```json
 {
   "created_at": "2025-07-02T15:23:25Z",
@@ -60,12 +68,17 @@ Body:
 }
 
 ```
+
 ##### Update
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Member Hook
 ```
+
 Body:
+
 ```json
 {
   "created_at": "2025-07-02T15:23:25Z",
@@ -85,11 +98,15 @@ Body:
 ```
 
 ##### Delete
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Member Hook
 ```
+
 Body:
+
 ```json
 {
   "created_at": "2025-07-02T15:23:25Z",
@@ -109,17 +126,20 @@ Body:
 ```
 
 #### Project events
+
 Triggered when project created or deleted
 
 ##### Create
 
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Project Hook
 ```
+
 Body:
 
-```
+```json
 {
   "event_name": "project_create",
   "created_at": "2025-07-02T15:40:09Z",
@@ -140,13 +160,16 @@ Body:
 ```
 
 ##### Delete
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Project Hook
 ```
+
 Body:
 
-```
+```json
 {
   "event_name": "project_destroy",
   "created_at": "2025-07-02T15:40:09Z",
@@ -167,16 +190,20 @@ Body:
 ```
 
 #### События подгруп
+
 Triggered when subgroup created or deleted
 
 ##### Create
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Subgroup Hook
 ```
+
 Body:
 
-```
+```json
 {
   "created_at": "2025-07-02T15:44:02Z",
   "updated_at": "2025-07-02T15:44:02Z",
@@ -191,14 +218,18 @@ Body:
   "parent_full_path": "flant-development"
 }
 ```
+
 ##### Delete
+
 Request headers:
-```
+
+```text
 X-Gitlab-Event: Subgroup Hook
 ```
+
 Body:
 
-```
+```json
 {
   "created_at": "2025-07-02T15:44:02Z",
   "updated_at": "2025-07-02T15:44:02Z",

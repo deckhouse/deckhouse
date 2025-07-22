@@ -8,61 +8,69 @@ permalink: en/code/documentation/user/external-vault.html
 lang: en
 ---
 
-# Integration with External Vault
+## Integration with External Vault
+
 This feature allows you to set up integration with a Vault server and use secrets in CI pipelines.
 To get started, you need to configure the Vault server and prepare the appropriate roles and policies.
 
-## VAULT Setup
-Enabling JWT Authentication
-```bash
-vault auth enable jwt
+### VAULT Setup
 
-vault write auth/jwt/config \
-  oidc_discovery_url="https://code.example.com" \
-  bound_issuer="https://code.example.com" \
-  default_role="gitlab-role"
-```
+#### 1) Enabling JWT Authentication
 
-1) Creating a Role
+  ```bash
+  vault auth enable jwt
 
-```bash
-vault write auth/jwt/role/gitlab-role - <<EOF
-{
-  "role_type": "jwt",
-  "user_claim": "sub",
-  "bound_audiences": ["vault"],
-  "bound_claims": {
-    "project_id": "23"
-  },
-  "policies": ["gitlab-policy"],
-  "ttl": "1h"
-}
-EOF
+  vault write auth/jwt/config \
+    oidc_discovery_url="https://code.example.com" \
+    bound_issuer="https://code.example.com" \
+    default_role="gitlab-role"
+  ```
 
-```
+#### 2) Creating a Role
 
-> ⚠️ Important: Always use bound_claims to restrict access to the role.
-Otherwise, any JWT issued by the instance will be able to access Vault using this role.
+  ```bash
+  vault write auth/jwt/role/gitlab-role - <<EOF
+  {
+    "role_type": "jwt",
+    "user_claim": "sub",
+    "bound_audiences": ["vault"],
+    "bound_claims": {
+      "project_id": "23"
+    },
+    "policies": ["gitlab-policy"],
+    "ttl": "1h"
+  }
+  EOF
 
-3) Configuring a Policy
-```bash
-vault policy write gitlab-policy - <<EOF
-path "kv/data/code/vault-demo" {
-  capabilities = ["read"]
-}
-EOF
-```
+  ```
 
-## CI Configuration
+  > ⚠️ Important: Always use bound_claims to restrict access to the role.
+  Otherwise, any JWT issued by the instance will be able to access Vault using this role.
 
-### Environment Variables
+#### 3) Configuring a Policy
+
+  ```bash
+  vault policy write gitlab-policy - <<EOF
+  path "kv/data/code/vault-demo" {
+    capabilities = ["read"]
+  }
+  EOF
+
+  ```
+
+### CI Configuration
+
+#### Environment Variables
+
 Set the following environment variables in CI/CD:
 
-- `VAULT_SERVER_URL` - Required. Vault server URL, e.g., https://vault.example.com.
+- `VAULT_SERVER_URL` - Required. Vault server URL, e.g., <https://vault.example.com>.
 - `VAULT_AUTH_ROLE` - Optional. Role on the Vault server. If not set, the default role configured for the auth method will be used.
 - `VAULT_AUTH_PATH` - Optional. Path to the authentication method. Default is `jwt`.
 - `VAULT_NAMESPACE` - Optional. Vault namespace.
-### Using Secrets in CI
+
+#### Using Secrets in CI
+
 ```yaml
 stages:
   - test
@@ -79,7 +87,8 @@ vault-login:
   script: echo $DATABASE_PASSWORD
 ```
 
-### keys details
+#### keys details
+
 ```yaml
 DATABASE_PASSWORD:
   vault: code/vault-demo/DATABASE_PASSWORD@kv
@@ -87,7 +96,7 @@ DATABASE_PASSWORD:
   file: false
 ```
 
-#### (Required)
+##### (Required)
 
 A string in the format `code/vault-demo/DATABASE_PASSWORD@kv` where:
 
@@ -109,18 +118,20 @@ DATABASE_PASSWORD:
   token: $VAULT_ID_TOKEN
   file: false
 ```
-#### `token`  (Required)
+
+##### `token`  (Required)
+
 Required parameter.
 The JWT token from the id_tokens section used to authenticate with Vault.
-#### `file` (опционально)
+
+##### `file` (опционально)
+
 Default is true.
 Defines whether the secret will be saved as a file or a string.
 
-
-## Fields Included in JWT
+### Fields Included in JWT
 
 The following fields are included in the JWT token:
-
 
 | Field                    | When         | Description                                             |
 |--------------------------|--------------|---------------------------------------------------------|
@@ -151,4 +162,4 @@ The following fields are included in the JWT token:
 | `environment_action`    | if present   | Specified action on the environment                    |
 
 references  :
-- https://docs.gitlab.com/ci/secrets/hashicorp_vault/
+- <https://docs.gitlab.com/ci/secrets/hashicorp_vault/>
