@@ -20,6 +20,7 @@ data:
   #
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
+  vlan-bpf-bypass: "0"
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
   pprof: "true"
