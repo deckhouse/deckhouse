@@ -61,7 +61,7 @@ weight: 50
 
 Задайте следующие переменные окружения в CI/CD:
 
-- `VAULT_SERVER_URL` - Обязательно. URL адрес vault серва <https://vault.example.com>.
+- `VAULT_SERVER_URL` - Обязательно. URL адрес vault сервера <https://vault.example.com>.
 - `VAULT_AUTH_ROLE` - Опционально. Роль на vault сервере. Если не указано будет использоваться роль по умолчанию сконфигурированная для используемого метода аутентификации
 - `VAULT_AUTH_PATH` - Опционально. путь до метода аутентификации. Значение по умолчанию - jwt
 - `VAULT_NAMESPACE` - Опционально. Vault namespace.

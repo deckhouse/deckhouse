@@ -124,7 +124,7 @@ DATABASE_PASSWORD:
 Required parameter.
 The JWT token from the id_tokens section used to authenticate with Vault.
 
-##### `file` (опционально)
+##### `file` (optional)
 
 Default is true.
 Defines whether the secret will be saved as a file or a string.

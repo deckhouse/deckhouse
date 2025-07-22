@@ -68,7 +68,7 @@ providers:
 
 > **Note:** for oidc and SAML If a user belongs to `admin_groups` but is not present in `allowed_groups`, they will not be able to log in. In such cases, `admin_groups` will not be considered, and the user will not be granted administrative privileges.
 
-## LDAP Syncronization
+## LDAP Synchronization
 
 Performs synchronization of users, groups, and group access rights with the LDAP server. By default it happens once per hour.
 
@@ -174,5 +174,5 @@ To fix perform following steps:
 
 1. Connect to Redis using the databases specified in `config/redis.shared_state.yml` and `config/redis.queues.yml`.
 2. Delete the following key:  `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` by executing:
-- `keys *ldap*` - makes sures the key exists
+- `keys *ldap*` - makes sure the key exists
 - `del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"` - deletes the key

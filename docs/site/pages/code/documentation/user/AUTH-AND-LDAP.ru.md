@@ -28,7 +28,7 @@ weight: 45
 
 ### Пример конфигурации OIDC
 
-Секци находится в разделе `spec.appConfig.omniauth.`
+Секции находится в разделе `spec.appConfig.omniauth.`
 
 ```yaml
 providers:
@@ -69,7 +69,7 @@ providers:
 
 > **Примечание**: для OIDC и SAML — если пользователь принадлежит к admin_groups, но не указан в allowed_groups, он не сможет войти. В этом случае admin_groups игнорируется и административные права не назначаются.
 
-## LDAP Syncronization
+## LDAP Synchronization
 
 Выполняет синхронизацию пользователей, групп и прав доступа с LDAP-сервером. По умолчанию запускается раз в час.
 
