@@ -164,3 +164,13 @@ properties:
       Ручное управление режимом отказоустойчивости.
 
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+  license:
+    type: object
+    # description:
+    properties:
+      edition:
+        type: string
+        enum: ["ce", "be", "fe", "ee", "se", "se-plus"]
+        x-examples: ["Community"]
+        # description: 
+        default: "Community"
