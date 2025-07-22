@@ -13,7 +13,7 @@ RUN mkdir -p /artifacts/mod && \
 RUN mkdir -p /artifacts/src && \
   rsync -a --include '*/' --include='*.go' --include='deckhouse-controller/*.sh' --exclude='*' --prune-empty-dirs /deckhouse/ /artifacts/src/
 
-RUN mkdir -p /artifacts/registry && \
+RUN mkdir -p /artifacts/registry /artifacts/deckhouse && \
     rsync -a --prune-empty-dirs \
       --exclude='docs' \
       --exclude='charts/helm_lib' \
@@ -89,7 +89,7 @@ COPY --from=build /out/caps-deckhouse-controller /usr/bin/caps-deckhouse-control
 COPY --from=src /out/run /run
 
 USER root
-RUN ["/bin/bash", "-c", "cp /bin/bash /bin/sh"]
+# RUN ["/bin/bash", "-c", "cp /bin/bash /bin/sh"]
 
 # Replace module helm chart
 RUN rm -rf \
