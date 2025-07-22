@@ -37,27 +37,11 @@ jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
-
   build_fe:
     name: Build FE
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -71,8 +55,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -84,8 +66,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -97,8 +77,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -110,8 +88,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -123,8 +99,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"

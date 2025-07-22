@@ -40,7 +40,7 @@ entries:
             - title:
                en: Switching editions
                ru: Переключение редакций
-              url: /admin/editions.html   
+              url: /admin/editions.html
             - title:
                 en: Access
                 ru: Доступ

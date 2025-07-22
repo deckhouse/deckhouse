@@ -1,5 +1,8 @@
 name: local-path-provisioner
+stage: "General Availability"
+weight: 31
 critical: true
 subsystems:
   - infrastructure
 namespace: d8-local-path-provisioner
+weight: 31
