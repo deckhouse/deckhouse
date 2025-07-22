@@ -22,7 +22,6 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	openapierrors "github.com/go-openapi/errors"
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -33,8 +32,10 @@ const (
 	DefinitionFile = "module.yaml"
 )
 
+// Definition of module.yaml file struct
 type Definition struct {
 	Name           string   `json:"name" yaml:"name"`
+	Critical       bool     `json:"critical,omitempty" yaml:"critical,omitempty"`
 	Weight         uint32   `json:"weight,omitempty" yaml:"weight,omitempty"`
 	Tags           []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Subsystems     []string `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`
@@ -46,7 +47,7 @@ type Definition struct {
 	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
-	Path           string                         `yaml:"-"`
+	Path           string                         `json:"-" yaml:"-"`
 }
 
 type ModuleDescriptions struct {
@@ -78,24 +79,17 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 	}
 
 	err = dm.Validate()
-	// next we will need to record all validation errors except required (602).
+
+	// next we will need to record all validation errors
 	var result error
 	var mErr *multierror.Error
 	if errors.As(err, &mErr) {
 		for _, me := range mErr.Errors {
-			var e *openapierrors.Validation
-
-			if errors.As(me, &e) {
-				if e.Code() == 602 {
-					continue
-				}
-			}
-
 			result = errors.Join(result, me)
 		}
 	}
 
-	// now result will contain all validation errors, if any, except required.
+	// now result will contain all validation errors
 	if result != nil {
 		return fmt.Errorf("validate module: %w", result)
 	}

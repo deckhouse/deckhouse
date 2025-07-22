@@ -1,5 +1,4 @@
 name: cert-manager
-weight: 101
 stage: "General Availability"
 subsystems:
   - security
@@ -11,5 +10,3 @@ descriptions:
   en: |
     This module installs the reliable and highly available cert-manager
     https://github.com/jetstack/cert-manager
-requirements:
-  bootstrapped: true

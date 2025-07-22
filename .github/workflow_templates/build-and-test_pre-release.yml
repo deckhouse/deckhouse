@@ -36,25 +36,12 @@ concurrency:
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
     env:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
@@ -65,8 +52,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -78,8 +63,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -91,8 +74,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -104,8 +85,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -117,8 +96,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"
@@ -274,3 +251,30 @@ jobs:
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 
+  list_changed_modules:
+    name: List changed modules
+    needs:
+      - git_info
+      - build_fe
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+      - name: List changed modules from latest released version
+        id: list_changed_modules
+        env:
+          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+        run: |
+          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
+          if [[ -n "${TAG_FROM}" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+            python .github/scripts/python/compare_version_modules.py
+          else
+            echo "No released versions exist. Skipping."
+          fi
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}

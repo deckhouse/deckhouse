@@ -28,9 +28,7 @@ import (
 var defaultLogger atomic.Pointer[Logger]
 
 func init() {
-	defaultLogger.Store(NewLogger(Options{
-		Level: slog.Level(LevelInfo),
-	}))
+	defaultLogger.Store(NewLogger(WithLevel(slog.LevelInfo)))
 }
 
 func SetDefault(l *Logger) {

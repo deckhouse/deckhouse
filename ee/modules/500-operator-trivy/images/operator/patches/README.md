@@ -43,3 +43,10 @@ The operator of v0.22.0 cannot re-download policies if the image of the policies
 ### 010-use-local-policies.patch
 
 Uses policies from the "/local/policies" directory if "OPERATOR_USE_LOCAL_POLICIES" is set to "true"
+
+### 011-support-new-jobs.patch
+
+The current version of operator does not support kubernetes v1.31+ because of new job resources, this patch fixes it.
+
+[PR](https://github.com/aquasecurity/trivy-operator/pull/2292)
+[Issue](https://github.com/aquasecurity/trivy-operator/issues/2251)

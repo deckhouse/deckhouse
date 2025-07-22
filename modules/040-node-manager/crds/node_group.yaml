@@ -862,6 +862,10 @@ spec:
                         containerd: {}
                     - properties:
                         type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
+                    - properties:
+                        type:
                           enum: [NotManaged]
                 cloudInstances:
                   description: |
@@ -1501,6 +1505,57 @@ spec:
                   type: integer
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy.
+                      enum:
+                        - TimeSlicing
+                        - MIG
+                        - Exclusive
+                    mig:
+                      type: object
+                      properties:
+                        partedConfig:
+                          type: string
+                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          description: |
+                            Selected parted-config for MIG.
+                          x-doc-default: all-1g.5gb
+                    timeSlicing:
+                      description: |
+                        Time-slicing parameters.
+                      type: object
+                      properties:
+                        partitionCount:
+                          type: number
+                          description: |
+                            Count of partition per GPU with TimeSlicing.
+                          x-doc-default: 4
+                          minimum: 1
+                          maximum: 100
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
+                  oneOf:
+                    - properties:
+                        sharing:
+                          enum: [TimeSlicing]
+                        timeSlicing: {}
+                    - properties:
+                        sharing:
+                          enum: [MIG]
+                        mig: {}
+                    - properties:
+                        sharing:
+                          enum: [Exclusive]
+                        exclusive: {}
                 cri:
                   type: object
                   description: |
@@ -1517,6 +1572,7 @@ spec:
                       enum:
                         - Docker
                         - Containerd
+                        - ContainerdV2
                         - NotManaged
                     containerd:
                       type: object
@@ -1524,6 +1580,18 @@ spec:
                         Containerd runtime parameters.
 
                         If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    containerdV2:
+                      type: object
+                      description: |
+                        ContainerdV2 runtime parameters.
+
+                        If used, `cri.type` must be set to `ContainerdV2`.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1564,6 +1632,10 @@ spec:
                         type:
                           enum: [Containerd]
                         containerd: {}
+                    - properties:
+                        type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
                     - properties:
                         type:
                           enum: [NotManaged]
@@ -1637,7 +1709,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of existing `staticInstances` to bootstrap and add to the cluster.
+                          The number of existing `staticInstances` to bootstrap and add to the cluster. In a NodeGroup of type Static or CloudStatic, you can explicitly specify the number of nodes using this parameter. This sets the expected number of nodes — DKP uses this value for state control and automation purposes.
                       type: integer
                       minimum: 0
                       default: 0

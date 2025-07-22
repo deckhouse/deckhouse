@@ -52,7 +52,7 @@ func updatePolicyHandler(cli client.Client) http.Handler {
 			}
 		}
 
-		return allowResult("")
+		return allowResult(nil)
 	})
 
 	// Create webhook.

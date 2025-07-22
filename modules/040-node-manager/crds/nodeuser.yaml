@@ -37,7 +37,6 @@ spec:
                 - sshPublicKeys
               required:
                 - uid
-                - passwordHash
               properties:
                 uid:
                   type: number
@@ -70,7 +69,6 @@ spec:
                   - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
                 passwordHash:
                   type: string
-                  x-doc-required: true
                   description: |
                     Hashed user password.
 
@@ -143,7 +141,6 @@ spec:
                 - sshPublicKeys
               required:
                 - uid
-                - passwordHash
               properties:
                 uid:
                   type: number
@@ -176,7 +173,6 @@ spec:
                   - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
                 passwordHash:
                   type: string
-                  x-doc-required: true
                   description: |
                     Hashed user password.
 

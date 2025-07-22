@@ -1,4 +1,4 @@
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
     var $parent = $(this).closest('[data-features-tabs]');
@@ -94,7 +94,7 @@ function update_domain_parameters() {
   update_parameter((sessionStorage.getItem('dhctl-domain') || 'example.com').replace('%s.', ''), null, 'example.com', null, '[config-yml]');
 }
 
-function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '', multilineIndent = 0) {
+function update_parameter(sourceDataName = '', searchKey = '', replacePattern = '', value = null, snippetSelector = '', multilineIndent = 0) {
   var objectToModify, sourceData;
 
   if (sourceDataName && sourceDataName.match(/^dhctl-/)) {
@@ -107,7 +107,7 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
     value = value ? value : sourceData
     if (value) {
       value = value.replace(/^/gm, ' '.repeat(multilineIndent));
-      value = "|\n" + value;
+      value = "\n" + value.replace(/\s+$/, '');
     }
   }
 
@@ -121,14 +121,19 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
         } else {
           objectToModify = $(this).next().next()[0]
         }
+
         if (objectToModify && (objectToModify.innerText.length > 0)) {
           let innerText = objectToModify.innerText;
-          if (replacePattern === '<GENERATED_PASSWORD_HASH>') {
+          if (multilineIndent > 0) {
+            objectToModify.innerText = '|';
+            objectToModify.after(innerText.replace(replacePattern, value ? value : sourceData));
+          } else if (replacePattern === '<GENERATED_PASSWORD_HASH>') {
             objectToModify.innerText = innerText.replace(replacePattern, "'" + (value ? value : sourceData) + "'");
           } else {
             objectToModify.innerText = innerText.replace(replacePattern, value ? value : sourceData);
           }
         }
+
       });
     }
 
@@ -148,7 +153,7 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
   }
 }
 
-function updateTextInSnippet(snippetSelector, replacePattern, value) {
+function updateTextInSnippet(snippetSelector = '', replacePattern = '', value = '') {
   $(snippetSelector).each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
     if (content && content.length > 0) {
@@ -168,13 +173,13 @@ function getDockerConfigFromToken(registry, username, password) {
 //
 // Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
 //
-function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonElement = false) {
+function triggerBlockOnItemContent(itemSelector = '', targetSelector = '', turnCommonElement = false) {
   const input = $(itemSelector);
   const wrapper = $(targetSelector);
-  if (input.val() !== '') {
+  if (input && input.val() && input.length > 0) {
     update_license_parameters(input.val().trim());
     wrapper.removeClass('disabled');
-  } else if(input.val() === '' && !turnCommonElement) {
+  } else if(input && input.val() && input.val() === '' && !turnCommonElement) {
     getLicenseToken(input.val());
   } else {
     wrapper.addClass('disabled');
@@ -185,7 +190,7 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   }
 }
 
-function toggleDisabled(tab, inputDataAttr) {
+function toggleDisabled(tab = '', inputDataAttr = '') {
   if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
   } else if (tab === 'tab_layout_ee' || tab === 'tab_layout_be' || tab === 'tab_layout_se' ) {
@@ -194,7 +199,7 @@ function toggleDisabled(tab, inputDataAttr) {
   }
 }
 
-async function getLicenseToken(token, revision) {
+async function getLicenseToken(token = '', revision = '') {
   try {
     if (token === '') {
       throw new Error(responseFromLicense[pageLang]['empty_input']);
@@ -215,7 +220,7 @@ async function getLicenseToken(token, revision) {
   }
 }
 
-function handlerResolveData(data, licenseToken, messageElement, inputField) {
+function handlerResolveData(data = '', licenseToken = '', messageElement = '', inputField = '') {
   messageElement.html(`${responseFromLicense[pageLang]['resolve']}`);
   messageElement.removeAttr('class').addClass('license-form__message');
 
@@ -278,7 +283,15 @@ function update_license_parameters(newtoken = '') {
     $('.highlight code').filter(function () {
       return this.innerText.match(matchStringDockerLogin) == matchStringDockerLogin;
     }).each(function (index) {
-      $(this).text($(this).text().replace(matchStringDockerLogin, replacePartStringDockerLogin));
+      let originalCode = $(this);
+      let cloneCode = originalCode.clone();
+      let ignoreElement = cloneCode.find('[data-copy="ignore"]').detach();
+      let originalText = cloneCode.text();
+      let newText = originalText.replace(matchStringDockerLogin, replacePartStringDockerLogin);
+      originalCode.empty().text(newText);
+      if(ignoreElement.length > 0) {
+        originalCode.prepend(ignoreElement);
+      }
     });
   } else {
     console.log("No license token, so InitConfiguration was not updated");

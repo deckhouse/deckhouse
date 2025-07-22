@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -92,41 +96,103 @@ func capsConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
+	input.Logger.Info("Starting hook that set flags for rendering CAPI and CAPS managers")
+	defer input.Logger.Info("Finish hook that set flags for rendering CAPI and CAPS managers")
+
+	capiControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
+	capsControllerManagerEnabledBeforeExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
+
+	input.Logger.Info("Flags before executing.",
+		"capiControllerManagerEnabled_exists",
+		capiControllerManagerEnabledBeforeExecuting.Exists(),
+		"capiControllerManagerEnabled",
+		capiControllerManagerEnabledBeforeExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
+		capsControllerManagerEnabledBeforeExecuting.Exists(),
+		"capsControllerManagerEnabled",
+		capsControllerManagerEnabledBeforeExecuting.Bool(),
+	)
+
 	var hasStaticInstancesField bool
 
-	nodeGroupSnapshots := input.Snapshots["node_group"]
-	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
-		hasStaticInstancesField = nodeGroupSnapshot.(bool)
+	nodeGroupSnapshots := input.NewSnapshots.Get("node_group")
+	for hasStaticInstancesFieldSnapshot, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
+		}
+
+		hasStaticInstancesField = hasStaticInstancesFieldSnapshot
 		if hasStaticInstancesField {
+			input.Logger.Info("Found staticInstances field in node group")
 			break // we need at least one NodeGroup with staticInstances field
 		}
 	}
 
+	input.Logger.Info("hasStaticInstancesField", "value", hasStaticInstancesField)
+
 	capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
 	hasCapiProvider := capiClusterName != ""
+
+	input.Logger.Info("capiClusterName discovered", "capiClusterName", capiClusterName, "hasCapiProvider", hasCapiProvider)
 
 	var capiEnabled bool
 	var capsEnabled bool
 
-	configMapSnapshots := input.Snapshots["config_map"]
+	configMapSnapshots := input.NewSnapshots.Get("config_map")
+
 	if len(configMapSnapshots) > 0 {
-		capiEnabled = hasCapiProvider || configMapSnapshots[0].(bool)
-		capsEnabled = configMapSnapshots[0].(bool)
+		var capsFromStartSnap bool
+		err := configMapSnapshots[0].UnmarshalTo(&capsFromStartSnap)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal start 'config_map' snapshot: %w", err)
+		}
+		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capsFromStartSnap)
+
+		capiEnabled = hasCapiProvider || capsFromStartSnap
+		capsEnabled = capsFromStartSnap
+
+		input.Logger.Info("Calculated flags", "capiEnabled", capiEnabled, "capsEnabled", capsEnabled)
 	} else {
+		input.Logger.Info("ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed not found")
+
 		capiEnabled = hasCapiProvider || hasStaticInstancesField
+
+		input.Logger.Info("Calculated flags (capsEnabled not set)", "capiEnabled", capiEnabled)
 	}
 
 	if capiEnabled {
+		input.Logger.Info("nodeManager.internal.capiControllerManagerEnabled set to true")
+
 		input.Values.Set("nodeManager.internal.capiControllerManagerEnabled", true)
 	} else {
+		input.Logger.Info("nodeManager.internal.capiControllerManagerEnabled removed from values")
+
 		input.Values.Remove("nodeManager.internal.capiControllerManagerEnabled")
 	}
 
 	if capsEnabled || hasStaticInstancesField {
+		input.Logger.Info("nodeManager.internal.capsControllerManagerEnabled set to true")
+
 		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
 	} else {
+		input.Logger.Info("nodeManager.internal.capsControllerManagerEnable removed from values")
+
 		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
 	}
+
+	capiControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
+	capsControllerManagerEnabledAfterExecuting := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
+
+	input.Logger.Info("Flags after executing",
+		"capiControllerManagerEnabled_exists",
+		capiControllerManagerEnabledAfterExecuting.Exists(),
+		"capiControllerManagerEnabled",
+		capiControllerManagerEnabledAfterExecuting.Bool(),
+		"capsControllerManagerEnabled_exists",
+		capsControllerManagerEnabledAfterExecuting.Exists(),
+		"capsControllerManagerEnabled",
+		capsControllerManagerEnabledAfterExecuting.Bool(),
+	)
 
 	return nil
 }

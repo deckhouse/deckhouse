@@ -1,22 +1,80 @@
-{{- $containerd_version := "1.7.27" }}
-{{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.2.5" }}
+{{- $containerd_versions := list "1.7.27" "2.1.3" }}
+{{- $runc_versions := list "1.2.5" "1.3.0" }}
+{{- $containerd2runc := dict "1.7.27" "1.2.5" "2.1.3" "1.3.0" }}
+
+{{- range $runc_version := $runc_versions }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/runc
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src
+  - cd /src
+  - git apply /patches/{{ $runc_version }}/*.patch --verbose
+  - git describe --dirty --long --always > COMMIT
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+fromImage: builder/golang-bookworm
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+  {{ include "mount points for golang builds" $ }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" $ | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
+  - mkdir -p /out
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - git config --global user.email "builder@deckhouse.io"
+  - make COMMIT="$(cat COMMIT)" static
+  - mv runc /out/runc
+  - chown -R 64535:64535 /out
+  - chmod 755 /out/runc
+{{- end }}
+
+{{- range $containerd_version := $containerd_versions }}
+  {{- $image_version := $containerd_version | replace "." "-" }}
+  {{- $major_version := index (splitList "-" $image_version) 0 }}
+  {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /
+  add: /out
   to: /
   includePaths:
   - containerd
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
-  - runc
   - install
   - uninstall
   - containerd.service
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+  add: /out/runc
+  to: /runc
   before: setup
 imageSpec:
   config:
@@ -27,62 +85,60 @@ imageSpec:
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
+fromCacheVersion: "2025-06-24.2"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/containerd/{{ $containerd_version }}
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
-  - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src/runc
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
-  - git apply /patches/containerd/*.patch --verbose
-  - cd /src/runc
-  - git describe --dirty --long --always > COMMIT
-  - rm -rf /src/containerd/.git
-  - rm -rf /src/runc/.git
+  - git apply /patches/*.patch --verbose
+  - cd /src/scripts
+  - cp install_v{{ $major_version }} install
+  - rm -rf install_v1 install_v2
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-bullseye
+fromImage: builder/golang-bookworm
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 mount:
-{{ include "mount points for golang builds" . }}
+{{ include "mount points for golang builds" $ }}
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
+  {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
+  - mkdir -p /out
   install:
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
-  - mv bin/* /
-  - cd /src/runc
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - git config --global user.email "builder@deckhouse.io"
-  - make COMMIT="$(cat COMMIT)" static
-  - mv runc /runc
-  - mv /src/scripts/* /
+  - mv bin/* /out
+  - mv /src/scripts/* /out
+  - chown -R 64535:64535 /out
+  - chmod 755 /out/*
+{{- end }}

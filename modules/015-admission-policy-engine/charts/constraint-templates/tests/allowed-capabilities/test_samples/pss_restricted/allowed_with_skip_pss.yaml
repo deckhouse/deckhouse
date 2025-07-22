@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: opa-disallowed
+  namespace: testns
+  labels:
+    security.deckhouse.io/skip-pss-check: "true"
+spec:
+  containers:
+    - name: nginx
+      image: nginx

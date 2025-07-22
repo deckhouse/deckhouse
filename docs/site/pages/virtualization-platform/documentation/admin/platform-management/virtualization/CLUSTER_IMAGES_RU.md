@@ -74,7 +74,7 @@ lang: ru
 
    Пример вывода:
 
-    ```txt
+    ```text
     {"size":"58G","storageClass":"linstor-thick-data-r1"}
     ```
 
@@ -87,7 +87,7 @@ lang: ru
 
    Пример вывода:
 
-    ```txt
+    ```text
    moduleconfig.deckhouse.io/virtualization patched
     ```
 
@@ -99,7 +99,7 @@ lang: ru
 
    Пример вывода:
 
-    ```txt
+    ```text
     {"size":"59G","storageClass":"linstor-thick-data-r1"}
     ```
 
@@ -111,7 +111,7 @@ lang: ru
 
    Пример вывода:
 
-    ```txt
+    ```text
     NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
@@ -269,7 +269,7 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 Пример вывода:
 
-```txt
+```text
 {
   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
   "inCluster":"http://10.222.165.239/upload"

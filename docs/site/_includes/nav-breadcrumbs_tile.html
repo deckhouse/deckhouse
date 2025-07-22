@@ -8,18 +8,15 @@
                 </form>
             </div>
             <!--end search-->
-            {% endif %}
-            {% unless site.mode == 'module' %}
+        {% endif %}
+        {% unless site.mode == 'module' %}
             <div id="doc-versions-menu" class="channel-menu submenu-parent">
                 <!-- #include virtual="/includes/channel-menu.html" -->
             </div>
         {% endunless %}
     </div>
     <div class="breadcrumbs__right">
-        <ol class="breadcrumbs">
-        <!--#include virtual="/includes/group-menu.html" -->
-        {% include nav-breadcrumbs-pagepath.html %}
-        </ol>
+        <!-- empty now -->
     </div>
 
 </div>

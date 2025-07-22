@@ -45,6 +45,7 @@ module "master" {
   volume_zone           = module.volume_zone.zone
   server_group          = local.server_group
   subnet                = local.subnet
+  enterprise_project_id = local.enterprise_project_id
 }
 
 module "kubernetes_data" {
@@ -56,6 +57,7 @@ module "kubernetes_data" {
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags        = local.tags
+  enterprise_project_id = local.enterprise_project_id
 }
 
 module "security_groups" {
@@ -63,6 +65,7 @@ module "security_groups" {
   security_group_names        = local.security_group_names
   layout_security_group_ids   = module.network_security_info.security_group_ids
   layout_security_group_names = module.network_security_info.security_group_names
+  enterprise_project_id = local.enterprise_project_id
 }
 
 data "huaweicloud_availability_zones" "zones" {}

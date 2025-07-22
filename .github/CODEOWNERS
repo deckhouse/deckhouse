@@ -16,9 +16,8 @@
 040-node-manager/               @name212 @sprait
 040-terraform-manager/          @name212 @sprait @aleksey-su
 042-kube-dns/                   @apolovov
-045-snapshot-controller/        @AleksZimin
 050-network-policy-engine/      @apolovov
-101-cert-manager/               @yalosev @ldmonster
+101-cert-manager/               @Suselz
 110-istio/                      @apolovov
 140-user-authz/                 @nabokihms
 150-user-authn/                 @nabokihms
@@ -66,4 +65,4 @@ crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
 /monitoring/prometheus-rules/   @sudoroot-null
-/release.yaml @yalosev @nabokihms
+/release.yaml                   @yalosev @nabokihms

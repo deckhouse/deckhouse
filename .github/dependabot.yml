@@ -115,6 +115,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/040-node-manager/images/d8-shutdown-inhibitor/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/110-istio/images/api-proxy/src"
   labels:
   - "type/dependencies"
@@ -233,6 +242,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/go_lib/dependency/k8s/drain"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/registry"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -628,15 +646,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/geoip-updater/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/kube-rbac-proxy/src"
   labels:
   - "type/dependencies"
@@ -728,6 +737,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/pkg/log"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/metrics-storage"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

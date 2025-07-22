@@ -39,10 +39,11 @@ Example module folder structure containing build and publish rules using GitHub 
 │  │  └─ 📝 deploy_prod.yaml
 ├─ 📁 .werf/
 │  ├─ 📁 workflows/
+│  │  ├─ 📝 base-images.yaml
 │  │  ├─ 📝 bundle.yaml
 │  │  ├─ 📝 images.yaml
 │  │  ├─ 📝 images-digest.yaml
-│  │  ├─ 📝 python-deps.yaml
+│  │  ├─ 📝 batch-go.yaml
 │  │  └─ 📝 release.yaml
 ├─ 📁 charts/
 │  └─ 📁 helm_lib/
@@ -65,8 +66,13 @@ Example module folder structure containing build and publish rules using GitHub 
 │  ├─ 📝 ADVANCED_USAGE.md
 │  └─ 📝 ADVANCED_USAGE.ru.md
 ├─ 📁 hooks/
-│  ├─ 📝 hook1.py
-│  └─ 📝 hook2.py
+│  ├─ 📁 batch/
+│  │  ├─ 📁 my-hooks/
+│  │  │  ├─ 📝 my-hook1.go
+│  │  │  └─ 📝 my-hook2.go
+│  │  ├─ 📝 go.mod
+│  │  ├─ 📝 go.sum
+│  │  ├─ 📝 main.go
 ├─ 📁 images/
 │  ├─ 📁 nginx
 │  │  └─ 📝 Dockerfile
@@ -228,18 +234,19 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 
 ## hooks
 
-The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
+The `/hooks/batch` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 
-[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
+[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Go library](https://github.com/deckhouse/module-sdk) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
-- When run with the `--config` parameter, the hook must output its configuration in YAML format.
-- When run without parameters, the hook must perform its intended action.
+- When run with the `hook config` arguments, it should output its hook configuration in JSON format.
+- When run with the `hook list` arguments, it should output a run of all hooks with their sequence number.
+- When run with the `hook run 0` arguments, the logic of the hook with number 0 should be executed.
 
 The hook files must be executable. Add the appropriate permissions using the `chmod +x <path to the hook file>` command.
 
-You can find Python hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
+You can find Go hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can also be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
 
 ## images
 
@@ -339,6 +346,98 @@ properties:
       English description. Markdown markup.</code>
 ```
 
+#### x-deckhouse-validations (CEL validations)
+
+When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
+
+When using CEL validations, keep the following features in mind:
+
+- Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
+- All parameters at the current level are available in expressions via the `self` variable.
+- Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
+- Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
+- If there are multiple validation errors, the user will see all messages from the corresponding rules.
+
+##### Examples of complex rules
+
+Below are examples of complex validation rules described in CEL:
+
+- Checking whether the parameter value falls within the range:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas must be between minReplicas and maxReplicas"
+  ```
+
+- Checking for the presence of a key:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "The key 'Available' must be present"
+  ```
+
+- Checking that exactly one of two lists is non-empty:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Exactly one of the lists must be non-empty"
+  ```
+
+- Checking a value by regular expression:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "All values must contain only letters"
+  ```
+
+##### Scalar and array value validation
+
+Validation of scalar values and arrays has the following features:
+
+- If the property is a scalar (e.g., number or string), then in the CEL expression `self` will be that value.
+- If the property is an array, then `self` will be an array, and you can use methods like `.size()`, `.all()`, `.exists()`, etc.
+
+Example for an array:
+
+```yaml
+type: object
+properties:
+  items:
+    type: array
+    items:
+      type: string
+    x-deckhouse-validations:
+      - expression: "self.size() > 0"
+        message: "The items list must not be empty"
+```
+
+##### Validation of additionalProperties (map)
+
+For objects with additionalProperties (map), you can validate keys and values using methods like `.all(key, ...)`, `.exists(key, ...)`, etc.
+
+Example:
+
+```yaml
+type: object
+properties:
+  mymap:
+    type: object
+    additionalProperties:
+      type: integer
+    x-deckhouse-validations:
+      - expression: "self.all(key, self[key] > 0)"
+        message: "All values in mymap must be greater than 0"
+```
+
 ### values.yaml
 
 This file is required for validating the source data when rendering templates without using extra Helm chart functions.
@@ -425,7 +524,6 @@ Parameters that can be used in `module.yaml`:
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
 - `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
 - `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
-  - `bootstrapped` — *Boolean.* Dependency on the [cluster installation status](../dependencies/#cluster-installation-status-dependency) (only for built-in DKP modules).
   - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
@@ -455,7 +553,6 @@ descriptions:
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
-    bootstrapped: true
 disable:
   confirmation: true
   message: "Disabling this module will delete all resources, created by the module."

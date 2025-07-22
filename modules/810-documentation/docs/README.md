@@ -1,5 +1,6 @@
 ---
 title: "The documentation module"
+description: "A web interface with documentation for the Deckhouse Kubernetes Platform."
 webIfaces:
 - name: documentation
 ---

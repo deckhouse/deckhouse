@@ -34,12 +34,10 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
-clusterName: {{ .clusterConfiguration.clusterName | default "kubernetes" }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki
 certificateValidityPeriod: 8760h0m0s
 caCertificateValidityPeriod: 87600h0m0s
-imageRepository: {{ .clusterConfiguration.imageRepository | default "registry.k8s.io" }}
 encryptionAlgorithm: {{ .clusterConfiguration.encryptionAlgorithm }}
 networking:
   serviceSubnet: {{ .clusterConfiguration.serviceSubnetCIDR | quote }}
@@ -98,7 +96,7 @@ apiServer:
     - name: audit-log-truncate-enabled
       value: "true"
     - name: audit-log-maxage
-      value: "7"
+      value: "30"
     - name: audit-log-maxsize
       value: "100"
     - name: audit-log-maxbackup
@@ -143,6 +141,24 @@ apiServer:
     - name: oidc-issuer-url
       value: {{ .apiserver.oidcIssuerURL }}
     {{- end }}
+    {{ if .apiserver.webhookURL }}
+    - name: authorization-mode
+      value: Node,Webhook,RBAC
+    - name: authorization-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookURL }}
+    - name: authentication-token-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
+    {{- end -}}
+    {{ if .apiserver.authnWebhookCacheTTL }}
+    - name: authentication-token-webhook-cache-ttl
+      value: {{.apiserver.authnWebhookCacheTTL | quote }}
+    {{- end -}}
+    {{ if .apiserver.auditWebhookURL }}
+    - name: audit-webhook-config-file
+      value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
+    {{- end }}
     - name: profiling
       value: "false"
     - name: request-timeout
@@ -150,11 +166,11 @@ apiServer:
     - name: tls-cipher-suites
       value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
     {{- if hasKey .apiserver "certSANs" }}
-    certSANs:
-      {{- range $san := .apiserver.certSANs }}
-      - {{ $san | quote }}
-      {{- end }}
+  certSANs:
+    {{- range $san := .apiserver.certSANs }}
+    - {{ $san | quote }}
     {{- end }}
+  {{- end }}
 controllerManager:
   extraVolumes:
     - name: deckhouse-extra-files

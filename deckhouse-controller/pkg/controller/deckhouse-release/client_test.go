@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -49,7 +50,7 @@ var testDeckhouseVersion = "v1.15.0"
 func setupFakeController(
 	t *testing.T,
 	filename, values string,
-	mup *v1alpha1.ModuleUpdatePolicySpec,
+	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
 	ds := &helpers.DeckhouseSettings{
@@ -105,7 +106,7 @@ func setupControllerSettings(
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack("", log.NewNop()),
+		exts:             extenders.NewExtendersStack(nil, "", log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

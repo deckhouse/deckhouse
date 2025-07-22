@@ -26,7 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
-	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +44,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debug("refresh module status", slog.String("name", moduleName))
+	r.logger.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -69,10 +69,10 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debug("refresh module config status", slog.String("name", configName))
+	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
-	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
+	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
@@ -80,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debug("module config not found", slog.String("name", configName))
+					r.logger.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
@@ -144,8 +144,10 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
 		case modules.Ready:
-			module.Status.Phase = v1alpha1.ModulePhaseReady
-			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			if !basicModule.HasReadiness() {
+				module.Status.Phase = v1alpha1.ModulePhaseReady
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			}
 
 		case modules.Startup:
 			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {
@@ -190,7 +192,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
-	case kubeconfig.Name:
+	case kubeconfigextender.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
 
@@ -219,8 +221,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
-		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+		reason = v1alpha1.ModuleReasonBootstrappedExtender
+		message = v1alpha1.ModuleMessageBootstrappedExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender
