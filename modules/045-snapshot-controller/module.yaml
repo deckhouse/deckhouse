@@ -9,5 +9,6 @@ description: |
 descriptions:
   en: |
     This module enables snapshot support for compatible CSI-drivers in the Kubernetes cluster.
+    It is required for CSI snapshotting to work and is not specific to any CSI driver.
 requirements:
   bootstrapped: true
