@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"fmt"
+	"time"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -45,6 +46,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		fmt.Printf("[test_hook] Patching pod %s in namespace %s\n", pod.Name, pod.Namespace)
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", pod.Namespace, pod.Name)
 	}
+
 	fmt.Printf("[test_hook] Patched %d pods\n", len(pods))
+
+	fmt.Printf("[test_hook] Sleeping for 60 seconds\n")
+	time.Sleep(60 * time.Second)
+	fmt.Printf("[test_hook] Waking up\n")
 	return nil
 })
