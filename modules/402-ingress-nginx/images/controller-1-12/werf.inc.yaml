@@ -147,9 +147,13 @@ shell:
   - rm -rf /usr/local
   - /build.sh
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-abseil-dev
+from: dev-registry.deckhouse.io/base_images@sha256:ba05eb87026e03684f98cd53356dc269cea28ce6938ee67d1fc9e2e5a2686e3d
+final: false
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-21.01"
+fromCacheVersion: "2025-07-22.01"
 final: false
 mount:
 - from: build_dir
@@ -197,51 +201,51 @@ import:
   add: /d8-curl
   to: /chroot/usr/bin/curl
   before: install
-# - image: libs/abseil-cpp
-#   add: /usr/lib
-#   to: /chroot/lib64
-#   includePaths:
-#   - libabsl_base.so*
-#   - libabsl_city.so*
-#   - libabsl_cord_internal.so*
-#   - libabsl_cord.so*
-#   - libabsl_cordz_functions.so*
-#   - libabsl_cordz_handle.so*
-#   - libabsl_cordz_info.so*
-#   - libabsl_crc_cord_state.so*
-#   - libabsl_crc_internal.so*
-#   - libabsl_crc32c.so*
-#   - libabsl_debugging_internal.so*
-#   - libabsl_demangle_internal.so*
-#   - libabsl_exponential_biased.so*
-#   - libabsl_hash.so*
-#   - libabsl_int128.so*
-#   - libabsl_low_level_hash.so*
-#   - libabsl_malloc_internal.so*
-#   - libabsl_random_internal_platform.so*
-#   - libabsl_random_internal_pool_urbg.so*
-#   - libabsl_random_internal_randen_hwaes_impl.so*
-#   - libabsl_random_internal_randen_hwaes.so*
-#   - libabsl_random_internal_randen_slow.so*
-#   - libabsl_random_internal_randen.so*
-#   - libabsl_random_internal_seed_material.so*
-#   - libabsl_random_seed_gen_exception.so*
-#   - libabsl_raw_hash_set.so*
-#   - libabsl_raw_logging_internal.so*
-#   - libabsl_spinlock_wait.so*
-#   - libabsl_stacktrace.so*
-#   - libabsl_status.so*
-#   - libabsl_statusor.so*
-#   - libabsl_str_format_internal.so*
-#   - libabsl_strerror.so*
-#   - libabsl_strings_internal.so*
-#   - libabsl_strings.so*
-#   - libabsl_symbolize.so*
-#   - libabsl_synchronization.so*
-#   - libabsl_throw_delegate.so*
-#   - libabsl_time_zone.so*
-#   - libabsl_time.so*
-#   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-abseil-dev
+  add: /usr/lib
+  to: /chroot/lib64
+  includePaths:
+  - libabsl_base.so*
+  - libabsl_city.so*
+  - libabsl_cord_internal.so*
+  - libabsl_cord.so*
+  - libabsl_cordz_functions.so*
+  - libabsl_cordz_handle.so*
+  - libabsl_cordz_info.so*
+  - libabsl_crc_cord_state.so*
+  - libabsl_crc_internal.so*
+  - libabsl_crc32c.so*
+  - libabsl_debugging_internal.so*
+  - libabsl_demangle_internal.so*
+  - libabsl_exponential_biased.so*
+  - libabsl_hash.so*
+  - libabsl_int128.so*
+  - libabsl_low_level_hash.so*
+  - libabsl_malloc_internal.so*
+  - libabsl_random_internal_platform.so*
+  - libabsl_random_internal_pool_urbg.so*
+  - libabsl_random_internal_randen_hwaes_impl.so*
+  - libabsl_random_internal_randen_hwaes.so*
+  - libabsl_random_internal_randen_slow.so*
+  - libabsl_random_internal_randen.so*
+  - libabsl_random_internal_seed_material.so*
+  - libabsl_random_seed_gen_exception.so*
+  - libabsl_raw_hash_set.so*
+  - libabsl_raw_logging_internal.so*
+  - libabsl_spinlock_wait.so*
+  - libabsl_stacktrace.so*
+  - libabsl_status.so*
+  - libabsl_statusor.so*
+  - libabsl_str_format_internal.so*
+  - libabsl_strerror.so*
+  - libabsl_strings_internal.so*
+  - libabsl_strings.so*
+  - libabsl_symbolize.so*
+  - libabsl_synchronization.so*
+  - libabsl_throw_delegate.so*
+  - libabsl_time_zone.so*
+  - libabsl_time.so*
+  before: install
 # - image: tools/openssl
 #   add: /
 #   to: /chroot
@@ -371,46 +375,46 @@ shell:
   # - cp -a /usr/lib64/libc.so* /chroot/lib64
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
-  - cp -a /lib64/libabsl_base.so* /chroot/lib64
-  - cp -a /lib64/libabsl_city.so* /chroot/lib64
-  - cp -a /lib64/libabsl_cord_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_cord.so* /chroot/lib64
-  - cp -a /lib64/libabsl_cordz_functions.so* /chroot/lib64
-  - cp -a /lib64/libabsl_cordz_handle.so* /chroot/lib64
-  - cp -a /lib64/libabsl_cordz_info.so* /chroot/lib64
-  - cp -a /lib64/libabsl_crc_cord_state.so* /chroot/lib64
-  - cp -a /lib64/libabsl_crc_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_crc32c.so* /chroot/lib64
-  - cp -a /lib64/libabsl_debugging_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_demangle_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_exponential_biased.so* /chroot/lib64
-  - cp -a /lib64/libabsl_hash.so* /chroot/lib64
-  - cp -a /lib64/libabsl_int128.so* /chroot/lib64
-  - cp -a /lib64/libabsl_low_level_hash.so* /chroot/lib64
-  - cp -a /lib64/libabsl_malloc_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_platform.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_pool_urbg.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_randen_hwaes_impl.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_randen_hwaes.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_randen_slow.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_randen.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_internal_seed_material.so* /chroot/lib64
-  - cp -a /lib64/libabsl_random_seed_gen_exception.so* /chroot/lib64
-  - cp -a /lib64/libabsl_raw_hash_set.so* /chroot/lib64
-  - cp -a /lib64/libabsl_raw_logging_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_spinlock_wait.so* /chroot/lib64
-  - cp -a /lib64/libabsl_stacktrace.so* /chroot/lib64
-  - cp -a /lib64/libabsl_status.so* /chroot/lib64
-  - cp -a /lib64/libabsl_statusor.so* /chroot/lib64
-  - cp -a /lib64/libabsl_str_format_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_strerror.so* /chroot/lib64
-  - cp -a /lib64/libabsl_strings_internal.so* /chroot/lib64
-  - cp -a /lib64/libabsl_strings.so* /chroot/lib64
-  - cp -a /lib64/libabsl_symbolize.so* /chroot/lib64
-  - cp -a /lib64/libabsl_synchronization.so* /chroot/lib64
-  - cp -a /lib64/libabsl_throw_delegate.so* /chroot/lib64
-  - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
-  - cp -a /lib64/libabsl_time.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_base.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_city.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cord_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cord.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_functions.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_handle.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_info.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc_cord_state.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc32c.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_debugging_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_demangle_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_exponential_biased.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_hash.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_int128.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_low_level_hash.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_malloc_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_platform.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_pool_urbg.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_hwaes_impl.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_hwaes.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_slow.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_seed_material.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_seed_gen_exception.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_raw_hash_set.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_raw_logging_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_spinlock_wait.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_stacktrace.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_status.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_statusor.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_str_format_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strerror.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strings_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strings.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_symbolize.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_synchronization.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_throw_delegate.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_time.so* /chroot/lib64
   - cp -a /lib64/libaddress_sorting.so* /chroot/lib64
   - cp -a /lib64/libbrotlicommon.so* /chroot/lib64
   - cp -a /lib64/libbrotlidec.so* /chroot/lib64
@@ -468,7 +472,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-17.02"
+fromCacheVersion: "2025-07-22.01"
 mount:
 - from: build_dir
   to: /tmp/apps
