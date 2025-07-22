@@ -1548,10 +1548,12 @@ spec:
                         sharing:
                           enum: [TimeSlicing]
                         timeSlicing: {}
-                    - properties:
+                    - required: [mig]
+                      properties:
                         sharing:
                           enum: [MIG]
-                        mig: {}
+                        mig:
+                          required: [partedConfig]
                     - properties:
                         sharing:
                           enum: [Exclusive]
