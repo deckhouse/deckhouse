@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
 
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
@@ -66,8 +66,8 @@ func (rp RegistryParams) Validate() error {
 	return validation.ValidateStruct(&rp,
 		validation.Field(&rp.Address, validation.Required),
 		validation.Field(&rp.Scheme, validation.In("HTTP", "HTTPS")),
-		validation.Field(&rp.Username, validation.Required),
-		validation.Field(&rp.Password, validation.Required),
+		validation.Field(&rp.Username, validation.When(rp.Password != "", validation.Required)),
+		validation.Field(&rp.Password, validation.When(rp.Username != "", validation.Required)),
 	)
 }
 
