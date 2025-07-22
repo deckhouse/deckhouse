@@ -246,13 +246,13 @@ import:
   - lib/libabsl_time_zone.so*
   - lib/libabsl_time.so*
   before: install
-- image: tools/openssl
-  add: /usr
-  to: /chroot
-  includePaths:
-  - lib/libcrypto.so*
-  - lib/libssl.so*
-  before: install
+# - image: tools/openssl
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib/libcrypto.so*
+#   - lib/libssl.so*
+#   before: install
 # - image: tools/openssl
 #   add: /lib
 #   to: /chroot/lib
@@ -373,8 +373,8 @@ shell:
   # - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
   - cp -a /lib64/libcrypt.so* /chroot/lib64
   - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
-  # - cp -a /lib64/libssl.so* /chroot/lib64
-  # - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
+  - cp -a /lib64/libssl.so* /chroot/lib64
+  - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
   # - cp -a /usr/lib64/libz.so* /chroot/lib64
   - cp -a /usr/lib64/libm.so* /chroot/lib64
   # - cp -a /usr/lib64/libc.so* /chroot/lib64
