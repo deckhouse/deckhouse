@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -25,9 +26,11 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		moduleConfiguration          v1.VsphereModuleConfiguration
 	)
 
-	err := json.Unmarshal([]byte(input.Values.Get("cloudProviderVsphere").String()), &moduleConfiguration)
+	moduleConfigurationRaw := input.Values.Get("cloudProviderVsphere").String()
+
+	err := json.Unmarshal([]byte(moduleConfigurationRaw), &moduleConfiguration)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w %+v", err, moduleConfigurationRaw)
 	}
 
 	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
