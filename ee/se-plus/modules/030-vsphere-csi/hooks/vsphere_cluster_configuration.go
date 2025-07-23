@@ -8,7 +8,6 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -26,18 +25,16 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		moduleConfiguration          v1.VsphereModuleConfiguration
 	)
 
-	moduleConfigurationRaw := input.Values.Get("cloudProviderVsphere").String()
-
-	err := json.Unmarshal([]byte(moduleConfigurationRaw), &moduleConfiguration)
+	err := json.Unmarshal([]byte(input.Values.Get("vsphereCsi").String()), &moduleConfiguration)
 	if err != nil {
-		return fmt.Errorf("%w %+v", err, moduleConfigurationRaw)
+		return err
 	}
 
 	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
 	if err != nil {
 		return err
 	}
-	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
+	input.Values.Set("vsphereCsi.internal.providerClusterConfiguration", providerClusterConfiguration)
 
 	var discoveryData v1.VsphereCloudDiscoveryData
 	if providerDiscoveryData != nil {
@@ -46,7 +43,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 			return err
 		}
 	}
-	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("vsphereCsi.internal.providerDiscoveryData", discoveryData)
 
 	return nil
 })
