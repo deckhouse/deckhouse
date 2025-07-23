@@ -74,6 +74,7 @@ resource "aws_security_group_rule" "allow-all-incoming-traffic-to-loadbalancer" 
 }
 
 resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
+  count             = var.disable_default_security_group ? 0 : 1
   type                     = "egress"
   protocol                 = "-1"
   from_port                = 0
