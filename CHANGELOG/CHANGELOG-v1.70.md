@@ -85,6 +85,7 @@
  - **[cloud-provider-dynamix]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-dynamix]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-gcp]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
+ - **[cloud-provider-huaweicloud]** fix virtualMachineClassName in terraform [#14251](https://github.com/deckhouse/deckhouse/pull/14251)
  - **[cloud-provider-huaweicloud]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-huaweicloud]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-huaweicloud]** Added the `--cluster-name` CLI flag to the `cloud-controller-manager`. [#12950](https://github.com/deckhouse/deckhouse/pull/12950)
@@ -105,6 +106,7 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
+ - **[control-plane-manager]** correct indentation of the 'certSANs' in v1beta4 template. [#14559](https://github.com/deckhouse/deckhouse/pull/14559)
  - **[control-plane-manager]** Fixed issues with etcd backup restoration process, ensuring reliable master node scaling from 1 to 3. [#14083](https://github.com/deckhouse/deckhouse/pull/14083)
     Users can now restore etcd backups and scale their master nodes efficiently without encountering previous errors.
  - **[control-plane-manager]** Fix default behaviour for etcd backup. [#14146](https://github.com/deckhouse/deckhouse/pull/14146)
@@ -174,6 +176,7 @@
  - **[runtime-audit-engine]** Fixed `falco` CVE vulnerabilities. [#13318](https://github.com/deckhouse/deckhouse/pull/13318)
  - **[service-with-healthchecks]** change port kube-rbac-proxy in agent DaemonSet [#13891](https://github.com/deckhouse/deckhouse/pull/13891)
  - **[upmeter]** Added a hook for replacing old sts, increase storage capacity, and scale down retention to 13 months. [#12809](https://github.com/deckhouse/deckhouse/pull/12809)
+ - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14535](https://github.com/deckhouse/deckhouse/pull/14535)
  - **[user-authn]** Added the ability to create `DexAuthenticator` with numbers in the name. [#12902](https://github.com/deckhouse/deckhouse/pull/12902)
  - **[user-authz]** fix error with webhook system-roles [#13782](https://github.com/deckhouse/deckhouse/pull/13782)
  - **[vertical-pod-autoscaler]** Fixed `VPA` CVE vulnerabilities. [#13319](https://github.com/deckhouse/deckhouse/pull/13319)

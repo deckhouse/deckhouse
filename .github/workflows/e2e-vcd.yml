@@ -288,7 +288,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -510,7 +509,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -546,7 +544,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -588,7 +585,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -600,6 +596,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -685,7 +684,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -707,7 +705,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -717,6 +714,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -822,7 +822,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -1044,7 +1043,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -1080,7 +1078,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -1122,7 +1119,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1134,6 +1130,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1219,7 +1218,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1241,7 +1239,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1251,6 +1248,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1356,7 +1356,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -1578,7 +1577,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -1614,7 +1612,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -1656,7 +1653,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1668,6 +1664,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1753,7 +1752,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1775,7 +1773,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1785,6 +1782,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1890,7 +1890,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -2112,7 +2111,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -2148,7 +2146,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -2190,7 +2187,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2202,6 +2198,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2287,7 +2286,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2309,7 +2307,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2319,6 +2316,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2424,7 +2424,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -2646,7 +2645,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -2682,7 +2680,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -2724,7 +2721,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2736,6 +2732,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2821,7 +2820,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2843,7 +2841,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2853,6 +2850,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2958,7 +2958,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -3180,7 +3179,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -3216,7 +3214,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3258,7 +3255,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3270,6 +3266,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3355,7 +3354,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3377,7 +3375,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3387,6 +3384,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3492,7 +3492,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
@@ -3714,7 +3713,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
@@ -3750,7 +3748,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -3792,7 +3789,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3804,6 +3800,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3889,7 +3888,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3911,7 +3909,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3921,6 +3918,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4026,7 +4026,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -4248,7 +4247,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -4284,7 +4282,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -4326,7 +4323,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4338,6 +4334,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4423,7 +4422,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -4445,7 +4443,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4455,6 +4452,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4560,7 +4560,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -4782,7 +4781,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -4818,7 +4816,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -4860,7 +4857,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4872,6 +4868,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4957,7 +4956,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -4979,7 +4977,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4989,6 +4986,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5094,7 +5094,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -5316,7 +5315,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -5352,7 +5350,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5394,7 +5391,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -5406,6 +5402,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5491,7 +5490,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -5513,7 +5511,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -5523,6 +5520,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5628,7 +5628,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -5850,7 +5849,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -5886,7 +5884,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -5928,7 +5925,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -5940,6 +5936,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6025,7 +6024,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -6047,7 +6045,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -6057,6 +6054,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6162,7 +6162,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -6384,7 +6383,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -6420,7 +6418,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -6462,7 +6459,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -6474,6 +6470,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6559,7 +6558,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -6581,7 +6579,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -6591,6 +6588,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6696,7 +6696,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -6918,7 +6917,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -6954,7 +6952,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -6996,7 +6993,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -7008,6 +7004,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -7093,7 +7092,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -7115,7 +7113,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -7125,6 +7122,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -7230,7 +7230,6 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
       PROVIDER: VCD
       CRI: ContainerdV2
       LAYOUT: Standard
@@ -7452,7 +7451,6 @@ jobs:
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: VCD
           CRI: ContainerdV2
           LAYOUT: Standard
@@ -7488,7 +7486,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
@@ -7530,7 +7527,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -7542,6 +7538,9 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -7627,7 +7626,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -7649,7 +7647,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -7659,6 +7656,9 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
+            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
+            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
