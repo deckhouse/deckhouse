@@ -214,135 +214,42 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - check_branch_name
 
-    # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
+  # <template: check_changelog_template>
+  check_changelog:
+    name: Check changelog
+    runs-on: ubuntu-latest
     steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+      - name: Check for tag
         run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "Not a tag push, skipping changelog check."
+            exit 0
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
 
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: |
-          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-    # </template: go_generate_template>
-
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - check_branch_name
-
-    # <template: workflow_render_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [ ! -f "$FILE" ]; then
+            echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+            exit 1
+          else
+            echo "✅ Changelog file $FILE found."
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      - name: Render GitHub workflow
-        run: |
-          cd .github
-          ./render-workflows.sh
-
-      - name: Check rendered files
-        run: |
-          git diff --exit-code
-    # </template: workflow_render_template>
+  # </template: check_changelog_template>
 
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
+      - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
