@@ -74,4 +74,3 @@ spec:
           cpu: "20m"
           memory: "50Mi"
 ```
-
