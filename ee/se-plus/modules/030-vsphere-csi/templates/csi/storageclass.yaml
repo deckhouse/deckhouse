@@ -1,5 +1,5 @@
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
-{{- range $index, $storageClass := .Values.cloudProviderVsphere.internal.storageClasses }}
+{{- if ne .Values.vsphereCsi.internal.compatibilityFlag "Legacy" }}
+{{- range $index, $storageClass := .Values.vsphereCsi.internal.storageClasses }}
 {{- if eq $storageClass.datastoreType "Datastore" }}
 ---
 apiVersion: storage.k8s.io/v1
@@ -15,7 +15,7 @@ allowedTopologies:
 - matchLabelExpressions:
   - key: failure-domain.beta.kubernetes.io/region
     values:
-    - {{ $.Values.cloudProviderVsphere.internal.providerClusterConfiguration.region }}
+    - {{ $.Values.vsphereCsi.internal.providerClusterConfiguration.region }}
   - key: failure-domain.beta.kubernetes.io/zone
     values:
   {{- range $storageClass.zones}}
