@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"log/slog"
 	"regexp"
 	"slices"
 	"strings"
@@ -62,9 +61,8 @@ func validateEdition(edition string) bool {
 }
 
 func handleModuleConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("--- === hook handled === ---")
-	var found bool
 	// set metrics on hook result
+	var found bool
 	defer func(found *bool) {
 		var value float64
 		if *found {
@@ -75,12 +73,9 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 
 	// check moduleConfig spec.settings.licence.edition
 	moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
-	input.Logger.Info("moduleEditions length", slog.Int("length", len(moduleEditions)))
 	for _, moduleEditionSnap := range moduleEditions {
 		moduleEdition := moduleEditionSnap.String()
-		input.Logger.Info("validating module edition", slog.String("moduleEdition", moduleEdition), slog.Any("moduleEditionSnap", moduleEditionSnap))
 		if validateEdition(moduleEdition) {
-			input.Logger.Info("module edition validated", slog.String("moduleEdition", moduleEdition))
 			found = true
 			return nil
 		}
@@ -88,20 +83,16 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 
 	// check values.global.deckhouseEdition
 	edition, ok := input.Values.GetOk("global.deckhouseEdition")
-	input.Logger.Info("trying to get edition from values", slog.String("global.deckhouseEdition", edition.String()), slog.Bool("ok", ok))
 	if ok && validateEdition(edition.String()) {
-		input.Logger.Info("edition validated", slog.String("edition", edition.String()))
 		found = true
 		return nil
 	}
 
 	// check values.global.registry
 	registryAddress, ok := input.Values.GetOk("global.modulesImages.registry.address")
-	input.Logger.Info("trying to get edition from registry path", slog.String("global.modulesImages.registry.address", registryAddress.String()), slog.Bool("ok", ok))
 	if ok && registryAddress.String() == "registry.deckhouse.io" {
 		// if prod registry, check path
 		registryPath, ok := input.Values.GetOk("global.modulesImages.registry.path")
-		input.Logger.Info("trying to get edition from registry path", slog.String("global.modulesImages.registry.path", registryPath.String()), slog.Bool("ok", ok))
 		if !ok {
 			input.Logger.Warn("global value global.modulesImages.registry.path not set")
 			return nil
@@ -110,9 +101,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		// regex to extract edition from path
 		// e.g. /deckhouse/ce, /deckhouse/be, /deckhouse/fe, /deckhouse/ee, /deckhouse/se, /deckhouse/se-plus
 		reResult := reEditionFromPath.FindStringSubmatch(registryPath.String())
-		input.Logger.Info("regex result", slog.Any("reResult", reResult))
 		if len(reResult) > 0 && validateEdition(reResult[1]) {
-			input.Logger.Info("edition validated", slog.String("reResult[1]", reResult[1]))
 			found = true
 			return nil
 		}
@@ -121,5 +110,6 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 	}
 
 	// if we reach this point, it means no edition was found
+	input.Logger.Warn("deckhouse edition not found")
 	return nil
 }

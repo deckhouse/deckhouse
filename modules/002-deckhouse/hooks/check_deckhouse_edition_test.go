@@ -100,6 +100,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			f.BindingContexts.Set(st)
 			f.ValuesSet("global.deckhouseEdition", "FE")
 			f.RunHook()
+			f.ValuesDelete("global.deckhouseEdition")
 		})
 
 		It("Metrics must be set", func() {
@@ -118,10 +119,11 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 		BeforeEach(func() {
 			st := f.KubeStateSet(moduleConfigWithoutEdition)
 			f.BindingContexts.Set(st)
-			f.ValuesDelete("global.deckhouseEdition")
 			f.ValuesSet("global.modulesImages.registry.address", "registry.deckhouse.io")
 			f.ValuesSet("global.modulesImages.registry.path", "/deckhouse/fe")
 			f.RunHook()
+			f.ValuesDelete("global.modulesImages.registry.address")
+			f.ValuesDelete("global.modulesImages.registry.path")
 		})
 
 		It("Metrics must be set", func() {
