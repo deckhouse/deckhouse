@@ -66,6 +66,11 @@ module ReferenceGenerator
       signature = "d8 #{full_path}" unless parent_titles.empty?
       prepare_signature(signature) if signature
     end
+    
+    # Escape `{{...}}`
+    def escape_liquid_tags(text)
+      text.gsub(/\{\{(.*?)\}\}/) { |match| "{% raw %}#{match}{% endraw %}" }
+    end
 
     def render_flags(flags, depth)
       return '' unless flags && flags.size > 0
@@ -100,9 +105,10 @@ module ReferenceGenerator
     end
 
     def render_flag_item(flag_name, flag_data)
+      description = escape_liquid_tags(flag_data['description'])
       result = %Q(<li><code>--#{flag_name}</code>)
       result += %Q(, <code>-#{flag_data['shorthand']}</code>) if flag_data['shorthand'].to_s.size > 0
-      result += %Q(<div style="white-space: pre-wrap; margin: 0.5em 0 0 0; line-height: 1.7em;">#{flag_data['description']}</div></li>)
+      result += %Q(<div style="white-space: pre-wrap; margin: 0.5em 0 0 0; line-height: 1.7em;">#{description}</div></li>)
     end
 
     def renderD8Section(data, depth, parent_titles)
@@ -126,7 +132,10 @@ module ReferenceGenerator
         end
       end
 
-      result += "<p>#{data['description']}</p>\n" if data['description']
+      if data['description']
+        description = escape_liquid_tags(data['description'])
+        result += "<p>#{description}</p>\n"
+      end
 
       # Render flags
       result += render_flags(data['flags'], depth) if data['flags'] && data['flags'].size > 0
