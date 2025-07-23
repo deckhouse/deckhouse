@@ -645,7 +645,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersStack(nil, "", false, log.NewNop()),
+		exts:           extenders.NewExtendersStack(nil, "", log.NewNop()),
 	}
 
 	for _, option := range options {

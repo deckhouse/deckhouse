@@ -106,7 +106,7 @@ func setupControllerSettings(
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack(nil, "", false, log.NewNop()),
+		exts:             extenders.NewExtendersStack(nil, "", log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

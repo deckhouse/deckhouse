@@ -347,3 +347,7 @@ func (m *Module) HasCondition(condName string) bool {
 func (m *Module) GetVersion() string {
 	return m.Properties.Version
 }
+
+func (m *Module) IsExperimental() bool {
+	return m.Properties.Stage == "Experimental"
+}

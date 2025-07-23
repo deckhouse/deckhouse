@@ -91,7 +91,6 @@ type DeckhouseController struct {
 func NewDeckhouseController(
 	ctx context.Context,
 	version string,
-	allowExperimentalModules bool,
 	operator *addonoperator.AddonOperator,
 	logger *log.Logger,
 ) (*DeckhouseController, error) {
@@ -233,7 +232,7 @@ func NewDeckhouseController(
 		return bootstrapped, nil
 	}
 
-	exts := extenders.NewExtendersStack(bootstrappedHelper, version, allowExperimentalModules, logger.Named("extenders"))
+	exts := extenders.NewExtendersStack(bootstrappedHelper, version, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {

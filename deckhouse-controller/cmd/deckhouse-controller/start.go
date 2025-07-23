@@ -18,12 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -249,12 +247,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	allowExpRaw := os.Getenv(allowExperimentalModules)
-	allowExp, err := strconv.ParseBool(allowExpRaw)
-	if err != nil {
-		logger.Warn("Bad environment value 'DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES' - must be bool", slog.String("value", allowExpRaw))
-	}
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, allowExp, operator, logger.Named("deckhouse-controller"))
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
 	}

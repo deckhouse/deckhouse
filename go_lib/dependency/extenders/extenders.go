@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/experimentalextender"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -36,16 +35,14 @@ type ExtendersStack struct {
 	KubernetesVersion *kubernetesversion.Extender
 	ModuleDependency  *moduledependency.Extender
 	Bootstrapped      *bootstrapped.Extender
-	Experimental      *experimentalextender.Extender
 }
 
-func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion string, allowExperimental bool, logger *log.Logger) *ExtendersStack {
+func NewExtendersStack(bootstrappedHelper func() (bool, error), deckhouseVersion string, logger *log.Logger) *ExtendersStack {
 	return &ExtendersStack{
 		DeckhouseVersion:  deckhouseversion.NewExtender(deckhouseVersion, logger.Named("deckhouse-version-extender")),
 		KubernetesVersion: kubernetesversion.Instance(),
 		ModuleDependency:  moduledependency.Instance(),
 		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
-		Experimental:      experimentalextender.NewExtender(allowExperimental, logger.Named("experimental-extender")),
 	}
 }
 
@@ -55,15 +52,10 @@ func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 		b.KubernetesVersion,
 		b.ModuleDependency,
 		b.Bootstrapped,
-		b.Experimental,
 	}
 }
 
-func (b *ExtendersStack) AddConstraints(module string, critical bool, experimental bool, requirements *v1alpha1.ModuleRequirements) error {
-	if experimental {
-		b.Experimental.AddConstraint(module)
-	}
-
+func (b *ExtendersStack) AddConstraints(module string, critical bool, requirements *v1alpha1.ModuleRequirements) error {
 	if !critical {
 		b.Bootstrapped.AddFunctionalModule(module)
 	}
@@ -98,7 +90,6 @@ func (b *ExtendersStack) DeleteConstraints(module string) {
 	b.DeckhouseVersion.DeleteConstraint(module)
 	b.KubernetesVersion.DeleteConstraint(module)
 	b.ModuleDependency.DeleteConstraint(module)
-	b.Experimental.DeleteConstraint(module)
 }
 
 func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {

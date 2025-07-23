@@ -22,7 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric"
@@ -157,6 +159,16 @@ func moduleConfigValidationHandler(
 		// skip checking source for the global module
 		if cfg.Name != "global" {
 			module := new(v1alpha1.Module)
+
+			allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
+			allowExp, err := strconv.ParseBool(allowExpRaw)
+			if err != nil {
+				return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
+			}
+			if !allowExp && module.IsExperimental() {
+				return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
+			}
+
 			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 				if apierrors.IsNotFound(err) {
 					return allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})

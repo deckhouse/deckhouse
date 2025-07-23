@@ -207,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Critical, def.IsExperimental(), def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
