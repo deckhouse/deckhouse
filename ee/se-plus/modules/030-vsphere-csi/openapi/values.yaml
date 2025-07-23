@@ -34,7 +34,7 @@ properties:
       providerClusterConfiguration:
         type: object
         additionalProperties: false
-        required: [regionTagCategory, zoneTagCategory, region, sshPublicKey, vmFolderPath, provider]
+        required: [regionTagCategory, zoneTagCategory, region, provider]
         x-examples:
           - sshPublicKey: "mysshkey1"
             region: myreg
