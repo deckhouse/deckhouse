@@ -86,80 +86,118 @@ data:
 		for _, gOneIsApproved := range []bool{true, false} {
 			for _, gWaitingForApproval := range []bool{true, false} {
 				for _, gNodeReady := range []bool{true, false} {
-					for _, gNgReady := range []bool{true, false} {
-						for _, gNodeType := range []string{"CloudEphemeral", "CloudPermanent", "Static"} {
-							Context(fmt.Sprintf("Approved: %t, AproveRequired: %v, NodeReady: %t, NgReady: %t, NodeType: %s", gOneIsApproved, gWaitingForApproval, gNodeReady, gNgReady, gNodeType), func() {
-								oneIsApproved := gOneIsApproved
-								waitingForApproval := gWaitingForApproval
-								nodeReady := gNodeReady
-								ngReady := gNgReady
-								nodeType := gNodeType
+					for _, gDrained := range []bool{true, false} {
+						for _, gNgReady := range []bool{true, false} {
+							for _, gNodeType := range []string{"CloudEphemeral", "CloudPermanent", "Static"} {
+								for _, gDisruptionApproved := range []bool{true, false} {
+									Context(fmt.Sprintf("Approved: %t, AproveRequired: %v, NodeReady: %t, NgReady: %t, NodeType: %s, DisruptionApproved: %t, Drained: %t", gOneIsApproved, gWaitingForApproval, gNodeReady, gNgReady, gNodeType, gDisruptionApproved, gDrained), func() {
+										oneIsApproved := gOneIsApproved
+										waitingForApproval := gWaitingForApproval
+										disruptionApproved := gDisruptionApproved
+										nodeReady := gNodeReady
+										ngReady := gNgReady
+										nodeType := gNodeType
+										drained := gDrained
 
-								BeforeEach(func() {
-									f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveUpdates(nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, nodeType)))
-									f.RunHook()
-								})
+										BeforeEach(func() {
+											f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveUpdates(nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, disruptionApproved, drained, nodeType)))
+											f.RunHook()
+										})
 
-								It("Works as expected", func() {
-									Expect(f).To(ExecuteSuccessfully())
+										It("Works as expected", func() {
+											Expect(f).To(ExecuteSuccessfully())
 
-									approvedReadyCount := 0
-									approvedNotReadyCount := 0
-									waitingForApprovalCount := 0
-									for i := 1; i <= len(nodeNames); i++ {
-										if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists() {
-											if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`status.conditions.0.status`).String() == "True" {
-												approvedReadyCount++
-											} else {
-												approvedNotReadyCount++
+											approvedReadyCount := 0
+											approvedNotReadyCount := 0
+											waitingForApprovalCount := 0
+											drainingCount := 0
+											drainedCount := 0
+											for i := 1; i <= len(nodeNames); i++ {
+												if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists() {
+													if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`status.conditions.0.status`).String() == "True" {
+														approvedReadyCount++
+													} else {
+														approvedNotReadyCount++
+													}
+												}
+												if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists() {
+													waitingForApprovalCount++
+												}
+												if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists() {
+													drainingCount++
+												}
+												if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists() {
+													drainedCount++
+												}
 											}
-										}
-										if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists() {
-											waitingForApprovalCount++
-										}
-									}
 
-									if oneIsApproved {
-										By("If 1 node was approved – it should stay approved", func() {
-											Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(1))
-										})
-									} else if waitingForApproval {
-										if ngReady && nodeReady {
-											By("If ng desired==ready and all nodes ready – 1 node should be approved", func() {
-												Expect(approvedReadyCount).To(Equal(1))
-												Expect(approvedNotReadyCount).To(Equal(0))
-												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
-											})
-										} else if !ngReady && nodeReady && nodeType != "CloudEphemeral" {
-											By("If nodeType is not Cloud, ng will not have desired field, so if all existing nodes are ready – 1 node should be approved", func() {
-												Expect(approvedReadyCount).To(Equal(1))
-												Expect(approvedNotReadyCount).To(Equal(0))
-												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
-											})
-										} else if !ngReady && nodeReady && nodeType == "CloudEphemeral" {
-											By("If ng desired != ready, but all existing nodes are ready – there should be no approved nodes", func() {
-												Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
-												Expect(waitingForApprovalCount).To(Equal(len(nodeNames)))
-											})
-										} else if !nodeReady {
-											By("If there are not ready nodes – one of them should be approved", func() {
-												Expect(approvedReadyCount).To(Equal(0))
-												Expect(approvedNotReadyCount).To(Equal(1))
-												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
-											})
-										} else {
-											By("Something went wrong!", func() {
-												Expect(true).To(BeFalse())
-											})
-										}
+											if oneIsApproved {
+												By("If 1 node was approved – it should stay approved", func() {
+													Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(1))
+												})
+											} else if waitingForApproval {
+												if disruptionApproved {
+													if drained {
+														By("If disruptionApproved and drained node should be approved", func() {
+															Expect(approvedNotReadyCount + approvedReadyCount).To(Equal(1))
+															Expect(drainingCount).To(Equal(0))
+															Expect(drainedCount).To(Equal(3))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+														})
+													} else {
+														By("If disruptionApproved and !drained node should be draining", func() {
+															Expect(approvedNotReadyCount).To(Equal(0))
+															Expect(drainingCount).To(Equal(1))
+															Expect(drainedCount).To(Equal(0))
+															Expect(approvedReadyCount).To(Equal(0))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames)))
+														})
+													}
+												} else {
+													if ngReady && nodeReady {
+														By("If ng desired==ready and all nodes ready – 1 node should be approved", func() {
+															Expect(approvedNotReadyCount).To(Equal(0))
+															Expect(drainingCount).To(Equal(0))
+															Expect(approvedReadyCount).To(Equal(1))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+														})
+													} else if !ngReady && nodeReady && nodeType != "CloudEphemeral" {
+														By("If nodeType is not Cloud, ng will not have desired field, so if all existing nodes are ready – 1 node should be approved", func() {
+															Expect(approvedNotReadyCount).To(Equal(0))
+															Expect(drainingCount).To(Equal(0))
+															Expect(approvedReadyCount).To(Equal(1))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+														})
+													} else if !ngReady && nodeReady && nodeType == "CloudEphemeral" {
+														By("If ng desired != ready, but all existing nodes are ready – there should be no approved nodes", func() {
+															Expect(drainingCount).To(Equal(0))
+															Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(1))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+														})
+													} else if !nodeReady {
+														By("If there are not ready nodes – one of them should be approved", func() {
+															Expect(approvedReadyCount).To(Equal(0))
+															Expect(drainingCount).To(Equal(0))
+															Expect(approvedNotReadyCount).To(Equal(1))
+															Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+														})
+													} else {
+														By("Something went wrong!", func() {
+															Expect(true).To(BeFalse())
+														})
+													}
+												}
 
-									} else {
-										By("If there was no approved before and no nodes are waiting for approval – there should be no approved nodes", func() {
-											Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
+											} else {
+												By("If there was no approved before and no nodes are waiting for approval – there should be no approved nodes", func() {
+													Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
+												})
+											}
+
 										})
-									}
-								})
-							})
+									})
+								}
+							}
 						}
 					}
 				}
@@ -195,11 +233,11 @@ data:
 													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
 												})
 											} else {
-												By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
-													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+												By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
 												})
-												By(fmt.Sprintf("%s must have /draining", nodeName), func() {
-													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+												By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
 												})
 											}
 										} else {
@@ -250,10 +288,13 @@ data:
 			n := f.KubernetesGlobalResource("Node", nodeName)
 
 			drainAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`)
-			Expect(drainAnnotate.Exists()).To(BeTrue())
+			Expect(drainAnnotate.Exists()).To(BeFalse())
 
 			disruptionReqAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`)
-			Expect(disruptionReqAnnotate.Exists()).To(BeTrue())
+			Expect(disruptionReqAnnotate.Exists()).To(BeFalse())
+
+			approveAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`)
+			Expect(approveAnnotate.Exists()).To(BeTrue())
 		}
 
 		Context("when have single-master control-plane", func() {
@@ -1322,7 +1363,7 @@ metadata:
 	return state.String()
 }
 
-func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {
+func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady, disruptionApproved, drained bool, nodeType string) string {
 	const tpl = `
 ---
 apiVersion: deckhouse.io/v1
@@ -1331,6 +1372,8 @@ metadata:
   name: worker-2
 spec:
   nodeType: {{ $.NodeType }}
+  disruptions:
+    approvalMode: Automatic
 status:
 {{- if $.NgReady }}
   {{- if eq $.NodeType "CloudEphemeral" }}
@@ -1359,6 +1402,12 @@ metadata:
 {{- if $.AproveRequired }}
     update.node.deckhouse.io/waiting-for-approval: ""
 {{- end }}
+{{- if $.DisruptionApproved }}
+    update.node.deckhouse.io/disruption-approved: ""
+{{- end }}
+{{- if $.Drained }}
+    update.node.deckhouse.io/drained: "bashible"
+{{- end }}
 {{- if $.NodeReady }}
 status:
   conditions:
@@ -1375,13 +1424,15 @@ status:
 	tmpl, _ := template.New("state").Parse(tpl)
 	var state bytes.Buffer
 	err := tmpl.Execute(&state, struct {
-		NodeNames      []string
-		OneIsApproved  bool
-		AproveRequired bool
-		NodeReady      bool
-		NgReady        bool
-		NodeType       string
-	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, nodeType})
+		NodeNames          []string
+		OneIsApproved      bool
+		AproveRequired     bool
+		NodeReady          bool
+		NgReady            bool
+		DisruptionApproved bool
+		Drained            bool
+		NodeType           string
+	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, disruptionApproved, drained, nodeType})
 	if err != nil {
 		panic(err)
 	}
