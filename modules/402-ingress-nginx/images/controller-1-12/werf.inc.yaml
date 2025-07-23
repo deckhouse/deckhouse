@@ -265,13 +265,13 @@ import:
   includePaths:
   - lib/libz.so*
   before: install
-- image: libs/glibc
-  add: /usr
-  to: /chroot
-  includePaths:
-  - lib64/libc.so*
-  - lib64/ld-linux-x86-64.so*
-  before: install
+# - image: libs/glibc
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib64/libc.so*
+#   - lib64/ld-linux-x86-64.so*
+#   before: install
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -370,14 +370,14 @@ shell:
 
 
   # For NGINX
-  # - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
+  - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
   - cp -a /lib64/libcrypt.so* /chroot/lib64
   - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
   - cp -a /lib64/libssl.so* /chroot/lib64
   - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
   # - cp -a /usr/lib64/libz.so* /chroot/lib64
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  # - cp -a /usr/lib64/libc.so* /chroot/lib64
+  - cp -a /usr/lib64/libc.so* /chroot/lib64
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
