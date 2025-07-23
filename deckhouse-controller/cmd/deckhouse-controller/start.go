@@ -107,7 +107,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" {
+		if version == "dev" && os.Getenv("DECKHOUSE_HA") == "false" {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
