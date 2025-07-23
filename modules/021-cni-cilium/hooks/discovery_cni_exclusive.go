@@ -21,10 +21,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-)
 
-// If istio-cni in istio module is enabled, which means the istio-cni-node DaemonSet is created,
-// we need to set the cilium-agent's cni-exclusive setting to "false" to avoid writing conflicts to the /etc/cni/net.d/*.conflist file.
+	"github.com/deckhouse/deckhouse/go_lib/set"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -44,16 +43,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: daemonsetFilter,
 		},
+		{
+			Name:       "sdn-cni-daemonset",
+			ApiVersion: "apps/v1",
+			Kind:       "DaemonSet",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"sdn-agent"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-sdn"},
+				},
+			},
+			FilterFunc: daemonsetFilter,
+		},
 	},
-}, discoveryIsIstioCNIEnabled)
+}, discoveryIsExclusiveCNIPluginEnabled)
 
 func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
 }
 
-func discoveryIsIstioCNIEnabled(input *go_hook.HookInput) error {
+func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
 	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
-	isIstioCNIEnabled := len(istioCniDaemonSets) != 0
-	input.Values.Set("cniCilium.internal.isIstioCNIEnabled", isIstioCNIEnabled)
+	sdnCniDaemonSets := input.NewSnapshots.Get("sdn-cni-daemonset")
+	isEnabled := len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets)
+	input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", isEnabled)
 	return nil
 }
