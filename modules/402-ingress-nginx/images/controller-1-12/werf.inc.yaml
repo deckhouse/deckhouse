@@ -153,7 +153,7 @@ final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-22.02"
+fromCacheVersion: "2025-07-23.01"
 final: false
 mount:
 - from: build_dir
@@ -477,7 +477,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-# fromCacheVersion: "2025-07-22.02"
+fromCacheVersion: "2025-07-23.01"
 mount:
 - from: build_dir
   to: /tmp/apps
