@@ -17,7 +17,7 @@ output "additional_security_groups" {
 }
 
 output "load_balancer_security_group" {
-  value = length(aws_security_group.loadbalancer) > 0 ? aws_security_group.loadbalancer[0].id : null
+  value = length(aws_security_group.loadbalancer) > 0 ? aws_security_group.loadbalancer[0].id : ""
 }
 
 output "security_group_id_node" {
