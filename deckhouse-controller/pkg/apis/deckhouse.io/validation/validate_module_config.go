@@ -22,9 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric"
@@ -59,6 +57,7 @@ func moduleConfigValidationHandler(
 	metricStorage metric.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
+	allowExperimentalModules bool,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
@@ -68,13 +67,9 @@ func moduleConfigValidationHandler(
 
 		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 			definition := module.GetModuleDefinition()
-			isExperimentalModuleFloat := func() float64 {
-				if definition.IsExperimental() {
-					return 1.0
-				}
-				return 0.0
+			if definition.IsExperimental() {
+				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})
 			}
-			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": obj.GetName()})
 		}
 
 		switch review.Operation {
@@ -139,16 +134,12 @@ func moduleConfigValidationHandler(
 			// if no annotations and module is disabled, check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
+
+			metricStorage.GaugeSet(telemetry.WrapName("can_use_experimental_modules"), 1.0, map[string]string{"module": obj.GetName()})
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
-					allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
-					allowExp, err := strconv.ParseBool(allowExpRaw)
-					if err != nil {
-						return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
-					}
-
-					if !allowExp && definition.IsExperimental() {
+					if !allowExperimentalModules && definition.IsExperimental() {
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
 					}
 				}

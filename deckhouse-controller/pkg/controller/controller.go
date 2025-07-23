@@ -91,6 +91,7 @@ type DeckhouseController struct {
 func NewDeckhouseController(
 	ctx context.Context,
 	version string,
+	allowExperimentalModules bool,
 	operator *addonoperator.AddonOperator,
 	logger *log.Logger,
 ) (*DeckhouseController, error) {
@@ -295,6 +296,7 @@ func NewDeckhouseController(
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
 		operator.MetricStorage,
+		allowExperimentalModules,
 	)
 
 	return &DeckhouseController{
