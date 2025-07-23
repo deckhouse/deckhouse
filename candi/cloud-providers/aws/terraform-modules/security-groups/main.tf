@@ -30,6 +30,7 @@ resource "aws_security_group" "node" {
 }
 
 resource "aws_security_group_rule" "lb-to-node" {
+  count                    = var.disable_default_security_group ? 0 : 1
   type                     = "ingress"
   protocol                 = "-1"
   from_port                = 0
