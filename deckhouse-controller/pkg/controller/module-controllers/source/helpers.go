@@ -167,13 +167,14 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 
 // needToEnsureRelease checks that the module enabled, the source is the active source,
 // release exists, and checksum not changed.
-func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
+func (r *reconciler) needToEnsureRelease(
+	source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	// check the active source
-	if module.Properties.Source != source.Name {
+	if module.Properties.Source != "" && module.Properties.Source != source.Name {
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
@@ -183,9 +184,18 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 
 	// check the module enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
+		if !source.IsDefault() {
+			return false
+		}
 
-		return false
+		enabledByBundle := false
+		if meta.ModuleDefinition != nil {
+			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
+		}
+
+		if !enabledByBundle {
+			return false
+		}
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists

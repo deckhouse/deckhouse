@@ -197,7 +197,7 @@ spec:
             - name: HELM_HOST
               value: "127.0.0.1:44434"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
-              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
