@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 type AnnotationsOnly struct {
@@ -160,20 +161,29 @@ func moduleConfigValidationHandler(
 		if cfg.Name != "global" {
 			module := new(v1alpha1.Module)
 
-			allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
-			allowExp, err := strconv.ParseBool(allowExpRaw)
-			if err != nil {
-				return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
-			}
-			if !allowExp && module.IsExperimental() {
-				return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
-			}
-
 			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 				if apierrors.IsNotFound(err) {
 					return allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})
 				}
 				return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+			}
+
+			isExperimentalModuleFloat := func() float64 {
+				if module.IsExperimental() {
+					return 1.0
+				}
+				return 0.0
+			}
+			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
+
+			allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
+			allowExp, err := strconv.ParseBool(allowExpRaw)
+			if err != nil {
+				return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
+			}
+
+			if !allowExp && module.IsExperimental() {
+				return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
 			}
 
 			if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {

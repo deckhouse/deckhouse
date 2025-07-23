@@ -235,7 +235,6 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 				},
 			)
 			fs.PublishDirStatic = staticFs
-
 		}
 
 		if !base.C.Clock.IsZero() {
@@ -260,7 +259,6 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 	})
 
 	return cc, err
-
 }
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {

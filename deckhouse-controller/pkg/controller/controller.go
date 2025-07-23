@@ -294,7 +294,8 @@ func NewDeckhouseController(
 		operator.ModuleManager,
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
-		operator.MetricStorage)
+		operator.MetricStorage,
+	)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,

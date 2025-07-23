@@ -41,6 +41,7 @@ func (fs *countingStatFs) Stat(name string) (os.FileInfo, error) {
 	return f, err
 }
 
+// nolint: unused
 func chmodFilter(dst, src os.FileInfo) bool {
 	return src.IsDir()
 }

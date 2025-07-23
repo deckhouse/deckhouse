@@ -55,7 +55,6 @@ func (b *hugoBuilder) withConf(fn func(conf *commonConfig)) {
 	b.confmu.Lock()
 	defer b.confmu.Unlock()
 	fn(b.conf)
-
 }
 
 func (b *hugoBuilder) build() error {

@@ -91,6 +91,8 @@ const (
 	DeckhouseRequirementFieldName        string = "deckhouse"
 	KubernetesRequirementFieldName       string = "kubernetes"
 	ModuleDependencyRequirementFieldName string = "modules"
+
+	ExperimentalStage string = "Experimental"
 )
 
 var (
@@ -349,5 +351,5 @@ func (m *Module) GetVersion() string {
 }
 
 func (m *Module) IsExperimental() bool {
-	return m.Properties.Stage == "Experimental"
+	return m.Properties.Stage == ExperimentalStage
 }
