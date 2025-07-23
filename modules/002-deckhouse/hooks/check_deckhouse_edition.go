@@ -64,6 +64,15 @@ func validateEdition(edition string) bool {
 
 func handleModuleConfig(input *go_hook.HookInput) error {
 	input.Logger.Info("--- === hook handled === ---")
+	var found bool
+	// set metrics on hook result
+	defer func(found *bool) {
+		var value float64
+		if *found {
+			value = 1.0
+		}
+		input.MetricsCollector.Set("deckhouse_edition_found", value, nil)
+	}(&found)
 
 	// check moduleConfig spec.settings.licence.edition
 	moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
@@ -73,6 +82,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		input.Logger.Info("validating module edition", slog.String("moduleEdition", moduleEdition), slog.Any("moduleEditionSnap", moduleEditionSnap))
 		if validateEdition(moduleEdition) {
 			input.Logger.Info("module edition validated", slog.String("moduleEdition", moduleEdition))
+			found = true
 			return nil
 		}
 	}
@@ -82,6 +92,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 	input.Logger.Info("trying to get edition from values", slog.String("global.deckhouseEdition", edition.String()), slog.Bool("ok", ok))
 	if ok && validateEdition(edition.String()) {
 		input.Logger.Info("edition validated", slog.String("edition", edition.String()))
+		found = true
 		return nil
 	}
 
@@ -103,6 +114,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		input.Logger.Info("regex result", slog.Any("reResult", reResult))
 		if len(reResult) > 0 && validateEdition(reResult[1]) {
 			input.Logger.Info("edition validated", slog.String("reResult[1]", reResult[1]))
+			found = true
 			return nil
 		}
 
@@ -110,6 +122,5 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 	}
 
 	// if we reach this point, it means no edition was found
-	input.MetricsCollector.Set("deckhouse_edition_not_found", 1.0, nil)
 	return nil
 }
