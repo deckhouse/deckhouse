@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	v1 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-vsphere-csi/hooks/internal/v1"
+	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
@@ -116,6 +116,6 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	if m.SSHKeys != nil {
 		p.SSHPublicKey = &(*m.SSHKeys)[0]
 	}
-	
+
 	return nil
 }
