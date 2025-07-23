@@ -46,6 +46,7 @@ var once sync.Once
 var store *SchemaStore
 
 type validateOptions struct {
+	omitDocInError     bool
 	commanderMode      bool
 	strictUnmarshal    bool
 	validateExtensions bool
@@ -57,6 +58,15 @@ type ValidateOption func(o *validateOptions)
 func ValidateOptionCommanderMode(v bool) ValidateOption {
 	return func(o *validateOptions) {
 		o.commanderMode = v
+	}
+}
+
+// ValidateOptionOmitDocInError configures whether to exclude the original document
+// from validation error messages. By default, the document is included.
+// When this option is enabled, the document will be omitted from errors.
+func ValidateOptionOmitDocInError(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.omitDocInError = v
 	}
 }
 
@@ -311,7 +321,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
-		if options.commanderMode {
+		if options.omitDocInError || options.commanderMode {
 			return fmt.Errorf("%q document validation failed: %w", index.String(), err)
 		}
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)

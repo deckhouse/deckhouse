@@ -97,6 +97,43 @@ shell:
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-configuration-validator-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/configuration-validator
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-configuration-validator-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+  {{ include "mount points for golang builds" . }}
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-configuration-validator-src-artifact
+    add: /src
+    to: /src
+    before: install
+secrets:
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /configuration-validator configuration_validator.go
+    - chown 64535:64535 /configuration-validator
+    - chmod 755 /configuration-validator
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
 final: false
