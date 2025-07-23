@@ -4,12 +4,15 @@ modules: модули
 modules2: модулей
 module: модуль
 module_versions: Версии модуля
+module_version: Версия модуля
 deckhouse: deckhouse
 documentation: документация
 modules_documentation: Документация модулей
 modules_list: Список модулей
 category: категория
 core: ядро
+community_edition_en: community edition
+commercial_editions_en: commercial editions
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
 conversion_from_version: Обновление из версии

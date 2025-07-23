@@ -10,6 +10,7 @@
         "policy",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "admission-policy-engine/",
       "ru": {
         "title": "Модуль admission-policy-engine",
@@ -25,6 +26,7 @@
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cert-manager/",
       "ru": {
         "title": "Модуль cert-manager",
@@ -33,19 +35,23 @@
     },
     {
       "title": "The chrony module",
+      "description": "Time synchronization on all cluster nodes.",
       "module": "chrony",
       "embedded": "true",
       "tags": [
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "chrony/",
       "ru": {
-        "title": "Модуль chrony"
+        "title": "Модуль chrony",
+        "description": "Синхронизация времени в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The cilium-hubble module",
+      "description": "Visualization of the Deckhouse Kubernetes Platform cluster network stack using Cilium Hubble.",
       "webIfaces": [
         {
           "name": "hubble"
@@ -59,9 +65,11 @@
         "observability",
         "web-interface"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cilium-hubble/",
       "ru": {
         "title": "Модуль cilium-hubble",
+        "description": "Визуализация сетевого стека кластера Deckhouse Kubernetes Platform с помощью Cilium Hubble.",
         "webIfaces": [
           {
             "name": "hubble"
@@ -78,6 +86,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cloud-provider-aws/",
       "ru": {
         "title": "Cloud provider — AWS",
@@ -93,6 +102,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cloud-provider-azure/",
       "ru": {
         "title": "Cloud provider — Azure",
@@ -108,6 +118,7 @@
         "embedded",
         "virtualization"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cloud-provider-dvp/",
       "ru": {
         "title": "Cloud provider — DVP",
@@ -123,6 +134,7 @@
         "bare-metal",
         "embedded"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "cloud-provider-dynamix/",
       "ru": {
         "title": "Cloud provider — Базис.DynamiX",
@@ -138,6 +150,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cloud-provider-gcp/",
       "ru": {
         "title": "Cloud provider — GCP",
@@ -153,6 +166,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "cloud-provider-huaweicloud/",
       "ru": {
         "title": "Cloud provider — Huawei Cloud",
@@ -168,6 +182,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "cloud-provider-openstack/",
       "ru": {
         "title": "Cloud provider — OpenStack",
@@ -183,6 +198,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "cloud-provider-vcd/",
       "ru": {
         "title": "Cloud provider — VMware Cloud Director",
@@ -191,6 +207,7 @@
     },
     {
       "title": "Cloud provider — VMware vSphere",
+      "description": "Managing cloud resources in Deckhouse Kubernetes Platform based on VMware vSphere.",
       "module": "cloud-provider-vsphere",
       "embedded": "true",
       "tags": [
@@ -198,9 +215,11 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "se-plus",
       "url": "cloud-provider-vsphere/",
       "ru": {
-        "title": "Cloud provider — VMware vSphere"
+        "title": "Cloud provider — VMware vSphere",
+        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе VMware vSphere."
       }
     },
     {
@@ -212,6 +231,7 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cloud-provider-yandex/",
       "ru": {
         "title": "Cloud provider — Yandex Cloud",
@@ -220,6 +240,7 @@
     },
     {
       "title": "Cloud provider — zVirt",
+      "description": "Managing cloud resources in Deckhouse Kubernetes Platform based on zVirt.",
       "module": "cloud-provider-zvirt",
       "embedded": "true",
       "tags": [
@@ -227,9 +248,11 @@
         "cloud",
         "embedded"
       ],
+      "editionMinimumAvailable": "se-plus",
       "url": "cloud-provider-zvirt/",
       "ru": {
-        "title": "Cloud provider — zVirt"
+        "title": "Cloud provider — zVirt",
+        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе zVirt."
       }
     },
     {
@@ -242,6 +265,7 @@
         "network",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cni-cilium/",
       "ru": {
         "title": "Модуль cni-cilium",
@@ -257,6 +281,7 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cni-flannel/",
       "ru": {
         "title": "Модуль cni-flannel",
@@ -272,6 +297,7 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "cni-simple-bridge/",
       "ru": {
         "title": "Модуль cni-simple-bridge",
@@ -287,6 +313,7 @@
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "control-plane-manager/",
       "ru": {
         "title": "Управление control plane",
@@ -295,6 +322,7 @@
     },
     {
       "title": "The dashboard module",
+      "description": "Kubernetes Dashboard Web UI for managing applications in the Deckhouse Kubernetes Platform cluster.",
       "webIfaces": [
         {
           "name": "dashboard"
@@ -307,9 +335,11 @@
         "observability",
         "web-interface"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "dashboard/",
       "ru": {
         "title": "Модуль dashboard",
+        "description": "Веб-интерфейс Kubernetes Dashboard для управления кластером Deckhouse Kubernetes Platform.",
         "webIfaces": [
           {
             "name": "dashboard"
@@ -326,6 +356,7 @@
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "deckhouse/",
       "ru": {
         "title": "Модуль deckhouse",
@@ -339,7 +370,7 @@
           "name": "deckhouse-tools"
         }
       ],
-      "description": "The deckhouse-tools Deckhouse module provides a web interface in the cluster for downloading Deckhouse utilities (Deckhouse CLI)",
+      "description": "A web interface for downloading Deckhouse CLI (d8) for various operating systems.",
       "module": "deckhouse-tools",
       "embedded": "true",
       "tags": [
@@ -347,6 +378,7 @@
         "tools",
         "web-interface"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "deckhouse-tools/",
       "ru": {
         "title": "Модуль deckhouse-tools",
@@ -355,7 +387,7 @@
             "name": "deckhouse-tools"
           }
         ],
-        "description": "Модуль deckhouse-tools Deckhouse предоставляет веб-интерфейс в кластере для скачивания утилит Deckhouse (Deckhouse CLI)"
+        "description": "Веб-интерфейс для скачивания утилиты Deckhouse CLI (d8) под различные операционные системы."
       }
     },
     {
@@ -367,6 +399,7 @@
         "embedded",
         "scheduling"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "descheduler/",
       "ru": {
         "title": "Модуль descheduler",
@@ -375,6 +408,7 @@
     },
     {
       "title": "The documentation module",
+      "description": "A web interface with documentation for the Deckhouse Kubernetes Platform.",
       "webIfaces": [
         {
           "name": "documentation"
@@ -386,9 +420,11 @@
         "embedded",
         "web-interface"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "documentation/",
       "ru": {
         "title": "Модуль documentation",
+        "description": "Веб-интерфейс с документацией Deckhouse Kubernetes Platform.",
         "webIfaces": [
           {
             "name": "documentation"
@@ -405,6 +441,7 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "extended-monitoring/",
       "ru": {
         "title": "Модуль extended-monitoring",
@@ -413,6 +450,7 @@
     },
     {
       "title": "The ingress-nginx module",
+      "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using NGINX Ingress controller.",
       "module": "ingress-nginx",
       "embedded": "true",
       "tags": [
@@ -420,14 +458,16 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "ingress-nginx/",
       "ru": {
-        "title": "Модуль ingress-nginx"
+        "title": "Модуль ingress-nginx",
+        "description": "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью NGINX Ingress controller."
       }
     },
     {
       "title": "The istio module",
-      "description": "Description of the istio module of the Deckhouse Kubernetes Platform, including the tasks it solves, architecture, as well as features of configuration and management.",
+      "description": "Enables Istio Service Mesh in the Deckhouse Kubernetes Platform cluster.",
       "webIfaces": [
         {
           "name": "istio"
@@ -441,10 +481,11 @@
         "network",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "istio/",
       "ru": {
         "title": "Модуль istio",
-        "description": "Описание модуля istio Deckhouse Kubernetes Platform, включая задачи, которые он решает, архитектуру, а также особенности настройки и управления.",
+        "description": "Организация сети service mesh в кластере Deckhouse Kubernetes Platform",
         "webIfaces": [
           {
             "name": "istio"
@@ -454,6 +495,7 @@
     },
     {
       "title": "The keepalived module",
+      "description": "Management of keepalived clusters on Deckhouse Kubernetes Platform nodes.",
       "module": "keepalived",
       "embedded": "true",
       "tags": [
@@ -462,9 +504,11 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "keepalived/",
       "ru": {
-        "title": "Модуль keepalived"
+        "title": "Модуль keepalived",
+        "description": "Управление кластерами keepalived на узлах Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -476,6 +520,7 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "kube-dns/",
       "ru": {
         "title": "Модуль kube-dns",
@@ -491,6 +536,7 @@
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "kube-proxy/",
       "ru": {
         "title": "Модуль kube-proxy",
@@ -506,6 +552,7 @@
         "embedded",
         "storage"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "local-path-provisioner/",
       "ru": {
         "title": "Модуль local-path-provisioner",
@@ -514,7 +561,7 @@
     },
     {
       "title": "The log-shipper module",
-      "description": "Collecting logs in the Kubernetes cluster using the log-shipper Deckhouse module. Log sending topologies, log filtering, and log metadata enrichment.",
+      "description": "Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.",
       "module": "log-shipper",
       "embedded": "true",
       "tags": [
@@ -522,14 +569,16 @@
         "logging",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "log-shipper/",
       "ru": {
         "title": "Модуль log-shipper",
-        "description": "Описание возможностей сбора логов в кластере Kubernetes с помощью модуля log-shipper Deckhouse. Описание топологий отправки логов, возможностей фильтрации логов и обогащения логов метаданными."
+        "description": "Сбор, фильтрация и обогащение логов в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The loki module",
+      "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
       "module": "loki",
       "embedded": "true",
       "tags": [
@@ -537,13 +586,16 @@
         "logging",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "loki/",
       "ru": {
-        "title": "Модуль loki"
+        "title": "Модуль loki",
+        "description": "Хранилище логов в кластере Deckhouse Kubernetes Platform на базе Grafana Loki."
       }
     },
     {
       "title": "The metallb module",
+      "description": "Load balancing for services in bare metal clusters.",
       "module": "metallb",
       "embedded": "true",
       "tags": [
@@ -552,13 +604,16 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "se",
       "url": "metallb/",
       "ru": {
-        "title": "Модуль metallb"
+        "title": "Модуль metallb",
+        "description": "Балансировка трафика для сервисов в кластерах bare metal."
       }
     },
     {
       "title": "The monitoring-custom module",
+      "description": "Monitoring user applications in Deckhouse Kubernetes Platform.",
       "type": [
         "instruction"
       ],
@@ -569,9 +624,11 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "monitoring-custom/",
       "ru": {
         "title": "Модуль monitoring-custom",
+        "description": "Мониторинг приложений пользователей в Deckhouse Kubernetes Platform.",
         "type": [
           "instruction"
         ],
@@ -580,32 +637,39 @@
     },
     {
       "title": "The monitoring-kubernetes module",
+      "description": "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform.",
       "module": "monitoring-kubernetes",
       "embedded": "true",
       "tags": [
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "monitoring-kubernetes/",
       "ru": {
-        "title": "Модуль monitoring-kubernetes"
+        "title": "Модуль monitoring-kubernetes",
+        "description": "Базовый мониторинг узлов кластера Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "Monitoring the control plane",
+      "description": "Monitoring control plane components in the Deckhouse Kubernetes Platform cluster.",
       "module": "monitoring-kubernetes-control-plane",
       "embedded": "true",
       "tags": [
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "monitoring-kubernetes-control-plane/",
       "ru": {
-        "title": "Мониторинг control plane"
+        "title": "Мониторинг control plane",
+        "description": "Мониторинг компонентов control plane кластера Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The monitoring-ping module",
+      "description": "Network connectivity monitoring between Deckhouse Kubernetes Platform cluster nodes.",
       "module": "monitoring-ping",
       "embedded": "true",
       "tags": [
@@ -613,9 +677,11 @@
         "network",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "monitoring-ping/",
       "ru": {
-        "title": "Модуль monitoring-ping"
+        "title": "Модуль monitoring-ping",
+        "description": "Мониторинг сетевого взаимодействия между узлами кластера Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -629,6 +695,7 @@
         "multitenancy",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "multitenancy-manager/",
       "ru": {
         "title": "Модуль multitenancy-manager",
@@ -638,28 +705,34 @@
     },
     {
       "title": "The namespace-configurator module",
+      "description": "Automatic management of annotations and labels on namespaces in the Deckhouse Kubernetes Platform.",
       "module": "namespace-configurator",
       "embedded": "true",
       "tags": [
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "namespace-configurator/",
       "ru": {
-        "title": "Модуль namespace-configurator"
+        "title": "Модуль namespace-configurator",
+        "description": "Автоматическое управление аннотациями и лейблами на пространствах имён в Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The network-gateway module",
+      "description": "Creates a network gateway using Deckhouse Kubernetes Platform nodes.",
       "module": "network-gateway",
       "embedded": "true",
       "tags": [
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "network-gateway/",
       "ru": {
-        "title": "Модуль network-gateway"
+        "title": "Модуль network-gateway",
+        "description": "Постройка сетевого шлюза из узлов кластера Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -672,6 +745,7 @@
         "network",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "network-policy-engine/",
       "ru": {
         "title": "Модуль network-policy-engine",
@@ -680,15 +754,18 @@
     },
     {
       "title": "The node-local-dns module",
+      "description": "Caching DNS server on each node of the Deckhouse Kubernetes Platform cluster.",
       "module": "node-local-dns",
       "embedded": "true",
       "tags": [
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "be",
       "url": "node-local-dns/",
       "ru": {
-        "title": "Модуль node-local-dns"
+        "title": "Модуль node-local-dns",
+        "description": "Кэширующий DNS-сервер на каждом узле кластера Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -701,6 +778,7 @@
         "embedded",
         "scaling"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "node-manager/",
       "ru": {
         "title": "Управление узлами",
@@ -709,6 +787,7 @@
     },
     {
       "title": "The okmeter module",
+      "description": "Installation of the Okmeter agent in the Deckhouse Kubernetes Platform cluster.",
       "module": "okmeter",
       "embedded": "true",
       "tags": [
@@ -716,14 +795,16 @@
         "observability",
         "proprietary"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "okmeter/",
       "ru": {
-        "title": "Модуль okmeter"
+        "title": "Модуль okmeter",
+        "description": "Установка агента Okmeter в кластер Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The openvpn module",
-      "description": "Deckhouse Kubernetes Platform openvpn module: features, web interface, options for publishing the VPN service, available cluster resources after connection, and audit of user connections.",
+      "description": "Access to Deckhouse Kubernetes Platform cluster resources via OpenVPN with certificate-based authentication.",
       "webIfaces": [
         {
           "name": "openvpn-admin"
@@ -736,10 +817,11 @@
         "network",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "openvpn/",
       "ru": {
         "title": "Модуль openvpn",
-        "description": "Описание модуля openvpn Deckhouse Kubernetes Platform: функции, веб-интерфейс, варианты публикации VPN-сервиса, доступные ресурсы кластера после подключения и аудит пользовательских соединений.",
+        "description": "Доступ к ресурсам кластера Deckhouse Kubernetes Platform через OpenVPN с аутентификацией по сертификатам.",
         "webIfaces": [
           {
             "name": "openvpn-admin"
@@ -756,6 +838,7 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "operator-prometheus/",
       "ru": {
         "title": "Модуль operator-prometheus",
@@ -764,30 +847,34 @@
     },
     {
       "title": "The operator-trivy module",
-      "description": "operator-trivy is a Deckhouse module for periodic scanning for vulnerabilities in a Kubernetes cluster.",
+      "description": "Periodic scanning for vulnerabilities in a Deckhouse Kubernetes Platform cluster.",
       "module": "operator-trivy",
       "embedded": "true",
       "tags": [
         "embedded",
         "security"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "operator-trivy/",
       "ru": {
         "title": "Модуль operator-trivy",
-        "description": "operator-trivy — модуль Deckhouse для периодического сканирования на уязвимости в кластере Kubernetes."
+        "description": "Периодическое сканирование на уязвимости в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The pod-reloader module",
+      "description": "Automatic pod restart on ConfigMap or Secret changes in the Deckhouse Kubernetes Platform cluster.",
       "module": "pod-reloader",
       "embedded": "true",
       "tags": [
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "pod-reloader/",
       "ru": {
-        "title": "Модуль pod-reloader"
+        "title": "Модуль pod-reloader",
+        "description": "Автоматический перезапуск подов при изменении ConfigMap или Secret в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -808,6 +895,7 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "prometheus/",
       "ru": {
         "title": "Prometheus-мониторинг",
@@ -833,6 +921,7 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "prometheus-metrics-adapter/",
       "ru": {
         "title": "Модуль prometheus-metrics-adapter",
@@ -849,6 +938,7 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "prometheus-pushgateway/",
       "ru": {
         "title": "Модуль Prometheus Pushgateway",
@@ -857,30 +947,34 @@
     },
     {
       "title": "The runtime-audit-engine module",
-      "description": "Overview of the runtime-audit-engine Deckhouse module, which implements a runtime threats detection engine in the Kubernetes cluster.",
+      "description": "Runtime threats detection engine in a Deckhouse Kubernetes Platform cluster.",
       "module": "runtime-audit-engine",
       "embedded": "true",
       "tags": [
         "embedded",
         "security"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "runtime-audit-engine/",
       "ru": {
         "title": "Модуль runtime-audit-engine",
-        "description": "Описание модуля runtime-audit-engine Deckhouse, предназначенного для поиска угроз безопасности в кластере Kubernetes."
+        "description": "Поиск угроз безопасности в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
       "title": "The secret-copier module",
+      "description": "Automatic copying of Secrets across namespaces in the Deckhouse Kubernetes Platform cluster.",
       "module": "secret-copier",
       "embedded": "true",
       "tags": [
         "core",
         "embedded"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "secret-copier/",
       "ru": {
-        "title": "Модуль secret-copier"
+        "title": "Модуль secret-copier",
+        "description": "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Kubernetes Platform."
       }
     },
     {
@@ -893,6 +987,7 @@
         "embedded",
         "network"
       ],
+      "editionMinimumAvailable": "ee",
       "url": "service-with-healthchecks/",
       "ru": {
         "title": "Модуль service-with-healthchecks",
@@ -910,6 +1005,7 @@
         "embedded",
         "scaling"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "terraform-manager/",
       "ru": {
         "title": "Модуль terraform-manager",
@@ -918,6 +1014,7 @@
     },
     {
       "title": "The upmeter module",
+      "description": "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components.",
       "webIfaces": [
         {
           "name": "status"
@@ -932,9 +1029,11 @@
         "embedded",
         "observability"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "upmeter/",
       "ru": {
         "title": "Модуль upmeter",
+        "description": "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform.",
         "webIfaces": [
           {
             "name": "status"
@@ -961,6 +1060,7 @@
         "embedded",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "user-authn/",
       "ru": {
         "title": "Модуль user-authn",
@@ -983,6 +1083,7 @@
         "embedded",
         "security"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "user-authz/",
       "ru": {
         "title": "Модуль user-authz",
@@ -999,6 +1100,7 @@
         "embedded",
         "scaling"
       ],
+      "editionMinimumAvailable": "ce",
       "url": "vertical-pod-autoscaler/",
       "ru": {
         "title": "Модуль vertical-pod-autoscaler",

@@ -10,7 +10,7 @@ $(document).ready(function () {
         tags.add(tag.textContent);
       });
     });
-    return Array.from(tags);
+    return Array.from(tags).sort();
   }
 
   function createCheckboxes(tag) {

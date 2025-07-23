@@ -29,6 +29,7 @@
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
 {{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
+{{ $modulesEditions := .Site.Data.modules_all }}
 {{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{ $ctx := $ }}
 
@@ -49,23 +50,20 @@
     {{ continue }}
   {{ end }}
 
+  {{ $moduleTags = index (index $modulesEditions $module) "tags" }}
+
   {{ range sort $channelsInfo "stability" "desc" }}
     {{/* Skip rock-solid channel */}}
     {{ if eq .code "rock-solid"  }}{{ continue }}{{ end }}
     {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
     {{ $code := .code }}
-    {{ if .Params.tags }}{{ $moduleTags = $moduleTags | append .Params.tags }}{{ end }}
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
       {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
       {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
       {{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
       {{ if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
-      {{ if .Params.tags }}{{ $moduleTags = $moduleTags | append .Params.tags }}{{ end }}
     {{ end}}
-  {{ end}}
-  {{ if gt ($moduleTags | len) 1}}
-    {{ $moduleTags = $moduleTags | uniq | sort "asc" }}
   {{ end}}
 
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
@@ -81,22 +79,54 @@
   {{ warnf "No embedded modules found!" }}
 {{ end }}
 
-{{ hugo.Store.Set "modulesList" (sort $modulesList "module" "asc" ) }}
-
-{{/* hugo.Store.SetInMap "modulesList" (sort (hugo.Store.Get "modulesList") "title" "asc") */}}
-
-
-<!--<p><strong>{{ T "found" | humanize }} {{ T "modules2" }}: {{ hugo.Store.Get "modulesList" | len }}</strong></p>-->
       <div class="block__tile">
-      {{- range hugo.Store.Get "modulesList" }}
+      {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
         <h2 class="button-tile__title">{{ .module }}</h2>
         <p class="button-tile__descr">{{ if and (index . $lang) (index (index . $lang) "description") }}{{ (index (index . $lang) "description") }}{{ else }}{{ .description }}{{ end }}</p>
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
-              {{range .tags}}
+
+              {{/* add commercial or community edition tag */}}
+              {{ $tags := .tags }}
+
+              {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
+              {{ $editionTagTitle := "" }}
+
+              {{ $moduleEditionsData := slice }}
+
+              {{ if gt (where $embeddedModulesList "module" .module | len ) 0 }}
+                {{ $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
+                {{ if or
+                   (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                   (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                   (in (index $moduleEditionsData "editions") "ce")
+                }}
+                  {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
+                {{ end }}
+              {{ else if isset $modulesEditions .module }}
+                {{ $moduleEditionsData := index $modulesEditions .module }}
+                {{ if or
+                     (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                     (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                     (in (index $moduleEditionsData "editions") "ce")
+                }}
+                  {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
+                {{ end }}
+              {{ end }}
+
+              {{ if gt ($editionTagTitle | len ) 0 }}
+                {{ $tags = $tags | append $editionTagTitle }}
+              {{ end }}
+
+              {{ range $tags }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
               {{end}}
+
             </div>
             {{/* <div class="button-tile__time">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
