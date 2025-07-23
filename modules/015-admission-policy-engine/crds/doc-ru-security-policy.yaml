@@ -198,7 +198,7 @@ spec:
                     allowedServiceTypes:
                       description: Список разрешенных типов сервисов.
                     blockWildcardDomains:
-                      description: Запрещает создание объектов ingress с `*` в DNS доменах.                      
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.                      
                     verifyImageSignatures:
                       description: |
                         Список политик проверки подписи образов контейнеров.
