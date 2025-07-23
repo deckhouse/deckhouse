@@ -1,0 +1,46 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedservicetypes
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "The allowed service types"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls the allowed types for the Service. 
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedServiceTypes
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls the allowed types for the Service. 
+          properties:
+            allowedServiceTypes:
+              type: array
+              description: "List of types of Services allowed to be created."
+              items:
+                type: string
+
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+          allowed_types := input.parameters.allowedServiceTypes
+          actual_type := input.review.object.spec.type        
+          service_name := input.review.object.metadata.name
+          not contains(allowed_types, actual_type)
+          msg := sprintf("Service \"%v\" has invalid type: \"%v\", allowed: %v", [service_name, actual_type, allowed_types])
+        }
+
+        contains(list, elem) {
+          list[_] = elem
+        }
