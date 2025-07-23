@@ -3,8 +3,6 @@ title: "Resource configuration"
 permalink: en/admin/configuration/access/authentication/resource-configuration.html
 ---
 
-## Resource configuration
-
 Deckhouse Kubernetes Platform allows you to configure resource limits and requests for all components. By default, the following values are used:
 
 - **Dex OIDC Provider** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
@@ -17,7 +15,7 @@ Deckhouse Kubernetes Platform allows you to configure resource limits and reques
 When [Vertical Pod Autoscaler (VPA)](/modules/vertical-pod-autoscaler/) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
 {% endalert %}
 
-### Example configuration
+## Example configuration
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
