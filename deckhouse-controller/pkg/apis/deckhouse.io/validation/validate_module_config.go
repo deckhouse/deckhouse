@@ -66,6 +66,17 @@ func moduleConfigValidationHandler(
 			ok  bool
 		)
 
+		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+			definition := module.GetModuleDefinition()
+			isExperimentalModuleFloat := func() float64 {
+				if definition.IsExperimental() {
+					return 1.0
+				}
+				return 0.0
+			}
+			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
+		}
+
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
 			{
@@ -112,28 +123,6 @@ func moduleConfigValidationHandler(
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
-
-			if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
-				definition := module.GetModuleDefinition()
-				isExperimentalModuleFloat := func() float64 {
-					if definition.IsExperimental() {
-						return 1.0
-					}
-					return 0.0
-				}
-
-				metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
-
-				allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
-				allowExp, err := strconv.ParseBool(allowExpRaw)
-				if err != nil {
-					return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
-				}
-
-				if !allowExp && definition.IsExperimental() {
-					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
-				}
-			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
 
@@ -153,6 +142,17 @@ func moduleConfigValidationHandler(
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+					definition := module.GetModuleDefinition()
+					allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
+					allowExp, err := strconv.ParseBool(allowExpRaw)
+					if err != nil {
+						return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
+					}
+
+					if !allowExp && definition.IsExperimental() {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
+					}
+
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
 						if !strings.HasSuffix(reason, ".") {
 							reason += "."
