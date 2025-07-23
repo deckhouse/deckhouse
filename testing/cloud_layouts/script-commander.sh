@@ -232,18 +232,22 @@ function prepare_environment() {
     ;;
 
   "vSphere")
-    # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$LAYOUT_VSPHERE_PASSWORD" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
-        CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" \
-        PREFIX="$PREFIX" \
-        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
-        MASTERS_COUNT="$MASTERS_COUNT" \
-        VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="redos"
+    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"VspherePassword\": \"${VSPHERE_PASSWORD}\",
+      \"vsphereBaseDomain\": \"${AYOUT_VSPHERE_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+    }"
+
     ;;
 
   "VCD")
