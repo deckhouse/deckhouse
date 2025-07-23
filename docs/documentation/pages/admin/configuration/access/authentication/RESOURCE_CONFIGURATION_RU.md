@@ -15,7 +15,7 @@ lang: ru
 - **Redis** (используется Dex authenticator) — 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты).
 
 {% alert level="info" %}
-Если в кластере включён [Vertical Pod Autoscaler (VPA)](/modules/vertical-pod-autoscaler/), значения лимитов управляются автоматически. Однако вы можете задать минимальные и максимальные границы через секцию `resources`.
+Если в кластере включён [Vertical Pod Autoscaler (VPA)](/modules/vertical-pod-autoscaler/), значения лимитов управляются автоматически. Вы можете задать минимальные и максимальные границы через секцию `resources`.
 {% endalert %}
 
 ### Пример конфигурации
