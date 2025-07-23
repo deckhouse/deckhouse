@@ -1191,6 +1191,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
         color: #A7B0BE;
     }
 
+    &:has(.language-tree) {
+      &::before {
+        content: none;
+      }
+    }
+
     .icon--copy {
         cursor: pointer;
         position: absolute;
