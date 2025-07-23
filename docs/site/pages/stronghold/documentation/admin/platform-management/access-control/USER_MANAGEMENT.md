@@ -149,7 +149,7 @@ spec:
     - users
 ```
 
-> `groups` in the above example — A list (filter) of allowed GitLab groups (group paths and not names). The user token will contain a set intersection of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful. The user token will contain all GitLab groups if the parameter is not set.
+> `groups` in the above example is a list of allowed GitLab group filters specified by their paths and not by names. The user token will contain a set intersection of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful. The user token will contain all GitLab groups if the parameter is not set.
 
 To create an application in GitLab, follow the steps below.
 
