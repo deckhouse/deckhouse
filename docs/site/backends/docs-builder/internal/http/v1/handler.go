@@ -21,8 +21,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/docs-builder/internal/docs"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type DocsBuilderHandler struct {
@@ -69,6 +70,7 @@ func (h *DocsBuilderHandler) handleHealthZ(w http.ResponseWriter, _ *http.Reques
 	_, _ = io.WriteString(w, "ok")
 }
 
+// nolint: revive
 func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("getting all docs info")
 
@@ -121,6 +123,7 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
+// nolint: revive
 func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
 	err := h.docsService.Build()
 	if err != nil {

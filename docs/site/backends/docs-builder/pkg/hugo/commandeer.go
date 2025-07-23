@@ -30,7 +30,6 @@ import (
 	"github.com/bep/lazycache"
 	"github.com/bep/logg"
 	"github.com/bep/overlayfs"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/htime"
 	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
@@ -41,6 +40,8 @@ import (
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/spf13/afero"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (c *command) Run() error {
@@ -150,6 +151,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 	if cfg == nil {
 		panic("cfg must be set")
 	}
+	// nolint: revive
 	cc, _, err := c.commonConfigs.GetOrCreate(key, func(key int32) (*commonConfig, error) {
 		var dir string
 		if c.flags.Source != "" {
@@ -262,6 +264,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 }
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
+	// nolint: revive
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
 		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)

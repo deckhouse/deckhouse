@@ -21,10 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/flant/docs-builder/pkg/hugo"
 	"github.com/spf13/fsync"
 
-	"github.com/flant/docs-builder/pkg/hugo"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (svc *Service) Build() error {
@@ -110,7 +110,8 @@ func getAssembleErrorPath(errorMessage string) (string, bool) {
 	return "", false
 }
 
-func (svc *Service) parseModulePath(modulePath string) (moduleName, channel string) {
+// nolint: nonamedreturns
+func (svc *Service) parseModulePath(modulePath string) (moduleName string, channel string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
 		svc.logger.Error("failed to parse", slog.String("path", modulePath))

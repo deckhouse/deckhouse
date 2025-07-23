@@ -18,8 +18,9 @@ import (
 	"os"
 	"sync/atomic"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/spf13/afero"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func newHugoBuilder(c *command, logger *log.Logger) *hugoBuilder {
@@ -41,7 +42,7 @@ func (fs *countingStatFs) Stat(name string) (os.FileInfo, error) {
 	return f, err
 }
 
-// nolint: unused
+// nolint: revive
 func chmodFilter(dst, src os.FileInfo) bool {
 	return src.IsDir()
 }
