@@ -15,16 +15,27 @@
 # limitations under the License.
 
 source /deckhouse/shell_lib.sh
-# The Registry module runs only in Deckhouse-managed clusters.
-# It is not supported in cloud-managed environments like AWS, Yandex Cloud, etc.
-# Enablement is based on the presence of global.clusterConfiguration.
-# Its absence means the cluster is externally managed and the module will be disabled.
-# This check is similar to the one performed during the startup of the control-plane-manager.
+
 function __main__() {
-  if values::has global.clusterConfiguration ; then
-    echo "true" > "$MODULE_ENABLED_RESULT"
-  else
-    echo "false" > "$MODULE_ENABLED_RESULT"
+  # By default, the module is disabled
+  echo "false" >"$MODULE_ENABLED_RESULT"
+
+  # Enable the module only if all of the following conditions are met:
+
+  # 1. global.clusterConfiguration exists — this indicates that the cluster is managed by Deckhouse.
+  #    If it's missing, the cluster is considered externally managed (e.g., AWS, Yandex Cloud),
+  #    and the module must not be enabled.
+  #    This check is consistent with the validation performed by the control-plane-manager on startup.
+
+  # 2. global.clusterConfiguration.defaultCRI is set and not equal to "NotManaged" —
+  #    the module depends on Deckhouse being able to manage Containerd settings.
+
+  if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
+    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
+
+    if [ "$containerd_mode" != "NotManaged" ]; then
+      echo "true" >"$MODULE_ENABLED_RESULT"
+    fi
   fi
 }
 
