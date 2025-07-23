@@ -328,9 +328,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -396,9 +394,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -718,9 +714,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -734,9 +728,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -763,9 +755,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
@@ -848,9 +838,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1103,9 +1091,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1175,9 +1161,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1405,9 +1389,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1473,9 +1455,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1705,9 +1685,7 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1775,9 +1753,7 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2088,9 +2064,7 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2169,9 +2143,7 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2506,9 +2478,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2589,9 +2559,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2932,9 +2900,7 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3021,9 +2987,7 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3356,9 +3320,7 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3437,9 +3399,7 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
