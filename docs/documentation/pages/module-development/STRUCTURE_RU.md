@@ -132,6 +132,7 @@ lang: ru
   
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Веб-консоль администратора Deckhouse"
@@ -139,6 +140,7 @@ lang: ru
   description: "Модуль позволяет полностью управлять кластером Kubernetes через веб-интерфейс, имея только навыки работы мышью."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -151,12 +153,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Примеры"
   description: "Примеры хранения секретов в нейронной сети с автоматической подстановкой в мысли при общении."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -169,12 +173,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Часто задаваемые вопросы"
   description: "Часто задаваемые вопросы и ответы на них."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -187,12 +193,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Отладка модуля"
   description: "В разделе разбираются все шаги по отладке модуля."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -200,11 +208,13 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Кастомные ресурсы"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -212,11 +222,13 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Настройки модуля"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   

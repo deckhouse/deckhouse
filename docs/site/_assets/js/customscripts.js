@@ -461,6 +461,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   preElement.forEach(pre => {
 
+    if(!pre.querySelector('code.language-tree')) {
     pre.classList.add('code__transfer');
     const code = pre.querySelector('code');
 
@@ -476,7 +477,12 @@ document.addEventListener("DOMContentLoaded", function() {
       if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
         return;
       }
-      newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}\n`;
+        newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}`;
+
+        if(lineIndex < line.length) {
+          newHTML += `\n`;
+        }
+
       lineIndex++;
     });
 
@@ -550,5 +556,6 @@ document.addEventListener("DOMContentLoaded", function() {
     pre.addEventListener('mouseleave', () => {
       button.classList.remove('show');
     });
+    }
   })
 })
