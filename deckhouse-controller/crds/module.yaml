@@ -104,7 +104,7 @@ spec:
                         properties:
                           available:
                             type: boolean
-                          enabledInBundle:
+                          enabledInBundles:
                             type: array
                             items:
                               type: string

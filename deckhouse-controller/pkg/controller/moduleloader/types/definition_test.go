@@ -37,7 +37,7 @@ accessibility:
   editions:
     ee:
       available: true
-      enabledInBundle:
+      enabledInBundles:
         - Minimal
         - Managed
 `
@@ -61,7 +61,7 @@ accessibility:
 	// check ee edition is parsed successfully
 	assert.NotEmpty(t, m.Accessibility.Editions["ee"])
 	// check bundles are parsed successfully
-	assert.NotEmpty(t, m.Accessibility.Editions["ee"].EnabledInBundle)
+	assert.NotEmpty(t, m.Accessibility.Editions["ee"].EnabledInBundles)
 	// check module is unavailable in se
 	assert.False(t, m.Accessibility.IsAvailable("se"))
 	// check module is available in ee

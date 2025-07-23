@@ -57,8 +57,8 @@ type ModuleAccessibility struct {
 }
 
 type ModuleEdition struct {
-	Available       bool     `json:"available" yaml:"available"`
-	EnabledInBundle []string `json:"enabledInBundle" yaml:"enabledInBundle"`
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 // IsAvailable checks if the module available in the specific edition
@@ -97,7 +97,7 @@ func (a *ModuleAccessibility) IsEnabled(editionName, bundleName string) bool {
 	}
 
 	// check edition‑specific bundles first
-	if edition, ok := a.Editions[editionName]; ok && isEnabledInBundle(edition.EnabledInBundle, bundleName) {
+	if edition, ok := a.Editions[editionName]; ok && isEnabledInBundle(edition.EnabledInBundles, bundleName) {
 		return true
 	}
 
@@ -108,7 +108,7 @@ func (a *ModuleAccessibility) IsEnabled(editionName, bundleName string) bool {
 	}
 
 	// fallback to the default
-	return isEnabledInBundle(defaultSettings.EnabledInBundle, bundleName)
+	return isEnabledInBundle(defaultSettings.EnabledInBundles, bundleName)
 }
 
 func isEnabledInBundle(bundles []string, requested string) bool {
@@ -132,8 +132,8 @@ func (a *ModuleAccessibility) ToV1Alpha1() *v1alpha1.ModuleAccessibility {
 
 	for name, edition := range a.Editions {
 		accessCopy.Editions[name] = v1alpha1.ModuleEdition{
-			Available:       edition.Available,
-			EnabledInBundle: slices.Clone(edition.EnabledInBundle),
+			Available:        edition.Available,
+			EnabledInBundles: slices.Clone(edition.EnabledInBundles),
 		}
 	}
 

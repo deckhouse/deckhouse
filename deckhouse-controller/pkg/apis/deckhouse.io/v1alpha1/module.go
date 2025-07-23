@@ -170,8 +170,8 @@ type ModuleAccessibility struct {
 }
 
 type ModuleEdition struct {
-	Available       bool     `json:"available" yaml:"available"`
-	EnabledInBundle []string `json:"enabledInBundle" yaml:"enabledInBundle"`
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 type ModuleDisableOptions struct {
