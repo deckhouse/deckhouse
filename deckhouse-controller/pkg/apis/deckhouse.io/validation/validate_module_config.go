@@ -74,7 +74,7 @@ func moduleConfigValidationHandler(
 				}
 				return 0.0
 			}
-			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
+			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": obj.GetName()})
 		}
 
 		switch review.Operation {
@@ -139,8 +139,7 @@ func moduleConfigValidationHandler(
 			// if no annotations and module is disabled, check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
-			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
-				// we can disable unknown module without any further check
+			if !ok && !oldOk && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 					allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
@@ -152,7 +151,11 @@ func moduleConfigValidationHandler(
 					if !allowExp && definition.IsExperimental() {
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
 					}
+				}
+			}
 
+			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
+				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
 						if !strings.HasSuffix(reason, ".") {
 							reason += "."
