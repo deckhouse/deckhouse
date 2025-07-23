@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
@@ -76,6 +77,7 @@ var ErrSettingsNotChanged = errors.New("settings not changed")
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	edition *d8edition.Edition,
 	dc dependency.Container,
 	metricStorage metric.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
@@ -87,6 +89,7 @@ func RegisterController(
 		dc:                   dc,
 		logger:               logger,
 		moduleManager:        mm,
+		edition:              edition,
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
@@ -155,6 +158,7 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
+	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
 }

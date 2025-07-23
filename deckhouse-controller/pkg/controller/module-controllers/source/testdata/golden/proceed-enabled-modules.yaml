@@ -19,6 +19,9 @@ status:
   message: ""
   modules:
   - checksum: 'sha256:'
+    name: bundlenabledmodule
+    version: v1.2.3
+  - checksum: 'sha256:'
     name: disabledmodule
     version: v1.2.3
   - checksum: 'sha256:'
@@ -31,7 +34,7 @@ status:
     name: withpolicymodule
     policy: test-alpha
     version: v1.2.3
-  modulesCount: 4
+  modulesCount: 5
   phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
