@@ -93,7 +93,7 @@ kubectl get module
 
 ```console
 $ kubectl get module
-NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
@@ -175,7 +175,7 @@ kubectl get mr -l module=<MODULE_NAME>
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
+NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
 
@@ -187,16 +187,16 @@ module-one           example  Downloading   False     False
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
-module-one  900      example  Installing    False     False
+NAME        STAGE    SOURCE   PHASE         ENABLED   READY
+module-one           example  Installing    False     False
 ```
 
 Если модуль успешно установился, то он перейдет в фазу готовности (`Ready`):
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
-module-one  900      example  Ready  True     True
+NAME        STAGE   SOURCE   PHASE  ENABLED  READY
+module-one          example  Ready  True     True
 ```
 
 Пример объекта Module в кластере, когда модуль успешно установился:
@@ -248,15 +248,15 @@ status:
 
 ```console
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
-module-one  910      example  Error  True     Error
+NAME        STAGE    SOURCE   PHASE  ENABLED  READY
+module-one           example  Error  True     Error
 ```
 
 Если у включенного модуля есть несколько доступных источников, и в его ModuleConfig явно не выбран источник модуля, модуль перейдет в фазу конфликта (`Conflict`):
 
 ```console
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
+NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
 
@@ -353,7 +353,7 @@ kubectl get modules
 
 ```console
 $ kubectl get module
-NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 ...
 module-one                   Available   False     False                      
 module-two                   Available   False     False     
