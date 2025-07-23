@@ -12,17 +12,21 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 **Caution!** The API server requires [additional configuration](faq.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/control-plane-manager/) module (enabled by default) automates this process.
 
-## Resource Configuration
+## Resource configuration
 
-The module allows you to configure resource limits and requests for all components. By default, the following values are used:
+The module `user-authn` allows you to configure resource limits and requests for all components. By default, the following values are used:
 
-- **Dex OIDC Provider**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Kubeconfig Generator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Basic Auth Proxy**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Dex Authenticator**: 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
-- **Redis** (used by Dex Authenticator): 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Dex OIDC Provider** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Kubeconfig Generator** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Basic Auth Proxy** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Dex Authenticator** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
+- **Redis** (used by Dex Authenticator) — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
 
-### Example Configuration
+{% alert level="info" %}
+When [Vertical Pod Autoscaler (VPA)](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/vertical-pod-autoscaler/) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
+{% endalert %}
+
+### Example configuration
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -69,5 +73,3 @@ spec:
           cpu: "20m"
           memory: "50Mi"
 ```
-
-**Note:** When Vertical Pod Autoscaler (VPA) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
