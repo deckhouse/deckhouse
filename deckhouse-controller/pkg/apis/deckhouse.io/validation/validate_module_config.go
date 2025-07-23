@@ -113,6 +113,27 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
+			if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+				definition := module.GetModuleDefinition()
+				isExperimentalModuleFloat := func() float64 {
+					if definition.IsExperimental() {
+						return 1.0
+					}
+					return 0.0
+				}
+
+				metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
+
+				allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
+				allowExp, err := strconv.ParseBool(allowExpRaw)
+				if err != nil {
+					return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
+				}
+
+				if !allowExp && definition.IsExperimental() {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
+				}
+			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
 
@@ -160,30 +181,11 @@ func moduleConfigValidationHandler(
 		// skip checking source for the global module
 		if cfg.Name != "global" {
 			module := new(v1alpha1.Module)
-
 			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 				if apierrors.IsNotFound(err) {
 					return allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})
 				}
 				return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
-			}
-
-			isExperimentalModuleFloat := func() float64 {
-				if module.IsExperimental() {
-					return 1.0
-				}
-				return 0.0
-			}
-			metricStorage.GaugeSet(telemetry.WrapName("is_experimental_module"), isExperimentalModuleFloat(), map[string]string{"module": cfg.GetName()})
-
-			allowExpRaw := os.Getenv("DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES")
-			allowExp, err := strconv.ParseBool(allowExpRaw)
-			if err != nil {
-				return nil, fmt.Errorf("parse allow experimental modules env variable: %w", err)
-			}
-
-			if !allowExp && module.IsExperimental() {
-				return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
 			}
 
 			if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
