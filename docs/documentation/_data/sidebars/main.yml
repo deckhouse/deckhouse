@@ -86,6 +86,10 @@ entries:
                         en: Accessing the Kubernetes API via load balancer
                         ru: Доступ к Kubernetes API через балансировщик трафика
                       url: /admin/configuration/access/authentication/k8s-api-lb.html
+                    - title:
+                        en: Resource configuration
+                        ru: Настройка ресурсов
+                      url: /admin/configuration/access/authentication/resource-configuration.html
                 - title:
                     en: Authorization
                     ru: Авторизация
