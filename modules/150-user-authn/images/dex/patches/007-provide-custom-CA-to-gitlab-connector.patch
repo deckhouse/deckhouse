@@ -1,5 +1,5 @@
 diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
-index 7aa44398..3b91bdf6 100644
+index 7aa44398..de3bc040 100644
 --- a/connector/gitlab/gitlab.go
 +++ b/connector/gitlab/gitlab.go
 @@ -3,6 +3,9 @@ package gitlab
@@ -27,7 +27,7 @@ index 7aa44398..3b91bdf6 100644
 +
 +	var httpClient *http.Client
 +	if len(c.RootCAData) > 0 {
-+		fmt.Printf("Using root CA data: %s\n", base64.StdEncoding.EncodeToString(c.RootCAData))
++		logger.Info("config refresh tokens rotation", base64.StdEncoding.EncodeToString(c.RootCAData))
 +		caCert, err := base64.StdEncoding.DecodeString(string(c.RootCAData))
 +		if err != nil {
 +			return nil, fmt.Errorf("failed to decode Base64 CA certificate: %v", err)
