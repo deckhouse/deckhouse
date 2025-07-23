@@ -27,15 +27,17 @@ function __main__() {
   #    and the module must not be enabled.
   #    This check is consistent with the validation performed by the control-plane-manager on startup.
 
-  # 2. global.clusterConfiguration.defaultCRI is set and not equal to "NotManaged" —
-  #    the module depends on Deckhouse being able to manage Containerd settings.
+  # 2. global.clusterConfiguration.defaultCRI is set and is in the allowed list
+  #    of container runtimes the module supports.
 
   if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
     containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
 
-    if [ "$containerd_mode" != "NotManaged" ]; then
-      echo "true" >"$MODULE_ENABLED_RESULT"
-    fi
+    case "$containerd_mode" in
+      "Containerd" | "ContainerdV2")
+        echo "true" >"$MODULE_ENABLED_RESULT"
+        ;;
+    esac
   fi
 }
 
