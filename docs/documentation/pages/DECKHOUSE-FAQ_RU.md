@@ -314,7 +314,7 @@ kubectl get deckhousereleases
 Для просмотра состояния всех очередей заданий Deckhouse, выполните следующую команду:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 platform queue list
 ```
 
 Пример вывода (очереди пусты):
@@ -329,7 +329,7 @@ Summary:
 Для просмотра состояния очереди заданий `main` Deckhouse, выполните следующую команду:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 platform queue main
 ```
 
 Пример вывода (в очереди `main` 38 заданий):
@@ -953,7 +953,7 @@ d8 platform edit cluster-configuration
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 platform edit provider-cluster-configuration
 ```
 
 ### Как изменить конфигурацию статического кластера?
@@ -963,7 +963,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 platform edit static-cluster-configuration
 ```
 
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
@@ -1275,7 +1275,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
    В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
@@ -1283,7 +1283,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -1384,7 +1384,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Проверить состояние очереди Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 platform queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
@@ -1397,7 +1397,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Если в выводе присутствуют поды модуля chrony, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   d8 platform module enable chrony
    ```
 
 1. Очистите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
@@ -1438,10 +1438,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### Как получить доступ к контроллеру Deckhouse в multi-master-кластере?
 
-В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру Deckhouse можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
+В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру Deckhouse можно использовать следующую команду (на примере команды `d8 platform queue list`):
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 platform queue list
 ```
 
 ### Как обновить версию Kubernetes в кластере?

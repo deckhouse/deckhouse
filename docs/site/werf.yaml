@@ -51,7 +51,7 @@ shell:
   - |
     jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
   - |
-    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end | (.ru[] | select(.url == "/products/kubernetes-platform/").items) += [{"title":"Модули","url":"/modules/","target":"","rel":""}] | (.en[] | select(.url == "/products/kubernetes-platform/").items) += [{"title":"Modules","url":"/modules/","target":"","rel":""}]' /tmp/menus.json > /data/topnav-l2-products.json
   - |
     jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
   - |
@@ -95,6 +95,7 @@ git:
   - _plugins/custom_filters.rb
   - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
+  - _plugins/sidebar_custom.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb
   stageDependencies:
@@ -353,6 +354,10 @@ import:
     - en/includes/
     - ru/includes/
 ---
+{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ImageName" "web" }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-static.inc.yaml" .ModulePath)) $context }}
+---
 image: web-frontend
 imageSpec:
   config:
@@ -367,6 +372,14 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/en/modules
+  to: /app/en/embedded-modules
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/ru/modules
+  to: /app/ru/embedded-modules
+  before: setup
 - image: web-static
   add: /app/_site
   to: /app
@@ -411,3 +424,4 @@ import:
     add: /go/src/app/registry-modules-watcher
     to: /app/registry-modules-watcher
     before: setup
+---

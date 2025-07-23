@@ -92,6 +92,26 @@ defaults:
       search_bage_enabled: true
       lang: en
   - scope:
+      path: "pages/admin"
+    values:
+      sidebar: main
+      sitemap_include: false
+  - scope:
+      path: "pages/architecture"
+      sitemap_include: false
+    values:
+      sidebar: main
+  - scope:
+      path: "pages/user"
+    values:
+      sidebar: main
+      sitemap_include: false
+  - scope:
+      path: "pages/reference"
+      sitemap_include: false
+    values:
+      sidebar: main
+  - scope:
       path: "pages/includes"
       type: "pages"
     values:
@@ -196,4 +216,3 @@ defaults:
     values:
       featureStatus: experimental
 timezone: Europe/Moscow
-

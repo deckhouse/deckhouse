@@ -28,6 +28,8 @@
 #     edition: ce
 #
 
+# TODO: Refactor this! And the weird modules_menu_skip logic...
+
 check_module_docs_exist() {
     moduleToCheck=$1
 
@@ -56,6 +58,7 @@ for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/mo
   module_doc_path=""
 
   # Skip modules, which are listed in modules_menu_skip file
+  # TODO: Use docs/documentation/_data/modules/excludedModules.json instead
   if grep -Fxq "$module_name" _tools/modules_menu_skip; then
       continue
   fi

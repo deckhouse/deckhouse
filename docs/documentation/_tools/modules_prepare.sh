@@ -14,7 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO: Refactor this!
+
 # Checks if a file has a frontmatter section.
+# TODO: Refactor this to use a more robust method of checking for frontmatter.
+# E.g. better to use something like awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' or something like that:
+# or awk
+# awk 'BEGIN { in_fm = 0; has_fm = 0 }
+#                     NR == 1 && /^---$/ { in_fm = 1; next }
+#                     in_fm == 1 && /^---$/ {
+#                     if (NR > 2) { has_fm = 1 }
+#                     exit }
+#                     END { exit !has_fm }' "$file")
+# or
+# has_frontmatter() {
+#   awk 'NR==1 && $0=="---"{f=1; next} f && $0=="---"{exit 0} END{exit 1}' "$1"
+# }
+#
+# BTW the module docs frontmatter should NOT have permalinks...
+
 page::has_frontmatter() {
     if [[ -f $1 ]]
     then
@@ -43,6 +61,7 @@ for page in ${pages}; do
     module_name=$(echo $module_original_name | sed -E 's#^[0-9]+-##')
 
     # Skip modules, which are listed in modules_menu_skip file
+    # TODO: Use docs/documentation/_data/modules/excludedModules.json instead
     if grep -Fxq "$module_name" _tools/modules_menu_skip; then
         continue
     fi
