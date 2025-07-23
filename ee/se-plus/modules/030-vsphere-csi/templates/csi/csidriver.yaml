@@ -1,4 +1,4 @@
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
+{{- if ne .Values.vsphereCsi.internal.compatibilityFlag "Legacy" }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver

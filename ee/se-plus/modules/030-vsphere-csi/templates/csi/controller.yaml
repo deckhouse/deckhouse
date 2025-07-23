@@ -70,7 +70,7 @@
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
 
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
+{{- if ne .Values.vsphereCsi.internal.compatibilityFlag "Legacy" }}
 {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 {{- end }}
 {{- end }}
@@ -135,7 +135,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeLivenessProbesCmd" (include "csi_node_registrar_liveness_exec_probes_command" . | fromYamlArray) }}
 
-  {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
+  {{- if ne .Values.vsphereCsi.internal.compatibilityFlag "Legacy" }}
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
   {{- end }}
 
