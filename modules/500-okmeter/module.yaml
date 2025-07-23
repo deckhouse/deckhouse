@@ -1,4 +1,5 @@
 name: okmeter
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-okmeter
