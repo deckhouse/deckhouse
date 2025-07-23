@@ -11,42 +11,46 @@ This applies both when deploying a cluster with multiple master nodes from the s
 and when increasing the number of master nodes from one to three.
 {% endalert %}
 
-To enable HA mode globally for DKP,
-set the `settings.highAvailability` parameter to `true` in `ModuleConfig/global`:
+## Enabling HA mode globally
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  version: 2
-  settings: 
-    highAvailability: true
-...
-```
+You can enable HA mode globally for DKP in one of the following ways.
 
-To ensure HA mode is enabled,
-you can, for example, check the number of `deckhouse` Pods in the `d8-system` namespace.
-To do that, run the following command:
+### Using ModuleConfig/global custom resource
 
-```shell
-d8 k -n d8-system get po | grep deckhouse
-```
+1. Set the `settings.highAvailability` parameter to `true` in `ModuleConfig/global`:
 
-The number of `deckhouse` Pods in the output must be more than one:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: global
+   spec:
+     version: 2
+     settings: 
+       highAvailability: true
+   ```
 
-```text
-deckhouse-57695f4d68-8rk6l                           2/2     Running   0             3m49s
-deckhouse-5764gfud68-76dsb                           2/2     Running   0             3m49s
-deckhouse-fgrhy4536s-fhu6s                           2/2     Running   0             3m49s
-```
+1. To ensure HA mode is enabled,
+   you can, for example, check the number of `deckhouse` Pods in the `d8-system` namespace.
+   To do that, run the following command:
 
-<!--
-- If the [`console`](/products/kubernetes-platform/modules/console/stable/) module is enabled in the cluster,
-  open the Deckhouse web UI, navigate to the **Deckhouse** — **Global settings** — **Global module settings** section,
-  and switch the **Fault tolerance mode** toggle to **Yes**.
--->
+   ```shell
+   d8 k -n d8-system get po | grep deckhouse
+   ```
+
+   The number of `deckhouse` Pods in the output must be more than one:
+
+   ```text
+   deckhouse-57695f4d68-8rk6l                           2/2     Running   0             3m49s
+   deckhouse-5764gfud68-76dsb                           2/2     Running   0             3m49s
+   deckhouse-fgrhy4536s-fhu6s                           2/2     Running   0             3m49s
+   ```
+
+### Using Deckhouse web UI
+
+If the [`console`](/products/kubernetes-platform/modules/console/stable/) module is enabled in the cluster,
+open the Deckhouse web UI, navigate to **Deckhouse** — **Global settings** — **Global module settings**,
+and switch the **HA mode** toggle to **Yes**.
 
 ## Enabling HA mode for individual components
 
@@ -67,7 +71,7 @@ List of modules supporting individual HA mode:
 - `monitoring-kubernetes`
 - `snapshot-controller`
 
-For example, to enable HA mode manually for the `deckhouse` module,
+To enable HA mode manually for a specific module,
 add the `settings.highAvailability` parameter to its configuration:
 
 ```yaml
@@ -80,7 +84,6 @@ spec:
   enabled: true
   settings:
     highAvailability: true
-...
 ```
 
 To ensure HA mode is enabled, check the number of Pods for the target module.
