@@ -23,7 +23,7 @@ The module `user-authn` allows you to configure resource limits and requests for
 - **Redis** (used by Dex Authenticator) — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
 
 {% alert level="info" %}
-When [Vertical Pod Autoscaler (VPA)](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/vertical-pod-autoscaler/) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
+When [Vertical Pod Autoscaler (VPA)](../vertical-pod-autoscaler/) is enabled, the resource limits are managed automatically by VPA, but you can still configure the minimum and maximum allowed values through the `resources` section.
 {% endalert %}
 
 ### Example configuration
