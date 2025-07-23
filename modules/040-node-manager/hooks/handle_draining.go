@@ -142,6 +142,8 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			return fmt.Errorf("failed to iterate over 'nodes_for_draining' snapshots: %w", err)
 		}
 
+		input.Logger.Warn(fmt.Sprintf("drain Node: %s", dNode.Name))
+
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
 		if !exists {
 			drainTimeout = getDrainTimeout(input, k8sCli, dNode.NodeGroupName)

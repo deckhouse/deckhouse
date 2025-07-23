@@ -118,6 +118,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 	err = approver.processUpdatedNodes(input)
 	if err != nil {
+		input.Logger.Warn(fmt.Sprintf("err processUpdatedNodes: %+s", err.Error()))
 		return err
 	}
 	if approver.finished {
@@ -126,6 +127,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 	err = approver.approveDisruptions(input)
 	if err != nil {
+		input.Logger.Warn(fmt.Sprintf("err approveDisruptions: %+s", err.Error()))
 		return err
 	}
 	if approver.finished {
@@ -134,6 +136,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 	err = approver.approveUpdates(input)
 	if err != nil {
+		input.Logger.Warn(fmt.Sprintf("err approveUpdates: %+s", err.Error()))
 		return err
 	}
 
@@ -190,6 +193,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		concurrency := calculateConcurrency(ng.Concurrency, len(nodeGroupNodes))
+		input.Logger.Info(fmt.Sprintf("concurrency: %d", concurrency), "ng", ng.Name)
 
 		var hasWaitingForApproval bool
 
@@ -206,15 +210,18 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		// Skip ng, if maxConcurrent is already reached
 		if currentUpdates >= concurrency {
+			input.Logger.Info(fmt.Sprintf("currentUpdates >= concurrency: %d >= %d", currentUpdates, concurrency), "ng", ng.Name)
 			continue
 		}
 
 		// Skip ng, if it has no waiting nodes
 		if !hasWaitingForApproval {
+			input.Logger.Info("!hasWaitingForApproval", "ng", ng.Name, "hasWaitingForApproval", hasWaitingForApproval)
 			continue
 		}
 
 		countToApprove := concurrency - currentUpdates
+		input.Logger.Info(fmt.Sprintf("countToApprove: %d", countToApprove), "ng", ng.Name)
 
 		approvedNodeNames := make(map[string]struct{}, countToApprove)
 
@@ -227,11 +234,13 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 					break
 				}
 			}
+			input.Logger.Info(fmt.Sprintf("allReady: %+v", allReady), "ng", ng.Name)
 
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
 						approvedNodeNames[ngn.Name] = struct{}{}
+						input.Logger.Info(fmt.Sprintf("allReady approvedNodeNames: %s", ngn.Name), "ng", ng.Name)
 						if len(approvedNodeNames) == countToApprove {
 							break
 						}
@@ -245,6 +254,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady && ngn.IsWaitingForApproval {
 					approvedNodeNames[ngn.Name] = struct{}{}
+					input.Logger.Info(fmt.Sprintf("!ngn.IsReady approvedNodeNames: %s", ngn.Name), "ng", ng.Name)
 					if len(approvedNodeNames) == countToApprove {
 						break
 					}
@@ -257,6 +267,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for approvedNodeName := range approvedNodeNames {
+			input.Logger.Info("Node approvedPatch", "node", approvedNodeName, "ng", ng.Name)
 			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
 			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		}
@@ -273,6 +284,14 @@ var (
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/approved":             "",
 				"update.node.deckhouse.io/waiting-for-approval": nil,
+			},
+		},
+	}
+	disruptionApprovedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/disruption-approved": "",
+				"update.node.deckhouse.io/disruption-required": nil,
 			},
 		},
 	}
@@ -352,14 +371,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		switch {
 		case !drainBeforeApproval:
 			// Skip draining if it's disabled in the NodeGroup
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
+			patch = disruptionApprovedPatch
 			metricStatus = "DisruptionApproved"
 
 		case !node.IsUnschedulable:
@@ -375,17 +387,11 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		default:
 			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
+			patch = disruptionApprovedPatch
 			metricStatus = "DisruptionApproved"
 		}
 
+		input.Logger.Info(fmt.Sprintf("approveDisruptions patch: %s", patch), "node", node.Name, "ng", ng.Name)
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
@@ -439,6 +445,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
+		input.Logger.Info(fmt.Sprintf("processUpdatedNodes patch: %s", patch), "node", node.Name, "ng", ngName)
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
