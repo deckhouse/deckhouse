@@ -12,11 +12,11 @@ lang: ru
 
 На главном экране Grafana расположена основная информация о кластере и его основных компонентах.
 
-В левой верхней части экрана указаны характеристики основных компонентов кластера: версия containerd, дистрибутив Linux, на базе которого работает кластер, а также версии Grafana, Prometheus и т.д.
+В левой верхней части экрана указаны характеристики основных компонентов кластера: версия `containerd`, дистрибутив Linux, на базе которого работает кластер, а также версии Grafana, Prometheus и т.д.
 
 В правой верхней части экрана расположены удобные графические обозначения для основных параметров — количества узлов кластере, количество запущенных в ней подов и других сущностей кластера.
 
-Для получения более подробной информации можно навести на любой элемент курсор мыши, нужная информация отображается во всплывающей подсказке:
+Для получения более подробной информации можно навести на любой элемент курсор мыши, нужная информация отображается во всплывающей подсказке.
 
 Ниже блоков с характеристиками расположены быстрые ссылки на дашборды некоторых компонентов кластера. Например, на мониторинг узлов кластера, потребления системных ресурсов его компонентами и статистику сетевого взаимодействия.
 
@@ -42,7 +42,7 @@ lang: ru
 
 ![Блок фильтров](../../images/grafana/filter.png)
 
-Например, на приведенном выше примере с дашбордом узлов кластера можно задать в фильтре отображение только одного из трех узлов, исключив из выдачи информацию об остальных двух узлах.
+На приведенном выше примере с дашбордом узлов кластера можно задать в фильтре отображение только одного из трех узлов, исключив из выдачи информацию об остальных двух узлах.
 
 ![Применение фильтров](../../images/grafana/filter1.png)
 
@@ -73,198 +73,151 @@ lang: ru
 
 ![Содержание записей из которых строится график](../../images/grafana/graph5.png)
 
-В открывшемся окне отобразятся все данные, из которых построен график. Здесь их также можно скачать в формате *.CSV и просмотреть общую статистику (например, общее количество записей). Для этого необходимо перейти на вкладку «Stats» окна со с данными.
+В открывшемся окне отобразятся все данные, из которых построен график. Здесь их также можно скачать в формате CSV и просмотреть общую статистику (например, общее количество записей). Для этого необходимо перейти на вкладку «Stats» окна со с данными.
 
 ![Скачивание данных графика](../../images/grafana/graph6.png)
 
-### 5.3.1.5 Описание дашбордов
+### Описание дашбордов
 
-5.3.1.5.1 Дашборд «Applications – Log Shipper» — состояние модуля log-shipper. Здесь представлено количество агентов модуля на узлах и их нагрузка.
+Дашборд «Applications – Log Shipper» — состояние модуля `log-shipper`. Здесь представлено количество агентов модуля на узлах и их нагрузка.
 
 ![Log Shipper](../../images/grafana/log_shipper.png)
 
-5.3.1.5.2 Дашборд «Applications – Loki» — состояние модуля loki.
+Дашборд «Applications – Loki» — состояние модуля `loki`.
 
 ![Loki](../../images/grafana/loki.png)
 
-5.3.1.5.3 Дашборд «Applications – Loki Logs» — логи модуля loki.
+Дашборд «Applications – Loki Logs» — логи модуля `loki`.
 
 ![Loki Logs](../../images/grafana/loki_logs.png)
 
-5.3.1.5.4 Дашборды группы Ingress Nginx — дашборды, связанные с Ingress-контроллерами.
+Дашборды группы Ingress Nginx — дашборды, связанные с Ingress-контроллерами:
 
-Дашборд «Namespace Detail» — на этом дашборде отображается детализация компонентов в пространстве имен. Детализация компонентов в пространстве имен. В фильтрах возможно выбрать конкретное пространство имен, Ingress, Service и другие параметры для отображения.
+- Дашборд «Namespace Detail» — на этом дашборде отображается детализация компонентов в пространстве имен. В фильтрах возможно выбрать конкретное пространство имен, Ingress, Service и другие параметры для отображения.
 
-![Namespace Detail](../../images/grafana/namespace_detail.png)
+  ![Namespace Detail](../../images/grafana/namespace_detail.png)
 
-Дашборд «Namespaces» — данные по Ingress-контроллеру в разрезе пространств имен кластера. В фильтрах можно выбрать конкретное пространство имен, виртуальные хосты и тип контента.
+- Дашборд «Namespaces» — данные по Ingress-контроллеру в разрезе пространств имен кластера. В фильтрах можно выбрать конкретное пространство имен, виртуальные хосты и тип контента.
 
-![Namespaces](../../images/grafana/namespaces.png)
+  ![Namespaces](../../images/grafana/namespaces.png)
 
-Дашборд «VHost Detail» — подробные данные по Ingress-контроллеру в разрезе виртуальных хостов.
+- Дашборд «VHost Detail» — подробные данные по Ingress-контроллеру в разрезе виртуальных хостов.
 
-![VHost Detail](../../images/grafana/vhost_details.png)
+  ![VHost Detail](../../images/grafana/vhost_details.png)
 
-Дашборд «VHost» — сводные данные по Ingress-контроллеру в разрезе виртуальных хостов кластера. В фильтрации можно выбрать конкретный виртуальный хост.
+- Дашборд «VHost» — сводные данные по Ingress-контроллеру в разрезе виртуальных хостов кластера. В фильтрации можно выбрать конкретный виртуальный хост.
 
-![VHost](../../images/grafana/vhost.png)
+  ![VHost](../../images/grafana/vhost.png)
 
-5.3.1.5.5 Дашборды группы «Kubernetes Cluster» — дашборды, связанные с кластером Kubernetes.
+Дашборды группы «Kubernetes Cluster» — дашборды, связанные с кластером Kubernetes:
 
-Дашборд «Aggregating Proxy Cache» — сводная информация по потребляемым прокси-сервером ресурсам.
+- Дашборд «Aggregating Proxy Cache» — сводная информация по потребляемым прокси-сервером ресурсам.
 
-![Aggregating Proxy Cache](../../images/grafana/aggregating-proxy-cache.png)
+  ![Aggregating Proxy Cache](../../images/grafana/aggregating-proxy-cache.png)
 
-Дашборд «Cilium Metrics» — метрики модуля cni-cilium.
+- Дашборд «Cilium Metrics» — метрики модуля `cni-cilium`.
 
-![Cilium Metrics](../../images/grafana/cilium-metrics.png)
+  ![Cilium Metrics](../../images/grafana/cilium-metrics.png)
 
-Дашборд «Control Plane Status» — состояние управляющего слоя кластера.
+- Дашборд «Control Plane Status» — состояние управляющего слоя кластера.
 
-![Control Plane Status](../../images/grafana/control-plane-status.png)
+  ![Control Plane Status](../../images/grafana/control-plane-status.png)
 
-Дашборд «Deprecated APIs» — отображает состояния Kubernetes API, которое на текущий момент находится в состоянии прекращения поддержки. Также на нем расположены инструкции по миграции на актуальные версии и запросы к эндпоинтам этого API.
+- Дашборд «Deprecated APIs» — отображает состояния Kubernetes API, которое на текущий момент находится в состоянии прекращения поддержки. Также на нем расположены инструкции по миграции на актуальные версии и запросы к эндпойнтам этого API.
 
-![Deprecated APIs](../../images/grafana/deprecated-apis.png)
+  ![Deprecated APIs](../../images/grafana/deprecated-apis.png)
 
-Дашборд «DNS (coredns)» — данные о работе компонента coredns.
+- Дашборд «DNS (coredns)» — данные о работе компонента CoreDNS.
 
-![DNS (coredns)](../../images/grafana/dns.png)
+  ![DNS (coredns)](../../images/grafana/dns.png)
 
-Дашборд «etcd3» — состояние базы данных etcd.
+- Дашборд «etcd3» — состояние базы данных etcd.
 
-![etcd3](../../images/grafana/etcd.png)
+  ![etcd3](../../images/grafana/etcd.png)
 
-Дашборд «External ping» — статистика внешних запросов.
+- Дашборд «External ping» — статистика внешних запросов.
 
-![External ping](../../images/grafana/external-ping.png)
+  ![External ping](../../images/grafana/external-ping.png)
 
-Дашборд «Ingress Nginx Controller Detail» — параметры Ingress Nginx контроллера.
+- Дашборд «Ingress Nginx Controller Detail» — параметры Ingress-контроллера.
 
-![Ingress Nginx Controller Detail](../../images/grafana/ingress-nginx-controller-detail.png)
+  ![Ingress Nginx Controller Detail](../../images/grafana/ingress-nginx-controller-detail.png)
 
-Дашборд «Ingress Nginx Controllers» — подробные данные Ingress-контроллеры кластера.
+- Дашборд «Ingress Nginx Controllers» — подробные данные об Ingress-контроллерах кластера.
 
-![Ingress Nginx Controllers](../../images/grafana/ingress-nginx-controllers.png)
+  ![Ingress Nginx Controllers](../../images/grafana/ingress-nginx-controllers.png)
 
-Дашборд «Node» — данные о работе узлов. В фильтрах можно выбрать целевой узел для отображения статистики.
+- Дашборд «Node» — данные о работе узлов. В фильтрах можно выбрать целевой узел для отображения статистики.
 
-![Node](../../images/grafana/node.png)
+  ![Node](../../images/grafana/node.png)
 
-Дашборд «Nodes» — сводные данные о работе узлов кластера. В фильтрах можно выбрать конкретный узел.
+- Дашборд «Nodes» — сводные данные о работе узлов кластера. В фильтрах можно выбрать конкретный узел.
 
-![Nodes](../../images/grafana/nodes.png)
+  ![Nodes](../../images/grafana/nodes.png)
 
-Дашборд «Nodes ping» — пинг до узлов кластера.
+- Дашборд «Nodes ping» — пинг до узлов кластера.
 
-![Nodes ping](../../images/grafana/nodes-ping.png)
+  ![Nodes ping](../../images/grafana/nodes-ping.png)
 
-Дашборд «NTP» — состояние сервера времени.
+- Дашборд «NTP» — состояние сервера времени.
 
-![NTP](../../images/grafana/ntp.png)
+  ![NTP](../../images/grafana/ntp.png)
 
-Дашборд «Prometheus Benchmark» — статус prometheus.
+- Дашборд «Prometheus Benchmark» — статус модуля `prometheus`.
 
-![Prometheus Benchmark](../../images/grafana/prometheus-benchmark.png)
+  ![Prometheus Benchmark](../../images/grafana/prometheus-benchmark.png)
 
-Дашборд «Prometheus-(self)» — сводная информация о состоянии prometheus.
+- Дашборд «Prometheus-(self)» — сводная информация о состоянии модуля `prometheus`.
 
-![Prometheus-(self)](../../images/grafana/prometheus-self.png)
+  ![Prometheus-(self)](../../images/grafana/prometheus-self.png)
 
-5.3.1.5.6 Дашборды группы «Main» — дашборды с общими данными о состоянии кластера.
+Дашборды группы «Main» — дашборды с общими данными о состоянии кластера:
 
-Дашборд «Capacity Planning» — сводные данные о производительности кластера.
+- Дашборд «Capacity Planning» — сводные данные о производительности кластера.
 
-![Capacity Planning](../../images/grafana/capacity-planning.png)
+  ![Capacity Planning](../../images/grafana/capacity-planning.png)
 
-Дашборд «Deckhouse» — сводная информация о состоянии главного компонента deckhouse.
+- Дашборд «Deckhouse» — сводная информация о состоянии главного компонента `deckhouse`.
 
-![Deckhouse](../../images/grafana/deckhouse.png)
+  ![Deckhouse](../../images/grafana/deckhouse.png)
 
-Дашборд «Namespace» — данные по конкретному пространству имен кластера.
+- Дашборд «Namespace» — данные по конкретному пространству имен кластера.
 
-![Namespace](../../images/grafana/namespace1.png)
+  ![Namespace](../../images/grafana/namespace1.png)
 
-Дашборд «Namespace / Controller» — данные по контроллерам в пространствах имен. В фильтрах можно выбрать конкретные пространства имен и контроллеры.
+- Дашборд «Namespace / Controller» — данные по контроллерам в пространствах имен. В фильтрах можно выбрать конкретные пространства имен и контроллеры.
 
-![Namespace-controller](../../images/grafana/namespace-controller.png)
+  ![Namespace-controller](../../images/grafana/namespace-controller.png)
 
-Дашборд «Namespace / Controller / Pod» — данные по подам в пространствах имен. В фильтрах можно выбрать определенные пространства имен и поды в них.
+- Дашборд «Namespace / Controller / Pod» — данные по подам в пространствах имен. В фильтрах можно выбрать определенные пространства имен и поды в них.
 
-![Namespace-controller-pod](../../images/grafana/namespace-controller-pod.png)
-
-Дашборд «Namespaces» — сводные данные в разрезе пространств имен в кластере.
-
-![Namespaces](../../images/grafana/namespace2.png)
-
-5.3.1.5.7 Дашборды группы Security
-Работа с дашбордами группы Security описана в разделе 4.5. Просмотр журналов событий безопасности, Руководства Администратора.
-
-4.5 Просмотр журналов событий безопасности
-Просмотр журналов событий безопасности осуществляется в веб-интерфейсе Grafana. Необходимые дашборды сгруппированы в папке Security:
-Admission policy engine. Содержит информацию, связанную с работой политик безопасности. В том числе: количество событий запрета выполнения действий из-за нарушения политики безопасности; разбивку запретов выполнения действий по типу запрета; журнал событий.
-Журнал событий безопасности, связанных с политиками безопасности, находится в окне OPA Violations.
-
-Рис. 4.5.1. Пример дашборда Admission policy engine
-
-CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле operator-trivy (см. п.4.1.).
-
-Рис. 4.5.3. Пример дашборда CIS Kubernetes Benchmark
-
-Kubernetes audit logs. Журнал регистрации обращений к API-серверу. Содержит записи о всех обращениях к API-серверу кластера в JSON-формате.
-
-Рис. 4.5.4. Пример дашборда Kubernetes audit logs
-
-Runtime audit engine logs. Журнал регистрации событий безопасности аудита работы ядра Linux и API-сервера кластера.
-
-Рис. 4.5.5. Пример дашборда Runtime audit engine logs
-
-Trivy Image Vulnerability Overview. Дашборд со сводной и детализированной информацией о сканировании образов контейнеров подов в пространствах имен, отмеченных аннотацией security-scanning.deckhouse.io/enabled (см. п.4.1).
-
-Рис. 4.5.6. Пример дашборда Trivy Image Vulnerability Overview
-4.6 Контроль целостности
-Для проверки целостности образа используется контрольная сумма, рассчитанная по алгоритму Стрибог (ГОСТ Р 34.11-2012).
-Чтобы устанавливаемые образы проверялись, необходимо добавить метку gost-integrity-controller.deckhouse.io/gost-digest-validation-enabled: true в пространство имен кластера, где необходимо производить контроль целостности образа.
-Пример:
-apiVersion: v1
-kind: Namespace
-metadata:
-labels:
-gost-integrity-controller.deckhouse.io/gost-digest-validation-enabled: true
-name: default
-
-Если в ходе проверки контрольная сумма образа окажется некорректной, установка образа будет отклонена, и вы получите соответствующее сообщение.
-Для расчета контрольной суммы берется список контрольных сумм слоев образа. Список сортируется в порядке возрастания и склеивается в одну строку. Затем производится расчет контрольной суммы от этой строки по алгоритму Стрибог (ГОСТ Р 34.11-2012).
-Пример расчета контрольной суммы образа nginx:1.25.2:
-Контрольные суммы слоев отсортированные в порядке возрастания
-[
-"sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c",
-"sha256:360eba32fa65016e0d558c6af176db31a202e9a6071666f9b629cb8ba6ccedf0",
-"sha256:72de7d1ce3a476d2652e24f098d571a6796524d64fb34602a90631ed71c4f7ce",
-"sha256:907d1bb4e9312e4bfeabf4115ef8592c77c3ddabcfddb0e6250f90ca1df414fe",
-"sha256:94f34d60e454ca21cf8e5b6ca1f401fcb2583d09281acb1b0de872dba2d36f34",
-"sha256:c5903f3678a7dec453012f84a7d04f6407129240f12a8ebc2cb7df4a06a08c4f",
-"sha256:e42dcfe1730ba17b27138ea21c0ab43785e4fdbea1ee753a1f70923a9c0cc9b8"
-]
-Склеенная строка из контрольных сумм
-"sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c
-sha256:360eba32fa65016e0d558c6af176db31a202e9a6071666f9b629cb8ba6ccedf0
-sha256:72de7d1ce3a476d2652e24f098d571a6796524d64fb34602a90631ed71c4f7ce
-sha256:907d1bb4e9312e4bfeabf4115ef8592c77c3ddabcfddb0e6250f90ca1df414fe
-sha256:94f34d60e454ca21cf8e5b6ca1f401fcb2583d09281acb1b0de872dba2d36f34
-sha256:c5903f3678a7dec453012f84a7d04f6407129240f12a8ebc2cb7df4a06a08c4f
-sha256:e42dcfe1730ba17b27138ea21c0ab43785e4fdbea1ee753a1f70923a9c0cc9b8"
-Контрольная сумма образа
-2f538c22adbdb2ca8749cdafc27e94baed8645c69d4f0745fc8889f0e1f5a3f9
-
-Скопировать бинарный файл imagedigest из дистрибутива ПО «Deckhouse Platform Certified Security Edition». Из образа install. Для этого перейти в каталог с дистрибутивом, распаковать архив deckhouse-cse-1.67.0.tar с помощью следующий команды:
-tar -xvf /distr/deckhouse-cse-1.67.0.tar  -C  /distr/deckhouse-cse-1.67.0
-Перейти в каталог deckhouse-cse-1.67.0 распаковать архив f67338b4fb93a72e06b8d0a0b768b2f358e766a20530ab7243fc7eac2ea73ca с помощью следующий команды:
-tar -xvf /distr/deckhouse-cse-1.67.0/install/blob/sha256/f67338b4fb93a72e06b8d0a0b768b2f358e766a20530ab7243fc7eac2ea73ca
-Из каталога /distr/deckhouse-cse-1.67.0/install/blob/sha256/usr/bin/ скопировать бинарный файл imagedigest к себе на ЭВМ.
-C помощью утилиты imagedigest выполняется расчет  контрольной суммы образа, подпись и проверка.
-imagedigest calculate <имя_образа> - расчет контрольной суммы образа
-imagedigest add <имя_образа> - подпись
-imagedigest validate <имя_образа> -проверка
-
-Для каждого образа администратор должен фиксировать в журнал идентификатор пользователя, подписавшего образ, и вычисленную контрольную сумму образа.
+  ![Namespace-controller-pod](../../images/grafana/namespace-controller-pod.png)
+
+- Дашборд «Namespaces» — сводные данные в разрезе пространств имен в кластере.
+
+  ![Namespaces](../../images/grafana/namespace2.png)
+
+### Просмотр журналов событий безопасности
+
+Просмотр журналов событий безопасности осуществляется в веб-интерфейсе Grafana. Необходимые дашборды сгруппированы в папке «Security»:
+
+- Admission policy engine. Содержит информацию, связанную с работой политик безопасности. В том числе: количество событий запрета выполнения действий из-за нарушения политики безопасности; разбивку запретов выполнения действий по типу запрета; журнал событий.
+  Журнал событий безопасности, связанных с политиками безопасности, находится в окне OPA Violations.
+
+  Пример дашборда Admission policy engine.
+
+- CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле `operator-trivy`.
+
+  Пример дашборда CIS Kubernetes Benchmark.
+
+- Kubernetes audit logs. Журнал регистрации обращений к API-серверу. Содержит записи о всех обращениях к API-серверу кластера в JSON-формате.
+
+  Пример дашборда Kubernetes audit logs.
+
+- Runtime audit engine logs. Журнал регистрации событий безопасности аудита работы ядра Linux и API-сервера кластера.
+
+  Пример дашборда Runtime audit engine logs.
+
+- Trivy Image Vulnerability Overview. Дашборд со сводной и детализированной информацией о сканировании образов контейнеров подов в пространствах имен, отмеченных аннотацией `security-scanning.deckhouse.io/enabled`.
+
+  Пример дашборда Trivy Image Vulnerability Overview.

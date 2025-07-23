@@ -1,5 +1,5 @@
 ---
-title: Alert management web UI
+title: Alert management
 permalink: en/user/web/alertmanager.html
 ---
 

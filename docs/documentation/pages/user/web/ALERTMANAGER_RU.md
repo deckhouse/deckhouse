@@ -1,5 +1,5 @@
 ---
-title: Веб-интерфейс управления алертами
+title: Управление алертами
 permalink: ru/user/web/alertmanager.html
 lang: ru
 ---

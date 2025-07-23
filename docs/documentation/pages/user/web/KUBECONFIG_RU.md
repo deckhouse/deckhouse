@@ -1,5 +1,5 @@
 ---
-title: Веб-интерфейс генератора kubeconfig
+title: Генератор kubeconfig
 permalink: ru/user/web/kubeconfig.html
 lang: ru
 ---
