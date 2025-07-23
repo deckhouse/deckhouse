@@ -64,6 +64,9 @@ function prepare_environment() {
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
   export PREFIX="$PREFIX"
 
+  FLANT_AUTH_B64=$(echo -n "$FLANT_REGISTRY_USER:$FLANT_REGISTRY_PASSWORD" | base64 -w0)
+  FLANT_CONFIG_JSON="{\"auths\":{\"$FLANT_REGISTRY_HOST\":{\"username\":\"$FLANT_REGISTRY_USER\",\"password\":\"$FLANT_REGISTRY_PASSWORD\",\"auth\":\"$FLANT_AUTH_B64\"}}}"
+  FLANT_DOCKERCFG_B64=$(echo "$FLANT_CONFIG_JSON" | base64 -w0)
   if [[ -z "$KUBERNETES_VERSION" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'KUBERNETES_VERSION environment variable is required.'
@@ -92,7 +95,7 @@ function prepare_environment() {
   fi
 
   # shellcheck disable=SC2016
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FLANT_DOCKERCFG="$FLANT_DOCKERCFG_B64" \
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
@@ -228,11 +231,6 @@ function wait_cluster_ready() {
 
   if [[ $test_failed == "true" ]] ; then
     return 1
-  fi
-
-  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
-    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
-    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
   chmod 755 /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh
