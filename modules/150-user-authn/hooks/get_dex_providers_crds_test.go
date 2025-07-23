@@ -58,6 +58,8 @@ spec:
     getUserInfo: true
     insecureSkipEmailVerified: true
     issuer: https://issue.example.com
+    allowedGroups:
+    - not-slu-gif-ed
     scopes:
     - profile
     - email
@@ -153,6 +155,7 @@ spec:
     "insecureSkipVerify": false,
     "issuer": "https://issue.example.com",
     "promptType": "consent",
+	"allowedGroups": [ "not-slu-gif-ed" ],
     "scopes": [
       "profile",
       "email"

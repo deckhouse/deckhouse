@@ -177,6 +177,12 @@
         {{- if $provider.oidc.claimMappingOverride }}
         overrideClaimMapping: true
         {{- end }}
+        {{- if $provider.oidc.allowedGroups }}
+        allowedGroups:
+          {{- range $group := $provider.oidc.allowedGroups }}
+          - {{ $group | quote }}
+          {{- end }}
+        {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}
            {{- range $scope := $provider.oidc.scopes }}

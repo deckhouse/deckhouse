@@ -285,6 +285,16 @@ spec:
                         List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
+                    allowedGroups:
+                      type: array
+                      description: |
+                        A list of groups that the user must have in order to log in.
+
+                        If the list contains a group that the user does not have, the authentication will not be considered successful.
+
+                        If the parameter is omitted, there will be no filter by group.
+                      items:
+                        type: string
                     promptType:
                       type: string
                       default: 'consent'
