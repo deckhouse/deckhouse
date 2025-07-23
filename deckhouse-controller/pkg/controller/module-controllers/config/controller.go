@@ -250,6 +250,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
 				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
+				return ctrl.Result{}, fmt.Errorf("list module releases: %w", err)
 			}
 
 			pendingReleases := make([]*v1alpha1.ModuleRelease, 0)
