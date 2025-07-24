@@ -63,7 +63,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 
 	for _, module := range modules.Items {
 		// handle too long disabled embedded modules
-		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
+		if module.DisabledMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
 			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)

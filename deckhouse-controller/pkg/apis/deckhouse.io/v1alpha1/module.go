@@ -335,12 +335,13 @@ func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...C
 	})
 }
 
-func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
+func (m *Module) DisabledMoreThan(timeout time.Duration) bool {
 	for _, cond := range m.Status.Conditions {
-		if cond.Type == ModuleConditionEnabledByModuleConfig && cond.Status == corev1.ConditionFalse {
+		if cond.Type == ModuleConditionEnabledByModuleManager && cond.Status == corev1.ConditionFalse {
 			return time.Since(cond.LastTransitionTime.Time) >= timeout
 		}
 	}
+
 	return false
 }
 

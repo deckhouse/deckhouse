@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
@@ -49,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -403,6 +403,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
 				}
+
+				module.Properties.Source = source.Name
 
 				return nil
 			})
