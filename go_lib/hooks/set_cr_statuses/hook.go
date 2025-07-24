@@ -36,15 +36,11 @@ func getTimeStamp() string {
 }
 
 func getCheckSum(bytes []byte) string {
-	checkSum, err := utils_checksum.CalculateChecksum(string(bytes))
-	if err != nil {
-		return ""
-	}
-	checkSumStr := fmt.Sprintf("%d", checkSum)
+	checkSum := utils_checksum.CalculateChecksum_old(string(bytes))
 	if env, ok := os.LookupEnv("TEST_CONDITIONS_CALC_CHKSUM"); ok {
-		checkSumStr = env
+		checkSum = env
 	}
-	return checkSumStr
+	return checkSum
 }
 
 func SetObservedStatus(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
