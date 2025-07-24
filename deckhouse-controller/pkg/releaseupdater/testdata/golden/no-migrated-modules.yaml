@@ -1,0 +1,22 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.50.0
+  resourceVersion: "999"
+spec:
+  version: v1.50.0
+status:
+  approved: false
+  message: ""
+  transitionTime: null
+---
+data:
+  cluster-configuration.yaml: a3ViZXJuZXRlc1ZlcnNpb246ICIxLjI5Ig==
+metadata:
+  creationTimestamp: null
+  name: d8-cluster-configuration
+  namespace: kube-system
+  resourceVersion: "1"

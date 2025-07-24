@@ -1,0 +1,22 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.50.0
+spec:
+  version: v1.50.0
+  requirements:
+    migratedModules: "test-module-1, test-module-missing"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+    - name: test-module-1
+  modulesCount: 1
