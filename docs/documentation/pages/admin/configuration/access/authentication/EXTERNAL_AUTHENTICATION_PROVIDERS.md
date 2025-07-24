@@ -21,6 +21,12 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
 
 ## General integration workflow
 
+{% alert level="info" %}
+The `allowedGroups` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource allows you to restrict login access to users who belong to specific groups.  
+If the `allowedGroups` list is specified, the user **must** be a member of at least one of these groups — otherwise, authentication will be considered unsuccessful.  
+If the parameter is not specified, no group-based filtering will be applied.
+{% endalert %}
+
 1. Create an OAuth application in the authentication provider:
    - Set the redirect URI to `https://dex.<publicDomainTemplate>/callback`.
    - Obtain the `clientID` and `clientSecret`.
