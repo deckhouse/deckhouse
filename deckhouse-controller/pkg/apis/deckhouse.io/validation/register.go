@@ -25,7 +25,6 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type registerer interface {
@@ -51,11 +50,10 @@ func RegisterAdmissionHandlers(
 	storage moduleStorage,
 	metricStorage metric.Storage,
 	exts *extenders.ExtendersStack,
-	logger *log.Logger,
 ) {
 	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
-	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", deckhouseReleaseValidationHandler(cli, mm, exts, logger))
+	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", deckhouseReleaseValidationHandler(cli, mm, exts))
 }

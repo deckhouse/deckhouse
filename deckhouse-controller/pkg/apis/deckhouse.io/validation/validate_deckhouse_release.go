@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type deckhouseReleaseModuleManager interface {
@@ -44,7 +43,6 @@ func deckhouseReleaseValidationHandler(
 	cli client.Client,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
-	logger *log.Logger,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		dr, ok := obj.(*v1alpha1.DeckhouseRelease)
@@ -71,7 +69,6 @@ func deckhouseReleaseValidationHandler(
 			cli,
 			moduleManager.GetEnabledModuleNames(),
 			exts,
-			logger,
 		)
 		if err != nil {
 			return rejectResult(fmt.Sprintf("failed to create requirements checker: %v", err))

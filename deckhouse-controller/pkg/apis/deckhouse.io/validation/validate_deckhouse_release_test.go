@@ -102,9 +102,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 
 			exts := extenders.NewExtendersStack(nil, "v1.30.0", log.NewLogger())
 
-			logger := log.NewLogger()
-
-			handler := deckhouseReleaseValidationHandler(client, mm, exts, logger)
+			handler := deckhouseReleaseValidationHandler(client, mm, exts)
 
 			assert.NotNil(t, handler)
 		})

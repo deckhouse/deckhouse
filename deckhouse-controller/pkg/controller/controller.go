@@ -291,7 +291,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		loader,
 		operator.MetricStorage,
 		exts,
-		logger)
+	)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
