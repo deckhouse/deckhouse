@@ -55,4 +55,5 @@ locals {
   zones = lookup(local.node_group, "zones", {}) != {} ? tolist(setintersection(local.actual_zones, local.node_group["zones"])) : local.actual_zones
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.node_group, "additionalTags", {}))
   disable_default_sg       = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
+  ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }
