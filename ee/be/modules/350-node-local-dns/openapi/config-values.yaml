@@ -1,2 +1,7 @@
 type: object
-properties: {}
+properties:
+  enableLogs:
+    description: |
+      Enables query logging for CoreDNS.
+    type: boolean
+    default: false
