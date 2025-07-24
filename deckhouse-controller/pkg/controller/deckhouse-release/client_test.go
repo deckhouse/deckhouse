@@ -26,7 +26,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -39,6 +38,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
