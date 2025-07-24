@@ -174,7 +174,7 @@ func (r *reconciler) needToEnsureRelease(
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	if module.Properties.Source == "" && !source.IsDefault() {
-		return true
+		return false
 	}
 
 	// check the active source
