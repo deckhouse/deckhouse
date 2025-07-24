@@ -49,7 +49,7 @@ Example request body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[УДАЛЕНО]",
+  "user_email": "[DELETED]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": "2025-07-09T00:00:00Z",
@@ -77,7 +77,7 @@ Example request body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[УДАЛЕНО]",
+  "user_email": "[DELETED]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": null,
@@ -105,7 +105,7 @@ Example request body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[УДАЛЕНО]",
+  "user_email": "[DELETED]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": null,
@@ -141,7 +141,7 @@ Example request body:
   "owners": [
     {
       "name": "Administrator",
-      "email": "[УДАЛЕНО]"
+      "email": "[DELETED]"
     }
   ],
   "project_visibility": "private"

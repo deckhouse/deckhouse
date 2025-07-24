@@ -31,7 +31,7 @@ Replace `branch-name` with the name of the branch, e.g., `main` or `feature/my-n
 1. Commit the changes with the command:
 
    ```bash
-   git commit -am "Описание ваших изменений"
+   git commit -am "Description of your changes"
    ```
 
 1. Push the changes to the remote repository:
@@ -57,7 +57,7 @@ Feature branches are used to develop new features or fixes. Below are the steps 
 1. Change directory to the repository folder:
 
    ```bash
-   cd <путь-до-папки-с-репозиторием>
+   cd <path-to-folder-with-repository>
    ```
 
 1. Create a new feature branch:
