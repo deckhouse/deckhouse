@@ -89,7 +89,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	if len(cloudSecrets) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
+		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 		}
