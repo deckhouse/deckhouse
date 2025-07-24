@@ -261,7 +261,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
-			// тут должно быть ветвление если выставлен IsDisruptionApproved
+			// тут должно быть ветвление если выставлен IsDisruptionApproved = true и ng.Disruptions.ApprovalMode = "Automatic"
 			// 		то мы должны проверить что IsDrained
 			// 			если IsDraining не стоит повесить его и выйти
 			//		если IsDrained = true то вешаем Approved
