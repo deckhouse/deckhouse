@@ -166,11 +166,19 @@ properties:
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   license:
     type: object
-    # description:
+    description: |
+      Настройки лицензии для Deckhouse.
     properties:
       edition:
         type: string
         enum: ["CE", "BE", "FE", "EE", "SE", "SE-plus"]
-        x-examples: ["Community"]
-        # description: 
-        default: "Community"
+        x-examples: ["CE"]
+        description: |
+          Издание Deckhouse.
+          - `CE` — Community Edition.
+          - `BE` — Basic Edition.
+          - `FE` — Flant Edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Plus Edition.
+        default: "CE"
