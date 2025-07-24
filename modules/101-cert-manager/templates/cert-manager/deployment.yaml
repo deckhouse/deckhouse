@@ -69,11 +69,13 @@ spec:
           {{- if $.Values.certManager.maxConcurrentChallenges }}
           - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}
           {{- end }}
-          {{- if .Values.certManager.recursiveSettings.nameservers }}
-          - --dns01-recursive-nameservers={{ join "," .Values.certManager.recursiveSettings.nameservers }}
-          {{- end }}
-          {{- if .Values.certManager.recursiveSettings.useOnlyRecursive }}
+          {{- with .Values.certManager.recursiveSettings }}
+            {{- if .nameservers }}
+          - --dns01-recursive-nameservers={{ join "," .nameservers }}
+            {{- end }}
+            {{- if .useOnlyRecursive }}
           - --dns01-recursive-nameservers-only
+            {{- end }}
           {{- end }}
 {{- if (hasKey $.Values.global.modules "https") }}
 {{- if eq $.Values.global.modules.https.mode "CertManager" }}
