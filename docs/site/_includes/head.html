@@ -33,8 +33,24 @@
 {%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
 {%- endif %}
 
-{%- assign generated_title = title_parts | reverse | join: " / " %}
-<title>{{ generated_title }} | {{ site.site_title }}</title>
+{%- if page.title_gen -%}
+  {%- assign generated_title = page.title_gen -%}
+{%- else -%}
+  {%- assign generated_title = title_parts | reverse | join: "" -%}
+{%- endif -%}
+
+{%- assign words = page.product_code | replace: '-', ' ' | split: ' ' -%}
+{%- assign additional_title = "" -%}
+{%- for word in words -%}
+  {%- assign capitalized_word = word | capitalize -%}
+  {%- if additional_title == "" -%}
+    {%- assign additional_title = capitalized_word -%}
+  {%- else -%}
+    {%- assign additional_title = additional_title | append: " " | append: capitalized_word -%}
+  {%- endif -%}
+{%- endfor -%}
+<title>{{ generated_title }} | {{ site.site_title }} {{ additional_title }}</title>
+
 {%- if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
 {%- else %}

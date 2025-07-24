@@ -42,6 +42,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in Amazon AWS"
       ru: "Deckhouse Kubernetes Platform в Amazon AWS"
+    gen_pages_title:
+      en: " in Amazon AWS"
+      ru: " в Amazon AWS"
     type: cloud
     name:
       en: Amazon AWS
@@ -80,6 +83,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in Google Cloud"
       ru: "Deckhouse Kubernetes Platform в Google Cloud"
+    gen_pages_title:
+      en: " in Google Cloud"
+      ru: " в Google Cloud"
     type: cloud
     name:
       en: Google Cloud
@@ -118,6 +124,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in Microsoft Azure"
       ru: "Deckhouse Kubernetes Platform в Microsoft Azure"
+    gen_pages_title:
+      en: " in Microsoft Azure"
+      ru: " в Microsoft Azure"
     type: cloud
     name:
       en: Microsoft Azure
@@ -157,6 +166,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on OpenStack"
       ru: "Deckhouse Kubernetes Platform на OpenStack"
+    gen_pages_title:
+      en: " on OpenStack"
+      ru: " на OpenStack"
     type: cloud
     name:
       en: OpenStack
@@ -196,6 +208,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
       ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
+    gen_pages_title:
+      en: " on VK Cloud (OpenStack)"
+      ru: " на VK Cloud (OpenStack)"
     type: cloud
     name:
       en: VK Cloud
@@ -235,6 +250,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on OVH (OpenStack)"
       ru: "Deckhouse Kubernetes Platform в OVH (OpenStack)"
+    gen_pages_title:
+      en: " on OVH (OpenStack)"
+      ru: " в OVH (OpenStack)"
     type: cloud
     name:
       en: OVH Cloud
@@ -274,6 +292,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on Selectel (OpenStack)"
       ru: "Deckhouse Kubernetes Platform в Selectel (OpenStack)"
+    gen_pages_title:
+      en: " on Selectel (OpenStack)"
+      ru: " в Selectel (OpenStack)"
     type: cloud
     name:
       en: Selectel
@@ -315,6 +336,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on VMware vSphere"
       ru: "Deckhouse Kubernetes Platform на VMware vSphere"
+    gen_pages_title:
+      en: " on VMware vSphere"
+      ru: " на VMware vSphere"
     layout:
       code: standard
       name: Standard
@@ -354,6 +378,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
       ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
+    gen_pages_title:
+      en: " on VMware Cloud Director"
+      ru: " на VMware Cloud Director"
     layout:
       code: standard
       name: Standard
@@ -391,6 +418,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in Yandex Cloud"
       ru: "Deckhouse Kubernetes Platform в Yandex Cloud"
+    gen_pages_title:
+      en: " in Yandex Cloud"
+      ru: " в Yandex Cloud"
     type: cloud
     name:
       en: "Yandex Cloud"
@@ -426,6 +456,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in existing cluster"
       ru: "Deckhouse Kubernetes Platform в существующем кластере"
+    gen_pages_title:
+      en: " in existing cluster"
+      ru: " в существующем кластере"
     type: existing
     name:
       en: Existing cluster
@@ -456,6 +489,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in kind"
       ru: "Deckhouse Kubernetes Platform в kind"
+    gen_pages_title:
+      en: " in kind"
+      ru: " в kind"
     type: special
     name:
       en: Using kind
@@ -477,6 +513,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform in a private environment"
       ru: "Deckhouse Kubernetes Platform в закрытом окружении"
+    gen_pages_title:
+      en: " in a private environment"
+      ru: " в закрытом окружении"
     type: baremetal
     name:
       en: Private environment
@@ -512,6 +551,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform for bare metal"
       ru: "Deckhouse Kubernetes Platform на bare metal"
+    gen_pages_title:
+      en: " for bare metal"
+      ru: " на bare metal"
     type: baremetal
     name:
       en: Bare metal
@@ -552,6 +594,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on Zvirt"
       ru: "Deckhouse Kubernetes Platform на Zvirt"
+    gen_pages_title:
+      en: " on Zvirt"
+      ru: " на Zvirt"
     type: cloud
     # Например, это надписи на плитке
     name:
@@ -592,6 +637,8 @@ installTypes:
       name: Standard
     pages_title:
       ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
+    gen_pages_title:
+      ru: " в Базис.DynamiX"
     type: cloud
     name:
       en: "Базис.DynamiX"
@@ -628,6 +675,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform for RED virtualization"
       ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
+    gen_pages_title:
+      en: " for RED virtualization"
+      ru: " на РЕД виртуализации"
     type: baremetal
     name:
       en: RED virtualization
@@ -667,6 +717,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform for SpaceVM"
       ru: "Deckhouse Kubernetes Platform на SpaceVM"
+    gen_pages_title:
+      en: " for SpaceVM"
+      ru: " на SpaceVM"
     type: baremetal
     name:
       en: SpaceVM
@@ -709,6 +762,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on Huawei Cloud"
       ru: "Deckhouse Kubernetes Platform на Huawei Cloud"
+    gen_pages_title:
+      en: " on Huawei Cloud"
+      ru: " на Huawei Cloud"
     type: cloud
     name:
       en: Huawei Cloud
@@ -747,6 +803,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
       ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
+    gen_pages_title:
+      en: " on Deckhouse Virtualization Platform (DVP)"
+      ru: " на Deckhouse Virtualization Platform (DVP)"
     type: cloud
     name:
       en: DVP
