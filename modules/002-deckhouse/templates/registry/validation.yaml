@@ -19,8 +19,8 @@ spec:
   - name: 'deckhouse-mc'
     expression: 'object.metadata.name == "deckhouse"'
   validations:
-  - expression: "!has(object.spec.settings.registry) || !has(oldObject.spec.settings.registry) || (object.spec.settings.registry == oldObject.spec.settings.registry)"
-    message: "Changing spec.settings.registry is forbidden when the registry module is disabled. Please enable the module to make changes."
+  - expression: "(has(object.spec.settings.registry) == has(oldObject.spec.settings.registry)) && (!has(object.spec.settings.registry) || object.spec.settings.registry == oldObject.spec.settings.registry)"
+    message: "Changing, adding, or removing spec.settings.registry is forbidden when the registry module is disabled. Please enable the module to make changes."
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
