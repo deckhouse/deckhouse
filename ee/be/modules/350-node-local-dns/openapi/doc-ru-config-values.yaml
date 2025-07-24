@@ -1,0 +1,4 @@
+properties:
+  enableLogs:
+    description: |
+      Включает логирование запросов для CoreDNS.
