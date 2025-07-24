@@ -7,7 +7,7 @@ final: false
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y conntrack-tools
+  - apt-get install -y conntrack-tools # FIXME
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |

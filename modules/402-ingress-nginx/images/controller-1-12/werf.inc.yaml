@@ -1,9 +1,8 @@
 {{- $controllerBranch := "controller-v1.12.1" }}
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-06-11.2"
+# fromCacheVersion: "2025-07-16.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -26,14 +25,17 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 --depth 1 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
   # pass env for build
@@ -44,10 +46,10 @@ shell:
   - rm -rf /src/lua-protobuf/.git
   - rm -rf /src/lua-iconv/.git
   - rm -rf /src/ingress-nginx/.git
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -63,6 +65,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -86,6 +89,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -93,15 +97,17 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
   - export PKG="k8s.io/ingress-nginx"
   - cd /src/
@@ -114,6 +120,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
+# fromCacheVersion: "2025-07-16.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -124,41 +131,55 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   # git needs for getting dependencies from our repo
   - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   - apt-get install -y liblua5.1-devel --download-only
   setup:
-  - export SOURCE_REPO={{ $.SOURCE_REPO }}
+  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
   - rm -rf /src/etc
+  - rm -rf /usr/local
   - /build.sh
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
+from: dev-registry.deckhouse.io/base_images@sha256:ba05eb87026e03684f98cd53356dc269cea28ce6938ee67d1fc9e2e5a2686e3d
+final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-07-23.02"
 final: false
+mount:
+- from: build_dir
+  to: /tmp/apps
 import:
+- image: tools/coreutils
+  add: /usr/bin
+  to: /tools
+  includePaths:
+  - chmod
+  - coreutils
+  - ln
+  - rm
+  - mkdir
+  before: install
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /usr/local
   to: /usr/local
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /opt
-  to: /opt
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /etc/nginx
   to: /etc/nginx
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /usr/lib
-  to: /chroot/usr/lib64
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
-  to: /usr/bin/dumb-init
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
   add: /usr/lib64/lua/5.1/iconv.so
@@ -176,14 +197,89 @@ import:
   add: /src/rootfs/etc
   to: /src/rootfs/etc
   before: install
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /chroot/usr/bin/curl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
+  add: /usr
+  to: /chroot
+  includePaths:
+  - lib/libabsl_base.so*
+  - lib/libabsl_city.so*
+  - lib/libabsl_cord_internal.so*
+  - lib/libabsl_cord.so*
+  - lib/libabsl_cordz_functions.so*
+  - lib/libabsl_cordz_handle.so*
+  - lib/libabsl_cordz_info.so*
+  - lib/libabsl_crc_cord_state.so*
+  - lib/libabsl_crc_internal.so*
+  - lib/libabsl_crc32c.so*
+  - lib/libabsl_debugging_internal.so*
+  - lib/libabsl_demangle_internal.so*
+  - lib/libabsl_exponential_biased.so*
+  - lib/libabsl_hash.so*
+  - lib/libabsl_int128.so*
+  - lib/libabsl_low_level_hash.so*
+  - lib/libabsl_malloc_internal.so*
+  - lib/libabsl_random_internal_platform.so*
+  - lib/libabsl_random_internal_pool_urbg.so*
+  - lib/libabsl_random_internal_randen_hwaes_impl.so*
+  - lib/libabsl_random_internal_randen_hwaes.so*
+  - lib/libabsl_random_internal_randen_slow.so*
+  - lib/libabsl_random_internal_randen.so*
+  - lib/libabsl_random_internal_seed_material.so*
+  - lib/libabsl_random_seed_gen_exception.so*
+  - lib/libabsl_raw_hash_set.so*
+  - lib/libabsl_raw_logging_internal.so*
+  - lib/libabsl_spinlock_wait.so*
+  - lib/libabsl_stacktrace.so*
+  - lib/libabsl_status.so*
+  - lib/libabsl_statusor.so*
+  - lib/libabsl_str_format_internal.so*
+  - lib/libabsl_strerror.so*
+  - lib/libabsl_strings_internal.so*
+  - lib/libabsl_strings.so*
+  - lib/libabsl_symbolize.so*
+  - lib/libabsl_synchronization.so*
+  - lib/libabsl_throw_delegate.so*
+  - lib/libabsl_time_zone.so*
+  - lib/libabsl_time.so*
+  before: install
+# - image: tools/openssl
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib/libcrypto.so*
+#   - lib/libssl.so*
+#   before: install
+# - image: tools/openssl
+#   add: /lib
+#   to: /chroot/lib
+#   includePaths:
+#   - ld-musl-x86_64.so*
+#   before: install
+# - image: libs/zlib
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib/libz.so*
+#   before: install
+# - image: libs/glibc
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib64/libc.so*
+#   - lib64/ld-linux-x86-64.so*
+#   before: install
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
+  - apt-get -y install ca-certificates
+  - apt-get -y install curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
-  - cp -R /usr/lib64 /chroot/usr/lib64
-  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+  # Prepare chroot directories and files
   - |
     bash -eu -c '
     writeDirs=(
@@ -213,32 +309,14 @@ shell:
       mkdir -p ${dir};
       chown -R www-data:www-data ${dir};
     done'
-  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
-  - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
+  - mkdir -p /chroot/{lib,lib64,proc,usr,bin,dev,run}
+  - mkdir -p /chroot/usr/lib64 /chroot/usr/local/{modsecurity,share}
+  - touch /chroot/var/log/nginx/access.log
+  - echo "" > /chroot/etc/resolv.conf
   # Create opentelemetry.toml file as it doesn't present in controller_image
   - touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
   - chown -R www-data:www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-  - cp -a /etc/pki /chroot/etc/pki
-  - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
-  - cp -a /usr/bin/curl /chroot/usr/bin/curl
-  - cp -a /lib64/* /chroot/lib64/
-  - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
-  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/gconv /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
+
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /usr/local/bin /chroot/usr/local/
   - cp -a /usr/local/lib /chroot/usr/local/
@@ -247,77 +325,13 @@ shell:
   - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
-  - chown www-data:www-data /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - rm -rf /src/rootfs/etc
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11-artifact
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-  add: /chroot
-  to: /chroot
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/dbg
-  to: /dbg
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/nginx-ingress-controller
-  to: /nginx-ingress-controller
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/wait-shutdown
-  to: /wait-shutdown
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/nginx-chroot-wrapper.sh
-  to: /usr/bin/nginx
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
-  to: /usr/bin/dumb-init
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/rootfs/etc
-  to: /src/rootfs/etc
-  before: setup
-shell:
-  setup:
-  - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
-  - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
-  - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
-  - cp -R /src/rootfs/etc/* /chroot/etc
-  - rm -rf /src/rootfs/etc/
-  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - chown www-data:www-data /usr/bin/nginx
-  - chown www-data:www-data /usr/bin/curl
-  - chown www-data:www-data /chroot/etc
-  - chmod 1777 /tmp
-  - setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - rm -rf /etc/pki
-  - ln -sf /chroot/etc/pki /etc/pki
-  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - touch /chroot/var/log/nginx/access.log
-  - chown www-data:www-data /chroot/var/log/nginx/access.log
-  - echo "" > /chroot/etc/resolv.conf
-  - chown -R www-data:www-data /var/log /chroot/var/log /chroot/etc/resolv.conf
+
+  - chown -R www-data:www-data /chroot/var/log /chroot/etc/resolv.conf /chroot/etc/nginx # /chroot/etc # DANGER
+  - cp -a /etc/pki /chroot/etc/pki
+  - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
+  - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
+  # Add devices
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
@@ -325,17 +339,217 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
+  # Create ld.so.cache inside chroot
   - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
   - ldconfig
-# Create ld.so.cache inside chroot
   - cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
+
+###############################################################
+  # - cp -R /usr/lib64 /chroot/usr/lib64
+
+  # - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/gconv /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
+  # - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
+
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
-  - rm -rf /chroot/usr/lib64/ruby
+  # - rm -rf /chroot/usr/lib64/ruby
+
+
+  # For NGINX
+  - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
+  - cp -a /lib64/libcrypt.so* /chroot/lib64
+  - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
+  - cp -a /lib64/libssl.so* /chroot/lib64
+  - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
+  - cp -a /usr/lib64/libz.so* /chroot/lib64
+  - cp -a /usr/lib64/libm.so* /chroot/lib64
+  - cp -a /usr/lib64/libc.so* /chroot/lib64
+  - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
+  # For modules
+  # - cp -a /lib64/libabsl_base.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_city.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cord_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cord.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_functions.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_handle.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_cordz_info.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc_cord_state.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_crc32c.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_debugging_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_demangle_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_exponential_biased.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_hash.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_int128.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_low_level_hash.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_malloc_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_platform.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_pool_urbg.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_hwaes_impl.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_hwaes.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen_slow.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_randen.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_internal_seed_material.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_random_seed_gen_exception.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_raw_hash_set.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_raw_logging_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_spinlock_wait.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_stacktrace.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_status.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_statusor.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_str_format_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strerror.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strings_internal.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_strings.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_symbolize.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_synchronization.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_throw_delegate.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
+  # - cp -a /lib64/libabsl_time.so* /chroot/lib64
+  - cp -a /lib64/libaddress_sorting.so* /chroot/lib64
+  - cp -a /lib64/libbrotlicommon.so* /chroot/lib64
+  - cp -a /lib64/libbrotlidec.so* /chroot/lib64
+  - cp -a /lib64/libbrotlienc.so* /chroot/lib64
+  - cp -a /lib64/libcares.so* /chroot/lib64
+  - cp -a /lib64/libcom_err.so* /chroot/lib64
+  - cp -a /lib64/libcurl.so* /chroot/lib64
+  - cp -a /lib64/libffi.so* /chroot/lib64 # !
+  - cp -a /lib64/libgcrypt.so* /chroot/lib64
+  - cp -a /lib64/libgmp.so* /chroot/lib64
+  - cp -a /lib64/libgnutls.so* /chroot/lib64
+  - cp -a /lib64/libgpg-error.so* /chroot/lib64
+  - cp -a /lib64/libgpr.so* /chroot/lib64
+  - cp -a /lib64/libgrpc.so* /chroot/lib64
+  - cp -a /lib64/libgrpc++.so* /chroot/lib64
+  - cp -a /lib64/libgsasl.so* /chroot/lib64
+  - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64
+  - cp -a /lib64/libhogweed.so* /chroot/lib64
+  - cp -a /lib64/libidn.so* /chroot/lib64
+  - cp -a /lib64/libidn2.so* /chroot/lib64
+  - cp -a /lib64/libk5crypto.so* /chroot/lib64
+  - cp -a /lib64/libkeyutils.so* /chroot/lib64
+  - cp -a /lib64/libkrb5.so* /chroot/lib64 # !
+  - cp -a /lib64/libkrb5support.so* /chroot/lib64 # !
+  - cp -a /lib64/liblber.so* /chroot/lib64
+  - cp -a /lib64/libldap.so* /chroot/lib64
+  - cp -a /lib64/liblua-5.3.so* /chroot/lib64
+  - cp -a /lib64/libmaxminddb.so* /chroot/lib64
+  - cp -a /lib64/libnettle.so* /chroot/lib64
+  - cp -a /lib64/libnghttp2.so* /chroot/lib64
+  - cp -a /lib64/libnghttp3.so* /chroot/lib64
+  - cp -a /lib64/libngtcp2_crypto_gnutls.so* /chroot/lib64
+  - cp -a /lib64/libngtcp2.so* /chroot/lib64
+  - cp -a /lib64/libntlm.so* /chroot/lib64
+  - cp -a /lib64/libp11-kit.so* /chroot/lib64
+  - cp -a /lib64/libpcre.so* /chroot/lib64 # !
+  - cp -a /lib64/libprotobuf.so* /chroot/lib64
+  - cp -a /lib64/libpsl.so* /chroot/lib64
+  - cp -a /lib64/libre2.so* /chroot/lib64
+  - cp -a /lib64/libsasl2.so* /chroot/lib64
+  - cp -a /lib64/libselinux.so* /chroot/lib64
+  - cp -a /lib64/libssh2.so* /chroot/lib64
+  - cp -a /lib64/libstdc++.so* /chroot/lib64
+  - cp -a /lib64/libtasn1.so* /chroot/lib64
+  - cp -a /lib64/libunistring.so* /chroot/lib64
+  - cp -a /lib64/libupb.so* /chroot/lib64
+  - cp -a /lib64/libzstd.so* /chroot/lib64
+
+  # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
+  # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
+
+  # Utils for final image
+  - cp -a /tools/{setcap,coreutils,rm,chmod,ln,mkdir} /tmp/apps
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/alt-p11-artifact
+# fromImage: common/distroless
+fromCacheVersion: "2025-07-23.02"
+mount:
+- from: build_dir
+  to: /tmp/apps
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+  add: /
+  to: /
+  includePaths:
+  - etc/passwd
+  - etc/group
+  - chroot
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/dbg
+  to: /dbg
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/nginx-ingress-controller
+  to: /nginx-ingress-controller
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/wait-shutdown
+  to: /wait-shutdown
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/curl-chroot-wrapper.sh
+  to: /usr/bin/curl
+  owner: "101"
+  group: "101"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/nginx-chroot-wrapper.sh
+  to: /usr/bin/nginx
+  owner: "101"
+  group: "101"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
+  add: /src/dumb-init
+  to: /usr/bin/dumb-init
+  before: install
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: install
+- image: tools/util-linux
+  add: /usr/bin/unshare
+  to: /usr/bin/unshare
+  before: install
+shell:
+  setup:
+  - /tmp/apps/chmod 1777 /tmp
+  - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
+  - /tmp/apps/mkdir -p /var/log
+  - /tmp/apps/ln -sf /chroot/etc/pki /etc/pki
+  - /tmp/apps/ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+  - /tmp/apps/ln -sf /chroot/etc/nginx /etc/nginx
+  - /tmp/apps/ln -sf /chroot/tmp/nginx /tmp/nginx
+  - /tmp/apps/ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  - /tmp/apps/ln -sf /chroot/var/log/nginx /var/log/nginx
+
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /
-    user: "www-data"
+    user: "101"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
