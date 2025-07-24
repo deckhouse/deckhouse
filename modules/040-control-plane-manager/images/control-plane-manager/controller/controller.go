@@ -55,6 +55,9 @@ func main() {
 
 	defer httpServerClose()
 
+	scheduler := NewScheduler(config.ExitChannel)
+	go scheduler.Run()
+
 	removeOrphanFiles()
 
 	runPhase(annotateNode())

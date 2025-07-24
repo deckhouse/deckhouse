@@ -27,7 +27,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
+
+const kubeconfigPath = "/etc/kubernetes/admin.conf"
 
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
@@ -72,7 +76,7 @@ func backupFile(src string) error {
 
 	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%02d-%02d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
 
-	if err := os.MkdirAll(backupDir, 0700); err != nil {
+	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		return err
 	}
 	return copy.Copy(src, backupDir+src)
@@ -186,4 +190,22 @@ func cleanup() {
 	if err := removeOldBackups(); err != nil {
 		log.Warn(err.Error())
 	}
+}
+
+func getKubeClient() (error, kubernetes.Interface) {
+	rawConfig, err := clientcmd.LoadFromFile(kubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to load kubeconfig from %s: %w", kubeconfigPath, err), nil
+	}
+	clientConfig := clientcmd.NewDefaultClientConfig(*rawConfig, &clientcmd.ConfigOverrides{})
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		return fmt.Errorf("failed to build rest config: %w", err), nil
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes client: %w", err), nil
+	}
+	return nil, kubeClient
 }

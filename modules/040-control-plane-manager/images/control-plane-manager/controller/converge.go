@@ -79,7 +79,6 @@ func convergeComponents() error {
 
 func convergeComponent(componentName string) error {
 	log.Infof("converge component %s", componentName)
-	etcd := &EtcdClient{}
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
@@ -116,7 +115,7 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
-			if err := etcd.EtcdJoinConverge(); err != nil {
+			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
 		} else {
@@ -142,20 +141,6 @@ func convergeComponent(componentName string) error {
 		}
 		return err
 	}
-
-	// Handle the situation when etcd member remains in the learner state
-	if componentName == "etcd" {
-		etcd.client, err = etcd.NewEtcdClient()
-		if err != nil {
-			return err
-		}
-		defer etcd.client.Close()
-		err = etcd.PromoteMemberIfNeeded()
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
