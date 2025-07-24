@@ -267,12 +267,12 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
-			input.Logger.Info("approveUpdates Node approvedPatch", "node", approvedNode.Name, "ng", ng.Name)
 			patch := approvedPatch
-			if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
-				input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
-				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-approve"
-			}
+			// if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
+			// 	input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
+			// 	patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-approve"
+			// }
+			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", patch), "node", approvedNode.Name, "ng", ng.Name)
 			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
 			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
 		}
