@@ -51,7 +51,7 @@ spec:
                       description: Список других включенных модулей, которые необходимы для работы модуля.
               accessibility:
                 type: object
-                description: Доступность модуля для использования.
+                description: Настройки доступности модуля.
                 properties:
                   editions:
                     description: Настройки изданий.
