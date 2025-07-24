@@ -88,7 +88,13 @@ type DeckhouseController struct {
 	log            *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
+func NewDeckhouseController(
+	ctx context.Context,
+	version string,
+	allowExperimentalModules bool,
+	operator *addonoperator.AddonOperator,
+	logger *log.Logger,
+) (*DeckhouseController, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
@@ -289,7 +295,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		operator.ModuleManager,
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
-		operator.MetricStorage)
+		operator.MetricStorage,
+		allowExperimentalModules,
+	)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -355,7 +363,8 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		configBytes, _ := deckhouseConfig.AsBytes("yaml")
 		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel: "",
+			ReleaseChannel:           "",
+			AllowExperimentalModules: false,
 		}
 		settings.Update.Mode = "Auto"
 		settings.Update.DisruptionApprovalMode = "Auto"

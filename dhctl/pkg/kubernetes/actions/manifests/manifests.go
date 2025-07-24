@@ -47,9 +47,10 @@ const (
 )
 
 type DeckhouseDeploymentParams struct {
-	Bundle   string
-	Registry string
-	LogLevel string
+	Bundle                   string
+	Registry                 string
+	LogLevel                 string
+	AllowExperimentalModules string
 
 	DeployTime time.Time
 
@@ -398,6 +399,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "DECKHOUSE_BUNDLE",
 			Value: params.Bundle,
+		},
+		{
+			Name:  "DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES",
+			Value: params.AllowExperimentalModules,
 		},
 		{
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
