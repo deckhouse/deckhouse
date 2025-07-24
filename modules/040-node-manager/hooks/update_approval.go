@@ -119,7 +119,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveDisruptions(input)
+	err = approver.approveUpdates(input)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveUpdates(input)
+	err = approver.approveDisruptions(input)
 	if err != nil {
 		return err
 	}
