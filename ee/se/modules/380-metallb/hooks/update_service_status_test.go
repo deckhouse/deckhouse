@@ -39,11 +39,15 @@ spec:
   loadBalancerClass: my-lb-class
 status:
   conditions:
-  - lastTransitionTime: "2025-07-23T15:17:03Z"
-    message: l2-default
+  - message: l2-default
     reason: LoadBalancerClassBound
     status: "True"
     type: network.deckhouse.io/load-balancer-class
+  - lastTransitionTime: null
+    message: 1 of 1 public IPs were assigned
+    reason: AllIPsAssigned
+    status: "True"
+    type: AllPublicIPsAssigned
 `
 )
 
@@ -111,7 +115,6 @@ status:
 			Expect(svc.Field("status").String()).To(MatchJSON(`{
 "conditions": [
 	{
-		"lastTransitionTime": "2025-07-23T15:17:03Z",
 		"message": "l2-default",
 		"reason": "LoadBalancerClassBound",
 		"status": "True",
@@ -198,7 +201,6 @@ spec:
 {
 	"conditions": [
 		{
-			"lastTransitionTime": "2025-07-23T15:17:03Z",
 			"message": "l2-default",
 			"reason": "LoadBalancerClassBound",
 			"status": "True",

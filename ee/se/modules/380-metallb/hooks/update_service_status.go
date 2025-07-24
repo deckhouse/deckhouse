@@ -23,7 +23,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/metallb/service-update",
+	Queue: "/modules/metallb/discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "l2lb_services",
@@ -83,7 +83,7 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
-		conditions := append(service.Status.Conditions, metav1.Condition{
+		conditions := updateCondition(service.Status.Conditions, metav1.Condition{
 			Status:  conditionStatus,
 			Type:    "AllPublicIPsAssigned",
 			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
@@ -130,4 +130,14 @@ func getNamespacedNameOfServicesWithIPs(snapshots []sdkpkg.Snapshot) map[types.N
 	}
 
 	return result
+}
+
+func updateCondition(conditions []metav1.Condition, newCondition metav1.Condition) []metav1.Condition {
+	for i, condition := range conditions {
+		if condition.Type == newCondition.Type {
+			conditions[i] = newCondition
+			return conditions
+		}
+	}
+	return append(conditions, newCondition)
 }
