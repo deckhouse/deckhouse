@@ -567,3 +567,21 @@
         ```
 
         Provided error: {{ $labels.error }}
+  - alert: DeckhouseEditionNotFound
+    expr: |
+      d8_edition_not_found > 0
+    for: 3m
+    labels:
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Deckhouse edition is not found.
+      description: |
+        Please specify the edition in {{ $labels.module }} ModuleConfig
+        ```bash
+        kubectl patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "MYEDITION"}}}}'
+        ```
+        Where `MYEDITION` is the edition you want to use like `CE`, `EE`, `FE`, etc.
