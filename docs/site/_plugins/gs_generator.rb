@@ -83,6 +83,7 @@ class DKP_GSPage < Jekyll::Page
 
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => installData['gen_pages_title'] ? "#{@stepData['name'][lang]} #{installData['gen_pages_title'][lang]}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],
@@ -149,6 +150,7 @@ class Stronghold_GSPage < Jekyll::Page
 
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => installData['gen_pages_title'] ? "#{@stepData['name'][lang]} #{installData['gen_pages_title'][lang]}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],
@@ -216,6 +218,7 @@ class DVP_GSPage < Jekyll::Page
 
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => installData['gen_pages_title'] ? "#{@stepData['name'][lang]} #{installData['gen_pages_title'][lang]}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],

@@ -42,6 +42,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Stronghold in an existing Deckhouse Kubernetes Platform cluster"
       ru: "Deckhouse Stronghold в существующем кластере Deckhouse Kubernetes Platform"
+    gen_pages_title:
+      en: " an existing Deckhouse Kubernetes Platform cluster"
+      ru: " в существующем кластере Deckhouse Kubernetes Platform"
     #layout:
     #  code: standard
     #  name: Standard
@@ -67,6 +70,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Stronghold on VMware vSphere"
       ru: "Deckhouse Stronghold на VMware vSphere"
+    gen_pages_title:
+      en: " on VMware vSphere"
+      ru: " на VMware vSphere"
     layout:
       code: standard
       name: Standard
@@ -104,6 +110,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Stronghold in Yandex Cloud"
       ru: "Deckhouse Stronghold в Yandex Cloud"
+    gen_pages_title:
+      en: " in Yandex Cloud"
+      ru: " в Yandex Cloud"
     type: cloud
     name:
       en: "Yandex Cloud"
@@ -140,6 +149,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Stronghold in a private environment"
       ru: "Deckhouse Stronghold в закрытом окружении"
+    gen_pages_title:
+      en: " in a private environment"
+      ru: " в закрытом окружении"
     type: baremetal
     name:
       en: Private environment
@@ -175,6 +187,9 @@ installTypes:
     pages_title:
       en: "Deckhouse Stronghold for bare metal"
       ru: "Deckhouse Stronghold на bare metal"
+    gen_pages_title:
+      en: " for bare metal"
+      ru: " на bare metal"
     type: baremetal
     name:
       en: Bare metal
