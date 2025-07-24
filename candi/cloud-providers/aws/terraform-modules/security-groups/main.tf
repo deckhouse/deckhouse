@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "aws_security_group" "node" {
+  count = var.disable_default_security_group ? 0 : 1
   name   = "${var.prefix}-node"
   vpc_id = var.vpc_id
 
@@ -40,6 +41,7 @@ resource "aws_security_group_rule" "lb-to-node" {
 }
 
 resource "aws_security_group_rule" "node-to-node" {
+  count                    = var.disable_default_security_group ? 0 : 1
   type                     = "ingress"
   protocol                 = "-1"
   from_port                = 0
@@ -49,6 +51,7 @@ resource "aws_security_group_rule" "node-to-node" {
 }
 
 resource "aws_security_group_rule" "to-node-icmp" {
+  count             = var.disable_default_security_group ? 0 : 1
   type              = "ingress"
   from_port         = -1
   to_port           = -1
@@ -75,7 +78,7 @@ resource "aws_security_group_rule" "allow-all-incoming-traffic-to-loadbalancer" 
 }
 
 resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
-  count             = var.disable_default_security_group ? 0 : 1
+  count                    = var.disable_default_security_group ? 0 : 1
   type                     = "egress"
   protocol                 = "-1"
   from_port                = 0
@@ -85,16 +88,18 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
 }
 
 resource "aws_security_group" "ssh-accessible" {
+  count       = var.disable_default_security_group ? 0 : 1
   name        = "${var.prefix}-ssh-accessible"
   vpc_id      = var.vpc_id
   tags        = var.tags
 }
 
 resource "aws_security_group_rule" "allow-ssh-for-everyone" {
-  type = "ingress"
-  from_port = 22
-  to_port = 22
-  protocol = "tcp"
-  cidr_blocks = var.ssh_allow_list
+  count             = var.disable_default_security_group ? 0 : 1
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = var.ssh_allow_list
   security_group_id = aws_security_group.ssh-accessible.id
 }
