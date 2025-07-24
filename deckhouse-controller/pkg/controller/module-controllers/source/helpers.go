@@ -173,16 +173,16 @@ func (r *reconciler) needToEnsureRelease(
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
-	if module.Properties.Source == "" && !source.IsDefault() {
-		return false
-	}
-
 	// check the active source
-	if module.Properties.Source != source.Name {
+	if module.Properties.Source != "" && module.Properties.Source != source.Name {
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
 
+		return false
+	}
+
+	if !source.IsDefault() {
 		return false
 	}
 
