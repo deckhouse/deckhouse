@@ -21,39 +21,39 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-)
 
-// If istio-cni in istio module is enabled, which means the istio-cni-node DaemonSet is created,
-// we need to set the cilium-agent's cni-exclusive setting to "false" to avoid writing conflicts to the /etc/cni/net.d/*.conflist file.
+	"github.com/deckhouse/deckhouse/go_lib/set"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/cni-cilium/set-exclusive",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "sdn-cni-daemonset",
+			Name:       "istio-cni-daemonset",
 			ApiVersion: "apps/v1",
 			Kind:       "DaemonSet",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"sdn-agent"},
+				MatchNames: []string{"istio-cni-node"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-sdn"},
+					MatchNames: []string{"d8-istio"},
 				},
 			},
-			FilterFunc: daemonsetSdnFilter,
+			FilterFunc: daemonsetFilter,
 		},
 	},
-}, discoveryIsSdnCNIEnabled)
+}, discoveryIsExclusiveCNIPluginEnabled)
 
-func daemonsetSdnFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
 }
 
-func discoveryIsSdnCNIEnabled(input *go_hook.HookInput) error {
-	sdnDaemonSets := input.NewSnapshots.Get("sdn-cni-daemonset")
-	isSdnEnabled := len(sdnDaemonSets) != 0
-	input.Values.Set("cniCilium.internal.isIstioCNIEnabled", isSdnEnabled)
+func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
+	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
+	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
+	isEnabled := len(istioCniDaemonSets) != 0 || enabledModules.Has("sdn")
+	input.Values.Set("cniCilium.discovery.exclusiveCNIPlugin", isEnabled)
 	return nil
 }
