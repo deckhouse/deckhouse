@@ -47,4 +47,5 @@ locals {
   additional_security_groups = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
   zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", data.aws_availability_zones.available.names)
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup, "additionalTags", {}))
+  disable_default_sg       = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
 }
