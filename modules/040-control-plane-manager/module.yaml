@@ -5,3 +5,5 @@ subsystems:
   - kubernetes
 namespace: kube-system
 stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"
