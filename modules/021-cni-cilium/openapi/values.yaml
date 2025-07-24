@@ -2,6 +2,15 @@ x-extend:
   schema: config-values.yaml
 type: object
 properties:
+  discovery:
+    type: object
+    default: {}
+    properties:
+      exclusiveCNIPlugin:
+        type: boolean
+        default: false
+        description: |
+          The switch indicates whether cni-exclusive feature of cilium agent must be enabled in the cluster.
   internal:
     type: object
     default: {}
