@@ -118,19 +118,6 @@ spec:
           readOnly: true
           mountPath: /host/textfile-kubelet-eviction-thresholds-exporter
           mountPropagation: HostToContainer
-        livenessProbe:
-          failureThreshold: 6
-          initialDelaySeconds: 120
-          timeoutSeconds: 5
-          tcpSocket:
-            port: 4206
-        readinessProbe:
-          failureThreshold: 6
-          initialDelaySeconds: 30
-          timeoutSeconds: 5
-          httpGet:
-            path: /
-            port: 4206
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

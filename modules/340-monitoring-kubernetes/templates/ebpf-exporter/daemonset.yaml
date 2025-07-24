@@ -84,16 +84,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "ebpf_exporter_resources" . | nindent 12 }}
 {{- end }}
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 4205
-            scheme: HTTPS
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 4205
-            scheme: HTTPS
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -110,8 +100,6 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
-            - /
             upstreams:
             - upstream: http://127.0.0.1:9435/metrics
               path: /metrics
