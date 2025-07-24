@@ -3,7 +3,7 @@ title: "Webhooks"
 menuTitle: Webhooks
 force_searchable: true
 description: Webhooks
-permalink: ru/code/documentation/user/web-hooks.html
+permalink: en/code/documentation/user/web-hooks.html
 lang: en
 weight: 50
 ---

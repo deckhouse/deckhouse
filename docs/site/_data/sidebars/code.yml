@@ -85,5 +85,5 @@ entries:
         url: /code/documentation/user/group-wiki.html
       - title:
           en: Webhooks
-          ru: Веб-хуки
+          ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
