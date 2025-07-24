@@ -319,4 +319,3 @@ func TestState_Process(t *testing.T) {
 		})
 	}
 }
-

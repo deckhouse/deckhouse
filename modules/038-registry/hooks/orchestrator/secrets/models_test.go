@@ -45,4 +45,4 @@ func TestState_Process(t *testing.T) {
 		assert.NotEmpty(t, state.HTTP)
 		assert.NotEqual(t, "   ", state.HTTP, "Whitespace secret should be replaced")
 	})
-} 
+}

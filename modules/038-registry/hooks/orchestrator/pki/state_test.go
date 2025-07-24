@@ -113,4 +113,4 @@ func TestState_Process(t *testing.T) {
 		// State should be updated with the new token
 		assert.NotEqual(t, invalidTokenModel, state.Token)
 	})
-} 
+}

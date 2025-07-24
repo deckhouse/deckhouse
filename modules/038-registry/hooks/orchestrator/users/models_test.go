@@ -94,4 +94,4 @@ func TestProcessUser(t *testing.T) {
 		require.NotEmpty(t, user.Password)
 		assert.True(t, user.IsPasswordHashValid())
 	})
-} 
+}
