@@ -36,7 +36,7 @@ resource "aws_security_group_rule" "lb-to-node" {
   protocol                 = "-1"
   from_port                = 0
   to_port                  = 65535
-  security_group_id        = aws_security_group.node.id
+  security_group_id        = aws_security_group.node[0].id
   source_security_group_id = aws_security_group.loadbalancer[0].id
 }
 
@@ -46,8 +46,8 @@ resource "aws_security_group_rule" "node-to-node" {
   protocol                 = "-1"
   from_port                = 0
   to_port                  = 65535
-  security_group_id        = aws_security_group.node.id
-  source_security_group_id = aws_security_group.node.id
+  security_group_id        = aws_security_group.node[0].id
+  source_security_group_id = aws_security_group.node[0].id
 }
 
 resource "aws_security_group_rule" "to-node-icmp" {
@@ -57,7 +57,7 @@ resource "aws_security_group_rule" "to-node-icmp" {
   to_port           = -1
   protocol          = "icmp"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.node.id
+  security_group_id = aws_security_group.node[0].id
 }
 
 resource "aws_security_group" "loadbalancer" {
@@ -84,7 +84,7 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
   from_port                = 0
   to_port                  = 65535
   security_group_id        = aws_security_group.loadbalancer[0].id
-  source_security_group_id = aws_security_group.node.id
+  source_security_group_id = aws_security_group.node[0].id
 }
 
 resource "aws_security_group" "ssh-accessible" {
@@ -101,5 +101,5 @@ resource "aws_security_group_rule" "allow-ssh-for-everyone" {
   to_port           = 22
   protocol          = "tcp"
   cidr_blocks       = var.ssh_allow_list
-  security_group_id = aws_security_group.ssh-accessible.id
+  security_group_id = aws_security_group.ssh-accessible[0].id
 }
