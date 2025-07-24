@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -30,7 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyL2LBServiceFilter,
 		},
 	},
-}, handleL2LBServices)
+}, dependency.WithExternalDependencies(handleL2LBServices))
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var l2LBService SDNInternalL2LBService
@@ -52,7 +54,7 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func handleL2LBServices(input *go_hook.HookInput) error {
+func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error {
 	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
@@ -65,25 +67,34 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 			assignedIPs++
 			IPsForStatus = append(IPsForStatus, map[string]string{"ip": ip})
 		}
+
+		k8sClient, err := dc.GetK8sClient()
+		if err != nil {
+			return err
+		}
+		service, err := k8sClient.CoreV1().Services(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
 		conditionStatus := metav1.ConditionFalse
 		reason := "NotAllIPsAssigned"
 		if totalIPs == assignedIPs {
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
+		conditions := append(service.Status.Conditions, metav1.Condition{
+			Status:  conditionStatus,
+			Type:    "AllPublicIPsAssigned",
+			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
+			Reason:  reason,
+		})
 		patch := map[string]any{
 			"status": map[string]any{
 				"loadBalancer": map[string]any{
 					"ingress": IPsForStatus,
 				},
-				"conditions": []metav1.Condition{
-					{
-						Status:  conditionStatus,
-						Type:    "AllPublicIPsAssigned",
-						Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
-						Reason:  reason,
-					},
-				},
+				"conditions": conditions,
 			},
 		}
 
