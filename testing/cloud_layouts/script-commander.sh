@@ -233,7 +233,7 @@ function prepare_environment() {
 
   "vSphere")
     ssh_user="redos"
-    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
+    cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
