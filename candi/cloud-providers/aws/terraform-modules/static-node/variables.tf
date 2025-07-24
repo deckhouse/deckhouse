@@ -16,6 +16,11 @@ variable "prefix" {
   type = string
 }
 
+variable "disable_default_security_group" {
+  type = bool
+  default = false
+}
+
 variable "cluster_uuid" {
   type = string
 }
