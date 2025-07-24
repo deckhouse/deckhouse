@@ -146,6 +146,7 @@ func moduleConfigValidationHandler(
 			}
 
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
+				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
 						if !strings.HasSuffix(reason, ".") {
