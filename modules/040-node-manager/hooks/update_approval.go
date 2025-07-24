@@ -38,79 +38,6 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-var (
-	approvedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             "",
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-			},
-		},
-	}
-	disruptionApprovedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/disruption-approved": "",
-				"update.node.deckhouse.io/disruption-required": nil,
-			},
-		},
-	}
-	cleanupPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             nil,
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-				"update.node.deckhouse.io/disruption-required":  nil,
-				"update.node.deckhouse.io/disruption-approved":  nil,
-				drainedAnnotationKey:                            nil,
-			},
-		},
-	}
-	drainedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				drainingAnnotationKey: "bashible",
-			},
-		},
-	}
-)
-
-type updateApprovalNode struct {
-	Name      string
-	NodeGroup string
-
-	ConfigurationChecksum string
-
-	IsReady              bool
-	IsApproved           bool
-	IsDisruptionApproved bool
-	IsWaitingForApproval bool
-
-	IsDisruptionRequired bool
-	IsUnschedulable      bool
-	IsDraining           bool
-	IsDrained            bool
-	IsRollingUpdate      bool
-}
-
-type updateNodeGroup struct {
-	Name        string
-	NodeType    ngv1.NodeType
-	Disruptions ngv1.Disruptions
-	Status      ngv1.NodeGroupStatus
-
-	Concurrency *intstr.IntOrString
-}
-
-type updateApprover struct {
-	finished bool
-
-	ngChecksums       shared.ConfigurationChecksum
-	nodes             map[string]updateApprovalNode
-	nodeGroups        map[string]updateNodeGroup
-	deckhouseNodeName string
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
 		ExecutionMinInterval: 5 * time.Second,
@@ -206,6 +133,15 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+type updateApprover struct {
+	finished bool
+
+	ngChecksums       shared.ConfigurationChecksum
+	nodes             map[string]updateApprovalNode
+	nodeGroups        map[string]updateNodeGroup
+	deckhouseNodeName string
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
@@ -333,6 +269,17 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 	return nil
 }
 
+var (
+	approvedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             "",
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+			},
+		},
+	}
+)
+
 func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
 	// we can not drain single control-plane node because deckhouse webhook will evict
 	// and deckhouse will malfunction and drain single node does not matter we always reboot
@@ -410,15 +357,37 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		switch {
 		case !drainBeforeApproval:
 			// Skip draining if it's disabled in the NodeGroup
-			patch = disruptionApprovedPatch
+			patch = map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						"update.node.deckhouse.io/disruption-approved": "",
+						"update.node.deckhouse.io/disruption-required": nil,
+					},
+				},
+			}
 			metricStatus = "DisruptionApproved"
+
 		case !node.IsUnschedulable:
 			// If node is not unschedulable – mark it for draining
-			patch = drainedPatch
+			patch = map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						drainingAnnotationKey: "bashible",
+					},
+				},
+			}
 			metricStatus = "DrainingForDisruption"
+
 		default:
 			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
-			patch = disruptionApprovedPatch
+			patch = map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						"update.node.deckhouse.io/disruption-approved": "",
+						"update.node.deckhouse.io/disruption-required": nil,
+					},
+				},
+			}
 			metricStatus = "DisruptionApproved"
 		}
 
@@ -460,12 +429,21 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 			continue
 		}
 
-		patch := cleanupPatch
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					"update.node.deckhouse.io/approved":             nil,
+					"update.node.deckhouse.io/waiting-for-approval": nil,
+					"update.node.deckhouse.io/disruption-required":  nil,
+					"update.node.deckhouse.io/disruption-approved":  nil,
+					drainedAnnotationKey:                            nil,
+				},
+			},
+		}
 		if node.IsDrained {
-			input.Logger.Info(fmt.Sprintf("processUpdatedNodes unschedulable patch: %+v", node.IsDrained), "node", node.Name, "ng", ngName)
-			// 	patch["spec"] = map[string]interface{}{
-			// 		"unschedulable": nil,
-			// 	}
+			patch["spec"] = map[string]interface{}{
+				"unschedulable": nil,
+			}
 		}
 		input.Logger.Info(fmt.Sprintf("processUpdatedNodes patch: %s", patch), "node", node.Name, "ng", ngName)
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
@@ -474,6 +452,33 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+type updateApprovalNode struct {
+	Name      string
+	NodeGroup string
+
+	ConfigurationChecksum string
+
+	IsReady              bool
+	IsApproved           bool
+	IsDisruptionApproved bool
+	IsWaitingForApproval bool
+
+	IsDisruptionRequired bool
+	IsUnschedulable      bool
+	IsDraining           bool
+	IsDrained            bool
+	IsRollingUpdate      bool
+}
+
+type updateNodeGroup struct {
+	Name        string
+	NodeType    ngv1.NodeType
+	Disruptions ngv1.Disruptions
+	Status      ngv1.NodeGroupStatus
+
+	Concurrency *intstr.IntOrString
 }
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -545,7 +550,8 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v != "user" {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -559,7 +565,8 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v != "user" {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
 		isDrained = true
 	}
 
