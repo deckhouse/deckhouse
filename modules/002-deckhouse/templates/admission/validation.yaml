@@ -67,10 +67,6 @@ webhooks:
         operations:
           - CREATE
           - UPDATE
-    matchConditions:
-      - name: has-default-annotation
-        expression: >-
-          object.metadata.annotations['modules.deckhouse.io/default-source'] == 'true'
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
