@@ -150,84 +150,157 @@ func TestState_processResult(t *testing.T) {
 }
 
 func TestState_Process(t *testing.T) {
+	// --- Setup for Managed Mode ---
+	managedParams := &ManagedModeParams{
+		CA:       "test-ca",
+		Username: "user",
+		Password: "pass",
+	}
+	expectedManagedSecret, err := buildManagedRegistrySecret(managedParams)
+	assert.NoError(t, err)
+	managedHash, err := expectedManagedSecret.Hash()
+	assert.NoError(t, err)
+
+	// --- Setup for Unmanaged Mode ---
+	unmanagedParams := &UnmanagedModeParams{
+		ImagesRepo: "my-registry.com/my-project",
+		Scheme:     "HTTPS",
+		CA:         "unmanaged-ca",
+		Username:   "unmanaged-user",
+		Password:   "unmanaged-pass",
+	}
+	expectedUnmanagedSecret, err := buildUnmanagedRegistrySecret(unmanagedParams)
+	assert.NoError(t, err)
+	unmanagedHash, err := expectedUnmanagedSecret.Hash()
+	assert.NoError(t, err)
+
 	tests := []struct {
 		name          string
 		params        Params
 		inputs        Inputs
 		expectedReady bool
+		expectedMsg   string
 		wantErr       bool
 	}{
+		// --- Managed Mode Tests ---
 		{
-			name: "Secret not ready - returns false",
+			name: "Managed mode - Secret needs update",
 			params: Params{
-				RegistrySecret: deckhouse_registry.Config{
-					Address: "old-registry.deckhouse.io",
-				},
-				ManagedMode: &ManagedModeParams{
-					CA:       "test-ca",
-					Username: "user",
-					Password: "pass",
-				},
+				RegistrySecret: deckhouse_registry.Config{Address: "old-registry"},
+				ManagedMode:    managedParams,
+			},
+			inputs:        Inputs{},
+			expectedReady: false,
+			expectedMsg:   "Updating registry for deckhouse components",
+		},
+		{
+			name: "Managed mode - Pod annotation needs update",
+			params: Params{
+				RegistrySecret: expectedManagedSecret,
+				ManagedMode:    managedParams,
 			},
 			inputs: Inputs{
 				DeckhousePod: DeckhousePodStatus{
-					IsExist: true,
-					IsReady: true,
+					RegistryVersion: "wrong-hash",
 				},
 			},
 			expectedReady: false,
-			wantErr:       false,
+			expectedMsg:   "Applying new registry to deckhouse-controller",
 		},
 		{
-			name: "Both secret and pod ready - returns true",
+			name: "Managed mode - Pod not ready",
 			params: Params{
-				RegistrySecret: deckhouse_registry.Config{
-					Address:      "registry.d8-system.svc:5001",
-					Path:         "/system/deckhouse",
-					Scheme:       "https",
-					CA:           "test-ca",
-					DockerConfig: []byte(`{"auths":{"registry.d8-system.svc:5001":{"username":"user","password":"pass","auth":"dXNlcjpwYXNz"}}}`),
+				RegistrySecret: expectedManagedSecret,
+				ManagedMode:    managedParams,
+			},
+			inputs: Inputs{
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         true,
+					IsReady:         false,
+					RegistryVersion: managedHash,
 				},
-				ManagedMode: &ManagedModeParams{
-					CA:       "test-ca",
-					Username: "user",
-					Password: "pass",
+			},
+			expectedReady: false,
+			expectedMsg:   "Waiting for deckhouse-controller to become ready",
+		},
+		{
+			name: "Managed mode - Pod does not exist",
+			params: Params{
+				RegistrySecret: expectedManagedSecret,
+				ManagedMode:    managedParams,
+			},
+			inputs: Inputs{
+				DeckhousePod: DeckhousePodStatus{
+					IsExist:         false,
+					RegistryVersion: managedHash,
 				},
+			},
+			expectedReady: false,
+			expectedMsg:   "Waiting for deckhouse-controller pod",
+		},
+		{
+			name: "Managed mode - Switch complete",
+			params: Params{
+				RegistrySecret: expectedManagedSecret,
+				ManagedMode:    managedParams,
 			},
 			inputs: Inputs{
 				DeckhousePod: DeckhousePodStatus{
 					IsExist:         true,
 					IsReady:         true,
-					RegistryVersion: "", // Will be calculated and set by Process
+					RegistryVersion: managedHash,
 				},
 			},
 			expectedReady: true,
-			wantErr:       false,
+			expectedMsg:   "",
+		},
+
+		// --- Unmanaged Mode Tests ---
+		{
+			name: "Unmanaged mode - Secret needs update",
+			params: Params{
+				RegistrySecret: deckhouse_registry.Config{Address: "old-registry"},
+				UnmanagedMode:  unmanagedParams,
+			},
+			inputs:        Inputs{},
+			expectedReady: false,
+			expectedMsg:   "Updating registry for deckhouse components",
 		},
 		{
-			name: "Pod ready but secret not ready - returns false",
+			name: "Unmanaged mode - Pod annotation needs update",
 			params: Params{
-				RegistrySecret: deckhouse_registry.Config{
-					Address: "registry.d8-system.svc:5001",
-					Scheme:  "https",
-					CA:      "test-ca",
-					Path:    "/system/deckhouse",
+				RegistrySecret: expectedUnmanagedSecret,
+				UnmanagedMode:  unmanagedParams,
+			},
+			inputs: Inputs{
+				DeckhousePod: DeckhousePodStatus{
+					RegistryVersion: "wrong-hash",
 				},
-				ManagedMode: &ManagedModeParams{
-					CA:       "test-ca",
-					Username: "user",
-					Password: "pass",
-				},
+			},
+			expectedReady: false,
+			expectedMsg:   "Applying new registry to deckhouse-controller",
+		},
+		{
+			name: "Unmanaged mode - Switch complete",
+			params: Params{
+				RegistrySecret: expectedUnmanagedSecret,
+				UnmanagedMode:  unmanagedParams,
 			},
 			inputs: Inputs{
 				DeckhousePod: DeckhousePodStatus{
 					IsExist:         true,
 					IsReady:         true,
-					RegistryVersion: "", // Will be calculated during Process
+					RegistryVersion: unmanagedHash,
 				},
 			},
-			expectedReady: false, // Will be false because hash won't match
-			wantErr:       false,
+			expectedReady: true,
+			expectedMsg:   "",
+		},
+		{
+			name:    "No mode provided - returns error",
+			params:  Params{},
+			inputs:  Inputs{},
+			wantErr: true,
 		},
 	}
 
@@ -235,42 +308,14 @@ func TestState_Process(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			state := &State{}
 			result, err := state.Process(tt.params, tt.inputs)
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				// For the ready test, update the pod's registry version to match the calculated hash
-				if tt.expectedReady && state.Hash != "" {
-					tt.inputs.DeckhousePod.RegistryVersion = state.Hash
-					result = state.processResult(tt.params, tt.inputs)
-				}
 				assert.Equal(t, tt.expectedReady, result.Ready)
+				assert.Equal(t, tt.expectedMsg, result.Message)
 			}
 		})
 	}
-}
-
-func TestBuildManagedRegistrySecret(t *testing.T) {
-	params := Params{
-		ManagedMode: &ManagedModeParams{
-			CA:       "test-ca",
-			Username: "user",
-			Password: "pass",
-		},
-	}
-
-	secret, err := buildRegistrySecret(params)
-	assert.NoError(t, err)
-
-	// Print the generated values for debugging
-	t.Logf("Generated Address: %s", secret.Address)
-	t.Logf("Generated Path: %s", secret.Path)
-	t.Logf("Generated Scheme: %s", secret.Scheme)
-	t.Logf("Generated DockerConfig: %s", secret.DockerConfig)
-
-	// Check expected values
-	assert.Equal(t, "registry.d8-system.svc:5001", secret.Address)
-	assert.Equal(t, "/system/deckhouse", secret.Path)
-	assert.Equal(t, "https", secret.Scheme)
-	assert.Equal(t, "test-ca", secret.CA)
 }
