@@ -59,7 +59,7 @@ resource "aws_volume_attachment" "kubernetes_data" {
 }
 
 data "aws_security_group" "ssh-accessible" {
-  count = var.disable_default_security_group ? 0 : 1
+  count = (!var.disable_default_security_group || length(var.ssh_allow_list) > 0) && var.associate_ssh_accessible_sg ? 1 : 0
   name = "${var.prefix}-ssh-accessible"
 }
 
@@ -69,8 +69,11 @@ data "aws_security_group" "node" {
 }
 
 locals {
-  base_security_groups = var.disable_default_security_group ? [] : (
-    var.associate_ssh_accessible_sg ? [data.aws_security_group.ssh-accessible[0].id, data.aws_security_group.node[0].id] : [data.aws_security_group.node[0].id]
+  base_security_groups = concat(
+    var.disable_default_security_group ? [] : [data.aws_security_group.node[0].id],
+    (!var.disable_default_security_group || length(var.ssh_allow_list) > 0) && var.associate_ssh_accessible_sg
+      ? [data.aws_security_group.ssh-accessible[0].id]
+      : []
   )
   }
 

@@ -27,4 +27,5 @@ module "master-node" {
   tags = local.tags
   resourceManagementTimeout = var.resourceManagementTimeout
   disable_default_security_group = local.disable_default_sg
+  ssh_allow_list = local.ssh_allow_list
 }

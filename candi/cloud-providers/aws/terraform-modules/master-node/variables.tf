@@ -21,6 +21,10 @@ variable "disable_default_security_group" {
   default = false
 }
 
+variable "ssh_allow_list" {
+  type = any
+}
+
 variable "cluster_uuid" {
   type = string
 }

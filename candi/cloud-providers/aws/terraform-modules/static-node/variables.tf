@@ -25,6 +25,10 @@ variable "cluster_uuid" {
   type = string
 }
 
+variable "ssh_allow_list" {
+  type = any
+}
+
 variable "node_group" {
   type = any
 }
