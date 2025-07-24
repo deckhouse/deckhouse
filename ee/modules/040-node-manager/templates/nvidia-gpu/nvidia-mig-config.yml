@@ -679,7 +679,7 @@ data:
       # Drain the node after confirming approval
       attempt=0
       until
-        kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
+        kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=nvidia-mig
       do
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then

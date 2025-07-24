@@ -223,7 +223,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		countToApprove := concurrency - currentUpdates
 		input.Logger.Info(fmt.Sprintf("countToApprove: %d", countToApprove), "ng", ng.Name)
 
-		approvedNodeNames := make(map[string]struct{}, countToApprove)
+		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
@@ -239,9 +239,9 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
-						approvedNodeNames[ngn.Name] = struct{}{}
-						input.Logger.Info(fmt.Sprintf("allReady approvedNodeNames: %s", ngn.Name), "ng", ng.Name)
-						if len(approvedNodeNames) == countToApprove {
+						approvedNodes = append(approvedNodes, ngn)
+						input.Logger.Info(fmt.Sprintf("allReady approvedNode: %s", ngn.Name), "ng", ng.Name)
+						if len(approvedNodes) == countToApprove {
 							break
 						}
 					}
@@ -249,27 +249,31 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			}
 		}
 
-		if len(approvedNodeNames) < countToApprove {
+		if len(approvedNodes) < countToApprove {
 			//    Allow one of not ready nodes, if any
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady && ngn.IsWaitingForApproval {
-					approvedNodeNames[ngn.Name] = struct{}{}
-					input.Logger.Info(fmt.Sprintf("!ngn.IsReady approvedNodeNames: %s", ngn.Name), "ng", ng.Name)
-					if len(approvedNodeNames) == countToApprove {
+					approvedNodes = append(approvedNodes, ngn)
+					input.Logger.Info(fmt.Sprintf("!ngn.IsReady approvedNode: %s", ngn.Name), "ng", ng.Name)
+					if len(approvedNodes) == countToApprove {
 						break
 					}
 				}
 			}
 		}
 
-		if len(approvedNodeNames) == 0 {
+		if len(approvedNodes) == 0 {
 			continue
 		}
 
-		for approvedNodeName := range approvedNodeNames {
+		for _, approvedNodeName := range approvedNodes {
 			input.Logger.Info("Node approvedPatch", "node", approvedNodeName, "ng", ng.Name)
-			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
-			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
+			patch := approvedPatch
+			if approvedNodeName.IsDisruptionApproved {
+				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-controler"
+			}
+			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNodeName.Name)
+			setNodeStatusesMetrics(input, approvedNodeName.Name, ng.Name, "Approved")
 		}
 
 		ar.finished = true
@@ -292,6 +296,24 @@ var (
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/disruption-approved": "",
 				"update.node.deckhouse.io/disruption-required": nil,
+			},
+		},
+	}
+	cleanupPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             nil,
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+				"update.node.deckhouse.io/disruption-required":  nil,
+				"update.node.deckhouse.io/disruption-approved":  nil,
+				drainedAnnotationKey:                            nil,
+			},
+		},
+	}
+	drainedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainingAnnotationKey: "deckhouse-controler",
 			},
 		},
 	}
@@ -373,18 +395,10 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			// Skip draining if it's disabled in the NodeGroup
 			patch = disruptionApprovedPatch
 			metricStatus = "DisruptionApproved"
-
 		case !node.IsUnschedulable:
 			// If node is not unschedulable – mark it for draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						drainingAnnotationKey: "bashible",
-					},
-				},
-			}
+			patch = drainedPatch
 			metricStatus = "DrainingForDisruption"
-
 		default:
 			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
 			patch = disruptionApprovedPatch
@@ -429,17 +443,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 			continue
 		}
 
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"update.node.deckhouse.io/approved":             nil,
-					"update.node.deckhouse.io/waiting-for-approval": nil,
-					"update.node.deckhouse.io/disruption-required":  nil,
-					"update.node.deckhouse.io/disruption-approved":  nil,
-					drainedAnnotationKey:                            nil,
-				},
-			},
-		}
+		patch := cleanupPatch
 		if node.IsDrained {
 			patch["spec"] = map[string]interface{}{
 				"unschedulable": nil,
