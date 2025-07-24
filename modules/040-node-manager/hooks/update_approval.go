@@ -270,7 +270,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			input.Logger.Info("Node approvedPatch", "node", approvedNodeName, "ng", ng.Name)
 			patch := approvedPatch
 			if approvedNodeName.IsDisruptionApproved {
-				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-controller"
+				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-approve"
 			}
 			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNodeName.Name)
 			setNodeStatusesMetrics(input, approvedNodeName.Name, ng.Name, "Approved")
@@ -313,7 +313,7 @@ var (
 	drainedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				drainingAnnotationKey: "deckhouse-controller",
+				drainingAnnotationKey: "deckhouse-IsUnschedulable",
 			},
 		},
 	}
