@@ -45,11 +45,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Queue: "/modules/node-manager/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
-		// snapshot: "configuration_checksums_secret"
-		// api: "v1",
-		// kind: "Secret",
-		// ns: "d8-cloud-instance-manager"
-		// name: "configuration-checksums"
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
@@ -193,7 +188,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		concurrency := calculateConcurrency(ng.Concurrency, len(nodeGroupNodes))
-		input.Logger.Info(fmt.Sprintf("approveUpdates concurrency: %d", concurrency), "ng", ng.Name)
 
 		var hasWaitingForApproval bool
 
@@ -210,19 +204,15 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		// Skip ng, if maxConcurrent is already reached
 		if currentUpdates >= concurrency {
-			input.Logger.Info(fmt.Sprintf("approveUpdates currentUpdates >= concurrency: %d >= %d", currentUpdates, concurrency), "ng", ng.Name)
 			continue
 		}
 
 		// Skip ng, if it has no waiting nodes
 		if !hasWaitingForApproval {
-			input.Logger.Info("approveUpdates !hasWaitingForApproval", "ng", ng.Name, "hasWaitingForApproval", hasWaitingForApproval)
 			continue
 		}
 
 		countToApprove := concurrency - currentUpdates
-		input.Logger.Info(fmt.Sprintf("approveUpdates countToApprove: %d", countToApprove), "ng", ng.Name)
-
 		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
@@ -234,7 +224,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 					break
 				}
 			}
-			input.Logger.Info(fmt.Sprintf("approveUpdates allReady: %+v", allReady), "ng", ng.Name)
 
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
@@ -396,10 +385,10 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			// Skip draining if it's disabled in the NodeGroup
 			patch = disruptionApprovedPatch
 			metricStatus = "DisruptionApproved"
-		case !node.IsUnschedulable:
-			// If node is not unschedulable – mark it for draining
-			patch = drainedPatch
-			metricStatus = "DrainingForDisruption"
+		// case !node.IsUnschedulable:
+		// 	// If node is not unschedulable – mark it for draining
+		// 	patch = drainedPatch
+		// 	metricStatus = "DrainingForDisruption"
 		default:
 			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
 			patch = disruptionApprovedPatch
@@ -446,9 +435,10 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 
 		patch := cleanupPatch
 		if node.IsDrained {
-			patch["spec"] = map[string]interface{}{
-				"unschedulable": nil,
-			}
+			input.Logger.Info(fmt.Sprintf("processUpdatedNodes unschedulable patch: %+v", node.IsDrained), "node", node.Name, "ng", ngName)
+			// 	patch["spec"] = map[string]interface{}{
+			// 		"unschedulable": nil,
+			// 	}
 		}
 		input.Logger.Info(fmt.Sprintf("processUpdatedNodes patch: %s", patch), "node", node.Name, "ng", ngName)
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
@@ -555,8 +545,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v != "user" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -570,8 +559,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v != "user" {
 		isDrained = true
 	}
 
