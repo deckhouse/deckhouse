@@ -26,6 +26,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -40,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
-	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -107,7 +107,7 @@ func setupControllerSettings(
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack(&d8edition.Edition{}, nil, log.NewNop()),
+		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

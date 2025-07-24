@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
@@ -54,7 +55,6 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
-	"github.com/deckhouse/deckhouse/go_lib/d8edition"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -646,7 +646,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersStack(&d8edition.Edition{}, nil, log.NewNop()),
+		exts:           extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	for _, option := range options {
