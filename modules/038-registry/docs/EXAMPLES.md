@@ -14,6 +14,20 @@ To switch an already running cluster to `Direct` mode, follow these steps:
 
 1. If the cluster is running with `Containerd V1`, [you need to prepare custom containerd configuration](./faq.html#how-to-prepare-containerd-v1).
 
+1. Make sure all `master` nodes are in the `Ready` state and do not have the `SchedulingDisabled` status.
+
+   ```bash
+   kubectl get nodes
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+
+   # Example output with `SchedulingDisabled`:
+   # NAME       STATUS                      ROLES                 ...
+   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
+
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
     ```bash
@@ -69,6 +83,20 @@ Switching to the `Unmanaged` mode is only available from `Direct` mode. Registry
 {% endalert %}
 
 To switch the cluster to `Unmanaged` mode, follow these steps:
+
+1. Make sure all `master` nodes are in the `Ready` state and do not have the `SchedulingDisabled` status.
+
+   ```bash
+   kubectl get nodes
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+
+   # Example output with `SchedulingDisabled`:
+   # NAME       STATUS                      ROLES                 ...
+   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
 
 1. Ensure that the `registry` module is running in `Direct` mode and the switch status to `Direct` is `Ready`. You can verify the state via the `registry-state` secret using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
 

@@ -14,6 +14,20 @@ description: ""
 
 1. Если кластер запущен с `Containerd V1`, [подготовьте пользовательские конфигурации containerd](./faq.html#как-подготовить-containerd-v1).
 
+1. Убедитесь, что все `master` ноды находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+
+   ```bash
+   kubectl get nodes
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+
+   # Пример вывода `SchedulingDisabled`:
+   # NAME       STATUS                      ROLES                 ...
+   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
+
 1. Убедитесь, что модуль `registry` включен и работает. Для этого выполните следующую команду:
 
     ```bash
@@ -69,6 +83,20 @@ description: ""
 {% endalert %}
 
 Для переключения кластера на режим `Unmanaged` выполните следующие шаги:
+
+1. Убедитесь, что все `master` ноды находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+
+   ```bash
+   kubectl get nodes
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+
+   # Пример вывода `SchedulingDisabled`:
+   # NAME       STATUS                      ROLES                 ...
+   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
 
 1. Убедитесь, что модуль `registry` запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
