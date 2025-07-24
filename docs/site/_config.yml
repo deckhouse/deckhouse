@@ -199,6 +199,6 @@ defaults:
       path: "*/038-registry"
       type: "pages"
     values:
-      featureStatus: experimental
+      featureStatus: preview
 timezone: Europe/Moscow
 

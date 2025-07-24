@@ -1,7 +1,7 @@
 name: registry
 critical: true
 weight: 38
-stage: Experimental
+stage: Preview
 subsystems:
   - deckhouse
   - infrastructure
