@@ -274,6 +274,6 @@ properties:
     type: boolean
     x-examples: [false]
     description: |
-      Allow the enable of Deckhouse experimental modules.
+      Allows enabling Deckhouse experimental modules.
        
       Experimental modules can be unstable and are not supported under the Deckhouse SLA. Use them with caution.
