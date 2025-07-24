@@ -65,10 +65,10 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 	var found bool
 	defer func(found *bool) {
 		var value float64
-		if *found {
+		if !*found {
 			value = 1.0
 		}
-		input.MetricsCollector.Set("d8_edition_found", value, nil)
+		input.MetricsCollector.Set("d8_edition_not_found", value, nil)
 	}(&found)
 
 	// check moduleConfig spec.settings.licence.edition

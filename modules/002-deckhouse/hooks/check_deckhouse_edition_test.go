@@ -68,8 +68,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).ToNot(BeEmpty())
 			for _, m := range metrics {
-				if m.Name == "d8_edition_found" {
-					Expect(*m.Value).To(Equal(0.0))
+				if m.Name == "d8_edition_not_found" {
+					Expect(*m.Value).To(Equal(1.0))
 				}
 			}
 		})
@@ -87,8 +87,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).ToNot(BeEmpty())
 			for _, m := range metrics {
-				if m.Name == "d8_edition_found" {
-					Expect(*m.Value).To(Equal(1.0))
+				if m.Name == "d8_edition_not_found" {
+					Expect(*m.Value).To(Equal(0.0))
 				}
 			}
 		})
@@ -108,8 +108,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).ToNot(BeEmpty())
 			for _, m := range metrics {
-				if m.Name == "d8_edition_found" {
-					Expect(*m.Value).To(Equal(1.0))
+				if m.Name == "d8_edition_not_found" {
+					Expect(*m.Value).To(Equal(0.0))
 				}
 			}
 		})
@@ -131,8 +131,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).ToNot(BeEmpty())
 			for _, m := range metrics {
-				if m.Name == "d8_edition_found" {
-					Expect(*m.Value).To(Equal(1.0))
+				if m.Name == "d8_edition_not_found" {
+					Expect(*m.Value).To(Equal(0.0))
 				}
 			}
 		})
