@@ -3,7 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
   name: v1.50.0
+  resourceVersion: "1000"
 spec:
   version: v1.50.0
   requirements:
-    migratedModules: ""
+    migratedModules: null
