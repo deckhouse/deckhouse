@@ -393,7 +393,7 @@ module.exports.checkLabel = checkLabel;
  * @returns {Promise<void|*>}
  */
 const removeLabel = async ({ github, context, core, issue_number, label }) => {
-  core.startGroup(`Remove label '${label}' from ${context.payload.pull_request ? 'PR' : 'issue'} #${issue_number} ...`);
+  core.startGroup(`Remove label '${label}' from issue ${issue_number} ...`);
   try {
     const response = await github.rest.issues.removeLabel({
       owner: context.repo.owner,
