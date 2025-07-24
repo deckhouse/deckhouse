@@ -298,13 +298,13 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
 `
 
-	Context("Not include controller with deletion timestamp", func() {
+	Context("A controller with deletion timestamp", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(IngressNginxControllerWithDeletionTomeStamp))
 			f.RunGoHook()
 		})
 
-		It("should controller absent", func() {
+		It("controller has to be excluded from internal.ingressControllers", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).Should(BeEmpty())
 		})
