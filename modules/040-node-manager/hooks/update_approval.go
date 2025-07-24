@@ -38,13 +38,6 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-// const (
-// 	drainingAnnotationKey = "update.node.deckhouse.io/draining"
-// 	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
-// 	nodeGroupLabel        = "node.deckhouse.io/group"
-// 	defaultDrainTimeout   = 10 * time.Minute
-// )
-
 var (
 	approvedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -76,7 +69,7 @@ var (
 	drainedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				drainingAnnotationKey: "deckhouse-IsUnschedulable",
+				drainingAnnotationKey: "bashible",
 			},
 		},
 	}
@@ -327,7 +320,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			patch := approvedPatch
 			// if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
 			// 	input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
-			// 	patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-approve"
+			// 	patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "bashible"
 			// }
 			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", patch), "node", approvedNode.Name, "ng", ng.Name)
 			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
