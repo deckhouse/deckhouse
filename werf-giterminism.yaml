@@ -12,6 +12,9 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
@@ -23,6 +26,9 @@ config:
       - CLOUD_PROVIDERS_SOURCE_REPO
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
   stapel:
     mount:
       allowBuildDir: true
