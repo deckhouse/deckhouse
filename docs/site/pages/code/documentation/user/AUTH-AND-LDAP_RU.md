@@ -11,7 +11,7 @@ weight: 45
 
 ## Конфигурация OmniAuth
 
-Deckhouse Code поддерживает настройку OmniAuth согласно [официальной документации](https://docs.gitlab.com/integration/omniauth/). При этом реализованы дополнительные возможности, описанные ниже.
+Deckhouse Code поддерживает настройку OmniAuth согласно [официальной документации GitLab](https://docs.gitlab.com/integration/omniauth/). При этом реализованы дополнительные возможности, описанные ниже.
 
 ### OpenID Connect (OIDC)
 

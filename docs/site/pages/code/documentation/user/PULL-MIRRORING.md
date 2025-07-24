@@ -15,7 +15,7 @@ If the repository is empty, import it first. All hooks are triggered during mirr
 
 1. Go to the project page:
 
-   - Open your project in the GitLab interface.  
+   - Open your project in the Deckhouse Code interface.  
    - In the left-hand menu, select "Settings" → "Repository".  
    - Scroll down to the "Mirroring repositories" section.
 
@@ -27,11 +27,11 @@ If the repository is empty, import it first. All hooks are triggered during mirr
    - Provide the following:  
       - "Username" — your username;  
       - "Password" — your password or access token.  
-   - If using SSH mirroring, specify the username (typically `git`). After saving the configuration, GitLab will generate an SSH key to be used for access.
+   - If using SSH mirroring, specify the username (typically `git`). After saving the configuration, Deckhouse Code will generate an SSH key to be used for access.
 
 ### LFS (Large File Storage) specifics
 
-When using pull mirroring, LFS objects will be fetched **only** if LFS is enabled in the target GitLab project:
+When using pull mirroring, LFS objects will be fetched **only** if LFS is enabled in the target Deckhouse Code project:
 
 - Mirroring jobs are scheduled once per hour ("Projects::PullMirrorScheduleWorker").  
 - Each mirror is updated no more than once every 6 hours.  

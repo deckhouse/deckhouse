@@ -10,7 +10,7 @@ weight: 45
 
 ## OmniAuth configuration
 
-Deckhouse Code supports OmniAuth configuration in accordance with the [official documentation](https://docs.gitlab.com/integration/omniauth/). Additionally, it provides extended functionality described below.
+Deckhouse Code supports OmniAuth configuration in accordance with the [GitLab official documentation](https://docs.gitlab.com/integration/omniauth/). Additionally, it provides extended functionality described below.
 
 ### OpenID connect (OIDC)
 
