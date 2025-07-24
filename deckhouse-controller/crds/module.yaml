@@ -94,7 +94,7 @@ spec:
                         type: string
                 accessibility:
                   type: object
-                  description: Accessibility settings.
+                  description: Module accessibility settings.
                   properties:
                     editions:
                       type: object
