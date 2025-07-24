@@ -1083,6 +1083,13 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+			
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+			
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
 		suite.Run("Empty migrated modules", func() {
@@ -1090,6 +1097,13 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+			
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+			
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
 		suite.Run("Modules available", func() {
@@ -1097,6 +1111,13 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+			
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+			
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
 		suite.Run("Module missing", func() {
@@ -1118,6 +1139,13 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+			
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+			
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 	})
 }
