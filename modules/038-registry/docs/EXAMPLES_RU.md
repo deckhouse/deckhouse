@@ -14,7 +14,7 @@ description: ""
 
 1. Если кластер запущен с `Containerd V1`, [подготовьте пользовательские конфигурации containerd](./faq.html#как-подготовить-containerd-v1).
 
-1. Убедитесь, что все `master` ноды находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+1. Убедитесь, что все `master` узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
 
    ```bash
    kubectl get nodes
@@ -84,7 +84,7 @@ description: ""
 
 Для переключения кластера на режим `Unmanaged` выполните следующие шаги:
 
-1. Убедитесь, что все `master` ноды находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+1. Убедитесь, что все `master` узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
 
    ```bash
    kubectl get nodes
