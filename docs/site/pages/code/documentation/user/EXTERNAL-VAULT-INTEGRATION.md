@@ -8,68 +8,64 @@ permalink: en/code/documentation/user/external-vault.html
 lang: en
 ---
 
-## Integration with External Vault
+This feature allows you to configure integration with a Vault server and use secrets in CI pipelines. Before getting started, you need to configure the Vault server and create the appropriate roles and policies.
 
-This feature allows you to set up integration with a Vault server and use secrets in CI pipelines.
-To get started, you need to configure the Vault server and prepare the appropriate roles and policies.
+## Vault configuration
 
-### VAULT Setup
+1. Enable JWT authentication:
 
-#### 1) Enabling JWT Authentication
+   ```bash
+   vault auth enable jwt
 
-  ```bash
-  vault auth enable jwt
+   vault write auth/jwt/config \
+     oidc_discovery_url="https://code.example.com" \
+     bound_issuer="https://code.example.com" \
+     default_role="gitlab-role"
+   ```
 
-  vault write auth/jwt/config \
-    oidc_discovery_url="https://code.example.com" \
-    bound_issuer="https://code.example.com" \
-    default_role="gitlab-role"
-  ```
+1. Create a role:
 
-#### 2) Creating a Role
+   ```bash
+   vault write auth/jwt/role/gitlab-role - <<EOF
+   {
+     "role_type": "jwt",
+     "user_claim": "sub",
+     "bound_audiences": ["vault"],
+     "bound_claims": {
+       "project_id": "23"
+     },
+     "policies": ["gitlab-policy"],
+     "ttl": "1h"
+   }
+   EOF
+   ```
 
-  ```bash
-  vault write auth/jwt/role/gitlab-role - <<EOF
-  {
-    "role_type": "jwt",
-    "user_claim": "sub",
-    "bound_audiences": ["vault"],
-    "bound_claims": {
-      "project_id": "23"
-    },
-    "policies": ["gitlab-policy"],
-    "ttl": "1h"
-  }
-  EOF
+   > Always use `bound_claims` to restrict access to the role. Otherwise, any JWT issued by the platform will be able to authenticate using this role.
+  
+1. Create a policy:
 
-  ```
+   ```bash
+   vault policy write gitlab-policy - <<EOF
+   path "kv/data/code/vault-demo" {
+     capabilities = ["read"]
+   }
+   EOF
+   ```
 
-  > ⚠️ Important: Always use bound_claims to restrict access to the role.
-  Otherwise, any JWT issued by the instance will be able to access Vault using this role.
+## CI configuration
 
-#### 3) Configuring a Policy
+### Environment variables
 
-  ```bash
-  vault policy write gitlab-policy - <<EOF
-  path "kv/data/code/vault-demo" {
-    capabilities = ["read"]
-  }
-  EOF
+To work correctly with Vault in a CI/CD pipeline, you need to define the following environment variables:
 
-  ```
+- `VAULT_SERVER_URL` — **required**. The URL of the Vault server (e.g., `https://vault.example.com`).
+- `VAULT_AUTH_ROLE` — *optional*. The name of the role in Vault. If not specified, the default role configured for the authentication method will be used.
+- `VAULT_AUTH_PATH` — *optional*. Path to the authentication method in Vault. Defaults to `jwt`.
+- `VAULT_NAMESPACE` — *optional*. Vault namespace, if a multi-level hierarchy is used.
 
-### CI Configuration
+### Using secrets in CI
 
-#### Environment Variables
-
-Set the following environment variables in CI/CD:
-
-- `VAULT_SERVER_URL` - Required. Vault server URL, e.g., <https://vault.example.com>.
-- `VAULT_AUTH_ROLE` - Optional. Role on the Vault server. If not set, the default role configured for the auth method will be used.
-- `VAULT_AUTH_PATH` - Optional. Path to the authentication method. Default is `jwt`.
-- `VAULT_NAMESPACE` - Optional. Vault namespace.
-
-#### Using Secrets in CI
+To retrieve secrets from Vault, you can use the following job template:
 
 ```yaml
 stages:
@@ -87,7 +83,9 @@ vault-login:
   script: echo $DATABASE_PASSWORD
 ```
 
-#### keys details
+### Secret parameters
+
+Example:
 
 ```yaml
 DATABASE_PASSWORD:
@@ -96,16 +94,14 @@ DATABASE_PASSWORD:
   file: false
 ```
 
-##### (Required)
+Parameter details:
 
-A string in the format `code/vault-demo/DATABASE_PASSWORD@kv` where:
+1. `vault` (required) — the path to the secret in the string format `path/to/secret/KEY@ENGINE`, where:
+   - `code/vault-demo/` — the path to the secret in Vault;
+   - `DATABASE_PASSWORD` — the name of the field inside the secret;
+   - `kv` — the mount point of the secret engine (default is `secret`).
 
-- `code/vault-demo/` – path to the secret
-- `DATABASE_PASSWORD` – field name
-- `kv` – secret engine mount point, default is secret
-
-By default, the kv-v2 engine is used.
-To use a different engine, you can provide an object instead of a string:
+By default, the `kv-v2` engine is used. If you need to use a different engine, you can specify it as an object instead of a string:
 
 ```yaml
 DATABASE_PASSWORD:
@@ -119,47 +115,40 @@ DATABASE_PASSWORD:
   file: false
 ```
 
-##### `token`  (Required)
+1. `token` (required) — a JWT token from the `id_tokens` section used to authenticate with Vault.
 
-Required parameter.
-The JWT token from the id_tokens section used to authenticate with Vault.
+1. `file` (optional, defaults to `true`) — defines how the secret is provided:
+   - `true` — the secret is saved to a temporary file;
+   - `false` — the secret is passed as a string to an environment variable.
 
-##### `file` (optional)
+### JWT claims
 
-Default is true.
-Defines whether the secret will be saved as a file or a string.
+The following fields are automatically included in the JWT token and can be used by Vault to validate access rights:
 
-### Fields Included in JWT
-
-The following fields are included in the JWT token:
-
-| Field                    | When         | Description                                             |
-|--------------------------|--------------|---------------------------------------------------------|
-| `jti`                    | always       | Unique token identifier                                 |
-| `iss`                    | always       | Issuer (Code URL)                                       |
-| `iat`                    | always       | Issued at time                                          |
-| `nbf`                    | always       | Not valid before                                        |
-| `exp`                    | always       | Expiration time                                         |
-| `sub`                    | always       | Subject (usually the job ID)                            |
-| `namespace_id`           | always       | Group or user namespace ID                              |
-| `namespace_path`         | always       | Group or user namespace path                            |
-| `project_id`             | always       | Project ID                                              |
-| `project_path`           | always       | Project path                                            |
-| `user_id`                | always       | User ID                                                 |
-| `user_login`            | always       | User login                                              |
-| `user_email`            | always       | User email                                              |
-| `pipeline_id`           | always       | Pipeline ID                                             |
-| `pipeline_source`       | always       | Pipeline source                                         |
-| `job_id`                | always       | CI job ID                                               |
-| `ref`                   | always       | Git reference                                           |
-| `ref_type`              | always       | Reference type (`branch` or `tag`)                      |
-| `ref_path`              | always       | Full ref path (e.g., `refs/heads/main`)                |
-| `ref_protected`         | always       | Indicates whether the ref is protected                 |
-| `environment`           | if present   | Environment name                                        |
-| `groups_direct`         | <200 groups  | Direct groups the user belongs to                      |
-| `environment_protected` | if present   | Indicates if the environment is protected              |
-| `deployment_tier`       | if present   | Environment type (production, staging, etc.)           |
-| `environment_action`    | if present   | Specified action on the environment                    |
-
-references  :
-- <https://docs.gitlab.com/ci/secrets/hashicorp_vault/>
+| Claim                   | Availability condition      | Description                                                              |
+|-------------------------|-----------------------------|---------------------------------------------------------------------------|
+| `jti`                   | always                      | Unique token identifier                                                   |
+| `iss`                   | always                      | Token issuer (typically the Deckhouse Code URL)                          |
+| `iat`                   | always                      | Token issue time (`Issued At`)                                           |
+| `nbf`                   | always                      | Time before which the token is not valid                                 |
+| `exp`                   | always                      | Token expiration time                                                    |
+| `sub`                   | always                      | Token subject (usually the CI job ID)                                    |
+| `namespace_id`          | always                      | ID of the namespace (group or user space)                                |
+| `namespace_path`        | always                      | Path to the namespace (e.g., `groups/dev`)                               |
+| `project_id`            | always                      | Project ID                                                               |
+| `project_path`          | always                      | Path to the project                                                      |
+| `user_id`               | always                      | User ID                                                                  |
+| `user_login`            | always                      | User login                                                               |
+| `user_email`            | always                      | User email                                                               |
+| `pipeline_id`           | always                      | CI pipeline ID                                                           |
+| `pipeline_source`       | always                      | Pipeline trigger source (push, schedule, merge request, etc.)           |
+| `job_id`                | always                      | CI job ID                                                                |
+| `ref`                   | always                      | Git ref (e.g., `main`, `v1.2`)                                           |
+| `ref_type`              | always                      | Ref type (`branch` or `tag`)                                             |
+| `ref_path`              | always                      | Full ref path (e.g., `refs/heads/main`)                                  |
+| `ref_protected`         | always                      | Indicates if the ref is protected                                        |
+| `environment`           | if available                | Environment name (if used)                                               |
+| `groups_direct`         | if available (<200 groups)  | Paths to groups the user is directly a member of                         |
+| `environment_protected` | if available                | Indicates if the environment is protected                                |
+| `deployment_tier`       | if available                | Environment type (`production`, `staging`, etc.)                         |
+| `environment_action`    | if available                | Action being performed on the environment (e.g., `deploy`)               |

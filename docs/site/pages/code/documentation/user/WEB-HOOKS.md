@@ -7,49 +7,38 @@ permalink: ru/code/documentation/user/web-hooks.html
 lang: en
 weight: 50
 ---
-## Webhooks
 
-Webhooks are an event-driven way to integrate with external services.  
-They allow you to automatically send HTTP requests when events occur in the system.
+Webhooks are an event-driven integration mechanism with external systems. They enable automatic sending of HTTP requests when specific events occur in Deckhouse Code:
 
-**Main features of webhooks:**
+- Support for a wide range of events: Push, Merge Request, Issue, Pipeline, Release, and others.
+- Request configuration: choice of method (POST, PUT), JSON format, header customization.
+- Security features: Secret Token, SSL/TLS, event filtering.
+- Support at the project, group, and instance levels.
+- Integration with CI/CD, monitoring, messaging platforms, and tracking systems.
+- Retry mechanism for connection failures.
 
-- Support for events: Push, Merge Request, Issue, Pipeline, Release, and more.
-- Request configuration: choose method (POST, PUT), JSON payload format, and custom headers.
-- Security: use of Secret Token, SSL/TLS support, and event filtering.
-- Support at the level of individual projects, groups, and the entire system.
-- Integration with CI/CD, monitoring systems, chats, and task managers.
-- Automatic retries in case of connection failures.
+> Project webhooks are supported in GitLab CE.
 
-## Project Webhooks
+## Group webhooks
 
-- Available in the GitLab CE version.
+To add a webhook at the group level, open the group page and navigate to "Settings" → "Webhooks". Then select the desired events. Group webhooks support all project events plus:
 
-## Group Webhooks
+- Member events;
+- Project events;
+- Subgroup events.
 
-To add a webhook to a group, go to the group page and click **Settings => Webhooks**.  
-Then, select the events that will trigger the webhook. Group webhooks support all project events, and additionally:
-- Member events
-- Project events
-- Subgroup events
+> If the user has no public email specified, the email in the request body will appear as "[REDACTED]".  
+> Member events trigger upon creation, modification, or deletion of group or project members.
 
-### Events
+## Creating group webhooks
 
-If the user does not have a public email specified, the email will be received as `"[REDACTED]"`.
+Request header:
 
-#### Member Events
-
-Triggered when members of a group or project are created, removed, or modified.
-
-##### Creation
-
-Request headers:
-
-```text
+```console
 X-Gitlab-Event: Member Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -60,7 +49,7 @@ Body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[DELETED]",
+  "user_email": "[УДАЛЕНО]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": "2025-07-09T00:00:00Z",
@@ -69,15 +58,15 @@ Body:
 
 ```
 
-##### Update
+### Updating group webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Member Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -88,7 +77,7 @@ Body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[DELETED]",
+  "user_email": "[УДАЛЕНО]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": null,
@@ -97,15 +86,15 @@ Body:
 
 ```
 
-##### Delete
+### Deleting group webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Member Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -116,7 +105,7 @@ Body:
   "group_id": 1130,
   "user_username": "reported_user_barabara",
   "user_name": "Estella Gleason",
-  "user_email": "[DELETED]",
+  "user_email": "[УДАЛЕНО]",
   "user_id": 58,
   "group_access": "Guest",
   "expires_at": null,
@@ -125,19 +114,19 @@ Body:
 
 ```
 
-#### Project events
+## Project events
 
-Triggered when project created or deleted
+Trigger on creation or deletion of projects in groups and subgroups.
 
-##### Create
+### Creating project webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Project Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -152,22 +141,22 @@ Body:
   "owners": [
     {
       "name": "Administrator",
-      "email": "[DELETED]"
+      "email": "[УДАЛЕНО]"
     }
   ],
   "project_visibility": "private"
 }
 ```
 
-##### Delete
+### Deleting project webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Project Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -189,19 +178,19 @@ Body:
 }
 ```
 
-#### Subgroups event
+## Subgroup events
 
-Triggered when subgroup created or deleted
+Trigger on creation or deletion of subgroups.
 
-##### Create
+### Creating subgroup webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Subgroup Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {
@@ -219,15 +208,15 @@ Body:
 }
 ```
 
-##### Delete
+### Deleting subgroup webhooks
 
-Request headers:
+Request header:
 
 ```text
 X-Gitlab-Event: Subgroup Hook
 ```
 
-Body:
+Example request body:
 
 ```json
 {

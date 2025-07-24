@@ -8,116 +8,93 @@ lang: en
 weight: 50
 ---
 
-## Group Wiki
+## Enabling wiki at the group level
 
-> Documentation for project Wikis can be found  
-> in the GitLab documentation.
-
-### Enabling Wiki at the Group Level
-
-On the group page, go to `Settings → General → Permissions and group features → Wiki access level`.
+To enable or configure access to the Wiki, open the desired group page and go to: “Settings” → “General” → “Permissions and group features” → “Wiki access level”.
 
 Available options:
-- **Enabled**. For public groups, everyone can access the wiki. For internal groups, only authenticated users can access the wiki.
-- **Private**. Only group members can access the wiki.
-- **Disabled**. The wiki isn’t accessible, and cannot be downloaded.
 
-Default value — **Enabled**.
+- Enabled — the Wiki is available to everyone (for public groups) or only to authenticated users (for internal groups).
+- Private — the Wiki is accessible only to group members.
+- Disabled — the Wiki is completely disabled and cannot be accessed.
 
-### Accessing the Wiki
+Default value — Enabled.
 
-To open the group Wiki, go to the group page and select `Plan → Wiki`.
+## Accessing the wiki
 
-### Roles and Wiki Access
+To open the group Wiki, go to the group page and select “Plan” → “Wiki”.
 
-Access level is determined by the user's membership role in the group:
+## Roles and wiki
 
-| Role                             | Actions                                                                                                     |
-|----------------------------------|------------------------------------------------------------------------------------------------------------|
-| **Guest**                        | Read the Wiki                                                                                              |
-| **Reporter**                     | Read, download Wiki code                                                                                   |
-| **Developer**                    | Create Wiki pages                                                                                          |
-| **Maintainer**                   | Administer the Wiki                                                                                        |
-| **Planner**                      | Administer the Wiki                                                                                        |
-| **Anonymous / external user**    | Access if the group is public or internal and the user is not external — download Wiki code only           |
+Access level is determined by the user's group membership:
 
-### Features
+| Role                              | Actions                                                                                                           |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------------|
+| **Guest**                         | View the Wiki                                                                                                   |
+| **Reporter**                      | View the Wiki, download code                                                                                    |
+| **Developer**                     | Create wiki pages                                                                                                |
+| **Maintainer**                    | Administer the Wiki                                                                                             |
+| **Planner**                       | Administer the Wiki                                                                                             |
+| **Anonymous / external user**     | Access granted if the group is public or internal, and the user is not external — only code download allowed    |
 
-#### 📁 Structure and Nesting
+## Features
 
-- Create hierarchical page structures using `/` (slash) in page names.  
-  Example:
+1. Structure and nesting — creates a tree navigation and helps organize content:
 
-  ```text
-  devops/ci-pipelines
-  devops/kubernetes
-  product/design
-  ```
+   - Create a hierarchical page structure using the `/` symbol in names. Example:
 
-  This creates folder-like navigation and helps organize content.
+     ```console
+     devops/ci-pipelines
+     devops/kubernetes
+     product/design
+     ```
 
----
+1. Markdown, rich text, attachments, and diagrams:
 
-#### 📝 Markdown, Rich Text, Attachments, and Diagrams
-
-- **Markdown (GitLab Flavored)**:
-  - Mentions (`@username`), issue/MR references (`#123`, `!456`), tasks (`- [ ]`), tables, code blocks.
+   - Markdown (GitLab Flavored):
+     - Mentions (`@username`), references to issues/MRs (`#123`, `!456`), checklists (`- [ ]`), tables, code blocks.
   
-- **Rich Text Editor**:
-  - WYSIWYG editing for users who prefer formatting without Markdown.
-  - Supports Mermaid and Draw.io integration as is.
+   - Rich text editor:
+     - WYSIWYG editor for users who prefer visual formatting.
+     - Built-in support for Mermaid and Draw.io.
 
-- **Attachments**:
-  - Upload and embed images, PDFs, and other files.
-  - Stored inside the Wiki’s Git repository.
+   - Attachments:
+     - Upload and embed images, PDFs, and other files.
+     - Stored in the Wiki's Git repository.
 
----
+1. Change history:
 
-#### 🕘 Version History
-
-- Full edit history for every page:
-  - Who made changes.
-  - When they were made.
+   - Complete history of changes for each page:
+     - Who made the changes.
+     - When the changes were made.
   
-- View diffs, roll back changes, and track all edits.
+   - View diffs, revert changes, and track revisions.
 
----
+1. Discussions and comments on pages.
 
-#### 💬 Discussions and Comments
+1. Git access:
 
-- Comments and discussions on pages.
+   - Each Wiki is a separate Git repository.
+   - Clone via SSH or HTTPS:
 
----
+     ```bash
+     git clone git@code.example.com:groupname/wiki.git
+     ```
 
-#### ⬇️ Git Access
+   - Full access to `.md` files, branches, and history for local editing, backups, or automation.
 
-- Each Wiki is a dedicated Git repository.
-- Clone via SSH or HTTPS:
+1. PDF export:
 
-  ```bash
-  git clone git@code.example.com:groupname/wiki.git
-  ```
+   - Export any Wiki page to PDF via the web interface.
+   - Useful for offline access, sharing, or printing.
 
-- Full access to `.md` files, branches, history — ideal for local editing, backup, or automation.
+1. Page templates:
 
----
+   - Reusable templates stored in the `templates/` directory.
+   - Applied when creating or editing pages to standardize content.
 
-#### 📄 Export to PDF
+1. Customizable sidebar:
 
-- Export any Wiki page as a PDF via the web interface.
-- Useful for offline access, sharing, or printing.
-
----
-
-#### 🧩 Page Templates
-
-- Reusable templates stored under the `templates/` directory.
-- Apply templates when creating or editing pages to standardize content.
-
----
-
-#### 🗂 Customizable Sidebar
-
-- Sidebar shows pages as a nested tree.
-- Fully customizable via a special `_sidebar` page.
-- Add links, organize sections, and improve navigation.
+   - The sidebar displays pages in a nested tree structure.
+   - Fully customizable via the special `_sidebar` page.
+   - You can add links, sections, and improve navigation.

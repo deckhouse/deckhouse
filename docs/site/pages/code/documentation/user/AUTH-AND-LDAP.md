@@ -8,26 +8,26 @@ lang: en
 weight: 45
 ---
 
-## OmniAuth Configuration
+## OmniAuth configuration
 
-Configuration mostly relies on the one documented in the [official documentation](https://docs.gitlab.com/integration/omniauth/). However, Deckhouse Code brings some extension over it described in sections below.
+Deckhouse Code supports OmniAuth configuration in accordance with the [official documentation](https://docs.gitlab.com/integration/omniauth/). Additionally, it provides extended functionality described below.
 
-### OpenID Connect (OIDC)
+### OpenID connect (OIDC)
 
-For OIDC integration, the following new parameters have been added:
+The following parameters are available for integrating with OIDC providers:
 
-- **`allowed_groups`**: An array of groups permitted to log in. Users who do not belong to these groups will be blocked and unable to log in.  
-  **Default:** `null` (allows all groups).
+- `allowed_groups` — a list of groups whose users are allowed to log in. Users not in these groups will be denied access.  
+  Default — `null` (all groups are allowed).
 
-- **`admin_groups`**: An array of groups permitted to log in as administrators. Users belonging to these groups will be granted an admin role.  
-  **Default:** `null` (no groups are granted admin privileges).
+- `admin_groups` — a list of groups whose users are granted administrative privileges.  
+  Default — `null` (no groups are granted admin rights).
 
-- **`groups_attribute`**: The attribute name used to retrieve user groups.  
-  **Default:** `'groups'`.
+- `groups_attribute` — the name of the attribute used to extract user group information.  
+  Default — `'groups'`.
 
-### Example OIDC Configuration
+### OIDC configuration example
 
-Section is under `spec.appConfig.omniauth.`
+This configuration is set in the `spec.appConfig.omniauth.` section:
 
 ```yaml
 providers:
@@ -41,20 +41,20 @@ providers:
 
 ## SAML
 
-For SAML integration, the following new parameters have been added:
+The same parameters are available for SAML providers:
 
-- **`allowed_groups`**: An array of groups permitted to log in. Users who do not belong to these groups will be blocked and unable to log in.  
-  **Default:** `null` (allows all groups).
+- `allowed_groups` — a list of groups whose members are allowed to log in.  
+  Default — `null` (all groups are allowed).
 
-- **`admin_groups`**: An array of groups permitted to log in as administrators. Users belonging to these groups will be granted an admin role.  
-  **Default:** `null` (no groups are granted admin privileges).
+- `admin_groups` — groups whose members are granted administrative privileges.  
+  Default — `null` (no groups are granted admin rights).
 
-- **`groups_attribute`**: The attribute name used to retrieve user groups.  
-  **Default:** `'Groups'`.
+- `groups_attribute` — the name of the attribute that contains group information.  
+  Default — `'Groups'`.
 
-### Example SAML Configuration
+### SAML configuration example
 
-Section is under `spec.appConfig.omniauth.`
+This configuration is set in the `spec.appConfig.omniauth.` section:
 
 ```yaml
 providers:
@@ -66,13 +66,13 @@ providers:
     groups_attribute: 'gitlab_group'
 ```
 
-> **Note:** for oidc and SAML If a user belongs to `admin_groups` but is not present in `allowed_groups`, they will not be able to log in. In such cases, `admin_groups` will not be considered, and the user will not be granted administrative privileges.
+> If a user belongs to `admin_groups` but is not listed in `allowed_groups`, access will be denied. In this case, administrative privileges will not be granted either.
 
-## LDAP Synchronization
+## LDAP synchronization
 
-Performs synchronization of users, groups, and group access rights with the LDAP server. By default it happens once per hour.
+Deckhouse Code supports synchronization of users, groups, and access rights with an LDAP server. Synchronization runs automatically every hour, or at a custom interval.
 
-You can configure the synchronization schedule via `cronJobs` param (at `spec.appConfig.` section):
+You can configure the synchronization interval using the `cronJobs` parameter in the `spec.appConfig.` section:
 
 ```yaml
 cron_jobs:
@@ -80,15 +80,14 @@ cron_jobs:
     cron: "0 * * * *"
 ```
 
-### LDAP Server-Side Limits
+### LDAP server-side limitations
 
-During synchronization, queries are made for all users and groups specified in the configuration file.
-The synchronization task automatically uses pagination if needed.
-However, if the LDAP server has a limit on the maximum number of records returned, it may lead to unexpected user access being blocked or removed.
+During synchronization, LDAP queries are executed for all users and groups defined in the configuration. Pagination is used automatically if necessary.  
+If the LDAP server enforces limits on the number of returned entries, this may cause synchronization errors or lead to user access rights being removed.
 
-### Example LDAP Provider Configuration
+### Example LDAP provider configuration
 
-Section is located under `spec.appConfig.ldap.`
+The configuration is defined in `spec.appConfig.ldap.`:
 
 ```yaml
 main:
@@ -119,37 +118,34 @@ main:
   }
 ```
 
-### Group and Access Rights Synchronization
+### Groups and access rights
 
-Creates GitLab groups and assigns user roles based on records retrieved from the LDAP server.  
-Can be configured with the following parameters:
+LDAP groups are mapped to GitLab groups. You can assign roles to users based on group names.
 
-Required Parameters:
+Required parameters:
 
-- **group_sync.base** — The base DN from which the search begins.
+- `group_sync.base` — the DN from which LDAP group search starts.
 
-Optional Parameters:
+Optional parameters:
 
-- **group_sync.create_groups** — If `true`, groups will be created in Deckhouse Code.
-- **group_sync.filter** — LDAP filter for groups.
-- **group_sync.scope** — Search scope (0 — Base, 1 — SingleLevel, 2 — WholeSubtree).
-- **group_sync.prefix** — Defines which attribute to use for the parent group name. If the attribute is missing, the default value is used.
-- **group_sync.top_level_group** — The name of the top-level group to which all synchronized groups will be added.
-- **group_sync.name_mask** — A regular expression to extract the group name from the `cn` attribute.
-- **group_sync.owner** — The username to be added as the group owner (default is `root`).
+- `group_sync.create_groups` — if `true`, groups will be created in Deckhouse Code.
+- `group_sync.filter` — LDAP filter used to find groups.
+- `group_sync.scope` — scope of group search (0 — Base, 1 — SingleLevel, 2 — WholeSubtree).
+- `group_sync.prefix` — defines which attribute to use for determining the parent group name. If missing, the default value is used.
+- `group_sync.top_level_group` — the top-level group to which all synchronized groups will be added.
+- `group_sync.name_mask` — regular expression used to extract the group name from the CN attribute.
+- `group_sync.owner` — name of the user to be assigned as group owner (default is `root`).
 
-### ``role_mapping` section
+### `role_mapping` section
 
-Assigns access rights to users based on the group name (`cn`):
+Assigns roles to users based on group names (`cn`):
 
-- **role_mapping.by_name** — A regular expression; if the group name matches, the corresponding `gitlab_role` is assigned to the user.
-- **role_mapping.gitlab_role** — The Deckhouse Code role name (e.g., `guest`, `reporter`, `developer`, `maintainer`, `owner`).
+- `role_mapping.by_name` — a regular expression; if the group name matches, the corresponding role is assigned to the user.
+- `role_mapping.gitlab_role` — the role name in Deckhouse Code (e.g., `guest`, `reporter`, `developer`, `maintainer`, `owner`).
 
-> Deckhouse Code leverages basic roles from Gitlab
+### Group membership resolution
 
-#### How group membership is defined
-
-Group members are determined from the following group attributes. The value of each attribute is expected to be an array of user DN:
+Deckhouse Code supports the following attributes to determine group membership (all values must be arrays of user DNs):
 
 - `member`
 - `uniquemember`
@@ -157,22 +153,24 @@ Group members are determined from the following group attributes. The value of e
 - `memberuid`
 - `submember`
 
-### User Synchronization
+### User synchronization
 
-Locks and unlocks users and updates their name and email based on data from the LDAP server.
+During synchronization, usernames, email addresses, and account lock status are updated.
 
-Optional parameters:
+**Optional parameters:**
 
-`sync_name` - if `true`, the user's name will be updated from LDAP data
+- `sync_name` — if `true`, the username will be updated based on LDAP data.
 
-#### Troubleshooting synchronization
+#### Troubleshooting synchronization issues
 
-If a previous synchronization job did not complete correctly, Redis may retain a record indicating the job is still running.  
-This prevents a new job from starting because concurrency is set to 1.
+If a previous sync job was not completed successfully, Redis may retain a lock preventing the next job from starting (the default `concurrency` is set to 1).
 
-To fix perform following steps:
+To remove the lock:
 
 1. Connect to Redis using the databases specified in `config/redis.shared_state.yml` and `config/redis.queues.yml`.
-2. Delete the following key:  `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` by executing:
-- `keys *ldap*` - makes sure the key exists
-- `del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"` - deletes the key
+1. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
+
+   ```console
+   keys *ldap*
+   del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"
+   ```
