@@ -212,6 +212,11 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		countToApprove := concurrency - currentUpdates
 		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
 
+		// меняем порядок набора нод
+		// сначала IsWaitingForApproval с IsDrained = true
+		// вторым  IsWaitingForApproval с IsReady = false
+		// третим IsWaitingForApproval с ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral
+
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			var allReady = true
@@ -226,7 +231,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
 						approvedNodes = append(approvedNodes, ngn)
-						input.Logger.Info(fmt.Sprintf("approveUpdates allReady approvedNode: %s", ngn.Name), "ng", ng.Name)
 						if len(approvedNodes) == countToApprove {
 							break
 						}
@@ -240,7 +244,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
-					input.Logger.Info(fmt.Sprintf("approveUpdates !ngn.IsReady approvedNode: %s", ngn.Name), "ng", ng.Name)
 					if len(approvedNodes) == countToApprove {
 						break
 					}
@@ -253,11 +256,17 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
+			// тут должно быть ветвление если выставлен IsDisruptionApproved
+			// 		то мы должны проверить что IsDrained
+			// 			если IsDraining не стоит повесить его и выйти
+			//		если IsDrained = true то вешаем Approved
+			// иначе вешаем Approved
 			patch := approvedPatch
-			// if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
-			// 	input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
-			// 	patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "bashible"
-			// }
+			input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
+			if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
+				input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
+				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "bashible"
+			}
 			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", patch), "node", approvedNode.Name, "ng", ng.Name)
 			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
 			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
