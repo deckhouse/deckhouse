@@ -118,6 +118,19 @@ spec:
           readOnly: true
           mountPath: /host/textfile-kubelet-eviction-thresholds-exporter
           mountPropagation: HostToContainer
+        livenessProbe:
+          failureThreshold: 6
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+          tcpSocket:
+            port: 4206
+        readinessProbe:
+          failureThreshold: 6
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          httpGet:
+            path: /
+            port: 4206
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -150,19 +163,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "kubelet_eviction_thresholds_exporter_resources" . | nindent 12 }}
 {{- end }}
-        livenessProbe:
-          failureThreshold: 6
-          initialDelaySeconds: 120
-          timeoutSeconds: 5
-          tcpSocket:
-            port: 4206
-        readinessProbe:
-          failureThreshold: 6
-          initialDelaySeconds: 30
-          timeoutSeconds: 5
-          httpGet:
-            path: /
-            port: 4206
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
