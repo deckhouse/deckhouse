@@ -587,14 +587,14 @@
         The migrated module `{{ $labels.module_name }}` specified in DeckhouseRelease was not found in any available ModuleSource registry.
         
         This may indicate:
-        - The module source registry is not properly configured
-        - The module has not been published to the registry yet
-        - There is a network issue preventing access to the registry
+        - The module source registry is not properly configured.
+        - The module has not been published to the registry yet.
+        - There is a network issue preventing access to the registry.
         
         Please check:
-        1. ModuleSource configurations: `kubectl get modulesources`
-        2. Registry accessibility and credentials
-        3. Module availability in the configured registries
+        1. ModuleSource configurations: `kubectl get modulesources`.
+        2. Registry accessibility and credentials.
+        3. Module availability in the configured registries.
         
         To investigate, run the following commands:
         
