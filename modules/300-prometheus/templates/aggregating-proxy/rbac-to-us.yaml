@@ -49,6 +49,11 @@ subjects:
     name: d8-vertical-pod-autoscaler-recommender
     namespace: kube-system
 {{- end }}
+{{- if (.Values.global.enabledModules | has "flant-integration") }}
+- kind: ServiceAccount
+  name: pricing
+  namespace: d8-flant-integration
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
