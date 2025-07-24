@@ -35,7 +35,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ingressNginxControllers",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "IngressNginxController",
-			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   setAnnotationValidationSuspendedFilterIngressNginxController,
 		},
 		{
