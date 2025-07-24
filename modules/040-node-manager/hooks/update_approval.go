@@ -45,6 +45,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Queue: "/modules/node-manager/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// snapshot: "configuration_checksums_secret"
+		// api: "v1",
+		// kind: "Secret",
+		// ns: "d8-cloud-instance-manager"
+		// name: "configuration-checksums"
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
