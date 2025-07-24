@@ -5208,6 +5208,19 @@ alerts:
         Certificate is expiring soon.
       severity: "5"
       markupFormat: markdown
+    - name: NginxIngressValidationIsDisabled
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Validation is disabled to reduce load on the master nodes, as it requires additional resources.
+        To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
+        from the `ingressnginxcontroller` resource.
+      summary: |
+        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+      severity: "3"
+      markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
       moduleUrl: 340-monitoring-kubernetes
