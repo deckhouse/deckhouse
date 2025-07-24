@@ -3437,6 +3437,21 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseEditionNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Please specify the edition in {{ $labels.module }} ModuleConfig
+        ```bash
+        kubectl patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "MYEDITION"}}}}'
+        ```
+        Where `MYEDITION` is the edition you want to use like `CE`, `EE`, `FE`, etc.
+      summary: |
+        Deckhouse edition is not found.
+      severity: "6"
+      markupFormat: markdown
     - name: DeckhouseHighMemoryUsage
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
