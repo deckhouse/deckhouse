@@ -193,7 +193,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		concurrency := calculateConcurrency(ng.Concurrency, len(nodeGroupNodes))
-		input.Logger.Info(fmt.Sprintf("concurrency: %d", concurrency), "ng", ng.Name)
+		input.Logger.Info(fmt.Sprintf("approveUpdates concurrency: %d", concurrency), "ng", ng.Name)
 
 		var hasWaitingForApproval bool
 
@@ -210,18 +210,18 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		// Skip ng, if maxConcurrent is already reached
 		if currentUpdates >= concurrency {
-			input.Logger.Info(fmt.Sprintf("currentUpdates >= concurrency: %d >= %d", currentUpdates, concurrency), "ng", ng.Name)
+			input.Logger.Info(fmt.Sprintf("approveUpdates currentUpdates >= concurrency: %d >= %d", currentUpdates, concurrency), "ng", ng.Name)
 			continue
 		}
 
 		// Skip ng, if it has no waiting nodes
 		if !hasWaitingForApproval {
-			input.Logger.Info("!hasWaitingForApproval", "ng", ng.Name, "hasWaitingForApproval", hasWaitingForApproval)
+			input.Logger.Info("approveUpdates !hasWaitingForApproval", "ng", ng.Name, "hasWaitingForApproval", hasWaitingForApproval)
 			continue
 		}
 
 		countToApprove := concurrency - currentUpdates
-		input.Logger.Info(fmt.Sprintf("countToApprove: %d", countToApprove), "ng", ng.Name)
+		input.Logger.Info(fmt.Sprintf("approveUpdates countToApprove: %d", countToApprove), "ng", ng.Name)
 
 		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
 
@@ -234,13 +234,13 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 					break
 				}
 			}
-			input.Logger.Info(fmt.Sprintf("allReady: %+v", allReady), "ng", ng.Name)
+			input.Logger.Info(fmt.Sprintf("approveUpdates allReady: %+v", allReady), "ng", ng.Name)
 
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
 						approvedNodes = append(approvedNodes, ngn)
-						input.Logger.Info(fmt.Sprintf("allReady approvedNode: %s", ngn.Name), "ng", ng.Name)
+						input.Logger.Info(fmt.Sprintf("approveUpdates allReady approvedNode: %s", ngn.Name), "ng", ng.Name)
 						if len(approvedNodes) == countToApprove {
 							break
 						}
@@ -254,7 +254,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
-					input.Logger.Info(fmt.Sprintf("!ngn.IsReady approvedNode: %s", ngn.Name), "ng", ng.Name)
+					input.Logger.Info(fmt.Sprintf("approveUpdates !ngn.IsReady approvedNode: %s", ngn.Name), "ng", ng.Name)
 					if len(approvedNodes) == countToApprove {
 						break
 					}
@@ -266,14 +266,15 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			continue
 		}
 
-		for _, approvedNodeName := range approvedNodes {
-			input.Logger.Info("Node approvedPatch", "node", approvedNodeName, "ng", ng.Name)
+		for _, approvedNode := range approvedNodes {
+			input.Logger.Info("approveUpdates Node approvedPatch", "node", approvedNode.Name, "ng", ng.Name)
 			patch := approvedPatch
-			if approvedNodeName.IsDisruptionApproved {
+			if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
+				input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
 				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "deckhouse-approve"
 			}
-			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNodeName.Name)
-			setNodeStatusesMetrics(input, approvedNodeName.Name, ng.Name, "Approved")
+			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
+			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
 		}
 
 		ar.finished = true
