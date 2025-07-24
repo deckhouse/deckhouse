@@ -70,8 +70,8 @@ func setAnnotationValidationSuspendedFilterIngressNginxController(obj *unstructu
 }
 
 func setAnnotationValidationSuspendedHandleIngressNginxControllers(input *go_hook.HookInput) error {
-	controllersSnapshot := input.Snapshots["ingressNginxControllers"]
-	configMapSnapshot := input.Snapshots["ingressNginxControllersConfigMap"]
+	controllersSnapshot := input.NewSnapshots.Get("ingressNginxControllers")
+	configMapSnapshot := input.NewSnapshots.Get("ingressNginxControllersConfigMap")
 
 	// Exit early if the ConfigMap already exists (annotations were already applied once)
 	// or if there are fewer than 5 controllers (do not proceed with annotation patching)
@@ -81,8 +81,9 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(input *go_hoo
 	}
 
 	for _, item := range controllersSnapshot {
-		ctrl, ok := item.(internal.IngressNginxController)
-		if !ok {
+		var ctrl internal.IngressNginxController
+		err := item.UnmarshalTo(&ctrl)
+		if err != nil {
 			continue
 		}
 
