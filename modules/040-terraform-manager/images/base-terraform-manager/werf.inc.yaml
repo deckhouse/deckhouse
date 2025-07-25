@@ -96,6 +96,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}          
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
@@ -121,6 +122,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
