@@ -386,7 +386,7 @@ Example configuration for integrating with Bitbucket:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket
