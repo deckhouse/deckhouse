@@ -1,13 +1,11 @@
-{{- $REPO := "deckhouse/3p-docker_auth.git"}}
-{{- $BRANCH := "v1.13.0-deckhouse.0"}}
-{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/cesanta/docker_auth"}}
+{{- $version := "v1.13.0-deckhouse.0"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
-    to: /scripts
+    to: /src/scripts
     stageDependencies:
       install:
         - '**/*'
@@ -16,18 +14,16 @@ secrets:
     value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - mkdir -m 1777 /tmp-tmp
     - git config --global advice.detachedHead false
-    - git clone --depth 1 --single-branch --branch {{ $BRANCH }} $(cat /run/secrets/SOURCE_REPO)/{{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
-    - cd {{ $GIT_CLONE_DEST_PATH }}
-    - rm -rf .git
+    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-docker_auth.git /src/docker_auth
+    - rm -rf /src/docker_auth/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: {{ $GIT_CLONE_DEST_PATH }}
+    add: /src
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -36,30 +32,33 @@ secrets:
     value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+    - mkdir -m 1777 /tmp-tmp
     - apk add --no-cache make
   install:
-    - cd {{ $GIT_CLONE_DEST_PATH }}/auth_server
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export GOOS=linux
     - export GOARCH=amd64
     - export CGO_ENABLED=0
+    - cd /src/docker_auth/auth_server
     - make build
     - mv ./auth_server /auth_server
+    - mv /src/scripts/* /
+    - chmod +x /auth_server /install /uninstall
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
     to: /tmp
     before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /scripts
-    to: /
-    before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /auth_server
-    to: /auth_server
+    add: /
+    to: /
+    includePaths:
+    - auth_server
+    - install
+    - uninstall
     before: setup
   - image: common/pause
     add: /pause
