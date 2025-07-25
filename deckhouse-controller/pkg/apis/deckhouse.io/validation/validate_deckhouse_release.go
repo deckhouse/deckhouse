@@ -50,6 +50,7 @@ func deckhouseReleaseValidationHandler(
 			return nil, fmt.Errorf("expect DeckhouseRelease as unstructured, got %T", obj)
 		}
 
+		// If the DeckhouseRelease is not approved, allow it
 		if !dr.Approved {
 			return allowResult(nil)
 		}
@@ -58,6 +59,9 @@ func deckhouseReleaseValidationHandler(
 			if review.OldObjectRaw != nil {
 				oldDR := &v1alpha1.DeckhouseRelease{}
 				if err := json.Unmarshal(review.OldObjectRaw, oldDR); err == nil {
+					// If the old DeckhouseRelease was approved, we allow the update.
+					// This is to prevent the case when a user approves a DeckhouseRelease,
+					// but then tries to change it back to unapproved, or change another fields.
 					if oldDR.Approved {
 						return allowResult(nil)
 					}
@@ -81,7 +85,8 @@ func deckhouseReleaseValidationHandler(
 				msgs = append(msgs, reason.Message)
 			}
 
-			message := fmt.Sprintf("Cannot approve DeckhouseRelease %q: requirements not met: %s", dr.Name, strings.Join(msgs, "; "))
+			message := fmt.Sprintf("cannot approve DeckhouseRelease %q: requirements not met: \n- %s", dr.Name, strings.Join(msgs, "\n- "))
+
 			return rejectResult(message)
 		}
 
@@ -91,8 +96,10 @@ func deckhouseReleaseValidationHandler(
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
 		ID:        "deckhouse-release-approval",
 		Validator: vf,
-		Logger:    nil,
-		Obj:       &v1alpha1.DeckhouseRelease{},
+		// logger is nil, because webhook has Info level for reporting about http handler
+		// and we get a log of useless spam here. So we decided to use Noop logger here
+		Logger: nil,
+		Obj:    &v1alpha1.DeckhouseRelease{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
