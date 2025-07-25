@@ -159,11 +159,14 @@ DKP will automatically generate new certificates and update all required configu
 
 ### Kubelet certificate rotation
 
-In Deckhouse Kubernetes Platform, kubelet does not use the `--tls-cert-file` or `--tls-private-key-file` flags directly. Instead, it relies on dynamic certificates:
+In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
+Kubelet does not use the `--tls-cert-file` or `--tls-private-key-file` flags directly. Instead, kubelet uses a dynamic client TLS certificate (`/var/lib/kubelet/pki/kubelet-client-current.pem`) with which it can request a new client certificate or a new server certificate (`/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the `operator-trivy` module.
+
+Features of kubelet certificate rotation in Deckhouse Kubernetes Platform:
 
 - By default, kubelet generates its keys in `/var/lib/kubelet/pki/` and requests renewal from the kube-apiserver when needed.
-- Issued certificates are valid for 1 year, but kubelet starts renewing them early (around 5–10% of the remaining validity period).
-- If the certificate fails to renew in time, the node is marked as `NotReady` and is eventually replaced.
+- lifetime of certificates is 1 year (8760 hours). When there is 5-10% (random value from the range) of time left before the certificate expires, kubelet requests a new certificate from kube-apiserver (for more details, see the official documentation [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization)). If necessary, lifetime of certificates can be changed using `--cluster-signing-duration` argument in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. But to ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour.
+- If the certificate cannot be renewed in time, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node is marked as `NotReady` and recreated.
 
 ### Manual renewal of control plane certificates
 
