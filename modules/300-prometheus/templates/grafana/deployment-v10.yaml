@@ -205,6 +205,12 @@ spec:
             port: 8443
             scheme: HTTPS
           initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 60
       - name: dashboard-provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "grafanaDashboardProvisioner") }}
@@ -278,6 +284,11 @@ spec:
         - containerPort: 8443
           name: https
         livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
           httpGet:
             path: /livez
             port: 8443
