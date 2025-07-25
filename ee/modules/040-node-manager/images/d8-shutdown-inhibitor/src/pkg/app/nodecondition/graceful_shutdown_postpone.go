@@ -30,7 +30,7 @@ func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
 		return err
 	}
 
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonOnStart)
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusFalse, ReasonOnStart)
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
