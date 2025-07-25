@@ -143,7 +143,7 @@ properties:
     description: |
       DNS recursion settings for ACME DNS-01 self-check.
     x-examples:
-      - nameservers: ["8.8.8.8:53", "https://1.1.1.1:443"]
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
         useOnlyRecursive: true
     x-kubernetes-validations:
       - rule: "self.useOnlyRecursive == false || size(self.nameservers) >= 1"
@@ -159,5 +159,5 @@ properties:
       useOnlyRecursive:
         type: boolean
         description: |
-          When set to true, cert-manager restricts DNS-01 challenge validation to the specified recursive nameservers and will not fall back to authoritative name servers.
+          When set to true, cert-manager restricts DNS-01 challenge validation to the specified recursive nameservers.
         default: false

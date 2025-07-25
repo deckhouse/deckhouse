@@ -73,7 +73,7 @@ properties:
     description: |
       Параметры рекурсивных DNS для самопроверки ACME DNS-01:
     x-examples:
-      - nameservers: ["8.8.8.8:53", "https://1.1.1.1:443"]
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
         useOnlyRecursive: true
     properties:
       nameservers:
@@ -81,4 +81,4 @@ properties:
           Список рекурсивных DNS-серверов (IP:порт или HTTPS-URL), к которым cert-manager будет обращаться.
       useOnlyRecursive:
         description: |
-          Если значение true, cert-manager ограничивает проверку DNS-01 указанными рекурсивными DNS-серверами и не выполняет запросы к авторитетным DNS-серверам.
+          Если значение true, cert-manager ограничивает проверку DNS-01 указанными рекурсивными DNS-серверами.
