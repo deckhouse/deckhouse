@@ -127,11 +127,11 @@ memory: 64Mi
     memory: 15Mi
 - containerName: kube-rbac-proxy
   maxAllowed:
-    cpu: 20m
-    memory: 25Mi
+    cpu: 50m
+    memory: 64Mi
   minAllowed:
-    cpu: 10m
-    memory: 25Mi`))
+    cpu: 15m
+    memory: 32Mi`))
 		})
 	})
 })
