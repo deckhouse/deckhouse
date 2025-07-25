@@ -851,10 +851,6 @@ entries:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
-        - title:
-            en: FAQ
-            ru: FAQ
-          url: /deckhouse-faq.html
 
 # ------------- Using -------------
     - title:
