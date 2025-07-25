@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: d8-configuration-secret.deckhouse.io
+  group: main
+  matchConditions:
+  - expression: (request.object.metadata.name in [d8-cluster-configuration, d8-provider-cluster-configuration, d8-static-cluster-configuration])
+    name: filter-d8-configuration
+  namespace:
+    labelSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["v1"]
+    operations:  ["*"]
+    resources:   ["secrets"]
+    scope:       "Namespaced"
+EOF
+}
+
+function forbid() {
+  jq -nc --arg message "$1" '
+    {
+      "allowed": false,
+      "message": $message
+    }
+    ' >"$VALIDATING_RESPONSE_PATH"
+}
+
+function __main__() {
+  validation_output=$(context::jq -r '.review.request.object' | configuration-validator 2>&1)
+  validator_exit_code=$?
+
+  if [ $validator_exit_code -eq 0 ]; then
+    echo '{"allowed":true}' > "$VALIDATING_RESPONSE_PATH"
+  else
+    forbid "$validation_output"
+  fi
+
+  return 0
+}
+
+hook::run "$@"
