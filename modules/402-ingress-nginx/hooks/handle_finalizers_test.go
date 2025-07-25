@@ -143,7 +143,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
-	Context("Add finalizer to IngressNginxController without finalizers", func() {
+	Context("Given an IngressNginxController with existing child resources, a finalizer must be added.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + loadBalancerServiceController + controllerDaemonSet + admissionService))
 			f.RunGoHook()
@@ -155,7 +155,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 		})
 	})
 
-	Context("No Add finalizer to IngressNginxController without finalizers", func() {
+	Context("Given an IngressNginxController with no child resources, a finalizer must not be added.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer))
 			f.RunGoHook()
@@ -167,7 +167,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 		})
 	})
 
-	Context("Remove finalizer to IngressNginxController with finalizers", func() {
+	Context("Given an IngressNginxController with no child resources, its finalizer must be removed.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerWithFinalizer))
 			f.RunGoHook()
@@ -179,7 +179,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 		})
 	})
 
-	Context("Check remove only our finalizer to IngressNginxController with fakefinalizers", func() {
+	Context("Given an 'IngressNginxController` resource does not contain child resources and has fake finalizers, the finalizer `finalizer.ingress-nginx.deckhouse.io ` must be deleted, other finalizers must remain.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerWithFakeFinalizers))
 			f.RunGoHook()
@@ -192,7 +192,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 		})
 	})
 
-	Context("Add finalizer to IngressNginxController with faiover", func() {
+	Context("If an IngressNginxController resource has the inlet type HostWithFailover and any child resources exist, then a finalizer should be added to the controller.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + withFailoverServiceController + controllerDaemonSetWithFailover))
 			f.RunGoHook()

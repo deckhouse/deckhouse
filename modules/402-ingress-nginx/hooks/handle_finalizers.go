@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-type INController struct {
+type IngressControllerWithFinalizer struct {
 	Finalizers []string
 	Name       string
 }
@@ -99,7 +99,7 @@ func applyIngressControllerFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	finalizers := obj.GetFinalizers()
 	name := obj.GetName()
 
-	return INController{
+	return IngressControllerWithFinalizer{
 		Finalizers: finalizers,
 		Name:       name,
 	}, nil
@@ -143,9 +143,9 @@ func handleFinalizers(input *go_hook.HookInput) error {
 	daemonSetNames := set.NewFromSnapshot(input.NewSnapshots.Get("daemonsetscruise"))
 	validationWebhooks := set.NewFromSnapshot(input.NewSnapshots.Get("valwebhookconfnginx"))
 
-	for controller, err := range sdkobjectpatch.SnapshotIter[INController](input.NewSnapshots.Get("controller")) {
+	for controller, err := range sdkobjectpatch.SnapshotIter[IngressControllerWithFinalizer](input.NewSnapshots.Get("controller")) {
 		if err != nil {
-			log.Error(fmt.Sprintf("Failed to patch controller %s with error %v", controller.Name, err))
+			log.Error(fmt.Sprintf("Failed convert shanpshot %s  to IngressControllerWithFinalizer type with error %v", controller.Name, err))
 		}
 
 		controllerName := controller.Name
