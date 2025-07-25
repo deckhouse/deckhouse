@@ -143,10 +143,10 @@ The following fields are automatically included in the JWT token and can be used
 | `pipeline_id`           | always                      | CI pipeline ID                                                           |
 | `pipeline_source`       | always                      | Pipeline trigger source (push, schedule, merge request, etc.)           |
 | `job_id`                | always                      | CI job ID                                                                |
-| `ref`                   | always                      | Git ref (e.g., `main`, `v1.2`)                                           |
-| `ref_type`              | always                      | Ref type (`branch` or `tag`)                                             |
-| `ref_path`              | always                      | Full ref path (e.g., `refs/heads/main`)                                  |
-| `ref_protected`         | always                      | Indicates if the ref is protected                                        |
+| `ref`                   | always                      | Git reference (e.g., `main`, `v1.2`)                                           |
+| `ref_type`              | always                      | Git reference type (`branch` or `tag`)                                             |
+| `ref_path`              | always                      | Full Git reference path (e.g., `refs/heads/main`)                                  |
+| `ref_protected`         | always                      | Indicates if the Git reference is protected                                        |
 | `environment`           | if available                | Environment name (if used)                                               |
 | `groups_direct`         | if available (<200 groups)  | Paths to groups the user is directly a member of                         |
 | `environment_protected` | if available                | Indicates if the environment is protected                                |
