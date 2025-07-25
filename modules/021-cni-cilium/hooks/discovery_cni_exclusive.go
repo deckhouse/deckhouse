@@ -54,6 +54,6 @@ func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
 	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	isEnabled := len(istioCniDaemonSets) != 0 || enabledModules.Has("sdn")
-	input.Values.Set("cniCilium.discovery.exclusiveCNIPlugin", isEnabled)
+	input.Values.Set("cniCilium.internal.exclusiveCNIPlugin2", isEnabled)
 	return nil
 }
