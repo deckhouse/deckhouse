@@ -48,22 +48,33 @@ func annotateNode() error {
 		lastErr = err
 		time.Sleep(1 * time.Second)
 	}
+
 	return lastErr
 }
 
 func waitNodeApproval() error {
 	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
 
+	var lastErr error
 	for i := 0; i < maxRetries; i++ {
 		log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
+
 		node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 		if err != nil {
-			return err
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
 		}
+
 		if _, ok := node.Annotations[approvedAnnotation]; ok {
 			return nil
 		}
+
 		time.Sleep(1 * time.Second)
+	}
+
+	if lastErr != nil {
+		return lastErr
 	}
 	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }
