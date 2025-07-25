@@ -82,21 +82,19 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
-	if len(snaps) == 0 {
+	ddSnaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+	if len(ddSnaps) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.NewSnapshots.Get("storage_classes")) == 0 {
+		scSnaps := input.NewSnapshots.Get("storage_classes")
+		if len(scSnaps) == 0 {
 			input.Logger.Warn("failed to find storage classes for vSphere provisioner")
-
 			return nil
 		}
 
-		storageClassesSnapshots := input.NewSnapshots.Get("storage_classes")
+		storageClasses := make([]storageClass, 0, len(scSnaps))
 
-		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
-
-		for sc, err := range objectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
+		for sc, err := range objectpatch.SnapshotIter[storage.StorageClass](scSnaps) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}
@@ -124,7 +122,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	}
 
 	secret := new(v1.Secret)
-	err := snaps[0].UnmarshalTo(secret)
+	err := ddSnaps[0].UnmarshalTo(secret)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal secret: %v", err)
 	}
