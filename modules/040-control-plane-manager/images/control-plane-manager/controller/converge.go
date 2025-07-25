@@ -69,7 +69,7 @@ func installExtraFiles() error {
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	for _, v := range []string{"kube-apiserver", "kube-controller-manager", "kube-scheduler", "etcd"} {
+	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
 		if err := convergeComponent(v); err != nil {
 			return err
 		}
