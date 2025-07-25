@@ -265,6 +265,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 						input.Logger.Info("approveUpdates Draining", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 						input.PatchCollector.PatchWithMerge(drainingPath, "v1", "Node", "", approvedNode.Name)
 						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
+						ar.finished = true
 					} else {
 						input.Logger.Info("approveUpdates is Drained wait", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 					}
@@ -275,7 +276,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			input.Logger.Info("approveUpdates Approved", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNode.Name)
 			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
-
 			ar.finished = true
 		}
 	}
