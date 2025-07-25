@@ -217,37 +217,34 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		countToApprove := concurrency - currentUpdates
 		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
 
-		// меняем порядок набора нод
-		// сначала IsWaitingForApproval с IsDrained = true
-		// вторым  IsWaitingForApproval с IsReady = false
-		// третим IsWaitingForApproval с ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral
-
-		//     Allow one node, if 100% nodes in NodeGroup are ready
-		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
-			var allReady = true
+		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
-				if !ngn.IsReady {
-					allReady = false
-					break
-				}
-			}
-
-			if allReady {
-				for _, ngn := range nodeGroupNodes {
-					if ngn.IsWaitingForApproval {
-						approvedNodes = append(approvedNodes, ngn)
-						if len(approvedNodes) == countToApprove {
-							break
-						}
+				// IsDrained first
+				if ngn.IsDrained && ngn.IsWaitingForApproval {
+					approvedNodes = append(approvedNodes, ngn)
+					if len(approvedNodes) == countToApprove {
+						break
 					}
 				}
 			}
 		}
 
 		if len(approvedNodes) < countToApprove {
-			//    Allow one of not ready nodes, if any
 			for _, ngn := range nodeGroupNodes {
-				if !ngn.IsReady && ngn.IsWaitingForApproval {
+				// get !ngn.IsReady if it is below the limit
+				if !ngn.IsReady && !ngn.IsDrained && ngn.IsWaitingForApproval {
+					approvedNodes = append(approvedNodes, ngn)
+					if len(approvedNodes) == countToApprove {
+						break
+					}
+				}
+			}
+		}
+
+		if len(approvedNodes) < countToApprove {
+			for _, ngn := range nodeGroupNodes {
+				// Allow one node, if 100% nodes in NodeGroup are ready
+				if (ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral) && !ngn.IsDrained && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
 					if len(approvedNodes) == countToApprove {
 						break
@@ -261,19 +258,21 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
-			// тут должно быть ветвление если выставлен IsDisruptionApproved = true и ng.Disruptions.ApprovalMode = "Automatic"
-			// 		то мы должны проверить что IsDrained
-			// 			если IsDraining не стоит повесить его и выйти
-			//		если IsDrained = true то вешаем Approved
-			// иначе вешаем Approved
-			patch := approvedPatch
-			input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
-			if approvedNode.IsDisruptionApproved && ar.needDrainNode(input, &approvedNode, &ng) {
-				input.Logger.Info(fmt.Sprintf("approveUpdates Node IsDisruptionApproved: %+v", approvedNode.IsDisruptionApproved), "node", approvedNode.Name, "ng", ng.Name)
-				patch["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})[drainingAnnotationKey] = "bashible"
+			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
+				if !approvedNode.IsDrained {
+					if !approvedNode.IsDraining {
+						input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", drainingPath), "node", approvedNode.Name, "ng", ng.Name)
+						input.PatchCollector.PatchWithMerge(drainingPath, "v1", "Node", "", approvedNode.Name)
+						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
+					} else {
+						input.Logger.Info("approveUpdates is Drained wait", "node", approvedNode.Name, "ng", ng.Name)
+					}
+					continue
+				}
 			}
-			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", patch), "node", approvedNode.Name, "ng", ng.Name)
-			input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
+
+			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", approvedPatch), "node", approvedNode.Name, "ng", ng.Name)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNode.Name)
 			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
 		}
 
@@ -289,6 +288,13 @@ var (
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/approved":             "",
 				"update.node.deckhouse.io/waiting-for-approval": nil,
+			},
+		},
+	}
+	drainingPath = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainingAnnotationKey: "bashible",
 			},
 		},
 	}
@@ -383,13 +389,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		case !node.IsUnschedulable:
 			// If node is not unschedulable – mark it for draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						drainingAnnotationKey: "bashible",
-					},
-				},
-			}
+			patch = drainingPath
 			metricStatus = "DrainingForDisruption"
 
 		default:
