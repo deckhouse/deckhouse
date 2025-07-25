@@ -26,14 +26,14 @@
 #####################################################################
 {{ $binariesFromALT := "" }}
 # from base install script
-{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }}
+{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### see what is it
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / simlink sh -> bash
 # clang dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
-{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
+{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
+{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
@@ -41,7 +41,7 @@
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
@@ -75,15 +75,15 @@
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
-from: dev-registry.deckhouse.io/base_images@sha256:cb5b0eff9f36bb126d4709a4c754d4bc3e226a2149afaa7489bd342691e35ef5
+from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
-from: dev-registry.deckhouse.io/base_images@sha256:0dbfa46661e53b920ab1e43efc571dc6315ceb3e5b4ed878ff824faf4bf98ad3
+from: dev-registry.deckhouse.io/base_images@sha256:b103dd49424bbf7a018a5c43776638fb33d3ff77149c3bf6741c99c73d652bc6
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:9017aa36c76354d06ce4d6cae562b80486fec27ba60905e13001776d7f0cf654
+from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
