@@ -48,8 +48,8 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 
-	// If exist deletetion timestamp skip controller, it don't include in "ingressNginx.internal.ingressControllers" to helm remove resources, after we remove finalizer
-	// need for handle_finalizers hook
+	// If deletion timestamp exists — skip controller to force helm deleteing the resources by excluding the controller from "ingressNginx.internal.ingressControllers".
+	// need for handle_finalizers hook proper work
 	if obj.GetDeletionTimestamp() != nil {
 		return nil, nil
 	}
