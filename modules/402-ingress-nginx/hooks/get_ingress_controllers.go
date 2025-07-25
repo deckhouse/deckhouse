@@ -47,6 +47,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
+
+	// If deletion timestamp exists — skip controller to force helm deleting the resources by excluding the controller from "ingressNginx.internal.ingressControllers".
+	// need for handle_finalizers hook proper work
+	if obj.GetDeletionTimestamp() != nil {
+		return nil, nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from ingress controller %s: %v", name, err)
 	}
@@ -161,6 +168,9 @@ func setInternalValues(input *go_hook.HookInput) error {
 	controllers := make([]Controller, 0, len(controllersFilterResult))
 
 	for _, c := range controllersFilterResult {
+		if c == nil {
+			continue
+		}
 		controller := c.(Controller)
 
 		version, found, err := unstructured.NestedString(controller.Spec, "controllerVersion")
