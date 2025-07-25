@@ -116,7 +116,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 				DatastoreURL: sc.Parameters["DatastoreURL"],
 			})
 		}
-		input.Logger.Info("found vSphere storage classes using StorageClass snapshots", slog.Any("storage_classes", storageClasses))
+		input.Logger.Info("found vSphere storage classes using storage_classes snapshots", slog.Any("storage_classes", storageClasses))
 		input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 		return nil
 	}
@@ -193,7 +193,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.Logger.Info("Found vSphere storage classes using StorageClass snapshots, StorageDomain discovery data", slog.Any("data", storageClasses))
+	input.Logger.Info("Found vSphere storage classes using cloud_provider_discovery_data", slog.Any("data", storageClasses))
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 	return nil
 }
