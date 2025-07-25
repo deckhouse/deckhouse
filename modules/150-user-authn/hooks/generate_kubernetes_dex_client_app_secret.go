@@ -70,7 +70,7 @@ func kubernetesDexClientAppSecret(input *go_hook.HookInput) error {
 		var secretContent []byte
 		err := kubernetesSecrets[0].UnmarshalTo(&secretContent)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'kubernetes_secret' snapshot: %w", err)
+			return fmt.Errorf("cannot conver kubernetes secret to bytes: failed to unmarshal 'kubernetes_secret' snapshot: %w", err)
 		}
 
 		// if secret field was removed, generate a new one

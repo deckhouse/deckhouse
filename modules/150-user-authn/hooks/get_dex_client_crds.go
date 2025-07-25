@@ -160,7 +160,7 @@ func getDexClient(input *go_hook.HookInput) error {
 
 	for dexSecret, err := range sdkobjectpatch.SnapshotIter[DexClientSecret](credentials) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'credentials' snapshot: %w", err)
+			return fmt.Errorf("cannot convert dex client secret: failed to iterate over 'credentials' snapshot: %w", err)
 		}
 
 		credentialsByID[dexSecret.ID] = string(dexSecret.Secret)
@@ -169,7 +169,7 @@ func getDexClient(input *go_hook.HookInput) error {
 	dexClients := make([]DexClient, 0, len(clients))
 	for dexClient, err := range sdkobjectpatch.SnapshotIter[DexClient](clients) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'clients' snapshot: %w", err)
+			return fmt.Errorf("cannot convert dex client: failed to iterate over 'clients' snapshot: %w", err)
 		}
 
 		existedSecret, ok := credentialsByID[dexClient.ID]

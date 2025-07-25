@@ -83,7 +83,7 @@ func expireDexUsers(input *go_hook.HookInput) error {
 
 	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.NewSnapshots.Get("users")) {
 		if err != nil {
-			return fmt.Errorf("cannot iterate over 'users' snapshot: %v", err)
+			return fmt.Errorf("cannot convert user to dex expire: cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {

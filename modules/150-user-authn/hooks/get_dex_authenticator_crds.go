@@ -135,7 +135,7 @@ func getDexAuthenticator(input *go_hook.HookInput) error {
 
 	for dexSecret, err := range sdkobjectpatch.SnapshotIter[DexAuthenticatorSecret](credentials) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'credentials' snapshot: %w", err)
+			return fmt.Errorf("cannot convert dex authenticator secret: failed to iterate over 'credentials' snapshot: %w", err)
 		}
 
 		credentialsByID[dexSecret.ID] = dexSecret.Credentials
@@ -144,7 +144,7 @@ func getDexAuthenticator(input *go_hook.HookInput) error {
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
 	for dexAuthenticator, err := range sdkobjectpatch.SnapshotIter[DexAuthenticator](authenticators) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'authenticators' snapshot: %w", err)
+			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
 		}
 
 		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]

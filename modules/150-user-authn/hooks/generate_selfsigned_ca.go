@@ -82,7 +82,7 @@ func generateSelfSignedCA(input *go_hook.HookInput) error {
 	if len(certs) == 1 {
 		err := certs[0].UnmarshalTo(&sefSignedCA)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'cert' snapshot: %w", err)
+			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert' snapshot: %w", err)
 		}
 	} else {
 		var err error

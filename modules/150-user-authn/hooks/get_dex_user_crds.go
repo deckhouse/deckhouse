@@ -136,7 +136,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.NewSnapshots.Get("users")) {
 		if err != nil {
-			return fmt.Errorf("cannot iterate over 'users' snapshot: %v", err)
+			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		var groups []string

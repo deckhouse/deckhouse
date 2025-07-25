@@ -231,7 +231,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 	for mc, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("mcs")) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'mcs' snapshot: %w", err)
+			return fmt.Errorf("failed to assert to string: failed to iterate over 'mcs' snapshot: %w", err)
 		}
 
 		preemptibleMachineClassesSet.Add(mc)
@@ -243,7 +243,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.NewSnapshots.Get("nodes")) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
+			return fmt.Errorf("failed to assert to Node: failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
 		nodeNameToNodeMap[node.Name] = &node
@@ -251,7 +251,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 	for ngStatus, err := range sdkobjectpatch.SnapshotIter[NodeGroupStatus](input.NewSnapshots.Get("nodegroupstatuses")) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'nodegroupstatuses' snapshot: %w", err)
+			return fmt.Errorf("failed to assert to NodeGroupStatus: failed to iterate over 'nodegroupstatuses' snapshot: %w", err)
 		}
 
 		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = &ngStatus
@@ -259,7 +259,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 	for machine, err := range sdkobjectpatch.SnapshotIter[Machine](input.NewSnapshots.Get("machines")) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'machines' snapshot: %w", err)
+			return fmt.Errorf("failed to assert to Machine: failed to iterate over 'machines' snapshot: %w", err)
 		}
 
 		if machine.Terminating {
