@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -100,7 +101,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				enabledModules: tt.enabledModules,
 			}
 
-			exts := extenders.NewExtendersStack(nil, "v1.30.0", log.NewLogger())
+			exts := extenders.NewExtendersStack(&edition.Edition{Version: "v1.30.0"}, nil, log.NewLogger())
 
 			handler := deckhouseReleaseValidationHandler(client, mm, exts)
 
