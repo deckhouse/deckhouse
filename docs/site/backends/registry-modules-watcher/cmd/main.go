@@ -18,18 +18,23 @@ import (
 	"context"
 	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"registry-modules-watcher/internal/backends"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
+	handler "registry-modules-watcher/internal/http/v1"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
 	"syscall"
 	"time"
 
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
@@ -51,6 +56,23 @@ func main() {
 
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
+
+	// * * * * * * * * *
+	// Metric storage
+	metricStorage := metricstorage.NewMetricStorage("watcher")
+	metricCollector := metricStorage.Collector()
+	metricRegistry := prometheus.NewRegistry()
+	metricRegistry.MustRegister(metricCollector)
+	// metricStorage.HistogramObserve()
+
+	// * * * * * * * * *
+	// New handler
+	h := handler.NewHandler(logger.Named("v1"), metricRegistry)
+	srv := &http.Server{
+		Addr:    "localhost:9090",
+		Handler: h,
+	}
+	go srv.ListenAndServe()
 
 	// * * * * * * * * *
 	// dockerconfigjson
