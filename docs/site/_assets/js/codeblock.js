@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", function() {
       let newHTML = '';
 
       let lineIndex = 1;
-      lines.forEach(line => {
+      lines.forEach((line, index, arr) => {
         const trimLine = line.trim();
 
         if(trimLine.length === 0 || /^(\s*<\/span>\s*){1,3}$/.test(trimLine)) {
@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         newHTML += `<span data-copy="ignore" class="line-number">${lineIndex}</span>${line}`;
 
-        if(lineIndex < line.length) {
+        if(index < arr.length - 1) {
           newHTML += `\n`;
         }
         
