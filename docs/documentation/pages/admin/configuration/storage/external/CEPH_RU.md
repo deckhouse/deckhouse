@@ -4,28 +4,28 @@ permalink: ru/admin/configuration/storage/external/ceph.html
 lang: ru
 ---
 
-Ceph — это масштабируемая распределённая система хранения, обеспечивающая высокую доступность и отказоустойчивость данных. В Deckhouse поддерживается интеграция с Ceph-кластерами. Это даёт возможность динамически управлять хранилищем и использовать StorageClass на основе RBD (RADOS Block Device) или CephFS.
+Ceph — это масштабируемая распределённая система хранения, обеспечивающая высокую доступность и отказоустойчивость данных. В Deckhouse поддерживается интеграция с Ceph-кластерами. Это даёт возможность динамически управлять хранилищем и использовать StorageClass на основе RADOS Block Device (RBD) или CephFS.
 
 На этой странице представлены инструкции по подключению Ceph в Deckhouse, настройке аутентификации, созданию объектов StorageClass, а также проверке работоспособности хранилища.
 
 {% alert level="warning" %}
 При переключении на данный модуль с модуля `ceph-csi` производится автоматическая миграция, но ее запуск требует подготовки:
 
-1. Необходимо сделать scale всех операторов (redis, clickhouse, kafka и т.д) в ноль реплик, в момент миграции операторы в кластере работать не должны. Единственное исключение — оператор `prometheus` в составе Deckhouse, в процессе миграции его отключит автоматически.
-1. Выключить модуль `ceph-csi` и включить модуль `csi-ceph`.
-1. В логах Deckhouse дождаться окончания процесса миграции (Finished migration from Ceph CSI module).
-1. Создать тестовые pod/pvc для проверки работоспособности CSI.
-1. Вернуть операторы в работоспособное состояние.
+1. Выполните scale всех операторов (redis, clickhouse, kafka и т.д) в ноль реплик. В момент миграции операторы в кластере работать не должны. Единственное исключение — оператор `prometheus` в составе Deckhouse, который будет автоматически отключен в процессе миграции.
+1. Выключите модуль `ceph-csi` и включите модуль `csi-ceph`.
+1. В логах Deckhouse дождитесь окончания процесса миграции («Finished migration from Ceph CSI module»).
+1. Создайте тестовые pod/pvc для проверки работоспособности CSI.
+1. Верните операторы в работоспособное состояние.
    При наличии в ресурсах CephCSIDriver поля `spec.cephfs.storageClasses.pool` отличного от `cephfs_data` миграция будет завершаться с ошибкой.
-   При наличии Ceph StorageClass, созданного не с помощью ресурса CephCSIDriver потребуется ручная миграция.
-   В этих случаях необходимо связаться с технической поддержкой.
+   При наличии Ceph StorageClass, созданного не с помощью ресурса CephCSIDriver, потребуется ручная миграция.
+   В этих случаях необходимо связаться [с технической поддержкой Deckhouse](https://deckhouse.ru/tech-support/).
 {% endalert %}
 
 ## Включение модуля
 
 Для подключения Ceph-кластера в Deckhouse необходимо включить модуль `csi-ceph`. Для этого примените ресурс ModuleConfig:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -38,9 +38,9 @@ EOF
 
 ## Подключение к Ceph-кластеру
 
-Чтобы настроить подключение к Ceph-кластеру примените ресурс [CephClusterConnection](../../../reference/cr/cephclusterconnection/). Пример команды:
+Чтобы настроить подключение к Ceph-кластеру, примените ресурс [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection). Пример команды:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: CephClusterConnection
@@ -50,7 +50,7 @@ spec:
   # FSID/UUID Ceph-кластера.
   # Получить FSID/UUID Ceph-кластера можно с помощью команды `ceph fsid`.
   clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
-  # Список IP-адресов ceph-mon’ов в формате 10.0.0.10:6789.
+  # Список IP-адресов ceph-mon’ов в формате `10.0.0.10:6789`.
   monitors:
     - 10.0.0.10:6789
   # Имя пользователя без `client.`.
@@ -70,9 +70,9 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Создание StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс [CephStorageClass](../../../reference/cr/cephstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [CephStorageClass](../../../reference/cr/cephstorageclass/) может привести к ошибкам. Пример создания StorageClass на основе RBD (RADOS Block Device):
+Создание объектов StorageClass осуществляется через ресурс [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) может привести к ошибкам. Пример создания StorageClass на основе RBD:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: CephStorageClass
@@ -90,7 +90,7 @@ EOF
 
 Пример создания StorageClass на основе файловой системы Ceph:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: CephStorageClass
@@ -105,13 +105,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданные ресурсы [CephStorageClass](../../../reference/cr/cephstorageclass/) перешли в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданные ресурсы [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) перешли в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get cephstorageclass
 ```
 
-В результате будет выведена информация о созданных ресурсах [CephStorageClass](../../../reference/cr/cephstorageclass/):
+В результате будет выведена информация о созданных ресурсах [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
 
 ```console
 NAME          PHASE     AGE
@@ -148,7 +148,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 ## Поддерживаемые версии Ceph
 
 - Официальная поддержка — Ceph версии 16.2.0 и выше.
-- Совместимость — решение работает с кластерами Ceph версии 14.2.0 и выше, однако рекомендуется обновить Ceph до версии 16.2.0 или новее для обеспечения максимальной стабильности и доступа к последним исправлениям.
+- Совместимость — решение работает с кластерами Ceph версии 14.2.0 и выше, однако рекомендуется обновить Ceph до версии 16.2.0 или выше для обеспечения максимальной стабильности и доступа к последним исправлениям.
 
 ## Поддерживаемые режимы доступа к томам
 
@@ -157,7 +157,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 
 ## Примеры
 
-Пример описания [CephClusterConnection](../../../reference/cr/cephclusterconnection/):
+Пример описания [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection):
 
 ```yaml
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -174,13 +174,13 @@ spec:
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 ```
 
-- Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
+Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get cephclusterconnection <имя cephclusterconnection>
 ```
 
-Пример описания [CephStorageClass](../../../reference/cr/cephstorageclass/):
+Пример описания [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
 
 - Для RBD
 

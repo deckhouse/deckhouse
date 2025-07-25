@@ -6,15 +6,15 @@ lang: ru
 
 Репликация данных между несколькими узлами обеспечивает отказоустойчивость и доступность данных даже при сбоях в оборудовании или программном обеспечении одного из узлов. Это гарантирует, что данные сохранятся на других узлах, а доступ к ним будет непрерывным. Такая модель необходима для критически важных данных и распределенных инфраструктур с высокими требованиями к доступности и минимизации потерь при сбоях.
 
-Для создания реплицируемых блочных объектов StorageClass на базе DRBD (Distributed Replicated Block Device) используется модуль `sds-replicated-volume`, который использует [LINSTOR](https://linbit.com/linstor/) в качестве бэкенда.
+Для создания реплицируемых блочных объектов StorageClass на базе Distributed Replicated Block Device (DRBD, распределенное реплицируемое блочное устройство) используется модуль `sds-replicated-volume`, который использует [LINSTOR](https://linbit.com/linstor/) в качестве бэкенда.
 
 ## Включение модуля
 
 ### Обнаружение компонентов LVM
 
-Перед тем как приступить к созданию объектов StorageClass на базе LVM (Logical Volume Manager), необходимо обнаружить доступные на узлах блочные устройства и группы томов и получить актуальную информацию об их состоянии. Для этого включите модуль `sds-node-configurator`:
+Перед тем как приступить к созданию объектов StorageClass на базе LVM (Logical Volume Manager), необходимо найти доступные на узлах блочные устройства и группы томов и получить актуальную информацию об их состоянии. Для этого включите модуль `sds-node-configurator`:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -43,7 +43,7 @@ sds-node-configurator   900      Enabled   deckhouse           Ready
 
 Чтобы включить модуль `sds-replicated-volume` с настройками по умолчанию, выполните команду:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -70,20 +70,22 @@ NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
 sds-replicated-volume   915      Enabled   Embedded           Ready
 ```
 
-Чтобы проверить, что в пространстве имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
+Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
 
 ```shell
 d8 k -n d8-sds-replicated-volume get pod -w
 d8 k -n d8-sds-node-configurator get pod -w
 ```
 
-Следует избегать непосредственной конфигурации бэкенда `LINSTOR` пользователем, так как это может привести к ошибкам.
+{% alert level="info" %}
+Не рекомендуется настраивать бэкенд `LINSTOR` вручную, поскольку это может привести к ошибкам.
+{% endalert %}
 
 ## Преднастройка узлов
 
 ### Создание групп томов LVM
 
-Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс BlockDevices, который отражает их актуальное состояние:
+Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс [BlockDevices](/modules/sds-node-configurator/cr.html#blockdevice), который отражает их актуальное состояние:
 
 ```shell
 d8 k get bd
@@ -101,11 +103,11 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
-В примере выполнения команды выше в наличии имеется шесть блочных устройств, расположенных на трёх узлах.
+В примере вывода перечислены шесть блочных устройств, расположенных на трёх узлах.
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). Для создания ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
+Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Для создания ресурса LVMVolumeGroup на узле `worker-0` примените следующий ресурс, предварительно заменив имена узла и блочных устройств на необходимые:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LVMVolumeGroup
@@ -114,26 +116,26 @@ metadata:
 spec:
   type: Local
   local:
-    # Замените на имя своего узла, для которого создаете группу томов. 
+    # Замените на имя своего узла, для которого вы создаете группу томов. 
     nodeName: "worker-0"
   blockDeviceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
-          # Замените на имена своих блочных устройств узла, для которого создаете группу томов. 
+          # Замените на имена своих блочных устройств узла, для которого вы создаете группу томов. 
           - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возможность создавать thin pool, детали будут раскрыты далее.
+  # Раскомментируйте, если важно иметь возможность создавать thin pool.
   # thinPools:
   #   - name: thin-pool-0
   #     size: 70%
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -146,7 +148,9 @@ NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE    
 vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
-Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`. Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих узлу.
+Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
+
+Далее необходимо повторить создание ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для оставшихся узлов (`worker-1` и `worker-2`), изменив в примере выше имя ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), имя узла и имена блочных устройств, соответствующих узлу.
 
 Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
@@ -165,11 +169,11 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Создание реплицированных thick pool
 
-Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/).
+Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
 
-Пулы хранения могут быть двух типов: LVM (thick) и LVMThin (thin). Thick-пул обладает высокой производительностью, сравнимой с производительностью накопителя, но не позволяет использовать снапшоты. Пример создания реплицированного thick-пула:
+Пулы хранения могут быть двух типов: LVM (thick) и LVMThin (thin). Thick pool обладает высокой производительностью, сравнимой с производительностью накопителя, но не позволяет использовать снимки. Пример создания реплицированного thick pool:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: ReplicatedStoragePool
@@ -184,7 +188,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -201,9 +205,9 @@ thick-pool   Completed   LVM    87d
 
 В отличие от thick pool, thin pool позволяет использовать снимки, но обладает меньшей производительностью.
 
-Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick pool. Если вам важно иметь возможность создавать реплицированные thin pool, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin pool:
+Созданные ранее ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) подходят для создания thick pool. Если вам важно иметь возможность создавать реплицированные thin pool, обновите конфигурацию ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), добавив определение для thin pool:
 
-```yaml
+```shell
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
   {
     "op": "add",
@@ -218,11 +222,11 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
+В обновленной версии [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
 
-Повторите добавление thin pool для оставшихся узлов (worker-1 и worker-2). Пример создания реплицированного thin pool:
+Повторите добавление thin pool для оставшихся узлов (`worker-1` и `worker-2`). Пример создания реплицированного thin pool:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: ReplicatedStoragePool
@@ -240,7 +244,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -255,22 +259,22 @@ thin-pool   Completed   LVMThin   87d
 
 ## Создание объектов StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) может привести к нежелательному поведению.
+Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) может привести к нежелательному поведению.
 
-Пример создания ресурса [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) на основе thick pool, PersistentVolumes которого будут размещены на группах томов на трех узлах:
+Пример создания ресурса [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) на основе thick pool, PersistentVolumes которого будут размещены на группах томов на трех узлах:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: ReplicatedStorageClass
 metadata:
   name: replicated-storage-class
 spec:
-  # Указываем имя одного из пулов хранения, созданных ранее.
+  # Имя одного из пулов хранения, созданных ранее.
   storagePool: thick-pool
   # Режим поведения при удалении PVC.
   # Допустимые значения: "Delete", "Retain".
-  # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
+  # Подробнее в документации Kubernetes: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
   reclaimPolicy: Delete
   # Реплики смогут размещаться на любых доступных узлах: не более одной реплики определенного тома на один узел.
   # В кластере нет зон (нет узлов с лейблами topology.kubernetes.io/zone).
@@ -281,13 +285,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
 
-В результате будет выведена информация о созданном [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/):
+В результате будет выведена информация о созданном [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass):
 
 ```console
 NAME                       PHASE     AGE

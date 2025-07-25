@@ -8,7 +8,7 @@ Deckhouse поддерживает управление хранилищами, 
 
 На этой странице представлены инструкции по подключению SCSI-устройств в Deckhouse, созданию SCSITarget, StorageClass, а также проверке работоспособности системы.
 
-### Поддерживаемые возможности
+## Поддерживаемые возможности
 
 - Обнаружение LUN через iSCSI/FC.
 - Создание PersistentVolume из заранее подготовленных LUN.
@@ -17,18 +17,16 @@ Deckhouse поддерживает управление хранилищами, 
 - Создание `multipath`-устройств и их монтирование в поды.
 - Отключение LUN от узлов.
 
-### Ограничения
+## Ограничения
 
 - Невозможно создать LUN на СХД.
 - Нельзя изменить размер LUN.
 - Снимки (snapshots) не поддерживаются.
 
-## Системные требования и рекомендации
-
-### Требования
+## Системные требования
 
 - Наличие развернутой и настроенной СХД с подключением через SCSI.
-- Уникальные iqn в /etc/iscsi/initiatorname.iscsi на каждой из Kubernetes Nodes
+- Уникальные IQN в `/etc/iscsi/initiatorname.iscsi` на каждом узле Kubernetes.
 
 ## Быстрый старт
 
@@ -37,8 +35,9 @@ Deckhouse поддерживает управление хранилищами, 
 ### Включение модуля
 
 Включите модуль `csi-scsi-generic`. Это приведет к тому, что на всех узлах кластера будет:
-- Зарегистрирован CSI драйвер;
-- Запущены служебные поды компонентов `csi-scsi-generic`.
+
+- зарегистрирован CSI драйвер;
+- запущены служебные поды компонентов `csi-scsi-generic`.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -60,9 +59,9 @@ d8 k get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Для создания SCSITarget необходимо использовать ресурс [SCSITarget](../../../reference/cr/scsitarget). Пример команд для создания такого ресурса:
+Для создания SCSITarget необходимо использовать ресурс [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget). Пример команд для создания такого ресурса:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
@@ -112,9 +111,9 @@ d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](../../../reference/cr/scsistorageclass). Пример команд для создания такого ресурса:
+Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](/modules/csi-scsi-generic/cr.html#scsistorageclass). Пример команды для создания такого ресурса:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSIStorageClass
@@ -128,9 +127,9 @@ spec:
 EOF
 ```
 
-Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать SCSITarget для создания PV по меткам. В примере выше выбираются все SCSITarget с меткой `my-key: some-label-value`. Эта метка будет выставлена на все девайсы, которые будут обнаружены в указанных SCSITarget.
+Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать SCSITarget для создания PV по лейблам. В примере выше выбираются все SCSITarget с лейблом `my-key: some-label-value`. Этот лейбл будет назначен на все девайсы, которые будут обнаружены в указанных SCSITarget.
 
-- Проверить создание объекта можно командой (`Phase` должен быть `Created`):
+Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>

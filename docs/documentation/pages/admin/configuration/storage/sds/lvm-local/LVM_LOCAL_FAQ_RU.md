@@ -6,7 +6,7 @@ lang: ru
 
 ## Выбор конкретных узлов для использования модуля
 
-Чтобы ограничить использование модуля определёнными узлами кластера, необходимо задать метки в поле `nodeSelector` в настройках модуля.
+Чтобы ограничить использование модуля определёнными узлами кластера, необходимо задать лейблы в поле `nodeSelector` в настройках модуля.
 
 Для отображения и редактирования настроек модуля выполните команду:
 
@@ -32,7 +32,7 @@ status:
   version: "1"
 ```
 
-Чтобы просмотреть текущие метки в поле `nodeSelector`, используйте следующую команду:
+Чтобы просмотреть текущие лейблы в поле `nodeSelector`, используйте следующую команду:
 
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -40,18 +40,18 @@ d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 
 Пример вывода:
 
-```yaml
+```console
 nodeSelector:
   my-custom-label-key: my-custom-label-value
 ```
 
-Модуль выбирает в качестве целевых только те узлы, у которых установлены все указанные в `nodeSelector` метки. Изменяя это поле, можно управлять списком узлов, на которых будет работать модуль.
+Модуль выбирает в качестве целевых только те узлы, у которых установлены все указанные в `nodeSelector` лейблы. Изменяя это поле, можно управлять списком узлов, на которых будет работать модуль.
 
 {% alert level="warning" %}
-В `nodeSelector` можно указать несколько меток. Однако для корректной работы модуля все эти метки должны присутствовать на каждом узле, на котором предполагается запуск `sds-local-volume-csi-node`.
+В `nodeSelector` можно указать несколько лейблов. Однако для корректной работы модуля все эти лейблы должны присутствовать на каждом узле, на котором предполагается запуск `sds-local-volume-csi-node`.
 {% endalert %}
 
-После настройки меток, убедитесь, что на целевых узлах запущены поды `sds-local-volume-csi-node`. Проверить их наличие можно командой:
+После настройки лейблов убедитесь, что на целевых узлах запущены поды `sds-local-volume-csi-node`. Проверить их наличие можно командой:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -owide
@@ -65,13 +65,13 @@ d8 k -n d8-sds-local-volume get pod -owide
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-При отсутствии пода проверьте, что на узле установлены все метки, указанные в настройках модуля в поле `nodeSelector`. Подробнее об этом можно прочитать [здесь](#отсутствие-служебных-подов-на-нужном-узле).
+При отсутствии пода проверьте, что на узле установлены все лейблы, указанные в настройках модуля в поле `nodeSelector`. Подробнее о способах решения проблемы с отсутствием подов на нужном узле можно прочитать [в этом разделе](#отсутствие-служебных-подов-на-нужном-узле).
 
 ## Вывод узла из-под управления модуля
 
-Чтобы вывести узел из-под управления модуля, необходимо удалить метки, заданные в поле `nodeSelector` в настройках модуля `sds-local-volume`.
+Чтобы вывести узел из-под управления модуля, необходимо удалить лейблы, заданные в поле `nodeSelector` в настройках модуля `sds-local-volume`.
 
-Для проверки текущих меток выполните команду:
+Для проверки текущих лейблов выполните команду:
 
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -79,64 +79,60 @@ d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 
 Пример вывода:
 
-```yaml
+```console
 nodeSelector:
   my-custom-label-key: my-custom-label-value
 ```
 
-Снимите указанные метки с узлов командой:
+Снимите указанные лейблы с узлов командой:
 
 ```shell
 d8 k label node %node-name% %label-from-selector%-
 ```
 
 {% alert level="warning" %}
-После ключа метки необходимо сразу указать знак минуса для её удаления.
+После ключа лейбла необходимо указать знак минуса для её удаления.
 {% endalert %}
 
-После этого под `sds-local-volume-csi-node` должен быть удален с узла. Проверьте состояние командой:
+После этого под `sds-local-volume-csi-node` должен быть удален с узла. Проверьте его состояние командой:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-Если под после удаления метки остаётся, убедитесь, что метки из конфига `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью:
+Если под остаётся после удаления метки, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
 
 ```shell
 d8 k get node %node-name% --show-labels
 ```
 
-Если метки отсутствуют, проверьте, что на узле не присутствуют [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсы, используемые [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсами. Подробнее об этой проверке можно прочитать [здесь](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если лейблы отсутствуют, проверьте, что на узле нет ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемых ресурсами [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Подробнее об этой проверке можно прочитать [в этом разделе](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 {% alert level="warning" %}
-Обратите внимание, что на ресурсах [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) и [LocalStorageClass](../../../reference/cr/localstorageclass/), из-за которых не удается вывести узел из-под управления модуля, будет отображена метка `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
+Обратите внимание, что для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) и [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass), из-за которых не удается вывести узел из-под управления модуля, будет назначен лейбл `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
 
-На самом узле будет присутствовать метка `storage.deckhouse.io/sds-local-volume-need-manual-eviction`.
+На самом узле будет присутствовать лейбл `storage.deckhouse.io/sds-local-volume-need-manual-eviction`.
 {% endalert %}
 
 ## Проверка зависимых ресурсов LVMVolumeGroup на узле
 
 Для проверки зависимых ресурсов выполните следующие шаги:
 
-1. Отобразите имеющиеся [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсы:
+1. Отобразите имеющиеся ресурсы [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass):
 
    ```shell
    d8 k get lsc
    ```
 
-1. Проверьте у каждого из них список используемых [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов, выполнив команду:
+1. Проверьте у каждого из них список используемых ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
-   Вы можете сразу отобразить содержимое всех [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсов, выполнив команду:
+   Вы можете сразу отобразить содержимое всех [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) ресурсов, выполнив команду:
 
    ```shell
    d8 k get lsc -oyaml
    ```
 
-   ```shell
-   d8 k get lsc %lsc-name% -oyaml
-   ```
-
-   Примерный вид [LocalStorageClass](../../../reference/cr/localstorageclass/):
+   Примерный вид [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass):
 
    ```yaml
    apiVersion: v1
@@ -159,15 +155,15 @@ d8 k get node %node-name% --show-labels
    kind: List
    ```
 
-   Обратите внимание на поле `spec.lvm.lvmVolumeGroups` - именно в нем указаны используемые [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсы.
+   Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно в нем указаны используемые ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
-1. Отобразите список существующих [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов
+1. Отобразите список существующих ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup):
 
    ```shell
    d8 k get lvg
    ```
 
-   Примерный вывод [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов:
+   Примерный вывод [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup):
 
    ```text
    NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
@@ -179,15 +175,15 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурс, используемый в [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсах. Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами пользователю необходимо вручную удалить зависимые ресурсы, совершив необходимые операции над томом.
+1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 
-## Оставшийся под sds-local-volume-csi-node после удаления меток
+## Оставшийся под sds-local-volume-csi-node после удаления лейблов
 
-Если после удаления меток с узла pod `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов, которые используются в одном из [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсов. Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если после удаления лейблов с узла под `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), которые используются в одном из ресурсов [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 ## Отсутствие служебных подов на нужном узле
 
-Проблема может быть связана с некорректно установленными метками. Узлы, используемые модулем, определяются метками, заданными в поле `nodeSelector` в настройках модуля. Для просмотра текущих меток выполните:
+Проблема может быть связана с некорректно установленными лейблами. Узлы, используемые модулем, определяются лейблами, заданными в поле `nodeSelector` в настройках модуля. Для просмотра текущих лейблов выполните:
 
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -195,7 +191,7 @@ d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 
 Пример вывода:
 
-```yaml
+```console
 nodeSelector:
   my-custom-label-key: my-custom-label-value
 ```
@@ -208,27 +204,27 @@ d8 k -n d8-sds-local-volume get secret d8-sds-local-volume-controller-config  -o
 
 Пример вывода:
 
-```yaml
+```console
 nodeSelector:
   kubernetes.io/os: linux
   my-custom-label-key: my-custom-label-value
 ```
 
-В выводе данной команды должны быть указаны все метки из настроек модуля `data.nodeSelector`, а также `kubernetes.io/os: linux`.
+В выводе данной команды должны быть указаны все лейблы из настроек модуля `data.nodeSelector`, а также `kubernetes.io/os: linux`.
 
-Проверьте метки на нужном узле:
+Проверьте лейблы на нужном узле:
 
 ```shell
 d8 k get node %node-name% --show-labels
 ```
 
-При необходимости добавьте недостающие метки на желаемый узел:
+При необходимости добавьте недостающие лейблы на желаемый узел:
 
 ```shell
 d8 k label node %node-name% my-custom-label-key=my-custom-label-value
 ```
 
-Если метки присутствуют, проверьте наличие метки `storage.deckhouse.io/sds-local-volume-node=` на узле. Если метка отсутствует, убедитесь, что работает `sds-local-volume-controller`, и ознакомьтесь с его логами:
+Если метки присутствуют, проверьте наличие лейбла `storage.deckhouse.io/sds-local-volume-node=` на узле. Если лейбл отсутствует, убедитесь, что работает `sds-local-volume-controller`, и ознакомьтесь с его логами:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -l app=sds-local-volume-controller
@@ -311,7 +307,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 
 ## Создание снимков томов
 
-Подробную информацию о снимках можно найти [здесь](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
+Подробную информацию о снимках и используемых ресурсах можно найти [в документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
 
 1. Включите модуль `snapshot-controller`:
 
@@ -343,7 +339,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
    EOF
    ```
 
-   Обратите внимание, что `sds-local-volume-snapshot-class` создается автоматически, и его `deletionPolicy` установлена в `Delete`, что означает, что [VolumeSnapshotContent](../../../reference/cr/volumesnapshotcontent/) будет удален при удалении связанного [VolumeSnapshot](../../../reference/cr/volumesnapshot/).
+   Обратите внимание, что `sds-local-volume-snapshot-class` создается автоматически, и его `deletionPolicy` установлена в `Delete`, что означает, что ресурс VolumeSnapshotContent будет удален при удалении связанного ресурса VolumeSnapshot.
 
 1. Чтобы проверить статус созданного снимка, выполните команду:
 

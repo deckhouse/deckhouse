@@ -4,15 +4,15 @@ permalink: ru/admin/configuration/storage/external/nfs.html
 lang: ru
 ---
 
-Deckhouse поддерживает работу с NFS (Network File System), обеспечивая подключение и управление сетевыми файловыми хранилищами в Kubernetes. Это помогает организовать централизованное хранение данных и совместное использование файлов между контейнерами.
+Deckhouse поддерживает работу с Network File System (NFS), обеспечивая подключение и управление сетевыми файловыми хранилищами в Kubernetes. Это помогает организовать централизованное хранение данных и совместное использование файлов между контейнерами.
 
 На этой странице представлены инструкции по подключению NFS-хранилища в Deckhouse, настройке соединения, созданию StorageClass и проверке работоспособности системы.
 
 ## Включение модуля
 
-Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль, выполните команду:
+Для управления томами на основе протокола NFS используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Чтобы включить модуль, выполните команду:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -39,13 +39,13 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass используйте ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без использования [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам.
+Для создания StorageClass используйте ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Ручное создание ресурса StorageClass без использования [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) может привести к ошибкам.
 
-Адрес NFS-сервера и путь к точке монтирования должны быть указаны явно. Также необходимо указать версию NFS-сервера (например, "4.1").
+Адрес NFS-сервера и путь к точке монтирования должны быть указаны явно. Также необходимо указать версию NFS-сервера (например, `"4.1"`).
 
 Пример команды для создания StorageClass на базе NFS:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: NFSStorageClass
@@ -61,13 +61,13 @@ spec:
   EOF
 ```
 
-Проверьте, что созданный ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе [NFSStorageClass](../../../reference/cr/nfsstorageclass/):
+В результате будет выведена информация о созданном ресурсе [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass):
 
 ```console
 NAME                PHASE     AGE
@@ -119,7 +119,7 @@ csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52
 
 1. Включите модуль `snapshot-controller`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
@@ -133,7 +133,7 @@ csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52
 
 1. Создайте снимок тома, указав необходимые параметры:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: snapshot.storage.k8s.io/v1
    kind: VolumeSnapshot
@@ -155,14 +155,14 @@ csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52
 
 Команда выведет список всех снимков и их текущее состояние.
 
-## Требования к Linux дистрибутиву для разворачивания NFS-сервера с поддержкой RPC-with-TLS
+## Требования к дистрибутиву Linux для разворачивания NFS-сервера с поддержкой RPC-with-TLS
 
-- Ядро должно быть собрано с включенными параметрами `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`;
-- Пакет nfs-utils (в дистрибутивах основанных на Debian - nfs-common) должен быть >= 2.6.3.
+- Ядро должно быть собрано с включенными параметрами `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`.
+- Версия пакета `nfs-utils` (в дистрибутивах на основе Debian пакет называется `nfs-common`) должна быть >= 2.6.3.
 
 ## Удаление PV при включённой поддержке RPC-with-TLS
 
-Если ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) настроен с поддержкой RPC-with-TLS, возможно, не удастся удалить созданные PV. Это может произойти, если удалён секрет, содержащий параметры монтирования (например, после удаления [NFSStorageClass](../../../reference/cr/nfsstorageclass/)). В результате контроллер не сможет смонтировать папку на NFS-сервере для удаления каталога `<имя PV>`.
+Если ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) настроен с поддержкой RPC-with-TLS, возможно, не удастся удалить созданные PV. Это может произойти, если удалён секрет, содержащий параметры монтирования (например, после удаления [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass)). В результате контроллер не сможет смонтировать папку на NFS-сервере для удаления каталога `<имя PV>`.
 
 ## Добавление нескольких CA в параметр tlsParameters.ca в ModuleConfig
 

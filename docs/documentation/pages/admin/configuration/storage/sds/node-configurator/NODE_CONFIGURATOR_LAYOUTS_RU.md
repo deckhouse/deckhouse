@@ -10,7 +10,7 @@ lang: ru
 
 ## Клонирование виртуальных машин
 
-При создании виртуальных машин методами клонирования, обязательно замените UUID групп томов (VG), выполнив:
+При создании виртуальных машин методом клонирования замените UUID групп томов (VG), выполнив:
 
 ```shell
 vgchange -u
@@ -19,21 +19,21 @@ vgchange -u
 Команда сгенерирует новые UUID для всех VG на виртуальной машине. При необходимости команду можно добавить в скрипт `cloud-init`.
 
 {% alert level="warning" %}
-Сменить UUID можно, только если в группе нет активных логических томов (LV). Деактивировать их можно так:
+Сменить UUID можно только если в группе нет активных логических томов (LV). Деактивировать их можно так:
 
 ```shell
 lvchange -an <VG_or_LV_NAME>
 ```
 
-`<VG_or_LV_NAME>` — название VG для деактивации всех томов в группе, или название LV для деактивации конкретного тома.
+Здесь `<VG_or_LV_NAME>` — название VG для деактивации всех томов в группе или название LV для деактивации конкретного тома.
 {% endalert %}
 
 ## Способы и сценарии конфигурации дисковой подсистемы узлов
 
-Дисковую подсистему каждого узла можно организовать двумя способами — в зависимости от того, одинаковые ли диски установлены в сервере.
+Дисковую подсистему каждого узла можно организовать двумя способами — в зависимости от того, одинаковые ли диски установлены в сервере:
 
-- [Хранилище с одинаковыми дисками](#хранилище-с-одинаковыми-дисками) — все диски в узле одного типа / размера;
-- [Комбинированное хранилище](#комбинированное-хранилище) — в узле установлены диски разных типов (например, SSD + HDD).
+- [хранилище с одинаковыми дисками](#хранилище-с-одинаковыми-дисками) — все диски в узле одного типа и размера;
+- [комбинированное хранилище](#комбинированное-хранилище) — в узле установлены диски разных типов (например, SSD + HDD).
 
 Для каждого из способов конфигурации дисковой подсистемы на узлах существует два сценария конфигурации:
 
@@ -112,9 +112,9 @@ lvchange -an <VG_or_LV_NAME>
 
 1. Создайте зеркало из всех дисков (аппаратно или программно). Это зеркало будет использоваться одновременно для корневой системы и для данных.
 1. Установите операционную систему:
-- создайте VG с именем `main` на зеркале;
-- создайте LV с именем `root` в VG `main`;
-- установите операционную систему на LV `root`.
+   - создайте VG с именем `main` на зеркале;
+   - создайте LV с именем `root` в VG `main`;
+   - установите операционную систему на LV `root`.
 1. Установите тег `storage.deckhouse.io/enabled=true` для VG `main`, используя следующую команду:
 
    ```shell
@@ -123,14 +123,14 @@ lvchange -an <VG_or_LV_NAME>
 
 1. Добавьте подготовленный узел в кластер Deckhouse.
 
-   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
+   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Полное зеркало»)
 
 В этом сценарии три узла кластера Deckhouse сконфигурированы в режиме «Полное зеркало».  
-После запуска автоматического обнаружения в кластере появятся три CRD-ресурса типа [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) с автоматически сгенерированными именами.
+После запуска автоматического обнаружения в кластере появятся три CRD-ресурса типа [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) с автоматически сгенерированными именами.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -145,11 +145,11 @@ vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Re
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                main   108s
 ```
 
-##### Настройка модуля `sds-local-volume` (одинаковые диски, «Полное зеркало»)
+##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
-Чтобы сконфигурировать `sds-local-volume` в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](../../../../../reference/cr/localstorageclass/) и укажите в нём все обнаруженные [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
+Чтобы сконфигурировать `sds-local-volume` в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
@@ -167,14 +167,14 @@ spec:
 EOF
 ```
 
-##### Настройка модуля `sds-replicated-volume` (одинаковые диски, «Полное зеркало»)
+##### Настройка модуля sds-replicated-volume (одинаковые диски, «Полное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) и добавьте в него все ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы VG `main` использовалась на всех узлах в модуле `sds-replicated-volume`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -189,9 +189,9 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/):
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool):
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
@@ -202,7 +202,7 @@ EOF
      storagePool: data
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone)
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -229,16 +229,19 @@ EOF
 ### Частичное зеркало
 
 {% alert level="warning" %}
+
 - Не используйте разделы с одинаковыми `PARTUUID`.
 - Изменение `PARTUUID` раздела, на котором уже создан VG, не поддерживается.
 - Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.  
+
 {% endalert %}
 
 В данном сценарии используются два раздела на каждом диске:
+
 - раздел для корневой системы и хранения данных SDS, которые не реплицируются;
 - раздел для данных SDS, которые реплицируются.
 
-Первый раздел каждого диска используется для создания зеркала, а второй – для создания отдельной VG без зеркалирования. Это позволяет максимально эффективно использовать место на диске.
+Первый раздел каждого диска используется для создания зеркала, а второй — для создания отдельной VG без зеркалирования. Это позволяет максимально эффективно использовать место на диске.
 
 Чтобы настроить узел по сценарию «Частичное зеркало», выполните следующее:
 
@@ -265,17 +268,17 @@ EOF
 
    Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`,
    то на этом узле запустится агент модуля `sds-node-configurator`,
-   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) в кластер Deckhouse.
-   Дальше ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
+   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) в кластер Deckhouse.
+   Дальше ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
+В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -293,12 +296,12 @@ vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Re
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                main-unsafe   108s
 ```
 
-##### Настройка модуля `sds-local-volume` (одинаковые диски, «Частичное зеркало»)
+##### Настройка модуля sds-local-volume (одинаковые диски, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](../../../../../reference/cr/localstorageclass/)
-и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `main-safe`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `main-safe`:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
@@ -316,15 +319,15 @@ spec:
 EOF
 ```
 
-##### Настройка модуля `sds-replicated-volume` (одинаковые диски, «Частичное зеркало»)
+##### Настройка модуля sds-replicated-volume (одинаковые диски, «Частичное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) с именем `data-safe` и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) с параметром `replication: None`
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`
    использовалась только VG `main-safe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -339,11 +342,11 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) с параметром `replication: Availability` или
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `main-unsafe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -358,10 +361,10 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/),
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `main-safe` и `main-unsafe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
@@ -369,17 +372,17 @@ EOF
    metadata:
      name: replicated-sc-r1
    spec:
-     storagePool: data-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-safe; следовательно, репликация данных для постоянных томов (PV), созданных с этим StorageClass, проводиться не будет
+     storagePool: data-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-safe; следовательно, репликация данных для постоянных томов (PV), созданных с этим StorageClass, проводиться не будет.
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone)
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
    metadata:
      name: replicated-sc-r2
    spec:
-     storagePool: data-unsafe # Обратите внимание, что из-за replication: Availability для этого ресурса используется data-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass
+     storagePool: data-unsafe # Обратите внимание, что из-за replication: Availability для этого ресурса используется data-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass.
      replication: Availability
      reclaimPolicy: Delete
      topology: Ignored
@@ -389,7 +392,7 @@ EOF
    metadata:
      name: replicated-sc-r3
    spec:
-     storagePool: data-unsafe # Обратите внимание, что из-за replication: ConsistencyAndAvailability для этого ресурса используется data-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass
+     storagePool: data-unsafe # Обратите внимание, что из-за replication: ConsistencyAndAvailability для этого ресурса используется data-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass.
      replication: ConsistencyAndAvailability
      reclaimPolicy: Delete
      topology: Ignored
@@ -416,8 +419,8 @@ EOF
 
 Ниже будет рассмотрен процесс настройки дополнительных дисков на примере следующих типов:
 
-- NVMe SSD.
-- SATA SSD.
+- NVMe SSD;
+- SATA SSD;
 - HDD.
 
 ### Настройка дополнительных дисков (Полное зеркало)
@@ -438,23 +441,23 @@ EOF
    ```
 
 {% alert level="info" %}
-В примере выше `<vg-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
+В примере выше замените `<vg-name>` на информативное имя, в зависимости от типа дополнительных дисков.
 
 Примеры имен VG для дополнительных дисков разных типов:
 
-- `ssd-nvme` — для дисков NVMe SSD.
-- `ssd-sata` — для дисков SATA SSD.
+- `ssd-nvme` — для дисков NVMe SSD;
+- `ssd-sata` — для дисков SATA SSD;
 - `hdd` — для дисков HDD.
 {% endalert %}
 
 #### Пример настройки модулей SDS (комбинированное хранилище, «Полное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Полное зеркало».
-В кластере Deckhouse при этом появятся три ресурса [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
+В кластере Deckhouse при этом появятся три ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -471,12 +474,12 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 где `<vg-name>` — имя, присвоенное VG на зеркале на предыдущем шаге.
 
-##### Настройка модуля `sds-local-volume` (комбинированное хранилище, «Полное зеркало»)
+##### Настройка модуля sds-local-volume (комбинированное хранилище, «Полное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](../../../../../reference/cr/localstorageclass/)
-и добавьте в него все ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-local-volume`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-local-volume`:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
@@ -497,21 +500,21 @@ EOF
 {% alert level="info" %}
 В примере выше `<local-storage-class-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
 
-Примеры информативных имен ресурса [LocalStorageClass](../../../../../reference/cr/localstorageclass/) для дополнительных дисков разных типов:
+Примеры информативных имен ресурса [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) для дополнительных дисков разных типов:
 
-- `local-sc-ssd-nvme` — для дисков NVMe SSD.
-- `local-sc-ssd-sata` — для дисков SATA SSD.
+- `local-sc-ssd-nvme` — для дисков NVMe SSD;
+- `local-sc-ssd-sata` — для дисков SATA SSD;
 - `local-sc-ssd-hdd` — для дисков HDD.
 {% endalert %}
 
-##### Настройка модуля `sds-replicated-volume` (комбинированное хранилище, «Полное зеркало»)
+##### Настройка модуля sds-replicated-volume (комбинированное хранилище, «Полное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) и добавьте в него все ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-replicated-volume`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -526,17 +529,17 @@ EOF
    EOF
    ```
 
-   > В примере выше `<replicated-storage-pool-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
+   > В примере выше замените `<replicated-storage-pool-name>` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
-   > - `data-ssd-nvme` — для дисков NVMe SSD.
-   > - `data-ssd-sata` — для дисков SATA SSD.
+   > - `data-ssd-nvme` — для дисков NVMe SSD;
+   > - `data-ssd-sata` — для дисков SATA SSD;
    > - `data-hdd` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/):
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool):
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
@@ -547,7 +550,7 @@ EOF
      storagePool: <replicated-storage-pool-name>
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone)
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -574,9 +577,10 @@ EOF
 ### Настройка дополнительных дисков (Частичное зеркало)
 
 {% alert level="warning" %}
+
 - Не используйте разделы с одинаковыми `PARTUUID`.
 - Изменение `PARTUUID` раздела, на котором уже создан VG, не поддерживается.
- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.
+- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -587,16 +591,16 @@ EOF
 В данном сценарии используются два раздела на каждом диске:
 один для хранения данных SDS, которые не реплицируются,
 и другой для данных SDS, которые реплицируются.
-Первый раздел каждого диска используется для создания зеркала, а второй – для создания отдельной VG без зеркалирования.
+Первый раздел каждого диска используется для создания зеркала, а второй — для создания отдельной VG без зеркалирования.
 Это позволяет максимально эффективно использовать место на диске.
 
 Чтобы настроить узел с дополнительными дисками по сценарию «Частичное зеркало», выполните следующее:
 
-1. создайте по два раздела на каждом дополнительном диске;
-1. соберите зеркало из первых разделов на каждом диске;
-1. создайте VG с именем `<vg-name>-safe` на зеркале;
-1. создайте VG с именем `<vg-name>-unsafe` из вторых разделов каждого диска;
-1. установите тег `storage.deckhouse.io/enabled=true` для VG `<vg-name>-safe` и `<vg-name>-unsafe`, используя следующую команду:
+1. Создайте по два раздела на каждом дополнительном диске.
+1. Соберите зеркало из первых разделов на каждом диске.
+1. Создайте VG с именем `<vg-name>-safe` на зеркале.
+1. Создайте VG с именем `<vg-name>-unsafe` из вторых разделов каждого диска.
+1. Установите тег `storage.deckhouse.io/enabled=true` для VG `<vg-name>-safe` и `<vg-name>-unsafe`, используя следующую команду:
 
    ```shell
    vgchange <vg-name>-safe --addtag storage.deckhouse.io/enabled=true
@@ -607,18 +611,18 @@ EOF
    >
    > Примеры информативного префикса `<vg-name>` для дополнительных дисков разных типов:
    >
-   > - `ssd-nvme` — для дисков NVMe SSD.
-   > - `ssd-sata` — для дисков SATA SSD.
+   > - `ssd-nvme` — для дисков NVMe SSD;
+   > - `ssd-sata` — для дисков SATA SSD;
    > - `hdd` — для дисков HDD.
 
 #### Пример настройки модулей SDS (комбинированное хранилище, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
+В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -638,12 +642,12 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 где `<vg-name>` — префикс имени, присвоенного VG, созданным на предыдущем шаге.
 
-##### Настройка модуля `sds-local-volume` (комбинированное хранилище, «Частичное зеркало»)
+##### Настройка модуля sds-local-volume (комбинированное хранилище, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](../../../../../reference/cr/localstorageclass/)
-и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `<vg-name>-safe`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `<vg-name>-safe`:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
@@ -662,24 +666,24 @@ EOF
 ```
 
 {% alert level="info" %}
-В примере выше `<local-storage-class-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
+В примере выше замените `<local-storage-class-name>` на информативное имя, в зависимости от типа дополнительных дисков.
 
-Примеры информативных имен ресурса [LocalStorageClass](../../../../../reference/cr/localstorageclass/) для дополнительных дисков разных типов:
+Примеры информативных имен ресурса [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) для дополнительных дисков разных типов:
 
-- `local-sc-ssd-nvme` — для дисков NVMe SSD.
-- `local-sc-ssd-sata` — для дисков SATA SSD.
+- `local-sc-ssd-nvme` — для дисков NVMe SSD;
+- `local-sc-ssd-sata` — для дисков SATA SSD;
 - `local-sc-hdd` — для дисков HDD.
 {% endalert %}
 
-##### Настройка модуля `sds-replicated-volume` (комбинированное хранилище, «Частичное зеркало»)
+##### Настройка модуля sds-replicated-volume (комбинированное хранилище, «Частичное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) с именем `data-<vg-name>-safe` и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) с параметром `replication: None`
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`
    использовалась только VG `<vg-name>-safe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -694,19 +698,19 @@ EOF
    EOF
    ```
 
-   > В примере выше `data-<vg-name>-safe` замените на информативное имя, в зависимости от типа дополнительных дисков.
+   > В примере выше замените `data-<vg-name>-safe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
-   > - `data-ssd-nvme-safe` — для дисков NVMe SSD.
-   > - `data-ssd-sata-safe` — для дисков SATA SSD.
+   > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
+   > - `data-ssd-sata-safe` — для дисков SATA SSD;
    > - `data-hdd-safe` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) с именем `data-<vg-name>-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](../../../../../reference/cr/lvmvolumegroup/),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) с параметром `replication: Availability` или
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `<vg-name>-unsafe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStoragePool
@@ -721,18 +725,18 @@ EOF
    EOF
    ```
 
-   > В примере выше `data-<vg-name>-unsafe` замените на информативное имя, в зависимости от типа дополнительных дисков.
+   > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
-   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD.
-   > - `data-ssd-sata-unsafe` — для дисков SATA SSD.
+   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
+   > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
    > - `data-hdd-unsafe` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStorageClass](../../../../../reference/cr/replicatedstorageclass/) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/),
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `<vg-name>-safe` и `<vg-name>-unsafe`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
@@ -740,17 +744,17 @@ EOF
    metadata:
      name: replicated-sc-ssd-nvme-r1
    spec:
-     storagePool: data-<vg-name>-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-<vg-name>-safe; следовательно, репликация данных для PV, созданных с этим StorageClass, проводиться не будет
+     storagePool: data-<vg-name>-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-<vg-name>-safe; следовательно, репликация данных для PV, созданных с этим StorageClass, проводиться не будет.
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone)
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
    metadata:
      name: replicated-sc-ssd-nvme-r2
    spec:
-     storagePool: data-<vg-name>-unsafe # Обратите внимание, что из-за replication: Availability для этого ресурса используется data-<vg-name>-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass
+     storagePool: data-<vg-name>-unsafe # Обратите внимание, что из-за replication: Availability для этого ресурса используется data-<vg-name>-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass.
      replication: Availability
      reclaimPolicy: Delete
      topology: Ignored
@@ -760,25 +764,25 @@ EOF
    metadata:
      name: replicated-sc-ssd-nvme-r3
    spec:
-     storagePool: data-<vg-name>-unsafe # Обратите внимание, что из-за replication: ConsistencyAndAvailability для этого ресурса используется data-<vg-name>-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass
+     storagePool: data-<vg-name>-unsafe # Обратите внимание, что из-за replication: ConsistencyAndAvailability для этого ресурса используется data-<vg-name>-unsafe; следовательно, будет проводиться репликация данных для PV, созданных с этим StorageClass.
      replication: ConsistencyAndAvailability
      reclaimPolicy: Delete
      topology: Ignored
    EOF
    ```
 
-   > В примере выше `data-<vg-name>-unsafe` замените на информативное имя, в зависимости от типа дополнительных дисков.
+   > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
-   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD.
-   > - `data-ssd-sata-unsafe` — для дисков SATA SSD.
+   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
+   > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
    > - `data-hdd-unsafe` — для дисков HDD.
    >
-   > `data-<vg-name>-safe` замените на информативное имя, в зависимости от типа дополнительных дисков.
+   > Аналогичным образом замените `data-<vg-name>-safe`.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](../../../../../reference/cr/replicatedstoragepool/) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
-   > - `data-ssd-nvme-safe` — для дисков NVMe SSD.
-   > - `data-ssd-sata-safe` — для дисков SATA SSD.
+   > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
+   > - `data-ssd-sata-safe` — для дисков SATA SSD;
    > - `data-hdd-safe` — для дисков HDD.

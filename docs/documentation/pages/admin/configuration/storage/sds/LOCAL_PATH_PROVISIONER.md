@@ -7,7 +7,7 @@ Deckhouse Kubernetes Platform provides the ability to configure local storage us
 
 ## How it works
 
-For each [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling pods.
+For each [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling pods.
 
 When a pod requests a disk, the following occurs:
 - A PersistentVolume of type `HostPath` is created;
@@ -54,7 +54,7 @@ spec:
 
 ## Configuring Prometheus to use local storage
 
-1. Apply the [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) resource:
+1. Apply the [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

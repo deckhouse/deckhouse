@@ -7,37 +7,36 @@ Deckhouse supports managing storage connected via iSCSI or Fibre Channel, enabli
 
 This page provides instructions for connecting SCSI devices in Deckhouse, creating SCSITarget, StorageClass, and verifying system functionality.
 
-### Supported Features
+## Supported features
 
 - Detecting LUN via iSCSI/FC.
 - Creating PersistentVolume from pre-provisioned LUN.
 - Deleting PersistentVolume and wiping data on LUN.
 - Attaching LUN to nodes via iSCSI/FC.
-- Creating `multipath` devices and mounting them in pods.
+- Creating `multipath` devices and mounting them in Pods.
 - Detaching LUN from nodes.
 
-### Limitations
+## Limitations
 
 - Creating LUN on storage is not supported.
 - Resizing LUN is not possible.
 - Snapshots are not supported.
 
-## System Requirements and Recommendations
-
-### Requirements
+## System requirements
 
 - A deployed and configured storage system with SCSI connections.
-- Unique iqn values in /etc/iscsi/initiatorname.iscsi on each Kubernetes Node.
+- Unique IQN values in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
-## Quick Start
+## Quick start
 
 All commands should be executed on a machine with access to the Kubernetes API and administrator rights.
 
-### Enabling the Module
+### Enabling the module
 
 Enable the `csi-scsi-generic` module. This will ensure that the following happens on all cluster nodes:
+
 - The CSI driver is registered.
-- Auxiliary pods for the `csi-scsi-generic` components are launched.
+- Auxiliary Pods for the `csi-scsi-generic` components are launched.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -59,9 +58,9 @@ d8 k get module csi-scsi-generic -w
 
 ### Creating an SCSITarget
 
-To create an SCSITarget, use the [SCSITarget](../../../reference/cr/scsitarget). An example of commands to create such a resource:
+To create an SCSITarget, use the [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget). An example of commands to create such a resource:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
@@ -103,7 +102,7 @@ EOF
 
 Note that the example above uses two SCSITargets. You can create multiple SCSITargets for either the same or different storage systems. This allows for the use of multipath to improve failover and performance.
 
-To verify that the object has been created (Phase should be `Created`), run:
+To verify that the object has been created (`Phase` should be `Created`), run:
 
 ```shell
 d8 k get scsitargets.storage.deckhouse.io <name-of-scsitarget>
@@ -111,9 +110,9 @@ d8 k get scsitargets.storage.deckhouse.io <name-of-scsitarget>
 
 ### Creating a StorageClass
 
-To create a StorageClass, use the [SCSIStorageClass](../../../reference/cr/scsistorageclass). An example of commands to create such a resource:
+To create a StorageClass, use the [SCSIStorageClass](/modules/csi-scsi-generic/cr.html#scsistorageclass). An example of commands to create such a resource:
 
-```yaml
+```shell
 d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSIStorageClass
@@ -135,9 +134,9 @@ To verify that the object has been created (`Phase` should be `Created`), run:
 d8 k get scsistorageclasses.storage.deckhouse.io <name-of-scsistorageclass>
 ```
 
-### Module Health Check
+### Module health check
 
-Check the status of pods in the `d8-csi-scsi-generic` namespace using the following command. All pods should be in the `Running` or `Completed` state and deployed on all nodes.
+Check the status of Pods in the `d8-csi-scsi-generic` namespace using the following command. All Pods should be in the `Running` or `Completed` state and deployed on all nodes.
 
 ```shell
 d8 k -n d8-csi-scsi-generic get pod -owide -w

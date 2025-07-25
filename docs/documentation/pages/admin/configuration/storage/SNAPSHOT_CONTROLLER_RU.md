@@ -12,24 +12,24 @@ Deckhouse Kubernetes Platform поддерживает создание сним
 
 Создание снимков поддерживается следующими CSI-драйверами:
 
-- [Облачные ресурсы провайдера OpenStack](#TODO);
-- [Облачные ресурсы провайдера VMWare vSphere](#TODO);
+- [Облачные ресурсы провайдера OpenStack](/modules/cloud-provider-openstack/);
+- [Облачные ресурсы провайдера VMWare vSphere](/modules/cloud-provider-vsphere/);
 - [Распределённое хранилище Ceph](../storage/external/ceph.html);
-- [Облачные ресурсы провайдера Amazon Web Services](#TODO);
-- [Облачные ресурсы провайдера Microsoft Azure](#TODO);
-- [Облачные ресурсы провайдера Google Cloud Platform](#TODO);
+- [Облачные ресурсы провайдера Amazon Web Services](/modules/cloud-provider-aws/);
+- [Облачные ресурсы провайдера Microsoft Azure](/modules/cloud-provider-azure/);
+- [Облачные ресурсы провайдера Google Cloud Platform](/modules/cloud-provider-gcp/);
 - [Реплицируемое хранилище на основе DRBD](../storage/sds/lvm-replicated.html);
 - [Хранилище данных NFS](../storage/external/nfs.html).
 
 ## Создание снимков
 
-Перед созданием снимков убедитесь, что в кластере настроены объекты [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/). Список доступных классов можно получить командой:
+Перед созданием снимков убедитесь, что в кластере настроены объекты VolumeSnapshotClass. Список доступных классов можно получить командой:
 
 ```shell
 d8 k get volumesnapshotclasses.snapshot.storage.k8s.io
 ```
 
-Чтобы создать снимок для тома, укажите нужный [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/) в манифесте:
+Чтобы создать снимок для тома, укажите нужный VolumeSnapshotClass в манифесте:
 
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1
@@ -44,7 +44,7 @@ spec:
 
 ## Восстановление из снимка
 
-Чтобы восстановить данные из снимка, создайте PVC, ссылающийся на ранее созданный объект [VolumeSnapshot](../../reference/cr/volumesnapshot/):
+Чтобы восстановить данные из снимка, создайте PVC, ссылающийся на ранее созданный объект VolumeSnapshot:
 
 ```yaml
 apiVersion: v1
