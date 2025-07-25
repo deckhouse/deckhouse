@@ -5,3 +5,5 @@ description: |
 descriptions:
   en: Documentation module
 namespace: d8-system
+requirements:
+  deckhouse: ">= 1.68"

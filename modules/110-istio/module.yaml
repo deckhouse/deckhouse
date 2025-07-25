@@ -8,4 +8,6 @@ description: |
   Service Mesh
 descriptions:
   en: Service Mesh
+requirements:
+  deckhouse: ">= 1.68"
 
