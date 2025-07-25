@@ -84,12 +84,6 @@ negative:
         username: "u"
         password: "p"
 
-# TODO(akraev): uncomment before release
-#  - registry:
-#      mode: Unmanaged
-#      direct:
-#        imagesRepo: registry.deckhouse.io/test
-
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev??sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4

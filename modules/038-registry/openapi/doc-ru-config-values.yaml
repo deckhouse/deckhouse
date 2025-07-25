@@ -1,11 +1,2 @@
 type: object
-properties:
-
-  # TODO (nabokihms): remove (only for testing purposes)
-  imagesOverride:
-    description: |
-      Переопределение образов
-    properties:
-      registryManager:
-        description: |
-          Образ registry manager-а
+properties: {}
