@@ -258,20 +258,21 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
+			input.Logger.Info(fmt.Sprintf("approveUpdates debug1: %+v , %+v, %+v ", approvedNode.IsDisruptionApproved, ng.Disruptions.ApprovalMode == "Automatic", ar.needDrainNode(input, &approvedNode, &ng)), slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
 				if !approvedNode.IsDrained {
 					if !approvedNode.IsDraining {
-						input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", drainingPath), "node", approvedNode.Name, "ng", ng.Name)
+						input.Logger.Info("approveUpdates Draining", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 						input.PatchCollector.PatchWithMerge(drainingPath, "v1", "Node", "", approvedNode.Name)
 						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
 					} else {
-						input.Logger.Info("approveUpdates is Drained wait", "node", approvedNode.Name, "ng", ng.Name)
+						input.Logger.Info("approveUpdates is Drained wait", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 					}
 					continue
 				}
 			}
 
-			input.Logger.Info(fmt.Sprintf("approveUpdates patch: %s", approvedPatch), "node", approvedNode.Name, "ng", ng.Name)
+			input.Logger.Info("approveUpdates Approved", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNode.Name)
 			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
 		}
@@ -405,7 +406,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			metricStatus = "DisruptionApproved"
 		}
 
-		input.Logger.Info(fmt.Sprintf("approveDisruptions patch: %s", patch), "node", node.Name, "ng", ng.Name)
+		input.Logger.Info(fmt.Sprintf("approveDisruptions %s", metricStatus), slog.String("node", node.Name), slog.String("ng", ng.Name))
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
@@ -459,7 +460,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
-		input.Logger.Info(fmt.Sprintf("processUpdatedNodes patch: %s", patch), "node", node.Name, "ng", ngName)
+		input.Logger.Info("processUpdatedNodes UpToDate", slog.String("node", node.Name), slog.String("ng", ngName))
 		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
