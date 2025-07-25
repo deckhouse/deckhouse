@@ -216,7 +216,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
      base64 project-209317-556c656b81c4.json
      ```
 
-1. Сохраните полученную Base64-строку в параметре `cloudDNSServiceAccount`(/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount).
+1. Сохраните полученную Base64-строку в [параметре `cloudDNSServiceAccount`](/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount).
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для CloudDNS в пространстве имён `d8-cert-manager`.
 
