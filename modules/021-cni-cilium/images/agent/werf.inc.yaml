@@ -75,7 +75,7 @@
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
-from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
+from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257s
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
