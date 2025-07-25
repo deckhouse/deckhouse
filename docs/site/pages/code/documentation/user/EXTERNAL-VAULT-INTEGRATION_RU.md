@@ -144,9 +144,9 @@ DATABASE_PASSWORD:
 | `pipeline_source`       | всегда                      | Источник запуска пайплайна (push, schedule, MR и т.д.)                  |
 | `job_id`                | всегда                      | ID задания CI                                                            |
 | `ref`                   | всегда                      | Ссылка Git (Git reference)                                       |
-| `ref_type`              | всегда                      | Тип рефа (`branch` или `tag`)                                           |
-| `ref_path`              | всегда                      | Полный путь до рефа (например, `refs/heads/main`)                       |
-| `ref_protected`         | всегда                      | Признак защищённого рефа                                                 |
+| `ref_type`              | всегда                      | Тип ссылки Git (Git reference) (`branch` или `tag`)                                           |
+| `ref_path`              | всегда                      | Полный путь ссылки Git (Git reference) (например, `refs/heads/main`)                       |
+| `ref_protected`         | всегда                      | Признак того, что объект по ссылке Git защищён |
 | `environment`           | при наличии                 | Название окружения (если используется)                                  |
 | `groups_direct`         | при наличии (<200 групп)    | Пути до групп, в которых состоит пользователь                           |
 | `environment_protected` | при наличии                 | Является ли окружение защищённым                                        |
