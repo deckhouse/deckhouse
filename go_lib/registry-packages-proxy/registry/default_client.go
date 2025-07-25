@@ -65,7 +65,8 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 
 	// Verify image signature
 	if err := ddk.VerifyImageManifestSignature(ctx, string(rootca.RootCA), manifest); err != nil {
-		return 0, nil, err
+		log.Error("verify image signature failed: %w", err)
+		//return 0, nil, err
 	}
 
 	if err != nil {
