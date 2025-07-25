@@ -18,7 +18,7 @@
 042-kube-dns/                   @apolovov
 050-network-policy-engine/      @apolovov
 101-cert-manager/               @Suselz
-110-istio/                      @apolovov
+110-istio/                      @apolovov @skurbatov
 140-user-authz/                 @nabokihms
 150-user-authn/                 @nabokihms
 160-multitenancy-manager/       @yalosev @ldmonster
