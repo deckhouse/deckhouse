@@ -126,7 +126,7 @@ spec:
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возможность создавать Thin-пулы, детали будут раскрыты далее.
+  # Раскомментируйте, если важно иметь возможность создавать thin pool, детали будут раскрыты далее.
   # thinPools:
   #   - name: thin-pool-0
   #     size: 70%
@@ -163,7 +163,7 @@ vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi
 vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
-### Создание реплицированных thick-пулов
+### Создание реплицированных thick pool
 
 Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/).
 
@@ -197,11 +197,11 @@ NAME         PHASE       TYPE   AGE
 thick-pool   Completed   LVM    87d
 ```
 
-### Создание реплицированных thin-пулов
+### Создание реплицированных thin pool
 
-В отличие от thick-пулов, thin-пул позволяет использовать снапшоты, но обладает меньшей производительностью.
+В отличие от thick pool, thin pool позволяет использовать снимки, но обладает меньшей производительностью.
 
-Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick-пулов. Если вам важно иметь возможность создавать реплицированные thin-пулы, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
+Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick pool. Если вам важно иметь возможность создавать реплицированные thin pool, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin pool:
 
 ```yaml
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -218,9 +218,9 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-пулов. Оставшиеся 30% могут быть использованы для thick-пулов.
+В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
 
-Повторите добавление Thin-пулов для оставшихся узлов (worker-1 и worker-2). Пример создания реплицированного thin-пула:
+Повторите добавление thin pool для оставшихся узлов (worker-1 и worker-2). Пример создания реплицированного thin pool:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -257,7 +257,7 @@ thin-pool   Completed   LVMThin   87d
 
 Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) может привести к нежелательному поведению.
 
-Пример создания ресурса [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) на основе thick-пула, PersistentVolumes которого будут размещены на группах томов на трех узлах:
+Пример создания ресурса [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) на основе thick pool, PersistentVolumes которого будут размещены на группах томов на трех узлах:
 
 ```yaml
 d8 k apply -f - <<EOF

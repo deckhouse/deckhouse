@@ -142,12 +142,41 @@ If you need to reboot another node, repeat the procedure.
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
    ```
 
+### Automatic management of replicas and monitoring of LINSTOR state
+
+Replica management and state monitoring are automated in the `replicas_manager.sh` script.
+It checks the availability of the LINSTOR controller, identifies faulty or corrupted resources, creates database backups, and manages disk replicas, including configuring `TieBreaker` for quorum.
+
+To check the existence of the `replicas_manager.sh` script, run the following command on any master node:
+
+   ```shell
+   ls -l /opt/deckhouse/sbin/replicas_manager.sh
+   ```
+
+Upon execution, the script performs the following actions:
+- Verifies the availability of the controller and connectivity to satellites;
+- Identifies faulty or corrupted resources;
+- Creates a backup of the database;
+- Manages the number of disk replicas, adding new ones as needed;
+- Configures TieBreaker for resources with two replicas;
+- Logs all actions to a file named linstor_replicas_manager_<date_time>.log;
+- Provides recommendations for resolving issues, such as stuck replicas.
+
+Configuration variables for `replicas_manager.sh`:
+- NON_INTERACTIVE: Enables non-interactive mode
+- TIMEOUT_SEC: Timeout between attempts, in seconds (default: 10)
+- EXCLUDED_RESOURCES_FROM_CHECK: Regular expression to exclude resources from checks
+- CHUNK_SIZE: Chunk size for processing resources (default: 10)
+- NODE_FOR_EVICT: The name of the node excluded from creating replicas
+- LINSTOR_NAMESPACE: Kubernetes namespace (default: d8-sds-replicated-volume)
+- DISKLESS_STORAGE_POOL: Pool for diskless replicas (default: DfltDisklessStorPool)
+
 ## Evicting DRBD resources from a node
 
 Eviction of DRBD resources from a node is performed using the `evict.sh` script. It can operate in two modes:
 
-- Node removal — additional replicas are created for every resource, after which the node is removed from LINSTOR and Kubernetes.
-- Resource removal — replicas are created for the resources, after which the resources themselves are removed from LINSTOR (the node remains in the cluster).
+- Node removal: Additional replicas are created for every resource, after which the node is removed from LINSTOR and Kubernetes.
+- Resource removal: Replicas are created for the resources, after which the resources themselves are removed from LINSTOR (the node remains in the cluster).
 
 ### Preparing and running the script
 
@@ -220,13 +249,13 @@ linstor node list -s AutoplaceTarget
 
 ### `evict.sh` script parameters
 
-- `--delete-node` — remove a node from LINSTOR and Kubernetes after creating additional replicas for all resources on the node;
-- `--delete-resources-only` — remove resources from the node without deleting the node, after creating additional replicas;
-- `--non-interactive` — run the script in non‑interactive mode;
-- `--node-name` — the name of the node to evict resources from. Mandatory when using `--non-interactive`;
-- `--skip-db-backup` — skip creating a LINSTOR DB backup before operations;
-- `--ignore-advise` — perform operations despite `linstor advise resource` warnings;
-- `--exclude-resources-from-check` — exclude resources listed with `|` from checks;
+- `--delete-node`: Remove a node from LINSTOR and Kubernetes after creating additional replicas for all resources on the node.
+- `--delete-resources-only`: Remove resources from the node without deleting the node, after creating additional replicas.
+- `--non-interactive`: Run the script in non‑interactive mode.
+- `--node-name`: The name of the node to evict resources from. Mandatory when using `--non-interactive`.
+- `--skip-db-backup`: Skip creating a LINSTOR DB backup before operations.
+- `--ignore-advise`: Perform operations despite `linstor advise resource` warnings. Use if the script was interrupted and the number of replicas for some resources does not match the value specified in the `ReplicatedStorageClass`.
+- `--exclude-resources-from-check`: Exclude resources listed with `|` from checks.
 
 ## Troubleshooting
 
@@ -575,8 +604,8 @@ Note that in old StorageClasses you look at the option in the `parameters` secti
 
 Additional parameters:
 
-- `reclaimPolicy` (Delete, Retain) — corresponds to `reclaimPolicy` of the old StorageClass.
-- `zones` — list of zones to place resources in (direct cloud zone names). Note that remote pod access to the data volume is possible only within one zone.
+- `reclaimPolicy` (Delete, Retain): Corresponds to `reclaimPolicy` of the old StorageClass.
+- `zones`: List of zones to place resources in (direct cloud zone names). Note that remote pod access to the data volume is possible only within one zone.
 - `volumeAccess` values: `Local` (access strictly within the node), `EventuallyLocal` (a data replica will synchronize to the node after the pod starts), `PreferablyLocal` (remote pod access allowed, `volumeBindingMode: WaitForFirstConsumer`), `Any` (remote pod access allowed, `volumeBindingMode: Immediate`).
 - If you need `volumeBindingMode: Immediate`, set `volumeAccess` in ReplicatedStorageClass to `Any`.
 
@@ -674,3 +703,38 @@ Using DRBD with more than one replica already provides network‑level RAID func
 ## Recommendations for using local disks
 
 DRBD uses the network for data replication. When using NAS, network load increases dramatically because nodes synchronize data not only with the NAS but also with each other. Latency for reads or writes also increases. NAS typically uses RAID on its side, adding further overhead.
+
+## Manual trigger the certificate renewal process
+
+Although the certificate renewal process is automated, manual renewal might still be necessary because it can be performed during a convenient maintenance window when it is acceptable to restart the module's objects. The automated renewal does not restart any objects.
+
+To manually trigger the certificate renewal process, create a `ConfigMap` named `manualcertrenewal-trigger`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manualcertrenewal-trigger
+  namespace: d8-sds-replicated-volume
+```
+
+The system will stop all necessary module objects, update the certificates, and then restart them.
+
+You can check the operation status using the following command:
+
+```shell
+d8 k -n d8-sds-replicated-volume get cm manualcertrenewal-trigger -ojsonpath='{.data.step}'
+```
+
+- `Prepared`: Health checks have passed successfully, and the downtime window has started.
+- `TurnedOffAndRenewedCerts`: The system has been stopped and certificates have been renewed.
+- `TurnedOn`: The system has been restarted.
+- `Done`: The operation is complete and ready to be repeated.
+
+Certificates are issued for a period of one year and are marked as expiring 30 days before their expiration date. The monitoring system alerts about expiring certificates (see the `D8LinstorCertificateExpiringIn30d` alert).
+
+To repeat the operation, simply remove the label from the trigger using the following command:
+
+```shell
+d8 k -n d8-sds-replicated-volume label cm manualcertrenewal-trigger storage.deckhouse.io/sds-replicated-volume-manualcertrenewal-completed-
+```

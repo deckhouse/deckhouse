@@ -125,13 +125,19 @@ To check the dependent resources, follow these steps:
    d8 k get lsc
    ```
 
-1. Check the list of used LVMVolumeGroup resources for a specific [LocalStorageClass](../../../reference/cr/localstorageclass/):
+1. Check each of them for the list of used [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources.
+
+   If you want to list all [LocalStorageClass](../../../reference/cr/localstorageclass/) resources at once, run the command:
 
    ```shell
-   d8 k get lsc <LSC-NAME> -oyaml
+   d8 k get lsc -oyaml
    ```
 
-   Example output:
+   ```shell
+   d8 k get lsc %lsc-name% -oyaml
+   ```
+
+   An approximate representation of [LocalStorageClass](../../../reference/cr/localstorageclass/) could be:
 
    ```yaml
    apiVersion: v1
@@ -154,17 +160,17 @@ To check the dependent resources, follow these steps:
    kind: List
    ```
 
-   > Note the `spec.lvm.lvmVolumeGroups` field — this is where the used resources are specified.
+   Please pay attention to the `spec.lvm.lvmVolumeGroups` field - it specifies the used [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources.
 
-1. Display the list of existing [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources:
+1. Display the list of existing [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources.
 
    ```shell
    d8 k get lvg
    ```
 
-   Example output:
+   An approximate representation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) could be:
 
-   ```console
+   ```text
    NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
    lvg-on-worker-0   Operational   node-worker-0   40956Mi    0                test-vg   15d
    lvg-on-worker-1   Operational   node-worker-1   61436Mi    0                test-vg   15d
@@ -174,7 +180,7 @@ To check the dependent resources, follow these steps:
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Make sure that on the node planned for removal from module management, there is no [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource used in [LocalStorageClass](../../../reference/cr/localstorageclass/) resources. If such resources are present, they must be deleted manually to avoid loss of control over the volumes.
+1. Ensure that the node you intend to remove from the module's control does not have any [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources used in [LocalStorageClass](../../../reference/cr/localstorageclass/) resources. To avoid unintentionally losing control over volumes already created using the module, the user needs to manually delete dependent resources by performing necessary operations on the volume.
 
 ## Remaining sds-local-volume-csi-node pod after removing labels
 
@@ -303,3 +309,47 @@ To use the script, run the following command:
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 ```
+
+## Creating volume snapshots
+
+You can read more about snapshots [here](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
+
+1. Enable the `snapshot-controller` module:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Now you can create volume snapshots. To do this, execute the following command with the necessary parameters:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <name of the namespace where the PVC is located>
+   spec:
+     volumeSnapshotClassName: sds-local-volume-snapshot-class
+     source:
+       persistentVolumeClaimName: <name of the PVC to snapshot>
+   EOF
+   ```
+
+   Note that `sds-local-volume-snapshot-class` is created automatically, and it's `deletionPolicy` is `Delete`, which means that [VolumeSnapshotContent](../../../reference/cr/volumesnapshotcontent/) should be deleted when its bound [VolumeSnapshot](../../../reference/cr/volumesnapshot/) is deleted.
+
+1. To check the status of the created snapshot, execute the command:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+This command will display a list of all snapshots and their current status.
