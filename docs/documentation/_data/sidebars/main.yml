@@ -1671,8 +1671,8 @@ entries:
       url: /release-notes.html
   # ------------- TEST -------------
     - title:
-        en: Projects (TEST)
-        ru: Проекты (ТЕСТ)
+        en: Projects (WIP)
+        ru: Проекты (WIP)
       folders:
         - title:
             en: Concepts
