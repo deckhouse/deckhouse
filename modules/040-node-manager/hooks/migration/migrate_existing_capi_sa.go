@@ -95,12 +95,17 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	snap := input.Snapshots
-	if len(snap["capi_sa"]) == 0 {
+	snaps := input.NewSnapshots.Get("capi_sa")
+	if len(snaps) == 0 {
 		return nil
 	}
 
-	serviceAccount := snap["capi_sa"][0].(ServiceAccountInfo)
+	var serviceAccount ServiceAccountInfo
+	err := snaps[0].UnmarshalTo(&serviceAccount)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal start 'capi_sa' snapshot: %w", err)
+	}
+
 	if !serviceAccount.IsLabeledAndAnnotated {
 		input.PatchCollector.PatchWithMerge(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 	}
