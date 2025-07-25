@@ -1363,7 +1363,7 @@ metadata:
 	return state.String()
 }
 
-func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady, DisruptionApproved, Drained bool, nodeType string) string {
+func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady, disruptionApproved, Drained bool, nodeType string) string {
 	const tpl = `
 ---
 apiVersion: deckhouse.io/v1
@@ -1432,7 +1432,7 @@ status:
 		DisruptionApproved bool
 		Drained            bool
 		NodeType           string
-	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, DisruptionApproved, Drained, nodeType})
+	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, disruptionApproved, Drained, nodeType})
 	if err != nil {
 		panic(err)
 	}
