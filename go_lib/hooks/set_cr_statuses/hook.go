@@ -36,7 +36,7 @@ func getTimeStamp() string {
 }
 
 func getCheckSum(bytes []byte) string {
-	checkSum := utils_checksum.CalculateChecksum_old(string(bytes))
+	checkSum := utils_checksum.CalculateChecksum(string(bytes))
 	if env, ok := os.LookupEnv("TEST_CONDITIONS_CALC_CHKSUM"); ok {
 		checkSum = env
 	}
