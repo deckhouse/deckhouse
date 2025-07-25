@@ -40,57 +40,12 @@ type deckhouseReleaseModuleManager interface {
 
 // deckhouseReleaseValidationHandler creates a webhook handler for DeckhouseRelease validation
 func deckhouseReleaseValidationHandler(
-	cli client.Client,
+	client client.Client,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		dr, ok := obj.(*v1alpha1.DeckhouseRelease)
-		if !ok {
-			return nil, fmt.Errorf("expect DeckhouseRelease as unstructured, got %T", obj)
-		}
-
-		// If the DeckhouseRelease is not approved, allow it
-		if !dr.Approved {
-			return allowResult(nil)
-		}
-
-		if review.Operation == model.OperationUpdate {
-			if review.OldObjectRaw != nil {
-				oldDR := &v1alpha1.DeckhouseRelease{}
-				if err := json.Unmarshal(review.OldObjectRaw, oldDR); err == nil {
-					// If the old DeckhouseRelease was approved, we allow the update.
-					// This is to prevent the case when a user approves a DeckhouseRelease,
-					// but then tries to change it back to unapproved, or change another fields.
-					if oldDR.Approved {
-						return allowResult(nil)
-					}
-				}
-			}
-		}
-
-		checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(
-			cli,
-			moduleManager.GetEnabledModuleNames(),
-			exts,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create requirements checker: %v", err)
-		}
-
-		reasons := checker.MetRequirements(ctx, dr)
-		if len(reasons) > 0 {
-			msgs := make([]string, 0, len(reasons))
-			for _, reason := range reasons {
-				msgs = append(msgs, reason.Message)
-			}
-
-			message := fmt.Sprintf("\n cannot approve DeckhouseRelease %q: requirements not met: \n- %s", dr.Name, strings.Join(msgs, "\n- "))
-
-			return rejectResult(message)
-		}
-
-		return allowResult(nil)
+		return validateDeckhouseReleaseApproval(ctx, review, obj, client, moduleManager, exts)
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
@@ -103,4 +58,62 @@ func deckhouseReleaseValidationHandler(
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
+}
+
+// validateDeckhouseReleaseApproval performs the main validation logic for DeckhouseRelease approval webhook
+func validateDeckhouseReleaseApproval(
+	ctx context.Context,
+	review *model.AdmissionReview,
+	obj metav1.Object,
+	client client.Client,
+	moduleManager deckhouseReleaseModuleManager,
+	exts *extenders.ExtendersStack,
+) (*kwhvalidating.ValidatorResult, error) {
+	dr, ok := obj.(*v1alpha1.DeckhouseRelease)
+	if !ok {
+		return nil, fmt.Errorf("expect DeckhouseRelease as unstructured, got %T", obj)
+	}
+
+	// If the DeckhouseRelease is not approved, allow it
+	if !dr.Approved {
+		return allowResult(nil)
+	}
+
+	if review.Operation == model.OperationUpdate {
+		if review.OldObjectRaw != nil {
+			oldDR := &v1alpha1.DeckhouseRelease{}
+			if err := json.Unmarshal(review.OldObjectRaw, oldDR); err == nil {
+				// If the old DeckhouseRelease was approved, we allow the update.
+				// This is to prevent the case when a user approves a DeckhouseRelease,
+				// but then tries to change it back to unapproved, or change another fields.
+				if oldDR.Approved {
+					return allowResult(nil)
+				}
+			}
+		}
+	}
+
+	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(
+		client,
+		moduleManager.GetEnabledModuleNames(),
+		exts,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create requirements checker: %v", err)
+	}
+
+	reasons := checker.MetRequirements(ctx, dr)
+	if len(reasons) > 0 {
+		msgs := make([]string, 0, len(reasons))
+		for _, reason := range reasons {
+			msgs = append(msgs, reason.Message)
+		}
+
+		message := fmt.Sprintf("\n cannot approve DeckhouseRelease %q: requirements not met: \n- %s", dr.Name, strings.Join(msgs, "\n- "))
+
+		return rejectResult(message)
+	}
+
+	return allowResult(nil)
 }
