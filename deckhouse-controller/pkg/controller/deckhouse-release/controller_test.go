@@ -1076,6 +1076,78 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Empty(suite.T(), dr.Status.Message)
 		})
 	})
+
+	suite.Run("Migrated Modules", func() {
+		suite.Run("No migrated modules", func() {
+			suite.setupController("no-migrated-modules.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Empty migrated modules", func() {
+			suite.setupController("empty-migrated-modules.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Modules available", func() {
+			suite.setupController("modules-available.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Module missing", func() {
+			suite.setupController("module-missing.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Module pull error", func() {
+			suite.setupController("module-pull-error.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Multiple sources", func() {
+			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+	})
 }
 
 func newDependencyContainer(t *testing.T) *dependency.MockedContainer {

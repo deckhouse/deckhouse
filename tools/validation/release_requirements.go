@@ -42,7 +42,7 @@ var (
 	moduleRequirementsRegex = regexp.MustCompile(`^(ee\/)?(be\/|fe\/)?modules\/.+\/requirements\/.+\.go$`)
 	modulesDirs             = []string{"./modules", "./ee"}
 	// these checks are excluded from validation for some reason (the way they are implemented, etc)
-	specificChecks          = []string{"disabledModules"}
+	specificChecks = []string{"disabledModules", "migratedModules"}
 )
 
 type releaseSettings struct {
