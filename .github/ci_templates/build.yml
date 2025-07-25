@@ -1,3 +1,29 @@
+{!{ define "check_changelog_template" }!}
+# <template: check_changelog_template>
+check_changelog:
+  name: Check changelog
+  runs-on: ubuntu-latest
+  steps:
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 4 }!}
+    - name: Check for tag
+      run: |
+        if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+          echo "Not a tag push, skipping changelog check."
+          exit 0
+        fi
+
+        TAG_VERSION="${GITHUB_REF#refs/tags/}"
+        FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
+
+        if [ ! -f "$FILE" ]; then
+          echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+          exit 1
+        else
+          echo "✅ Changelog file $FILE found."
+        fi
+# </template: check_changelog_template>
+{!{ end }!}
+
 {!{ define "go_generate_template" }!}
 # <template: go_generate_template>
 runs-on: [self-hosted, regular]
