@@ -195,11 +195,11 @@ data:
 													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
 												})
 											} else {
-												By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
-													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+												By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
 												})
-												By(fmt.Sprintf("%s must have /draining", nodeName), func() {
-													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+												By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
 												})
 											}
 										} else {
@@ -250,10 +250,13 @@ data:
 			n := f.KubernetesGlobalResource("Node", nodeName)
 
 			drainAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`)
-			Expect(drainAnnotate.Exists()).To(BeTrue())
+			Expect(drainAnnotate.Exists()).To(BeFalse())
 
 			disruptionReqAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`)
-			Expect(disruptionReqAnnotate.Exists()).To(BeTrue())
+			Expect(disruptionReqAnnotate.Exists()).To(BeFalse())
+
+			approveAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`)
+			Expect(approveAnnotate.Exists()).To(BeTrue())
 		}
 
 		Context("when have single-master control-plane", func() {

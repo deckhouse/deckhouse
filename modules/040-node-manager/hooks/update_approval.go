@@ -219,8 +219,8 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
-				// IsDrained first
-				if ngn.IsDrained && ngn.IsWaitingForApproval {
+				// IsDrained or IsDraining first
+				if (ngn.IsDrained || ngn.IsDraining) && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
 					if len(approvedNodes) == countToApprove {
 						break
@@ -232,7 +232,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
 				// get !ngn.IsReady if it is below the limit
-				if !ngn.IsReady && !ngn.IsDrained && ngn.IsWaitingForApproval {
+				if !ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
 					if len(approvedNodes) == countToApprove {
 						break
@@ -244,7 +244,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
 				// Allow one node, if 100% nodes in NodeGroup are ready
-				if (ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral) && !ngn.IsDrained && ngn.IsWaitingForApproval {
+				if (ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral) && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
 					if len(approvedNodes) == countToApprove {
 						break
