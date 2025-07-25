@@ -19,7 +19,7 @@ package bashible
 import (
 	"fmt"
 
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 var (
