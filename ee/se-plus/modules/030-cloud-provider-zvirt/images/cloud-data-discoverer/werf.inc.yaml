@@ -24,7 +24,7 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
-- add: /deckhouse/go_lib/cloud-data
+- add: /go_lib/cloud-data
   to: /src/go_lib/cloud-data
   excludePaths:
     - "**/*.md"
@@ -34,7 +34,7 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
-- add: /deckhouse/pkg/log
+- add: /pkg/log
   to: /src/pkg/log
   excludePaths:
     - "**/*.md"
