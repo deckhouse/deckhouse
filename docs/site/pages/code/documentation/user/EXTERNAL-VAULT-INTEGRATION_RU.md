@@ -143,7 +143,7 @@ DATABASE_PASSWORD:
 | `pipeline_id`           | всегда                      | ID CI-пайплайна                                                          |
 | `pipeline_source`       | всегда                      | Источник запуска пайплайна (push, schedule, MR и т.д.)                  |
 | `job_id`                | всегда                      | ID задания CI                                                            |
-| `ref`                   | всегда                      | Git-реф (например, `main`, `v1.2`)                                       |
+| `ref`                   | всегда                      | Ссылка Git (Git reference)                                       |
 | `ref_type`              | всегда                      | Тип рефа (`branch` или `tag`)                                           |
 | `ref_path`              | всегда                      | Полный путь до рефа (например, `refs/heads/main`)                       |
 | `ref_protected`         | всегда                      | Признак защищённого рефа                                                 |
