@@ -523,6 +523,40 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
 		})
 	})
+
+	suite.Run("Process major releases", func() {
+		suite.Run("major release 0 -> 1", func() {
+			// Setup initial state
+			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
+
+			repeatTest(func() {
+				mr := suite.getModuleRelease("parca-0.26.2")
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				// Test updating Parca module
+				mr = suite.getModuleRelease("parca-1.0.0")
+				_, err = suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		suite.Run("major release 1 -> 2", func() {
+			// Setup initial state
+			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-1-2.yaml"))
+
+			repeatTest(func() {
+				mr := suite.getModuleRelease("parca-1.26.2")
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				// Test updating Parca module
+				mr = suite.getModuleRelease("parca-2.0.0")
+				_, err = suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+			})
+		})
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
