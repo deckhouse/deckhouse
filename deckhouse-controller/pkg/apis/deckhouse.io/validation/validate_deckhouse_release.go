@@ -75,7 +75,7 @@ func deckhouseReleaseValidationHandler(
 			exts,
 		)
 		if err != nil {
-			return rejectResult(fmt.Sprintf("failed to create requirements checker: %v", err))
+			return nil, fmt.Errorf("failed to create requirements checker: %v", err)
 		}
 
 		reasons := checker.MetRequirements(ctx, dr)
