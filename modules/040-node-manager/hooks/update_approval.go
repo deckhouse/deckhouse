@@ -244,7 +244,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
 				// Allow one node, if 100% nodes in NodeGroup are ready
-				if (ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral) && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
+				if ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
 					approvedNodes = append(approvedNodes, ngn)
 					if len(approvedNodes) == countToApprove {
 						break
@@ -258,19 +258,11 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for _, approvedNode := range approvedNodes {
-			input.Logger.Info(fmt.Sprintf("approveUpdates debug1: %+v , %+v, %+v ", approvedNode.IsDisruptionApproved, ng.Disruptions.ApprovalMode == "Automatic", ar.needDrainNode(input, &approvedNode, &ng)), slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
 				if !approvedNode.IsDrained {
 					if !approvedNode.IsDraining {
-						patch := map[string]interface{}{
-							"metadata": map[string]interface{}{
-								"annotations": map[string]interface{}{
-									drainingAnnotationKey: "approveUpdates",
-								},
-							},
-						}
 						input.Logger.Info("approveUpdates Draining", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
-						input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
+						input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", approvedNode.Name)
 						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
 						ar.finished = true
 					} else {
@@ -303,6 +295,13 @@ var (
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/disruption-approved": "",
 				"update.node.deckhouse.io/disruption-required": nil,
+			},
+		},
+	}
+	drainingPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainingAnnotationKey: "bashible",
 			},
 		},
 	}
