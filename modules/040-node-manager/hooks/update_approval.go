@@ -298,6 +298,14 @@ var (
 			},
 		},
 	}
+	DisruptionApprovedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/disruption-approved": "",
+				"update.node.deckhouse.io/disruption-required": nil,
+			},
+		},
+	}
 )
 
 func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
@@ -369,51 +377,9 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			continue
 		}
 
-		var patch map[string]interface{}
-		var metricStatus string
-
-		drainBeforeApproval := ar.needDrainNode(input, &node, &ng)
-
-		switch {
-		case !drainBeforeApproval:
-			// Skip draining if it's disabled in the NodeGroup
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
-			metricStatus = "DisruptionApproved"
-
-		case !node.IsUnschedulable:
-			// If node is not unschedulable – mark it for draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						drainingAnnotationKey: "IsUnschedulable",
-					},
-				},
-			}
-			metricStatus = "DrainingForDisruption"
-
-		default:
-			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
-			metricStatus = "DisruptionApproved"
-		}
-
-		input.Logger.Info(fmt.Sprintf("approveDisruptions %s", metricStatus), slog.String("node", node.Name), slog.String("ng", ng.Name))
-		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
-		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
+		input.Logger.Info("approveDisruptions DisruptionApproved", slog.String("node", node.Name), slog.String("ng", ng.Name))
+		input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", node.Name)
+		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DisruptionApproved")
 	}
 
 	return nil
