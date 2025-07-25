@@ -23,7 +23,7 @@ redirectURIs:
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ index $context.Values.userAuthn.internal.kubeconfigEncodedNames $index}}
+  name: {{ index $context.Values.userAuthn.internal.kubeconfigEncodedNames $index | quote }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | nindent 2 }}
 id: kubeconfig-generator-{{ $index }}
