@@ -16,6 +16,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	v1 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks/internal/v1"
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
@@ -44,7 +45,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	var discoveryData v1.VsphereCloudDiscoveryData
+	var discoveryData cloudDataV1.VsphereCloudDiscoveryData
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {
