@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -71,16 +71,6 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		input.MetricsCollector.Set("d8_edition_not_found", value, nil)
 	}(&found)
 
-	// check moduleConfig spec.settings.licence.edition
-	moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
-	for _, moduleEditionSnap := range moduleEditions {
-		moduleEdition := moduleEditionSnap.String()
-		if validateEdition(moduleEdition) {
-			found = true
-			return nil
-		}
-	}
-
 	// check values.global.deckhouseEdition
 	edition, ok := input.Values.GetOk("global.deckhouseEdition")
 	if ok && validateEdition(edition.String()) {
@@ -107,6 +97,16 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		}
 
 		input.Logger.Warn("global value global.modulesImages.registry.path does not match edition regex")
+	}
+
+	// check moduleConfig spec.settings.licence.edition
+	moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
+	for _, moduleEditionSnap := range moduleEditions {
+		moduleEdition := moduleEditionSnap.String()
+		if validateEdition(moduleEdition) {
+			found = true
+			return nil
+		}
 	}
 
 	// if we reach this point, it means no edition was found
