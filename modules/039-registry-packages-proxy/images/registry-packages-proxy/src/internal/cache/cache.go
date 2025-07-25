@@ -35,6 +35,7 @@ const HighUsagePercent = 80
 type CacheEntry struct {
 	lastAccessTime time.Time
 	size           uint64
+	manifest       image.ma
 }
 
 type Cache struct {

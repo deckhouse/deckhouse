@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"strings"
 
+	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
+	"github.com/deckhouse/rootca"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -55,6 +57,17 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	image, err := remote.Image(
 		repository.Digest(digest),
 		remoteOpts...)
+
+	manifest, err := image.Manifest()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// Verify image signature
+	if err := ddk.VerifyImageManifestSignature(ctx, string(rootca.RootCA), manifest); err != nil {
+		return 0, nil, err
+	}
+
 	if err != nil {
 		e := &transport.Error{}
 		if errors.As(err, &e) {
