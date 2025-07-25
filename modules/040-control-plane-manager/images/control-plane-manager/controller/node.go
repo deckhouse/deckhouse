@@ -27,36 +27,54 @@ import (
 
 func annotateNode() error {
 	log.Infof("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation)
-	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
 
-	if _, ok := node.Annotations[approvedAnnotation]; ok {
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
+		if err != nil {
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
 		// node already approved, no need to annotate
-		log.Infof("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation)
-		return nil
+		if _, ok := node.Annotations[approvedAnnotation]; ok {
+			log.Infof("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation)
+			return nil
+		}
+		node.Annotations[waitingApprovalAnnotation] = ""
+		if _, err = config.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{}); err == nil {
+			return nil
+		}
+		lastErr = err
+		time.Sleep(1 * time.Second)
 	}
 
-	node.Annotations[waitingApprovalAnnotation] = ""
-
-	_, err = config.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
-	return err
+	return lastErr
 }
 
 func waitNodeApproval() error {
 	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
 
+	var lastErr error
 	for i := 0; i < maxRetries; i++ {
 		log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
+
 		node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 		if err != nil {
-			return err
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
 		}
+
 		if _, ok := node.Annotations[approvedAnnotation]; ok {
 			return nil
 		}
+
 		time.Sleep(1 * time.Second)
+	}
+
+	if lastErr != nil {
+		return lastErr
 	}
 	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }
