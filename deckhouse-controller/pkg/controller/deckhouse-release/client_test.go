@@ -38,6 +38,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -106,7 +107,7 @@ func setupControllerSettings(
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack(nil, "", log.NewNop()),
+		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

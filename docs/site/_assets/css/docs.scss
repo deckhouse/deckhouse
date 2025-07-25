@@ -829,7 +829,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 20px;
+  scroll-margin-top: 70px;
 }
 
 .docs ul.resources li::before {
@@ -1197,6 +1197,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background-color: #F6F7F8;
         border-right: 1px solid #C4CAD4;
         color: #A7B0BE;
+    }
+
+    &:has(.language-tree) {
+      &::before {
+        content: none;
+      }
     }
 
     .icon--copy {
