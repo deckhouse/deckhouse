@@ -29,8 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type INController struct {
@@ -90,7 +93,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyIngressControllerWebhookFilter,
 		},
 	},
-}, hadleFinalizers)
+}, handleFinalizers)
 
 func applyIngressControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	finalizers := obj.GetFinalizers()
@@ -133,16 +136,19 @@ func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hoo
 	return wh.Name, nil
 }
 
-func hadleFinalizers(input *go_hook.HookInput) error {
+func handleFinalizers(input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
-	controllers := input.Snapshots["controller"]
 	serviceNames := set.NewFromSnapshot(input.NewSnapshots.Get("services"))
 	daemonSetNames := set.NewFromSnapshot(input.NewSnapshots.Get("daemonsetscruise"))
 	validationWebhooks := set.NewFromSnapshot(input.NewSnapshots.Get("valwebhookconfnginx"))
 
-	for _, c := range controllers {
-		controllerName := c.(INController).Name
+	for controller, err := range sdkobjectpatch.SnapshotIter[INController](input.NewSnapshots.Get("controller")) {
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to patch controller %s with error %v", controller.Name, err))
+		}
+
+		controllerName := controller.Name
 
 		// Names pattern
 		expectedServices := []string{
@@ -188,7 +194,7 @@ func hadleFinalizers(input *go_hook.HookInput) error {
 
 		// Set finalizer
 		if found {
-			finalizers := c.(INController).Finalizers
+			finalizers := controller.Finalizers
 			if !slices.Contains(finalizers, finalizer) {
 				finalizers = append(finalizers, finalizer)
 				patch := map[string]interface{}{

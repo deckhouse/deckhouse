@@ -310,7 +310,6 @@ spec:
 		})
 	})
 
-
 	Context("With suspended validation annotation", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
