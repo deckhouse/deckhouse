@@ -85,7 +85,7 @@ func deckhouseReleaseValidationHandler(
 				msgs = append(msgs, reason.Message)
 			}
 
-			message := fmt.Sprintf("cannot approve DeckhouseRelease %q: requirements not met: \n- %s", dr.Name, strings.Join(msgs, "\n- "))
+			message := fmt.Sprintf("\n cannot approve DeckhouseRelease %q: requirements not met: \n- %s", dr.Name, strings.Join(msgs, "\n- "))
 
 			return rejectResult(message)
 		}
