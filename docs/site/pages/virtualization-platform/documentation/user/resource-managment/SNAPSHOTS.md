@@ -238,20 +238,36 @@ status:
 
 The [VirtualMachineRestore](../../../reference/cr/virtualmachinerestore.html) resource is used to restore a virtual machine from a snapshot. During the restore process, the following objects are automatically created in the cluster:
 
-- VirtualMachine - the main VM resource with the configuration from the snapshot.
-- VirtualDisk - disks connected to the VM at the moment of snapshot creation.
-- VirtualBlockDeviceAttachment - disk connections to the VM (if they existed in the original configuration).
-- Secret - secrets with cloud-init or sysprep settings (if they were involved in the original VM).
+- VirtualMachine: The main VM resource with the configuration from the snapshot.
+- VirtualDisk: Disks connected to the VM at the moment of snapshot creation.
+- VirtualBlockDeviceAttachment: Disk connections to the VM (if they existed in the original configuration).
+- VirtualMachineIPAddress: The IP address of the virtual machine (if the `keepIPAddress: Always` parameter was specified at the time of snapshot creation).
+- Secret: Secrets with cloud-init or sysprep settings (if they were involved in the original VM).
 
 Important: resources are created only if they were present in the VM configuration at the time the snapshot was created. This ensures that an exact copy of the environment is restored, including all dependencies and settings.
 
 ### Restore a virtual machine
 
+There are two modes used for restoring a virtual machine. They are defined by the restoreMode parameter of the VirtualMachineRestore resource:
+
+```yaml
+spec:
+  restoreMode: Safe | Forced
+```
+
+`Safe` is used by default.
+
 {% alert level="warning" %}
-To restore a virtual machine, you must delete its current configuration and all associated disks. This is because the restore process returns the virtual machine and its disks to the state that was fixed at the time the backup snapshot was created.
+To restore a virtual machine in `Safe` mode, you must delete its current configuration and all associated disks. This is because the restoration process returns the virtual machine and its disks to the state recorded at the snapshot's creation time.
 {% endalert %}
 
-Example manifest for restoring a virtual machine from a snapshot:
+The `Forced` mode is used to bring an already existing virtual machine to the state at the time of the snapshot.
+
+{% alert level="warning" %}
+`Forced` may disrupt the operation of the existing virtual machine because it will be stopped during restoration, and `VirtualDisks` and `VirtualMachineBlockDeviceAttachments` resources will be deleted for subsequent restoration.
+{% endalert %}
+
+Example manifest for restoring a virtual machine from a snapshot in `Safe` mode:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -260,6 +276,7 @@ kind: VirtualMachineRestore
 metadata:
   name: <restore name>
 spec:
+  restoreMode: Safe
   virtualMachineSnapshotName: <virtual machine snapshot name>
 EOF
 ```
