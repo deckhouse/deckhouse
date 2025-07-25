@@ -16,8 +16,17 @@ variable "prefix" {
   type = string
 }
 
+variable "disable_default_security_group" {
+  type = bool
+  default = false
+}
+
 variable "cluster_uuid" {
   type = string
+}
+
+variable "ssh_allow_list" {
+  type = any
 }
 
 variable "node_group" {

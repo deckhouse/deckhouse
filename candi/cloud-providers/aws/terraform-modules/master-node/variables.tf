@@ -16,6 +16,15 @@ variable "prefix" {
   type = string
 }
 
+variable "disable_default_security_group" {
+  type = bool
+  default = false
+}
+
+variable "ssh_allow_list" {
+  type = any
+}
+
 variable "cluster_uuid" {
   type = string
 }
@@ -40,7 +49,6 @@ variable "associate_public_ip_address" {
   type = bool
   default = false
 }
-
 variable "associate_ssh_accessible_sg" {
   type = bool
   default = true
