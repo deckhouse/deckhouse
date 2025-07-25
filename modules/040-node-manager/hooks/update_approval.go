@@ -262,8 +262,15 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
 				if !approvedNode.IsDrained {
 					if !approvedNode.IsDraining {
+						patch := map[string]interface{}{
+							"metadata": map[string]interface{}{
+								"annotations": map[string]interface{}{
+									drainingAnnotationKey: "approveUpdates",
+								},
+							},
+						}
 						input.Logger.Info("approveUpdates Draining", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
-						input.PatchCollector.PatchWithMerge(drainingPath, "v1", "Node", "", approvedNode.Name)
+						input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", approvedNode.Name)
 						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
 						ar.finished = true
 					} else {
@@ -288,13 +295,6 @@ var (
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/approved":             "",
 				"update.node.deckhouse.io/waiting-for-approval": nil,
-			},
-		},
-	}
-	drainingPath = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				drainingAnnotationKey: "bashible",
 			},
 		},
 	}
@@ -389,7 +389,13 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		case !node.IsUnschedulable:
 			// If node is not unschedulable – mark it for draining
-			patch = drainingPath
+			patch = map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						drainingAnnotationKey: "IsUnschedulable",
+					},
+				},
+			}
 			metricStatus = "DrainingForDisruption"
 
 		default:
@@ -565,7 +571,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		isDisruptionRequired = true
 	}
 	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v != "user" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -580,7 +586,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		nodeGroup = ""
 	}
 	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v != "user" {
 		isDrained = true
 	}
 
