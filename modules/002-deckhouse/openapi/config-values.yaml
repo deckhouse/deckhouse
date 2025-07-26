@@ -270,3 +270,21 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+  license:
+    type: object
+    description: |
+      License settings for Deckhouse.
+    properties:
+      edition:
+        type: string
+        enum: ["CE", "BE", "FE", "EE", "SE", "SE-plus"]
+        x-examples: ["CE"]
+        description: |
+          The edition of Deckhouse.
+          - `CE` — Community Edition.
+          - `BE` - Basic edition.
+          - `FE` — Flant Edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Plus Edition.
+        default: "CE"
