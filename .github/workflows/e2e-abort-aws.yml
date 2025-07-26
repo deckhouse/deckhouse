@@ -303,9 +303,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -572,9 +570,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -841,9 +837,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1110,9 +1104,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1379,9 +1371,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1648,9 +1638,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1917,9 +1905,7 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
