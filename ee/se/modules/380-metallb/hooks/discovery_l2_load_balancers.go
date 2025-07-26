@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -137,6 +136,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		DesiredIPs:                desiredIPs,
 		LBAllowSharedIP:           lbAllowSharedIP,
 		AnnotationMLBC:            mlbcAnnotation,
+		Conditions:                service.Status.Conditions,
 	}, nil
 }
 
@@ -221,18 +221,16 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 			continue
 		}
 
+		conditions := updateCondition(service.Conditions, metav1.Condition{
+			Type:    "network.deckhouse.io/load-balancer-class",
+			Message: mlbcForUse.Name,
+			Status:  "True",
+			Reason:  "LoadBalancerClassBound",
+		})
 		if patchStatusInformation {
 			patch := map[string]any{
 				"status": map[string]any{
-					"conditions": []metav1.Condition{
-						{
-							Type:               "network.deckhouse.io/load-balancer-class",
-							Message:            mlbcForUse.Name,
-							Status:             "True",
-							Reason:             "LoadBalancerClassBound",
-							LastTransitionTime: metav1.NewTime(time.Now()),
-						},
-					},
+					"conditions": conditions,
 				},
 			}
 
