@@ -17,9 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
