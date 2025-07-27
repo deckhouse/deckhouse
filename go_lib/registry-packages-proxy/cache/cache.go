@@ -24,5 +24,5 @@ var ErrEntryNotFound = errors.New("entry not found")
 
 type Cache interface {
 	Get(digest string) (int64, io.ReadCloser, error)
-	Set(digest string, size int64, reader io.Reader) error
+	Set(digest string, layerDigest string, reader io.Reader) error
 }
