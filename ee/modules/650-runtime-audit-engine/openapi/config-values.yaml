@@ -6,7 +6,8 @@ properties:
       type: string
       enum:
         - Fstec
-    default: ["Fstec"]
+        - D8Bcheck
+    default: ["Fstec", "D8Bcheck"]
     x-examples:
       - ["Fstec"]
       - []
