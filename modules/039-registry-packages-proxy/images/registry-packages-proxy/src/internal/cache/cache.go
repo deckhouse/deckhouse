@@ -70,7 +70,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	path := c.layerDigestToPath(entry.layerDigest)
 
 	// check if file hash is correct
-	if !c.checkHashIsOK(entry.layerDigest, path) {
+	if !c.checkHashIsOK(entry.layerDigest) {
 		c.setCorrupted(digest)
 		return 0, nil, cache.ErrEntryNotFound
 	}
@@ -216,7 +216,7 @@ func (c *Cache) checkFilesHash() {
 	c.Lock()
 	defer c.Unlock()
 	for k, v := range c.storage {
-		if !c.checkHashIsOK(v.layerDigest, c.layerDigestToPath(v.layerDigest)) {
+		if !c.checkHashIsOK(v.layerDigest) {
 			c.setCorrupted(k)
 		}
 	}
@@ -306,7 +306,8 @@ func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
 	return ret, true
 }
 
-func (c *Cache) checkHashIsOK(layerDigest string, path string) bool {
+func (c *Cache) checkHashIsOK(layerDigest string) bool {
+	path := c.layerDigestToPath(layerDigest)
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
