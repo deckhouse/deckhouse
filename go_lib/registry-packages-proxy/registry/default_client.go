@@ -36,7 +36,7 @@ import (
 
 type DefaultClient struct{}
 
-func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error) {
+func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error) {
 
 	repo := config.Repository
 	if path != "" {
@@ -46,12 +46,12 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	nameOpts := newNameOptions(config.Scheme)
 	repository, err := name.NewRepository(repo, nameOpts...)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	remoteOpts, err := newRemoteOptions(ctx, config)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	image, err := remote.Image(
@@ -60,13 +60,13 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 
 	manifest, err := image.Manifest()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	// Verify image signature
 	if err := ddk.VerifyImageManifestSignature(ctx, string(rootca.RootCA), manifest); err != nil {
 		log.Error("verify image signature failed: %w", err)
-		//return 0, nil, err
+		//return 0, "", nil, err
 	}
 
 	if err != nil {
@@ -74,28 +74,33 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		if errors.As(err, &e) {
 			log.Error(e.Error())
 			if e.StatusCode == http.StatusNotFound {
-				return 0, nil, ErrPackageNotFound
+				return 0, "", nil, ErrPackageNotFound
 			}
 		}
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	layers, err := image.Layers()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	size, err := layers[len(layers)-1].Size()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
+	}
+
+	hash, err := layers[len(layers)-1].Digest()
+	if err != nil {
+		return 0, "", nil, err
 	}
 
 	reader, err := layers[len(layers)-1].Compressed()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
-	return size, reader, nil
+	return size, hash.Hex, reader, nil
 }
 
 func newNameOptions(scheme string) []name.Option {
