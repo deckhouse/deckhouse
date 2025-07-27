@@ -17,6 +17,7 @@ package cache
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -318,7 +319,7 @@ func (c *Cache) checkHashIsOK(layerDigest string, path string) bool {
 		c.logger.Error("failed to calculate hash sum", slog.String("path", path), log.Err(err))
 		return false
 	}
-	hsum := string(h.Sum(nil))
+	hsum := fmt.Sprintf("%x", h.Sum(nil))
 	if hsum != layerDigest {
 		c.logger.Info("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layerHash", layerDigest))
 		return false
