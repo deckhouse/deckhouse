@@ -322,7 +322,7 @@ spec:
 
 ## Пример отправки алертов по электронной почте
 
-Создайте `Secret` с паролем от аккаунта электронной почты в ключе `password`:
+Создайте Secret с паролем от аккаунта электронной почты. Пароль, закодированный в формате base64, укажите в поле `password`:
 
 ```yaml
 apiVersion: v1
@@ -356,7 +356,7 @@ spec:
             authPassword:
               key: password
               name: am-mail-server-pass
-            # Если вы используете custom CA на сервере, вы можете положить публичную часть CA в ConfigMap в namespace d8-monitoring
+            # Если вы используете custom CA на сервере, можете поместить публичную часть CA в ConfigMap в пространстве имен d8-monitoring
             # tlsConfig:
             #   insecureSkipVerify: true
             #   ca:
