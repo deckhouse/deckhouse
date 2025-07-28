@@ -593,9 +593,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -609,9 +607,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -638,9 +634,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -753,9 +747,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1165,9 +1157,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1181,9 +1171,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -1210,9 +1198,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1325,9 +1311,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1737,9 +1721,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1753,9 +1735,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -1782,9 +1762,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1897,9 +1875,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -2309,9 +2285,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -2325,9 +2299,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -2354,9 +2326,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -2469,9 +2439,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -2881,9 +2849,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -2897,9 +2863,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -2926,9 +2890,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -3041,9 +3003,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -3453,9 +3413,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -3469,9 +3427,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -3498,9 +3454,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -3613,9 +3567,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4025,9 +3977,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4041,9 +3991,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -4070,9 +4018,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -4185,9 +4131,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4597,9 +4541,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -4613,9 +4555,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -4642,9 +4582,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -4757,9 +4695,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5169,9 +5105,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5185,9 +5119,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -5214,9 +5146,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -5329,9 +5259,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5741,9 +5669,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -5757,9 +5683,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -5786,9 +5710,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -5901,9 +5823,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6313,9 +6233,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6329,9 +6247,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -6358,9 +6274,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -6473,9 +6387,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6885,9 +6797,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -6901,9 +6811,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -6930,9 +6838,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -7045,9 +6951,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -7457,9 +7361,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -7473,9 +7375,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -7502,9 +7402,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -7617,9 +7515,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -8029,9 +7925,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -8045,9 +7939,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -8074,9 +7966,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -8189,9 +8079,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-          -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-          -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
