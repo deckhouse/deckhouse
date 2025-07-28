@@ -51,10 +51,6 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: tools/conntrack-tools
-  add: /usr/sbin/conntrack
-  to: /usr/sbin/conntrack
-  before: setup
 - image: {{ .ModuleName }}/failover-artifact
   add: /src/failover
   to: /failover

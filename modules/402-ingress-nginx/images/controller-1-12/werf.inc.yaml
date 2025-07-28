@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-28.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -49,7 +49,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -65,7 +65,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -89,7 +89,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -120,7 +120,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-16.01"
+fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -153,7 +153,7 @@ final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-23.02"
+fromCacheVersion: "2025-07-28.01"
 final: false
 mount:
 - from: build_dir
@@ -370,14 +370,14 @@ shell:
 
 
   # For NGINX
-  - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64
+  - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64 # !
   - cp -a /lib64/libcrypt.so* /chroot/lib64
   - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
   - cp -a /lib64/libssl.so* /chroot/lib64
-  - cp -a /usr/lib64/libcrypto.so* /chroot/lib64
-  - cp -a /usr/lib64/libz.so* /chroot/lib64
+  - cp -a /usr/lib64/libcrypto.so* /chroot/lib64 # !
+  - cp -a /usr/lib64/libz.so* /chroot/lib64  # !
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  - cp -a /usr/lib64/libc.so* /chroot/lib64
+  - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
   - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
@@ -421,22 +421,22 @@ shell:
   # - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
   # - cp -a /lib64/libabsl_time.so* /chroot/lib64
   - cp -a /lib64/libaddress_sorting.so* /chroot/lib64
-  - cp -a /lib64/libbrotlicommon.so* /chroot/lib64
-  - cp -a /lib64/libbrotlidec.so* /chroot/lib64
-  - cp -a /lib64/libbrotlienc.so* /chroot/lib64
+  - cp -a /lib64/libbrotlicommon.so* /chroot/lib64 # !
+  - cp -a /lib64/libbrotlidec.so* /chroot/lib64 # !
+  - cp -a /lib64/libbrotlienc.so* /chroot/lib64 # !
   - cp -a /lib64/libcares.so* /chroot/lib64
   - cp -a /lib64/libcom_err.so* /chroot/lib64
   - cp -a /lib64/libcurl.so* /chroot/lib64
   - cp -a /lib64/libffi.so* /chroot/lib64 # !
   - cp -a /lib64/libgcrypt.so* /chroot/lib64
-  - cp -a /lib64/libgmp.so* /chroot/lib64
+  - cp -a /lib64/libgmp.so* /chroot/lib64 # !
   - cp -a /lib64/libgnutls.so* /chroot/lib64
   - cp -a /lib64/libgpg-error.so* /chroot/lib64
   - cp -a /lib64/libgpr.so* /chroot/lib64
   - cp -a /lib64/libgrpc.so* /chroot/lib64
   - cp -a /lib64/libgrpc++.so* /chroot/lib64
   - cp -a /lib64/libgsasl.so* /chroot/lib64
-  - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64
+  - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64 # Возможно есть в krb5
   - cp -a /lib64/libhogweed.so* /chroot/lib64
   - cp -a /lib64/libidn.so* /chroot/lib64
   - cp -a /lib64/libidn2.so* /chroot/lib64
@@ -466,7 +466,7 @@ shell:
   - cp -a /lib64/libtasn1.so* /chroot/lib64
   - cp -a /lib64/libunistring.so* /chroot/lib64
   - cp -a /lib64/libupb.so* /chroot/lib64
-  - cp -a /lib64/libzstd.so* /chroot/lib64
+  - cp -a /lib64/libzstd.so* /chroot/lib64 # Серега собирает
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
@@ -477,7 +477,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-23.02"
+fromCacheVersion: "2025-07-28.01"
 mount:
 - from: build_dir
   to: /tmp/apps
