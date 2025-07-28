@@ -3,7 +3,8 @@
 {{- $pluginsVersion := "plugins/gcpaudit/v0.6.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+#fromImage: base/distroless
+fromImage: builder/alt-2025-06-06
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out
