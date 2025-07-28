@@ -71,7 +71,10 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 
 	// check if file hash is correct
 	if !c.checkHashIsOK(entry.layerDigest) {
-		c.setCorrupted(digest)
+		c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", digest))
+		c.Lock()
+		c.storage[digest].isCorrupted = true
+		c.Unlock()
 		return 0, nil, cache.ErrEntryNotFound
 	}
 
@@ -216,11 +219,12 @@ func (c *Cache) deleteFiles() {
 
 func (c *Cache) checkFilesHash() {
 	c.logger.Info("starting cache files hash check")
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 	for k, v := range c.storage {
 		if !c.checkHashIsOK(v.layerDigest) {
-			c.setCorrupted(k)
+			c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", k))
+			c.storage[k].isCorrupted = true
 		}
 	}
 }
@@ -324,32 +328,11 @@ func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	}
 	hsum := fmt.Sprintf("%x", h.Sum(nil))
 	if hsum != layerDigest {
-		c.logger.Info("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layerHash", layerDigest))
+		c.logger.Warn("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layerHash", layerDigest))
 		return false
 	}
 
 	return true
-}
-
-func (c *Cache) removeEntry(digest string) {
-	_, ok := c.storageGetOK(digest)
-	if !ok {
-		return
-	}
-	c.Lock()
-	defer c.Unlock()
-	delete(c.storage, digest)
-}
-
-func (c *Cache) setCorrupted(digest string) {
-	_, ok := c.storageGetOK(digest)
-	if !ok {
-		return
-	}
-	c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", digest))
-	c.Lock()
-	defer c.Unlock()
-	c.storage[digest].isCorrupted = true
 }
 
 func (c *Cache) getFileList() []string {
