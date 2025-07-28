@@ -34,7 +34,6 @@ import (
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
@@ -60,14 +59,11 @@ func main() {
 	// * * * * * * * * *
 	// Metric storage
 	metricStorage := metricstorage.NewMetricStorage("watcher")
-	metricCollector := metricStorage.Collector()
-	metricRegistry := prometheus.NewRegistry()
-	metricRegistry.MustRegister(metricCollector)
 	// metricStorage.HistogramObserve()
 
 	// * * * * * * * * *
 	// New handler
-	h := handler.NewHandler(logger.Named("v1"), metricRegistry)
+	h := handler.NewHandler(logger.Named("v1"), metricStorage)
 	srv := &http.Server{
 		Addr:    "localhost:9090",
 		Handler: h,

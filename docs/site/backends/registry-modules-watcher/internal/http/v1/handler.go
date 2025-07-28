@@ -4,9 +4,7 @@ import (
 	"net/http"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type RegistryModulesWatcherHandler struct {
@@ -15,7 +13,7 @@ type RegistryModulesWatcherHandler struct {
 	logger *log.Logger
 }
 
-func NewHandler(logger *log.Logger, metricRegistry *prometheus.Registry) *RegistryModulesWatcherHandler {
+func NewHandler(logger *log.Logger, metricStorage *metricsstorage.MetricStorage) *RegistryModulesWatcherHandler {
 	r := http.NewServeMux()
 
 	var h = &RegistryModulesWatcherHandler{
@@ -25,7 +23,7 @@ func NewHandler(logger *log.Logger, metricRegistry *prometheus.Registry) *Regist
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
-	r.Handle("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{}))
+	r.Handle("/metrics", metricStorage.Handler())
 
 	return h
 }
