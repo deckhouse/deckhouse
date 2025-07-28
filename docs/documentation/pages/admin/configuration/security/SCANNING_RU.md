@@ -61,28 +61,3 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
   ```shell
   d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
-
-## Просмотр результатов CIS compliance-проверки
-
-- Чтобы вывести все ресурсы, которые не прошли проверку:
-
-  ```shell
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
-  ```
-
-- Чтобы выполнить поиск по идентификатору конкретной проверки:
-
-  ```shell
-  check_id="5.7.3"
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
-  ```
-
-- Чтобы выполнить поиск по описанию проверки:
-
-  ```shell
-  check_desc="Apply Security Context to Your Pods and Containers"
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
-  ```
