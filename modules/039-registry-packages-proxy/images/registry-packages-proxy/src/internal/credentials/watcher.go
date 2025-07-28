@@ -193,7 +193,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Info("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
+	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module source", moduleSource.Name))
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
