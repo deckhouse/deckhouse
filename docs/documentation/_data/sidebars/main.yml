@@ -707,7 +707,7 @@ entries:
               url: /modules/node-manager/faq.html
         - title:
             en: Container Registry
-            ru: Реестр контейнеров
+            ru: Container Registry
           moduleName: registry
           featureStatus: preview
           folders:
