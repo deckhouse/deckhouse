@@ -29,6 +29,7 @@ import (
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -91,7 +92,6 @@ type DeckhouseController struct {
 func NewDeckhouseController(
 	ctx context.Context,
 	version string,
-	allowExperimentalModules bool,
 	operator *addonoperator.AddonOperator,
 	logger *log.Logger,
 ) (*DeckhouseController, error) {
@@ -296,7 +296,7 @@ func NewDeckhouseController(
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
 		operator.MetricStorage,
-		allowExperimentalModules,
+		settingsContainer,
 	)
 
 	return &DeckhouseController{
@@ -317,7 +317,7 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 }
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
-func (c *DeckhouseController) Start(ctx context.Context) error {
+func (c *DeckhouseController) Start(ctx context.Context, metricStorage metric.Storage) error {
 	// run preflight check
 	c.startModulesControllers(ctx)
 
@@ -337,7 +337,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	}
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
-	go c.syncDeckhouseSettings()
+	go c.syncDeckhouseSettings(metricStorage)
 
 	return nil
 }
@@ -357,7 +357,7 @@ func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
 }
 
 // syncDeckhouseSettings updates embeddedPolicy and deckhouse settings by the deckhouse moduleConfig
-func (c *DeckhouseController) syncDeckhouseSettings() {
+func (c *DeckhouseController) syncDeckhouseSettings(metricStorage metric.Storage) {
 	for {
 		deckhouseConfig := <-c.deckhouseConfigCh
 
@@ -375,7 +375,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.log.Debug("update deckhouse settings")
-		c.settings.Set(settings)
+		c.settings.Set(settings, metricStorage)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {

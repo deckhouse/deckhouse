@@ -180,7 +180,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 			"allowExperimentalModules": allowExperimental == "true",
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
+			return nil, fmt.Errorf("cannot create ModuleConfig deckhouse: %s", err)
 		}
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
 	}

@@ -18,12 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -51,7 +49,6 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -59,11 +56,10 @@ const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
 	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
-	deckhouseBundleEnv       = "DECKHOUSE_BUNDLE"
-	chrootDirEnv             = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
-	modulesDirEnv            = "MODULES_DIR"
-	skipEntrypointEnv        = "SKIP_ENTRYPOINT_EXECUTION"
-	allowExperimentalModules = "DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES"
+	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
+	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
+	modulesDirEnv      = "MODULES_DIR"
+	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
 	serviceDeckhouse = "deckhouse"
 	leaseName        = "deckhouse-leader-election"
@@ -249,21 +245,14 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
-	allowExpRaw := os.Getenv(allowExperimentalModules)
-	allowExp, err := strconv.ParseBool(allowExpRaw)
-	if err != nil {
-		logger.Warn("Bad environment value 'DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES' - must be bool", slog.String("value", allowExpRaw))
-	}
-	if allowExp {
-		operator.MetricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
-	}
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, allowExp, operator, logger.Named("deckhouse-controller"))
+
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
 	// load modules from FS, start controllers and run deckhouse config event loop
-	if err = deckhouseController.Start(ctx); err != nil {
+	if err = deckhouseController.Start(ctx, operator.MetricStorage); err != nil {
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 

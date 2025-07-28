@@ -22,6 +22,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+	"github.com/flant/shell-operator/pkg/metric"
 )
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather
@@ -60,7 +62,7 @@ type DeckhouseSettingsContainer struct {
 
 // Set update settings in container
 // TODO: notify controllers and requeue all releases
-func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
+func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings, metricStorage metric.Storage) {
 	if settings == nil {
 		panic("argument should be defined")
 	}
@@ -79,6 +81,9 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
+	if c.settings.AllowExperimentalModules {
+		metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
+	}
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {

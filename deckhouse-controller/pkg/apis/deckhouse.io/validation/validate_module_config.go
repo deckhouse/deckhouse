@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
@@ -57,14 +58,14 @@ func moduleConfigValidationHandler(
 	metricStorage metric.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
-	allowExperimentalModules bool,
+	setting *helpers.DeckhouseSettingsContainer,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
-			cfg = new(v1alpha1.ModuleConfig)
-			ok  bool
+			cfg                      = new(v1alpha1.ModuleConfig)
+			ok                       bool
+			allowExperimentalModules = setting.Get().AllowExperimentalModules
 		)
-
 		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 			definition := module.GetModuleDefinition()
 			if definition.IsExperimental() {
@@ -140,7 +141,7 @@ func moduleConfigValidationHandler(
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 					if !allowExperimentalModules && definition.IsExperimental() {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set DECKHOUSE_ALLOW_EXPERIMENTAL_MODULES=true to allow it", cfg.Name))
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
 					}
 				}
 			}

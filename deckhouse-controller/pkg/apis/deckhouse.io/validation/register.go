@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
@@ -47,9 +48,9 @@ func RegisterAdmissionHandlers(
 	validator *configtools.Validator,
 	storage moduleStorage,
 	metricStorage metric.Storage,
-	allowExperimentalModules bool,
+	settings *helpers.DeckhouseSettingsContainer,
 ) {
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, allowExperimentalModules))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
