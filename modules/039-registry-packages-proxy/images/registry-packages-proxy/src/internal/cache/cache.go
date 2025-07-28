@@ -312,6 +312,7 @@ func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
 
 func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	path := c.layerDigestToPath(layerDigest)
+	c.logger.Info("checking hash sum of file in the cache", slog.String("layerDigest", layerDigest), slog.String("path", path))
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
