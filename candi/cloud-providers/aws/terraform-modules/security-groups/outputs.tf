@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "additional_security_groups" {
-  value = length(aws_security_group.node) > 0 ? aws_security_group.node[0].id : []
+  value = length(aws_security_group.node) > 0 ? [aws_security_group.node[0].id] : []
 }
 
 output "load_balancer_security_group" {
