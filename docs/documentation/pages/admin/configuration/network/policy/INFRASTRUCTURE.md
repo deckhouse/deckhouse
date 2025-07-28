@@ -1,5 +1,5 @@
 ---
-title: "Network policies"
+title: "Network infrastructure"
 permalink: en/admin/configuration/network/policy/
 ---
 

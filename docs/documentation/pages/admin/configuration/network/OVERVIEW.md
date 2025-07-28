@@ -1,4 +1,4 @@
 ---
-title: "General network setting information in Deckhouse Kubernetes Platform"
+title: "Overview"
 permalink: en/admin/configuration/network/
 ---

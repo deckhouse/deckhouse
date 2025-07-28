@@ -1,5 +1,5 @@
 ---
-title: "Common info about incoming traffic balancing"
+title: "Overview"
 permalink: en/admin/configuration/network/ingress/
 ---
 

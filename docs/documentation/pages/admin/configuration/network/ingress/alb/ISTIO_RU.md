@@ -76,12 +76,13 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # Secret с сертификатом и ключом, который должен быть создан в d8-ingress-istio namespace.
-        # Поддерживаемые форматы Secret'ов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
+        # Ресурс Secret с сертификатом и ключом, который должен быть создан в d8-ingress-istio namespace.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com
 ```
+
+Поддерживаемые форматы Secret'ов можно посмотреть [на официальном сайте](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -103,9 +104,9 @@ spec:
 ### NGINX Ingress
 
 Для работы с NGINX Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у кастомного ресурса [IngressNginxController](../../../../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](../../../../../modules/ingress-nginx/).
+* Ingress-контроллер, добавив к нему sidecar от Istio. Для этого установите параметр `enableIstioSidecar` кастомного ресурса [IngressNginxController](../../../../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](../../../../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — эта аннотация указывает Ingress-контроллеру направлять запросы на ClusterIP сервиса (из диапазона Service CIDR), а не напрямую в поды приложения. Это необходимо, поскольку sidecar-контейнер `istio-proxy` перехватывает только трафик, направленный на диапазон Service CIDR. Запросы вне этого диапазона не проходят через Istio;
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 Примеры:
@@ -117,11 +118,11 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
-    # Просим nginx проксировать трафик на ClusterIP вместо собственных IP подов.
+    # Nginx будет проксировать трафик на ClusterIP вместо собственных IP подов.
     nginx.ingress.kubernetes.io/service-upstream: "true"
-    # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов.
-    # Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`,
-    # мы просто используем внутренний домен, о котором Istio осведомлен.
+    # В Istio маршрутизация основана на заголовке запросов `Host:`.
+    # Чтобы не указывать наличие внешнего домена `productpage.example.com`,
+    # используется внутренний домен, известный Istio.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:

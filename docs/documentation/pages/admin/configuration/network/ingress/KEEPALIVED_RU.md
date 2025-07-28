@@ -8,15 +8,15 @@ lang: ru
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 
-Для настройки keepalived-кластеров на узлах с его помощью используются custom resources.
+Для настройки keepalived-кластеров на узлах с его помощью используются Custom Resources (кастомные ресурсы).
 
 ## Примеры использования модуля
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/examples.html -->
 
-### Три публичных IP-адреса
+### Несколько публичных IP-адресов
 
-Три публичных IP-адреса на трех front-узлах. Каждый виртуальный IP-адрес вынесен в отдельную VRRP-группу, таким образом, каждый адрес «прыгает» независимо от других, и если в кластере три узла с лейблами `node-role.deckhouse.io/frontend: ""`, то каждый IP получит по своему master-узлу.
+Рассмотрим пример, когда три публичных IP-адреса расположены на трех front-узлах. Каждый виртуальный IP-адрес привязан к отдельной VRRP-группе, что обеспечивает независимое перемещение каждого адреса. При наличии в кластере трёх узлов с лейблами `node-role.deckhouse.io/frontend: ""`, каждый IP-адрес будет закреплён за своим master-узлом.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -33,10 +33,10 @@ spec:
   vrrpInstances:
   - id: 1 # Уникальный для всего кластера ID.
     interface:
-      detectionStrategy: DefaultRoute # В качестве служебной сетевой карты используем ту, через которую проложен дефолтный маршрут.
+      detectionStrategy: DefaultRoute # В качестве служебной сетевой карты используется та, через которую проложен дефолтный маршрут.
     virtualIPAddresses:
     - address: 42.43.44.101/32
-      # В нашем примере адреса «прыгают» по тем же сетевым интерфейсам, по которым ходит служебный VRRP-трафик, поэтому мы не указываем параметр interface.
+      # В приведённом примере IP-адреса переходят по тем же сетевым интерфейсам, по которым передаётся служебный VRRP-трафик, поэтому параметр interface указывать не требуется.
   - id: 2
     interface:
       detectionStrategy: DefaultRoute
@@ -49,7 +49,7 @@ spec:
     - address: 42.43.44.103/32
 ```
 
-Шлюз с парой IP-адресов для LAN и WAN. В случае шлюза приватный и публичный IP друг без друга не могут и «прыгать» между узлами они будут вместе. Служебный VRRP-трафик в данном примере мы решили пустить через LAN-интерфейс, который мы определим с помощью метода NetworkAddress (считаем, что на каждом узле есть IP из этой подсети).
+Шлюз использует пару IP-адресов — для LAN и WAN. В отличие от других случаев, приватный и публичный IP-адреса связаны между собой и перемещаются между узлами совместно. В данном примере служебный VRRP-трафик передаётся через LAN-интерфейс, который определяется методом NetworkAddress (предполагается, что на каждом узле имеется IP-адрес из соответствующей подсети).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -63,23 +63,23 @@ spec:
   - key: node-role.deckhouse.io/mygateway
     operator: Exists
   vrrpInstances:
-  - id: 4 # ID "1", "2", "3" уже заняты в KeepalivedInstance "front" выше.
+  - id: 4 # ID "1", "2", "3" уже используются в KeepalivedInstance "front" выше.
     interface:
       detectionStrategy: NetworkAddress
       networkAddress: 192.168.42.0/24
     virtualIPAddresses:
     - address: 192.168.42.1/24
-      # В данном случае мы уже определили локальную сеть выше и можем не определять интерфейс для этого IP, не указав параметр interface.
+      # Так как локальная сеть уже определена выше, параметр interface для этого IP можно не указывать.
     - address: 42.43.44.1/28
       interface:
         detectionStrategy: Name
-        name: ens7 # На всех узлах интерфейс для публичных IP называется "ens7", воспользуемся этим.
+        name: ens7 # Интерфейс для публичных IP на всех узлах называется "ens7", указываем его явно.
 ```
 
-## Как вручную переключить keepalived
+## Ручное переключение keepalived
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
 
 1. Зайдите в нужный под: `d8 k -n d8-keepalived exec -it keepalived-<name> -- sh`.
-2. Отредактируйте файл `vi /etc/keepalived/keepalived.conf`, где в строке с параметром `priority` замените значение на число подов keepalived + 1.
-3. Отправьте сигнал на перечитывание конфигурации: `kill -HUP 1`.
+1. Отредактируйте файл `vi /etc/keepalived/keepalived.conf`, где в строке с параметром `priority` замените значение на число подов keepalived + 1.
+1. Отправьте сигнал на перечитывание конфигурации: `kill -HUP 1`.
