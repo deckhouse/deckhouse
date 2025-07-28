@@ -38,16 +38,15 @@ import (
 )
 
 const (
-	etcdPromoteTimeout                          = 3 * time.Second
-	NotFoundID                           uint64 = 0
-	apiCallRetryInterval                        = 2 * time.Second
-	apiCallTimeout                              = 30 * time.Second
-	EtcdAdvertiseClientUrlsAnnotationKey        = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
-	EtcdComponent                               = "etcd"
-	ControlPlaneTier                            = "control-plane"
-	caCertPath                                  = "/etc/kubernetes/pki/etcd/ca.crt"
-	certPath                                    = "/etc/kubernetes/pki/etcd/peer.crt"
-	keyPath                                     = "/etc/kubernetes/pki/etcd/peer.key"
+	etcdPromoteTimeout                   = 3 * time.Second
+	apiCallRetryInterval                 = 2 * time.Second
+	apiCallTimeout                       = 30 * time.Second
+	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+	EtcdComponent                        = "etcd"
+	ControlPlaneTier                     = "control-plane"
+	caCertPath                           = "/etc/kubernetes/pki/etcd/ca.crt"
+	certPath                             = "/etc/kubernetes/pki/etcd/peer.crt"
+	keyPath                              = "/etc/kubernetes/pki/etcd/peer.key"
 )
 
 var defaultETCDendpoints = []string{"https://127.0.0.1:2379"}
