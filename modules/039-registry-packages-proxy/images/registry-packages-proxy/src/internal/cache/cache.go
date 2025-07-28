@@ -160,7 +160,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ticker.C:
 			if len(c.storage) == 0 {
 				c.logger.Info("storage map is empty")
-				return
+				continue
 			}
 
 			c.applyRetentionPolicy()
