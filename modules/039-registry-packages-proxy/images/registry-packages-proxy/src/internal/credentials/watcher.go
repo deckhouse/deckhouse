@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -223,12 +224,12 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		w.Lock()
-		w.logger.Info("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("added registry config for repo", slog.String("repo", moduleSource.Spec.Registry.Repo))
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
 		w.Lock()
-		w.logger.Info("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("deleted registry config for repo", slog.String("repo", moduleSource.Spec.Registry.Repo))
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
 	}
