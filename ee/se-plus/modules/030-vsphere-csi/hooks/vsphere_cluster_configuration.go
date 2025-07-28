@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	apisv1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/vsphere/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
@@ -36,7 +37,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 	input.Values.Set("vsphereCsi.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	var discoveryData v1.VsphereCloudDiscoveryData
+	var discoveryData apisv1.VsphereCloudDiscoveryData
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {
