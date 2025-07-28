@@ -508,7 +508,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -516,6 +519,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -568,6 +574,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
@@ -845,7 +852,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -853,6 +863,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -905,6 +918,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
@@ -1182,7 +1196,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1190,6 +1207,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1242,6 +1262,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
@@ -1507,7 +1528,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1515,6 +1539,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1567,6 +1594,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
@@ -1832,7 +1860,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1840,6 +1871,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1892,6 +1926,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
@@ -2157,7 +2192,10 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf render > werf-rendered.yaml
+
           werf build \
+            --config werf-rendered.yaml
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -2165,6 +2203,9 @@ jobs:
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"> id_rsa.pub
+          openssl rsautl -encrypt -pubin -inkey id_rsa.pub -ssl -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.enc
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2217,6 +2258,7 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
 
     # </template: build_template>
 
