@@ -165,8 +165,8 @@ func (c *Cache) Reconcile(ctx context.Context) {
 
 			c.applyRetentionPolicy()
 			c.checkFilesHash()
-			c.deleteOrphanedOrCorruptedEntries()
-			c.deleteFiles()
+			// c.deleteOrphanedOrCorruptedEntries()
+			// c.deleteFiles()
 		}
 	}
 }
