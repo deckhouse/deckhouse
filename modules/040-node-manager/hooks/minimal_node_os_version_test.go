@@ -110,7 +110,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("20.04.3"))
+			Expect(value).To(BeEquivalentTo("20.4.3"))
 		})
 	})
 
@@ -138,7 +138,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("18.04.5"))
+			Expect(value).To(BeEquivalentTo("18.4.5"))
 		})
 	})
 
@@ -152,7 +152,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("18.04.5"))
+			Expect(value).To(BeEquivalentTo("18.4.5"))
 		})
 	})
 })
