@@ -135,13 +135,13 @@ func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 
 	c.logger.Info("wrote file with digest to the cache dir", slog.String("digest", digest), slog.String("path", path), slog.Int64("size", size))
 
-	c.Lock()
+	c.RLock()
+	defer c.RUnlock()
 	c.storage[digest] = &CacheEntry{
 		lastAccessTime: time.Now(),
 		layerDigest:    layerDigest,
 		isCorrupted:    false,
 	}
-	c.Unlock()
 
 	c.metrics.CacheSize.Add(float64(size))
 	return nil
@@ -186,12 +186,12 @@ func (c *Cache) deleteOrphanedOrCorruptedEntries() {
 
 func (c *Cache) deleteFiles() {
 	c.logger.Info("starting cache delete files")
-	c.Lock()
+	c.RLock()
 	layerDigests := make(map[string]struct{}, len(c.storage))
 	for _, v := range c.storage {
 		layerDigests[v.layerDigest] = struct{}{}
 	}
-	c.Unlock()
+	c.RUnlock()
 
 	files := c.getFileList()
 
@@ -216,14 +216,10 @@ func (c *Cache) deleteFiles() {
 
 func (c *Cache) checkFilesHash() {
 	c.logger.Info("starting cache files hash check")
-	layers := make(map[string]string, len(c.storage))
-	c.Lock()
+	c.RLock()
+	defer c.RUnlock()
 	for k, v := range c.storage {
-		layers[k] = v.layerDigest
-	}
-	c.Unlock()
-	for k, v := range layers {
-		if !c.checkHashIsOK(v) {
+		if !c.checkHashIsOK(v.layerDigest) {
 			c.setCorrupted(k)
 		}
 	}
@@ -245,20 +241,17 @@ func (c *Cache) applyRetentionPolicy() {
 		lowestTime := time.Now()
 
 		c.Lock()
+		defer c.Unlock()
 		for k, v := range c.storage {
 			if lowestTime.Compare(v.lastAccessTime) >= 0 {
 				oldestDigest = k
 			}
 		}
 		delete(c.storage, oldestDigest)
-		c.Unlock()
 	}
 }
 
 func (c *Cache) calculateCacheSize() int64 {
-	c.Lock()
-	defer c.Unlock()
-
 	files := c.getFileList()
 	var size int64
 
@@ -286,8 +279,8 @@ func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
 		c.logger.Info("digest is empty, skipping", slog.String("digest", digest))
 		return nil, false
 	}
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 	entry, ok := c.storage[digest]
 
 	if !ok {
