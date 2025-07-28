@@ -48,4 +48,5 @@ locals {
   tags                     = lookup(var.providerClusterConfiguration, "tags", {})
   ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
   additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
+  disable_default_sg = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
 }

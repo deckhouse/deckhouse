@@ -50,4 +50,6 @@ locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
   zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", {}) != {} ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup, "additionalTags", {}))
+  ssh_allow_list = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  disable_default_sg = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
 }
