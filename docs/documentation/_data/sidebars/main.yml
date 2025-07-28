@@ -706,6 +706,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
+            en: Container Registry
+            ru: Реестр контейнеров
+          moduleName: registry
+          featureStatus: preview
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/registry/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/registry/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/registry/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/registry/faq.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
