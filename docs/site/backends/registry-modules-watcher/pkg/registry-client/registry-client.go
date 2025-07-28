@@ -68,6 +68,12 @@ func (c *client) Name() string {
 	return c.registryURL
 }
 
+func (c *client) ReleaseImageDigest(ctx context.Context, moduleName, tag string) (string, error) {
+	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
+
+	return c.imageDigest(ctx, imageURL)
+}
+
 func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
 
@@ -99,6 +105,29 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 		ref,
 		imageOptions...,
 	)
+}
+
+func (c *client) imageDigest(ctx context.Context, imageURL string) (string, error) {
+	var nameOpts []name.Option
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	imageOptions := make([]remote.Option, 0)
+	if !c.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
+	}
+
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
+
+	descriptor, err := remote.Get(ref, imageOptions...)
+	if err != nil {
+		return "", fmt.Errorf("get image descriptor: %w", err)
+	}
+
+	return descriptor.Digest.String(), nil
 }
 
 func (c *client) Modules(ctx context.Context) ([]string, error) {

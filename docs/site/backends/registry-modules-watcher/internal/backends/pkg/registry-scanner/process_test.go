@@ -185,6 +185,11 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("c1consoleImageSecond", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c1parcaImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c1parcaImageSecond", nil)
+
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["2.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
@@ -217,9 +222,13 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("c1consoleImageThird", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c1parcaImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c1parcaImageThird", nil)
+
+	// ReleaseImage is not called for console/alpha and parca/rock-solid because their digests don't change
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["5.5.5"], nil)
 
 	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
@@ -245,6 +254,11 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
+
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c2consoleImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("c2consoleImageSecond", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c2parcaImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c2parcaImageFirst", nil)
 
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.5"], nil)
@@ -277,9 +291,13 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c2consoleImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("c2consoleImageThird", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c2parcaImageFirst", nil)
+	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c2parcaImageThird", nil)
+
+	// ReleaseImage is not called for console/alpha and parca/rock-solid because their digests don't change
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)
 
 	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(images["console"]["4.4.4"], nil)

@@ -113,24 +113,19 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	// First get digest without downloading the image
+	releaseDigest, err := s.registryClients[registry].ReleaseImageDigest(ctx, module, releaseChannel)
 	if err != nil {
-		return nil, fmt.Errorf("get release image: %w", err)
-	}
-
-	releaseDigest, err := releaseImage.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("get digest: %w", err)
+		return nil, fmt.Errorf("get release digest: %w", err)
 	}
 
 	versionData := &internal.VersionData{
 		Registry:       registry,
 		ModuleName:     module,
 		ReleaseChannel: releaseChannel,
-		Checksum:       releaseDigest.String(),
+		Checksum:       releaseDigest,
 		Version:        "",
 		TarFile:        make([]byte, 0),
-		Image:          releaseImage,
 	}
 
 	// Check if we already have this release in cache
@@ -138,42 +133,54 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	if ok && releaseChecksum == versionData.Checksum {
 		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
 		if ok {
+			s.logger.Info("using cached data", slog.String("module", module), slog.String("version", version))
 			versionData.Version = version
 			versionData.TarFile = tarFile
-
 			return versionData, nil
 		}
 	}
 
-	// Extract version from image
-	version, err := getVersionFromImage(versionData.Image)
+	// Only download image if cache miss
+	s.logger.Info("cache miss, downloading image", slog.String("module", module), slog.String("channel", releaseChannel))
+	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
-		return nil, fmt.Errorf("extract version from image: %w", err)
+		return nil, fmt.Errorf("get release image: %w", err)
 	}
-	versionData.Version = version
 
-	// Extract tar file
-	tarFile, err := s.extractTar(ctx, versionData)
+	versionData.Image = releaseImage
+
+	// Extract version and tar file from image
+	version, tarFile, err := s.extractVersionAndTarFromImage(ctx, registry, module, releaseImage)
 	if err != nil {
-		return nil, fmt.Errorf("extract tar: %w", err)
+		return nil, fmt.Errorf("extract version and tar from image: %w", err)
 	}
+
+	versionData.Version = version
 	versionData.TarFile = tarFile
 
 	return versionData, nil
 }
 
-func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
-	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
+// extractVersionAndTarFromImage extracts both version and documentation tar optimally
+func (s *registryscanner) extractVersionAndTarFromImage(ctx context.Context, registry, module string, releaseImage crv1.Image) (string, []byte, error) {
+	// Extract version from release image
+	version, err := getVersionFromImage(releaseImage)
 	if err != nil {
-		return nil, fmt.Errorf("get image: %w", err)
+		return "", nil, fmt.Errorf("extract version from release image: %w", err)
+	}
+
+	// Get the versioned image and extract documentation
+	image, err := s.registryClients[registry].Image(ctx, module, version)
+	if err != nil {
+		return "", nil, fmt.Errorf("get versioned image: %w", err)
 	}
 
 	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
-		return nil, fmt.Errorf("extract documentation: %w", err)
+		return "", nil, fmt.Errorf("extract documentation: %w", err)
 	}
 
-	return tarFile, nil
+	return version, tarFile, nil
 }
 
 func (s *registryscanner) extractDocumentation(image crv1.Image) ([]byte, error) {

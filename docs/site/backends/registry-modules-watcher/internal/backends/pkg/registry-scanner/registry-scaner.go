@@ -28,6 +28,7 @@ import (
 
 type Client interface {
 	Name() string
+	ReleaseImageDigest(ctx context.Context, moduleName, releaseChannel string) (string, error)
 	ReleaseImage(ctx context.Context, moduleName, releaseChannel string) (v1.Image, error)
 	Image(ctx context.Context, moduleName, version string) (v1.Image, error)
 	ListTags(ctx context.Context, moduleName string) ([]string, error)
