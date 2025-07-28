@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/flant/addon-operator v1.10.2
+	github.com/flant/addon-operator v1.10.3
 	github.com/flant/kube-client v1.3.1
 	github.com/flant/shell-operator v1.9.1
 	github.com/go-openapi/spec v0.19.8
@@ -32,7 +32,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/vmware/govmomi v0.24.1
+	github.com/vmware/govmomi v0.51.0 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.10
 	go.etcd.io/etcd/client/v3 v3.5.10
 	google.golang.org/grpc v1.63.0
@@ -55,6 +55,7 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/module-sdk v0.3.1
@@ -78,7 +79,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/mod v0.24.0
-	golang.org/x/text v0.23.0
+	golang.org/x/text v0.25.0
 	k8s.io/cli-runtime v0.30.11
 	k8s.io/code-generator v0.30.11
 	k8s.io/klog/v2 v2.130.1
@@ -258,7 +259,7 @@ require (
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
@@ -301,5 +302,7 @@ replace github.com/go-openapi/swag => github.com/go-openapi/swag v0.21.1
 replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./go_lib/registry-packages-proxy
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/dependency/k8s/drain
+
+replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dependency/vsphere
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry

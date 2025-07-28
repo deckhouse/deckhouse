@@ -1,4 +1,5 @@
 name: prometheus-pushgateway
+stage: "General Availability"
 subsystems:
   - observability
 namespace: kube-prometheus-pushgateway

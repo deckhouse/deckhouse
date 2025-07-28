@@ -170,6 +170,24 @@ properties:
 
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
 
+  license:
+    type: object
+    description: |
+      Настройки редакции Deckhouse Kubernetes Platform.
+    properties:
+      edition:
+        type: string
+        enum: ["CE", "BE", "EE", "SE", "SE-plus"]
+        x-examples: ["CE"]
+        description: |
+          Редакция Deckhouse Kubernetes Platform.
+          - `CE` — Community Edition.
+          - `BE` — Basic Edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Edition+.
+        default: "CE"
+
   registry:
     description: |
       Настройки для доступа к хранилищу образов контейнеров (container registry) с образами Deckhouse.

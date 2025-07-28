@@ -158,6 +158,7 @@ spec:
   # managed by Deckhouse: use API-proxy
             - name: KUBERNETES_SERVICE_HOST
               value: 127.0.0.1
+              valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
             - name: KUBERNETES_SERVICE_PORT
               value: "6445"
   {{- else }}
