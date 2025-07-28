@@ -637,7 +637,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -961,7 +962,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1285,7 +1287,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1609,7 +1612,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -1933,7 +1937,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
@@ -2257,7 +2262,8 @@ jobs:
           werf config render > werf-rendered.yaml
 
           werf build \
-            --config werf-rendered.yaml
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
             --log-time=true\
             --save-build-report=true \
