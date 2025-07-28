@@ -34,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientset "k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -52,9 +51,8 @@ const (
 var defaultETCDendpoints = []string{"https://127.0.0.1:2379"}
 
 type Etcd struct {
-	client     *clientv3.Client
-	kubeClient clientset.Interface
-	wb         wait.Backoff
+	client *clientv3.Client
+	wb     wait.Backoff
 }
 
 func EtcdJoinConverge() error {
@@ -109,8 +107,6 @@ func (c *Etcd) PromoteLearnersIfNeeded() error {
 func NewEtcd() (*Etcd, error) {
 	var err error
 	c := &Etcd{}
-
-	err, c.kubeClient = getKubeClient()
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +245,7 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Durat
 // from kubeadm
 func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int, error) {
 	log.Debugf("[d8][etcd] retrieving etcd endpoints from %q annotation in etcd Pods", EtcdAdvertiseClientUrlsAnnotationKey)
-	podList, err := c.kubeClient.CoreV1().Pods(metav1.NamespaceSystem).List(
+	podList, err := config.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("component=%s,tier=%s", EtcdComponent, ControlPlaneTier),

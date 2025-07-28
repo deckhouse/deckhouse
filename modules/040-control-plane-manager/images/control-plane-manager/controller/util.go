@@ -31,8 +31,6 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const kubeconfigPath = "/etc/kubernetes/admin.conf"
@@ -201,24 +199,6 @@ func cleanup() {
 	if err := removeOldBackups(); err != nil {
 		log.Warn(err.Error())
 	}
-}
-
-func getKubeClient() (error, kubernetes.Interface) {
-	rawConfig, err := clientcmd.LoadFromFile(kubeconfigPath)
-	if err != nil {
-		return fmt.Errorf("failed to load kubeconfig from %s: %w", kubeconfigPath, err), nil
-	}
-	clientConfig := clientcmd.NewDefaultClientConfig(*rawConfig, &clientcmd.ConfigOverrides{})
-	restConfig, err := clientConfig.ClientConfig()
-	if err != nil {
-		return fmt.Errorf("failed to build rest config: %w", err), nil
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create kubernetes client: %w", err), nil
-	}
-	return nil, kubeClient
 }
 
 var ErrNonRetryable = errors.New("non-retryable error")
