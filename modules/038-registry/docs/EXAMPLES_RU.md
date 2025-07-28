@@ -19,7 +19,7 @@ description: ""
    ```bash
    d8 k get nodes
    ```
-   
+
    Пример вывода:
 
    ```console
@@ -30,7 +30,7 @@ description: ""
    ```
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
-   
+
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
@@ -43,7 +43,7 @@ description: ""
    ```bash
    d8 k get module registry -o wide
    ```
-   
+
    Пример вывода:
 
    ```console
@@ -106,7 +106,7 @@ description: ""
    ```bash
    d8 k get nodes
    ```
-   
+
    Пример вывода:
   
    ```console
@@ -117,7 +117,8 @@ description: ""
    ```
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
-   ```console 
+
+   ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...

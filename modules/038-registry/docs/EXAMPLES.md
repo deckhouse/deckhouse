@@ -19,7 +19,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    ```bash
    d8 k get nodes
    ```
-   
+
    Example output:
 
    ```console
@@ -30,7 +30,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    ```
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
-   
+
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
@@ -43,9 +43,9 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    ```bash
    d8 k get module registry -o wide
    ```
-   
+
    Example output:
-   
+
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
@@ -104,7 +104,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    ```bash
    d8 k get nodes
    ```
-   
+
    Example output:
 
    ```console
@@ -115,7 +115,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    ```
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
-   
+
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
