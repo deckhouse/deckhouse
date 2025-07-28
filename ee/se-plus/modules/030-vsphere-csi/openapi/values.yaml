@@ -124,22 +124,29 @@ properties:
             type: string
           resourcePoolPath:
             type: string
-          zones:
-            type: array
-            items:
-              type: string
-      vsphereDiscoveryData:
-        type: object
-        additionalProperties: false
-        required: [datacenter]
-        x-examples:
-          - datacenter: test
-        properties:
           datacenter:
             type: string
           zones:
             type: array
             items:
               type: string
-      cniSecretData:
-        type: string
+          datastores:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                zones:
+                  type: array
+                  items:
+                    type: string
+                path:
+                  type: string
+                name:
+                  type: string
+                  minLength: 1
+                datastoreType:
+                  type: string
+                datastoreURL:
+                  type: string
+            description: List of datastores
