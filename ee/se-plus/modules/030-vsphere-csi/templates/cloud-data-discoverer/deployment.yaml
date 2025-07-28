@@ -62,7 +62,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -100,6 +100,21 @@ spec:
             secretKeyRef:
               name: cloud-data-discoverer
               key: insecure
+        - name: REGION
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: region
+        - name: REGION_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: regionTagCategory
+        - name: ZONE_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: zoneTagCategory
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG
