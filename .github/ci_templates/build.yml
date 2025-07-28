@@ -59,7 +59,6 @@ steps:
   - name: Build and push deckhouse images
     id: build
     env:
-      WERF_DOCKER_REGISTRY_DEBUG: 1
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -159,7 +158,6 @@ steps:
 
       werf build \
         --parallel=true --parallel-tasks-limit=10 \
-        --log-time=true\
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json

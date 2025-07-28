@@ -36,8 +36,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -531,7 +533,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -627,7 +628,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -848,7 +848,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -944,7 +943,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1165,7 +1163,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1261,7 +1258,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1482,7 +1478,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1578,7 +1573,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1799,7 +1793,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1895,7 +1888,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -2116,7 +2108,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2212,7 +2203,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
