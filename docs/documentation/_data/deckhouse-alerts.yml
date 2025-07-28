@@ -3443,11 +3443,13 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please specify Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+
         ```bash
         d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
         ```
-        Where `DKP_EDITION` is the edition you want to use like `CE`, `EE`, etc.
+
+        Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
       summary: |
         Incorrect Deckhouse Kubernetes Platform edition.
       severity: "6"
