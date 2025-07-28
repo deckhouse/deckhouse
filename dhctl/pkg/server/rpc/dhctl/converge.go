@@ -287,6 +287,11 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
+	err = sshClient.Start()
+	if err != nil {
+		return &pb.ConvergeResult{Err: err.Error()}
+	}
+
 	checkParams.KubeClient = kubeClient
 	checkParams.SSHClient = sshClient
 	convergeParams.KubeClient = kubeClient
