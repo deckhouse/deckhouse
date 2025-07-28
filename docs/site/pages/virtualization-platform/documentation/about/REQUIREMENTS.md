@@ -46,7 +46,7 @@ The platform has no other restrictions and is compatible with any hardware that 
        - At least 60 GB;
        - High-speed disk (400+ IOPS).
    - OS [from the list of supported ones](#supported-os-for-platform-nodes):
-     - Linux kernel version `5.7` or newer.
+     - Linux kernel version `5.8` or newer.
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
      - HTTPS access to the container image registry at `registry.deckhouse.io`;
@@ -74,7 +74,7 @@ The platform has no other restrictions and is compatible with any hardware that 
        - High-speed disk (400+ IOPS);
        - Additional disks for software-defined storage;
    - OS [from the list of supported ones](#supported-os-for-platform-nodes);
-     - Linux kernel version `5.7` or newer;
+     - Linux kernel version `5.8` or newer;
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
      - HTTPS access to the container image registry at `registry.deckhouse.io`;

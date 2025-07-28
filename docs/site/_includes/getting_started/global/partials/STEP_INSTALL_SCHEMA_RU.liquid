@@ -104,7 +104,7 @@
    - 16 ГБ RAM;
    - 100 ГБ дискового пространства
    {%- if page.platform_code == 'aws' %};
-   - ядро Linux версии `5.7` или новее.
+   - ядро Linux версии `5.8` или новее.
    {%- else %}.{%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_code == 'zvirt' %}
@@ -114,7 +114,7 @@
    - 16 ГБ RAM;
    - 100 ГБ дискового пространства
    {%- if page.platform_code == 'aws' %};
-   - ядро Linux версии `5.7` или новее.
+   - ядро Linux версии `5.8` или новее.
    {%- else %}.{%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_type == 'baremetal' %}
@@ -124,7 +124,7 @@
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
    - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
-   - ядро Linux версии `5.7` или новее;
+   - ядро Linux версии `5.8` или новее;
    - **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - наличие одного из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`).
 

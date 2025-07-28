@@ -1,7 +1,7 @@
 ---
 title: "Installation"
 permalink: en/installing/
-description: | 
+description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
 ---
 
@@ -58,7 +58,7 @@ The installation configuration YAML file contains parameters for several resourc
     > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
 1. [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters for Kubernetes clusters deployed on bare-metal servers or virtual machines in unsupported clouds.
-   > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.  
+   > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
 1. `<CLOUD_PROVIDER>ClusterConfiguration` — a set of resources containing configuration parameters for supported cloud providers. These include:
    * Cloud infrastructure access settings (authentication parameters);
@@ -231,7 +231,7 @@ kind: ModuleConfig
 metadata:
   name: deckhouse-admin
 spec:
-  enabled: true  
+  enabled: true
 ```
 
 {% endofftopic %}
@@ -388,7 +388,7 @@ List of checks performed by the installer before starting Deckhouse installation
      - at least 4 CPU cores;
      - at least 8 GB of RAM;
      - at least 60 GB of disk space with 400+ IOPS performance;
-     - Linux kernel version 5.7 or newer;
+     - Linux kernel version 5.8 or newer;
      - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
      - access to standard OS package repositories.
    - Python is installed on the master node server (VM).
@@ -436,7 +436,7 @@ Example of using the preflight skip flag:
       dhctl bootstrap \
       --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
       --config=/config.yml \
-      --preflight-skip-all-checks 
+      --preflight-skip-all-checks
   ```
 
 {% endofftopic %}
