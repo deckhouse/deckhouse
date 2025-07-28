@@ -3443,13 +3443,13 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please specify the edition in {{ $labels.module }} ModuleConfig
+        Please specify Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
         ```bash
-        kubectl patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "MYEDITION"}}}}'
+        d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
         ```
-        Where `MYEDITION` is the edition you want to use like `CE`, `EE`, `FE`, etc.
+        Where `DKP_EDITION` is the edition you want to use like `CE`, `EE`, etc.
       summary: |
-        Deckhouse edition is not found.
+        Incorrect Deckhouse Kubernetes Platform edition.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseHighMemoryUsage

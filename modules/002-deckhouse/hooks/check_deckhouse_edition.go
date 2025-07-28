@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleModuleConfig)
 var reEditionFromPath = regexp.MustCompile(`^/deckhouse/(.+)$`)
-var allExpectedEditions = []string{"ce", "be", "fe", "ee", "se", "se-plus"}
+var allExpectedEditions = []string{"ce", "be", "ee", "se", "se-plus"}
 
 func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	edition, _, _ := unstructured.NestedString(obj.Object, "spec", "settings", "license", "edition")
@@ -89,7 +89,7 @@ func handleModuleConfig(input *go_hook.HookInput) error {
 		}
 
 		// regex to extract edition from path
-		// e.g. /deckhouse/ce, /deckhouse/be, /deckhouse/fe, /deckhouse/ee, /deckhouse/se, /deckhouse/se-plus
+		// e.g. /deckhouse/ce, /deckhouse/be, /deckhouse/ee, /deckhouse/se, /deckhouse/se-plus
 		reResult := reEditionFromPath.FindStringSubmatch(registryPath.String())
 		if len(reResult) > 0 && validateEdition(reResult[1]) {
 			found = true

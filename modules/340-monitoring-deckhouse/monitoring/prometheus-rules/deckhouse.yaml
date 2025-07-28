@@ -578,10 +578,10 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: Deckhouse edition is not found.
+      summary: Incorrect Deckhouse Kubernetes Platform edition.
       description: |
-        Please specify the edition in {{ $labels.module }} ModuleConfig
+        Please specify Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
         ```bash
-        kubectl patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "MYEDITION"}}}}'
+        d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
         ```
-        Where `MYEDITION` is the edition you want to use like `CE`, `EE`, `FE`, etc.
+        Where `DKP_EDITION` is the edition you want to use like `CE`, `EE`, etc.

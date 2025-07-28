@@ -34,7 +34,7 @@ spec:
   version: 1
   settings:
     license:
-      edition: FE
+      edition: CE
 `
 var moduleConfigWithoutEdition = `
 ---
@@ -98,7 +98,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 		BeforeEach(func() {
 			st := f.KubeStateSet(moduleConfigWithoutEdition)
 			f.BindingContexts.Set(st)
-			f.ValuesSet("global.deckhouseEdition", "FE")
+			f.ValuesSet("global.deckhouseEdition", "CE")
 			f.RunHook()
 			f.ValuesDelete("global.deckhouseEdition")
 		})
@@ -120,7 +120,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check_deckhouse_edition ::", 
 			st := f.KubeStateSet(moduleConfigWithoutEdition)
 			f.BindingContexts.Set(st)
 			f.ValuesSet("global.modulesImages.registry.address", "registry.deckhouse.io")
-			f.ValuesSet("global.modulesImages.registry.path", "/deckhouse/fe")
+			f.ValuesSet("global.modulesImages.registry.path", "/deckhouse/ce")
 			f.RunHook()
 			f.ValuesDelete("global.modulesImages.registry.address")
 			f.ValuesDelete("global.modulesImages.registry.path")

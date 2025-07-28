@@ -273,18 +273,17 @@ properties:
   license:
     type: object
     description: |
-      License settings for Deckhouse.
+      Edition settings of the Deckhouse Kubernetes Platform.
     properties:
       edition:
         type: string
-        enum: ["CE", "BE", "FE", "EE", "SE", "SE-plus"]
+        enum: ["CE", "BE", "EE", "SE", "SE-plus"]
         x-examples: ["CE"]
         description: |
-          The edition of Deckhouse.
+          The edition of Deckhouse Kubernetes Platform.
           - `CE` — Community Edition.
           - `BE` - Basic edition.
-          - `FE` — Flant Edition.
           - `EE` — Enterprise Edition.
           - `SE` — Standard Edition.
-          - `SE-plus` — Standard Plus Edition.
+          - `SE-plus` — Standard Edition+.
         default: "CE"
