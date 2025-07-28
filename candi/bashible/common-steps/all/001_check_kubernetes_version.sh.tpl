@@ -16,7 +16,6 @@
 {{ $kubernetesVersion := .kubernetesVersion | toString }}
 
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-  bb-flag-unset disruption
   currentVersion=$(kubelet --version |egrep -o "1.[0-9]+")
   desiredVersion={{ $kubernetesVersion }}
 
