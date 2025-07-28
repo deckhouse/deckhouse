@@ -79,7 +79,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627a
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
-from: dev-registry.deckhouse.io/base_images@sha256:e1fe74d9f412c1ff5ebc08edb9d19063c9ed61572fac6694f7c70c706de82837
+from: dev-registry.deckhouse.io/base_images@sha256:ab69c3c44e9f54aa5c798e7a6ca7d7015b31d6c0248c05562e1c63aa08fbedab
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
