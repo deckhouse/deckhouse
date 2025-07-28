@@ -280,7 +280,8 @@ properties:
         enum: ["CE", "BE", "EE", "SE", "SE-plus"]
         x-examples: ["CE"]
         description: |
-          The edition of Deckhouse Kubernetes Platform.
+          Edition of the Deckhouse Kubernetes Platform:
+
           - `CE` — Community Edition.
           - `BE` - Basic edition.
           - `EE` — Enterprise Edition.
