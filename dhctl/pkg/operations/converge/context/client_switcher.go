@@ -57,6 +57,9 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 		return err
 	}
 
+	log.DebugLn(fmt.Sprintf("NodeUser debug: %+v", convergeState.NodeUserCredentials == nil))
+	log.DebugLn(fmt.Sprintf("NodeUser debug: %+v", convergeState.NodeUserCredentials))
+	log.DebugLn(fmt.Sprintf("NodeUser debug: %+v", convergeState.NodeUserCredentials.Name))
 	if convergeState.NodeUserCredentials == nil {
 		log.DebugLn("Generate node user")
 		nodeUser, nodeUserCredentials, err := generateNodeUser()
