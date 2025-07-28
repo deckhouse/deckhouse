@@ -174,9 +174,9 @@ func handleDiscoveryDataVolumeTypes(
 		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
 
-	storageClassMap := make(map[string]*storage.StorageClass, len(storageClassSnapshots))
+	storageClassMap := make(map[string]storage.StorageClass, len(storageClassSnapshots))
 	for _, s := range storageClassSnapshots {
-		storageClassMap[s.Name] = &s
+		storageClassMap[s.Name] = s
 	}
 
 	storageClasses := make([]storageClass, 0, len(storageClassStorageDomain))
