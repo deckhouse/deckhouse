@@ -62,7 +62,7 @@ func main() {
 	// metricStorage.HistogramObserve()
 
 	// * * * * * * * * *
-	// New handler
+	// New handlers
 	h := handler.NewHandler(logger.Named("http"))
 	srv := &http.Server{
 		Addr:    "localhost:8080",

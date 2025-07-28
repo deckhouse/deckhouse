@@ -18,7 +18,9 @@ import (
 	"context"
 	"fmt"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
+	"time"
 
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -33,9 +35,10 @@ type registryOptions struct {
 type Option func(options *registryOptions)
 
 type client struct {
-	registryURL string
-	authConfig  authn.AuthConfig
-	options     *registryOptions
+	registryURL   string
+	authConfig    authn.AuthConfig
+	options       *registryOptions
+	metricStorage *metricsstorage.MetricStorage
 }
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
@@ -95,10 +98,18 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
-	return remote.Image(
+	timeBeforeRequest := time.Now().Unix()
+
+	image, err := remote.Image(
 		ref,
 		imageOptions...,
 	)
+
+	requestTime := time.Now().Unix() - timeBeforeRequest
+	c.metricStorage.HistogramObserve("registry_request_time", float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
+	c.metricStorage.GaugeAdd("registry_requests_count", 1.0, map[string]string{})
+
+	return image, err
 }
 
 func (c *client) Modules(ctx context.Context) ([]string, error) {
