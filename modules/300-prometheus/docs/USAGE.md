@@ -322,7 +322,7 @@ spec:
 
 ## Example of sending alert by Email
 
-Create a `Secret` with Base64 encoded password for email account as value of `password`:
+Create a Secret with base64 encoded password for email account as value of `password`:
 
 ```yaml
 apiVersion: v1
