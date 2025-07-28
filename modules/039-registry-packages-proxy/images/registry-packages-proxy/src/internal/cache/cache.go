@@ -101,12 +101,12 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 
 	if digest == "" {
-		c.logger.Error("digest is empty, skipping", slog.String("digest", digest))
+		c.logger.Warn("digest is empty, skipping", slog.String("digest", digest))
 		return nil
 	}
 
 	if layerDigest == "" {
-		c.logger.Error("layer digest is empty, skipping", slog.String("layerDigest", layerDigest))
+		c.logger.Warn("layer digest is empty, skipping", slog.String("layerDigest", layerDigest))
 		return nil
 	}
 
@@ -163,15 +163,16 @@ func (c *Cache) Reconcile(ctx context.Context) {
 				return
 			}
 
-			c.ApplyRetentionPolicy()
+			c.applyRetentionPolicy()
 			c.checkFilesHash()
-			c.DeleteOrphanedOrCorruptedEntries()
-			c.DeleteFiles()
+			c.deleteOrphanedOrCorruptedEntries()
+			c.deleteFiles()
 		}
 	}
 }
 
-func (c *Cache) DeleteOrphanedOrCorruptedEntries() {
+func (c *Cache) deleteOrphanedOrCorruptedEntries() {
+	c.logger.Info("starting cache delete orphaned or corrupted entries")
 	c.Lock()
 	defer c.Unlock()
 	// delete corrupted entries
@@ -183,7 +184,8 @@ func (c *Cache) DeleteOrphanedOrCorruptedEntries() {
 	}
 }
 
-func (c *Cache) DeleteFiles() {
+func (c *Cache) deleteFiles() {
+	c.logger.Info("starting cache delete files")
 	c.Lock()
 	layerDigests := make(map[string]struct{}, len(c.storage))
 	for _, v := range c.storage {
@@ -199,12 +201,12 @@ func (c *Cache) DeleteFiles() {
 		}
 		stat, err := os.Stat(file)
 		if err != nil {
-			c.logger.Error("failed to stat file", slog.String("path", file), log.Err(err))
+			c.logger.Warn("failed to stat file", slog.String("path", file), log.Err(err))
 			continue
 		}
 		err = os.Remove(file)
 		if err != nil {
-			c.logger.Error("failed to delete orphaned file", slog.String("path", file), log.Err(err))
+			c.logger.Warn("failed to delete orphaned file", slog.String("path", file), log.Err(err))
 			continue
 		}
 		c.metrics.CacheSize.Sub(float64(stat.Size()))
@@ -213,6 +215,7 @@ func (c *Cache) DeleteFiles() {
 }
 
 func (c *Cache) checkFilesHash() {
+	c.logger.Info("starting cache files hash check")
 	c.Lock()
 	defer c.Unlock()
 	for k, v := range c.storage {
@@ -222,7 +225,8 @@ func (c *Cache) checkFilesHash() {
 	}
 }
 
-func (c *Cache) ApplyRetentionPolicy() {
+func (c *Cache) applyRetentionPolicy() {
+	c.logger.Info("starting cache retention policy")
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
 		if usagePercent < HighUsagePercent {
@@ -257,7 +261,7 @@ func (c *Cache) calculateCacheSize() int64 {
 	for _, file := range files {
 		stat, err := os.Stat(file)
 		if err != nil {
-			c.logger.Error("failed to stat file", slog.String("path", file), log.Err(err))
+			c.logger.Warn("failed to stat file", slog.String("path", file), log.Err(err))
 			continue
 		}
 		size += stat.Size()
@@ -288,12 +292,12 @@ func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
 	}
 
 	if entry.isCorrupted {
-		c.logger.Error("entry with digest is corrupted, skipping", slog.String("digest", digest))
+		c.logger.Warn("entry with digest is corrupted, skipping", slog.String("digest", digest))
 		return nil, false
 	}
 
 	if entry.layerDigest == "" {
-		c.logger.Error("entry with digest doesn't have layer digest, skipping", slog.String("digest", digest))
+		c.logger.Warn("entry with digest doesn't have layer digest, skipping", slog.String("digest", digest))
 		return nil, false
 	}
 
@@ -311,13 +315,13 @@ func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
-		c.logger.Error("failed to open file", slog.String("path", path), log.Err(err))
+		c.logger.Warn("failed to open file", slog.String("path", path), log.Err(err))
 		return false
 	}
 
 	h := sha256.New()
 	if _, err := io.Copy(h, file); err != nil {
-		c.logger.Error("failed to calculate hash sum", slog.String("path", path), log.Err(err))
+		c.logger.Warn("failed to calculate hash sum", slog.String("path", path), log.Err(err))
 		return false
 	}
 	hsum := fmt.Sprintf("%x", h.Sum(nil))
@@ -346,7 +350,7 @@ func (c *Cache) setCorrupted(digest string) {
 	}
 	c.Lock()
 	defer c.Unlock()
-	c.logger.Error("entry with digest is corrupted, marking it", slog.String("digest", digest))
+	c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", digest))
 	c.storage[digest].isCorrupted = true
 }
 
@@ -366,7 +370,7 @@ func (c *Cache) getFileList() []string {
 	})
 
 	if err != nil {
-		c.logger.Error("failed to walk cache dir", log.Err(err))
+		c.logger.Warn("failed to walk cache dir", log.Err(err))
 	}
 	return files
 }

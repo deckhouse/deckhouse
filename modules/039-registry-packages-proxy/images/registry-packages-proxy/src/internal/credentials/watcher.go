@@ -101,7 +101,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
-		w.logger.Errorf("Watch secrets: %v", err)
+		w.logger.Error("Watch secrets: %v", err)
 		return
 	}
 	defer secretWatcher.Stop()
@@ -119,7 +119,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 
 			err = w.processSecretEvent(event)
 			if err != nil {
-				w.logger.Errorf("Process secret event: %v", err)
+				w.logger.Error("Process secret event: %v", err)
 			}
 		}
 	}
@@ -197,7 +197,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Infof("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
+	w.logger.Info("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
@@ -223,12 +223,12 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		w.Lock()
-		w.logger.Infof("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
 		w.Lock()
-		w.logger.Infof("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
 	}
