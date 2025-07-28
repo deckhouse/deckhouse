@@ -14,7 +14,7 @@ type RegistryModulesWatcherHandler struct {
 	logger *log.Logger
 }
 
-func NewHandler(logger *log.Logger, metricStorage *metricsstorage.MetricStorage) *RegistryModulesWatcherHandler {
+func NewHandler(logger *log.Logger) *RegistryModulesWatcherHandler {
 	r := http.NewServeMux()
 
 	var h = &RegistryModulesWatcherHandler{
@@ -24,20 +24,29 @@ func NewHandler(logger *log.Logger, metricStorage *metricsstorage.MetricStorage)
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
-	r.Handle("/metrics", metricStorage.Handler())
 
 	return h
 }
 
 func (h *RegistryModulesWatcherHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("ok"))
-	if err != nil {
-		h.logger.Error("writing response", log.Err(err))
-	}
+	_, _ = io.WriteString(w, "ok")
 }
 
 func (h *RegistryModulesWatcherHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.WriteString(w, "ok")
+}
+
+func NewMetricHandler(logger *log.Logger, metricStorage *metricsstorage.MetricStorage) *RegistryModulesWatcherHandler {
+	r := http.NewServeMux()
+
+	var h = &RegistryModulesWatcherHandler{
+		Handler: r,
+		logger:  logger,
+	}
+
+	r.Handle("/metrics", metricStorage.Handler())
+
+	return h
 }

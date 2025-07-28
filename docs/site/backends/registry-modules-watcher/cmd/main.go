@@ -63,12 +63,19 @@ func main() {
 
 	// * * * * * * * * *
 	// New handler
-	h := handler.NewHandler(logger.Named("http"), metricStorage)
+	h := handler.NewHandler(logger.Named("http"))
 	srv := &http.Server{
-		Addr:    "localhost:9090",
+		Addr:    "localhost:8080",
 		Handler: h,
 	}
 	go srv.ListenAndServe()
+
+	metricHandler := handler.NewMetricHandler(logger.Named("http-metrics"), metricStorage)
+	metricServer := &http.Server{
+		Addr:    "localhost:9090",
+		Handler: metricHandler,
+	}
+	go metricServer.ListenAndServe()
 
 	// * * * * * * * * *
 	// dockerconfigjson
