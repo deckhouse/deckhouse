@@ -169,7 +169,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 			c.applyRetentionPolicy()
 			c.checkFilesHash()
 			c.deleteOrphanedOrCorruptedEntries()
-			// c.deleteFiles()
+			c.deleteFiles()
 		}
 	}
 }
@@ -181,7 +181,7 @@ func (c *Cache) deleteOrphanedOrCorruptedEntries() {
 	// delete corrupted entries
 	for k, v := range c.storage {
 		if v.isCorrupted || v.layerDigest == "" {
-			c.logger.Info("delete corrupted entry", slog.String("digest", k))
+			c.logger.Info("delete corrupted entry", slog.String("digest", k), slog.String("layerDigest", v.layerDigest))
 			delete(c.storage, k)
 		}
 	}
