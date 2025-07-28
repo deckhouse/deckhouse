@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -253,6 +254,13 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	})
 	if err != nil {
 		return &pb.AbortResult{Err: err.Error()}
+	}
+
+	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+		err = sshClient.Start()
+		if err != nil {
+			return &pb.AbortResult{Err: fmt.Errorf("cannot start sshClient: %w", err).Error()}
+		}
 	}
 
 	var commanderUUID uuid.UUID
