@@ -375,6 +375,7 @@ func (c *DeckhouseController) syncDeckhouseSettings(metricStorage metric.Storage
 		}
 
 		c.log.Debug("update deckhouse settings")
+
 		c.settings.Set(settings, metricStorage)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
