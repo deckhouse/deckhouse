@@ -159,7 +159,7 @@ func (s *Client) Start() error {
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("failed to connect to host: %w", err)
+			return fmt.Errorf("failed to connect to host %s: %w", addr, err)
 		}
 
 		s.sshClient = client
