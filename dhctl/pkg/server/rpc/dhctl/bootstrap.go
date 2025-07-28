@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -274,6 +275,13 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.BootstrapResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
+	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+		err = sshClient.Start()
+		if err != nil {
+			return &pb.BootstrapResult{Err: fmt.Errorf("cannot start sshClient: %w", err).Error()}
 		}
 	}
 
