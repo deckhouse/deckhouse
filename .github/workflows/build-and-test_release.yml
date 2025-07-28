@@ -527,6 +527,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -877,6 +881,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1227,6 +1235,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1565,6 +1577,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1903,6 +1919,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2241,6 +2261,10 @@ jobs:
           openssl rand -out key.bin 32
           openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
           openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          echo "sleeping"
+          sleep 99999 #TODO debug, to remove
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
