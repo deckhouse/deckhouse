@@ -270,3 +270,21 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+  license:
+    type: object
+    description: |
+      Edition settings of the Deckhouse Kubernetes Platform.
+    properties:
+      edition:
+        type: string
+        enum: ["CE", "BE", "EE", "SE", "SE-plus"]
+        x-examples: ["CE"]
+        description: |
+          Edition of the Deckhouse Kubernetes Platform:
+
+          - `CE` — Community Edition.
+          - `BE` - Basic edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Edition+.
+        default: "CE"

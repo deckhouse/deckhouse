@@ -567,3 +567,23 @@
         ```
 
         Provided error: {{ $labels.error }}
+  - alert: DeckhouseEditionNotFound
+    expr: |
+      d8_edition_not_found > 0
+    for: 3m
+    labels:
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Incorrect Deckhouse Kubernetes Platform edition.
+      description: |
+        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+
+        ```bash
+        d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
+        ```
+
+        Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.

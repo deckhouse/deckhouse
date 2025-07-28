@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2021 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -22,7 +23,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+	objectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
@@ -53,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
-					"module":   "cloud-provider-zvirt",
+					"module":   "cloud-provider-vsphere",
 				},
 			},
 		},
@@ -81,83 +82,80 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	cloudSecrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "cloud_provider_discovery_data")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal cloud_provider_discovery_data snapshot: %w", err)
-	}
-
-	if len(cloudSecrets) == 0 {
+	ddSnaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+	if len(ddSnaps) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
-		}
-
-		if len(storageClassesSnaps) == 0 {
-			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
+		scSnaps := input.NewSnapshots.Get("storage_classes")
+		if len(scSnaps) == 0 {
+			input.Logger.Warn("failed to find storage classes for vSphere provisioner")
 			return nil
 		}
 
-		storageClasses := make([]storageClass, 0, len(storageClassesSnaps))
+		storageClasses := make([]storageClass, 0, len(scSnaps))
 
-		for _, sc := range storageClassesSnaps {
-			allowVolumeExpansion := true
-			if sc.AllowVolumeExpansion != nil {
-				allowVolumeExpansion = *sc.AllowVolumeExpansion
+		for sc, err := range objectpatch.SnapshotIter[storage.StorageClass](scSnaps) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}
+
+			var zones []string
+			for _, t := range sc.AllowedTopologies {
+				for _, m := range t.MatchLabelExpressions {
+					if m.Key == "failure-domain.beta.kubernetes.io/zone" {
+						zones = append(zones, m.Values...)
+					}
+				}
+			}
+			slices.Sort(zones)
+			zones = slices.Compact(zones)
+
 			storageClasses = append(storageClasses, storageClass{
-				Name:                 sc.Name,
-				StorageDomain:        sc.Parameters["storageDomain"],
-				AllowVolumeExpansion: allowVolumeExpansion,
+				Name:         sc.Name,
+				Zones:        zones,
+				DatastoreURL: sc.Parameters["DatastoreURL"],
 			})
 		}
-		input.Logger.Info("Found zvirt storage classes using StorageClass snapshots", slog.Any("storage_classes", storageClasses))
-
-		setStorageClassesValues(input, storageClasses)
-
+		input.Logger.Info("found vSphere storage classes using storage_classes snapshots", slog.Any("storage_classes", storageClasses))
+		input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 		return nil
 	}
 
-	secret := cloudSecrets[0]
-
+	secret := new(v1.Secret)
+	err := ddSnaps[0].UnmarshalTo(secret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi"})
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	var discoveryData cloudDataV1.ZvirtCloudProviderDiscoveryData
+	var discoveryData cloudDataV1.VsphereCloudDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
-	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.StorageDomains); err != nil {
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(
-	input *go_hook.HookInput,
-	storageDomains []cloudDataV1.ZvirtStorageDomain,
-) error {
-	storageClassStorageDomain := make(map[string]string, len(storageDomains))
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore) error {
+	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
 
-	for _, domain := range storageDomains {
-		if !domain.IsEnabled {
-			continue
-		}
-
-		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
+	for _, ds := range zonedDataStores {
+		storageClassStorageDomain[getStorageClassName(ds.Name)] = ds
 	}
 
-	classExcludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
+	classExcludes, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude")
 	if ok {
 		for _, esc := range classExcludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
@@ -169,26 +167,24 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
+	storageClassSnapshots := make(map[string]storage.StorageClass)
+	sclasses, err := objectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
 
-	storageClassMap := make(map[string]storage.StorageClass, len(storageClassSnapshots))
-	for _, s := range storageClassSnapshots {
-		storageClassMap[s.Name] = s
+	for _, s := range sclasses {
+		storageClassSnapshots[s.Name] = s
 	}
 
-	storageClasses := make([]storageClass, 0, len(storageClassStorageDomain))
+	storageClasses := make([]storageClass, 0, len(zonedDataStores))
 	for name, domain := range storageClassStorageDomain {
-		allowVolumeExpansion := true
-		if s, ok := storageClassMap[name]; ok && s.AllowVolumeExpansion != nil {
-			allowVolumeExpansion = *s.AllowVolumeExpansion
-		}
 		sc := storageClass{
-			Name:                 name,
-			StorageDomain:        domain,
-			AllowVolumeExpansion: allowVolumeExpansion,
+			Name:          name,
+			Path:          domain.InventoryPath,
+			Zones:         domain.Zones,
+			DatastoreType: domain.DatastoreType,
+			DatastoreURL:  domain.DatastoreURL,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -197,10 +193,8 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.Logger.Info("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data", slog.Any("storage_classes", storageClasses))
-
-	setStorageClassesValues(input, storageClasses)
-
+	input.Logger.Info("Found vSphere storage classes using cloud_provider_discovery_data", slog.Any("data", storageClasses))
+	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 	return nil
 }
 
@@ -225,12 +219,10 @@ func getStorageClassName(value string) string {
 	return strings.Trim(value, "-.")
 }
 
-func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
-	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
-}
-
 type storageClass struct {
-	Name                 string `json:"name"`
-	StorageDomain        string `json:"storageDomain"`
-	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+	Name          string   `json:"name"`
+	Path          string   `json:"path"`
+	Zones         []string `json:"zones"`
+	DatastoreType string   `json:"datastoreType"`
+	DatastoreURL  string   `json:"datastoreURL"`
 }
