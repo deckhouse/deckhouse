@@ -85,6 +85,8 @@ spec:
         - "--cache-retention-size=1Gi"
         env:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        - name: GOGC
+          value: "50"
         livenessProbe:
           httpGet:
             path: /healthz
