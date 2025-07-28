@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -38,8 +39,5 @@ func (h *RegistryModulesWatcherHandler) handleReadyZ(w http.ResponseWriter, _ *h
 
 func (h *RegistryModulesWatcherHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("ok"))
-	if err != nil {
-		h.logger.Error("writing response", log.Err(err))
-	}
+	_, _ = io.WriteString(w, "ok")
 }

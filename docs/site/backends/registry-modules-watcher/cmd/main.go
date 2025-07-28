@@ -24,7 +24,7 @@ import (
 	"registry-modules-watcher/internal/backends"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
-	handler "registry-modules-watcher/internal/http/v1"
+	handler "registry-modules-watcher/internal/http"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
@@ -63,7 +63,7 @@ func main() {
 
 	// * * * * * * * * *
 	// New handler
-	h := handler.NewHandler(logger.Named("v1"), metricStorage)
+	h := handler.NewHandler(logger.Named("http"), metricStorage)
 	srv := &http.Server{
 		Addr:    "localhost:9090",
 		Handler: h,
