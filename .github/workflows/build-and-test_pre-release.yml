@@ -475,7 +475,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -814,7 +815,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1153,7 +1155,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1492,7 +1495,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1831,7 +1835,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -2170,7 +2175,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.enc
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
