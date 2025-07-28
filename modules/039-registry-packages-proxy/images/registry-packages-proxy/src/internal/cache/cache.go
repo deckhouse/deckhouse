@@ -216,8 +216,14 @@ func (c *Cache) deleteFiles() {
 
 func (c *Cache) checkFilesHash() {
 	c.logger.Info("starting cache files hash check")
+	layers := make(map[string]string, len(c.storage))
+	c.Lock()
 	for k, v := range c.storage {
-		if !c.checkHashIsOK(v.layerDigest) {
+		layers[k] = v.layerDigest
+	}
+	c.Unlock()
+	for k, v := range layers {
+		if !c.checkHashIsOK(v) {
 			c.setCorrupted(k)
 		}
 	}
