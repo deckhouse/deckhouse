@@ -73,19 +73,19 @@ func normalizeUbuntuVersionForSemver(version string) string {
 	if len(parts) < 2 {
 		return version
 	}
-	
+
 	// Normalize major version
 	major := strings.TrimLeft(parts[0], "0")
 	if major == "" {
 		major = "0"
 	}
-	
+
 	// Normalize minor version
 	minor := strings.TrimLeft(parts[1], "0")
 	if minor == "" {
 		minor = "0"
 	}
-	
+
 	// Handle patch version
 	patch := "0"
 	if len(parts) > 2 {
@@ -94,7 +94,7 @@ func normalizeUbuntuVersionForSemver(version string) string {
 			patch = "0"
 		}
 	}
-	
+
 	return major + "." + minor + "." + patch
 }
 

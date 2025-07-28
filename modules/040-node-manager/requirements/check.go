@@ -41,19 +41,19 @@ func normalizeUbuntuVersionForSemver(version string) string {
 	if len(parts) < 2 {
 		return version
 	}
-	
+
 	// Normalize major version
 	major := strings.TrimLeft(parts[0], "0")
 	if major == "" {
 		major = "0"
 	}
-	
+
 	// Normalize minor version
 	minor := strings.TrimLeft(parts[1], "0")
 	if minor == "" {
 		minor = "0"
 	}
-	
+
 	// Handle patch version
 	patch := "0"
 	if len(parts) > 2 {
@@ -62,7 +62,7 @@ func normalizeUbuntuVersionForSemver(version string) string {
 			patch = "0"
 		}
 	}
-	
+
 	return major + "." + minor + "." + patch
 }
 
@@ -100,13 +100,13 @@ func init() {
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
 	var minVersionValuesKey string
-	
+
 	// Normalize Ubuntu version format for semver parsing
 	normalizedRequirementValue := requirementValue
 	if osImage == "Ubuntu" {
 		normalizedRequirementValue = normalizeUbuntuVersionForSemver(requirementValue)
 	}
-	
+
 	desiredVersion, err := semver.NewVersion(normalizedRequirementValue)
 	if err != nil {
 		return false, err
@@ -122,13 +122,13 @@ func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, 
 	if !exists {
 		return true, nil
 	}
-	
+
 	// Normalize Ubuntu version format for semver parsing
 	normalizedCurrentVersion := currentVersionRaw.(string)
 	if osImage == "Ubuntu" {
 		normalizedCurrentVersion = normalizeUbuntuVersionForSemver(normalizedCurrentVersion)
 	}
-	
+
 	currentVersion, err := semver.NewVersion(normalizedCurrentVersion)
 	if err != nil {
 		return false, err
