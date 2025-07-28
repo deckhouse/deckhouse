@@ -8,69 +8,86 @@ description: ""
 Для переключения уже работающего кластера на режим `Direct` выполните следующие шаги:
 
 {% alert level="danger" %}
-- Во время первого переключения сервис `Containerd V1` будет перезапущен, так как выполнится переключение на [новую конфигурацию авторизации](./faq.html#как-подготовить-containerd-v1).
+- Во время первого переключения сервис `Containerd V1` будет перезапущен, так как выполнится переключение на [новую конфигурацию авторизации](faq.html#как-подготовить-containerd-v1).
 - При изменении режима registry или параметров registry, Deckhouse будет перезапущен.
 {% endalert %}
 
-1. Если кластер запущен с `Containerd V1`, [подготовьте пользовательские конфигурации containerd](./faq.html#как-подготовить-containerd-v1).
+1. Если кластер запущен с `Containerd V1`, [подготовьте пользовательские конфигурации containerd](faq.html#как-подготовить-containerd-v1).
 
-1. Убедитесь, что все `master` узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`, используя следующую команду:
 
    ```bash
-   kubectl get nodes
+   d8 k get nodes
+   ```
+   
+   Пример вывода:
+
+   ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
+   ```
 
-   # Пример вывода `SchedulingDisabled`:
-   # NAME       STATUS                      ROLES                 ...
-   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
+   
+   ```console
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
 1. Убедитесь, что модуль `registry` включен и работает. Для этого выполните следующую команду:
 
-    ```bash
-    kubectl get module registry -o wide
-    # Пример вывода:
-    # NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
-    # registry   38     ...  Ready   True                         True
-    ```
+   ```bash
+   d8 k get module registry -o wide
+   ```
+   
+   Пример вывода:
 
-1. Установите настройки режима `Direct` в `ModuleConfig` модуля `deckhouse`. Если используется реестр, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/) для корректной настройки.
+   ```console
+   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
+   registry   38     ...  Ready   True                         True
+   ```
 
-    Пример конфигурации:
+1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: deckhouse
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        registry:
-          mode: Direct
-          direct:
-            imagesRepo: registry.deckhouse.ru/deckhouse/ee
-            scheme: HTTPS
-            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
-    ```
+   Пример конфигурации:
 
-1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           scheme: HTTPS
+           license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
+   ```
 
-    ```yaml
-    ...
-      - lastTransitionTime: "..."
-        message: ""
-        reason: ""
-        status: "True"
-        type: Ready
-    hash: ..
-    mode: Direct
-    target_mode: Direct
-    ```
+1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Direct
+   target_mode: Direct
+   ```
 
 ## Переключение на режим Unmanaged
 
@@ -79,66 +96,77 @@ description: ""
 {% endalert %}
 
 {% alert level="warning" %}
-Переключение в режим `Unmanaged` доступно только из режима `Direct`. Конфигурационные параметры реестра будут взяты из предыдущего активного режима.
+Переключение в режим `Unmanaged` доступно только из режима `Direct`. Конфигурационные параметры registry будут взяты из предыдущего активного режима.
 {% endalert %}
 
 Для переключения кластера на режим `Unmanaged` выполните следующие шаги:
 
-1. Убедитесь, что все `master` узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`.
+1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`, используя следующую команду:
 
    ```bash
-   kubectl get nodes
+   d8 k get nodes
+   ```
+   
+   Пример вывода:
+  
+   ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
-
-   # Пример вывода `SchedulingDisabled`:
-   # NAME       STATUS                      ROLES                 ...
-   # master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Убедитесь, что модуль `registry` запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+   Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
+   ```console 
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
 
-    ```yaml
-    ...
-      - lastTransitionTime: "..."
-        message: ""
-        reason: ""
-        status: "True"
-        type: Ready
-    hash: ..
-    mode: Direct
-    target_mode: Direct
-    ```
+1. Убедитесь, что модуль `registry` запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
-1. Установите настройки `Unmanaged` режима в `ModuleConfig` модуля `deckhouse`:
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Direct
+   target_mode: Direct
+   ```
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: deckhouse
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        registry:
-          mode: Unmanaged
-    ```
+1. Установите настройки режима `Unmanaged` в ModuleConfig `deckhouse`:
 
-1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+   ```
 
-    ```yaml
-    ...
-      - lastTransitionTime: "..."
-        message: ""
-        reason: ""
-        status: "True"
-        type: Ready
-    hash: ..
-    mode: Unmanaged
-    target_mode: Unmanaged
-    ```
+1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
-1. При необходимости переключения на предыдущую auth конфигурацию `Containerd V1` ознакомьтесь с [инстукрцией](./faq.html#как-переключиться-на-предыдущую-конфигурацию-авторизации-containerd-v1)
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
+
+1. При необходимости переключения на предыдущую auth-конфигурацию `Containerd V1` ознакомьтесь с [инструкцией](faq.html#как-переключиться-на-предыдущую-конфигурацию-авторизации-containerd-v1)

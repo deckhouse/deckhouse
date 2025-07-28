@@ -709,6 +709,7 @@ entries:
             en: Container Registry
             ru: Реестр контейнеров
           moduleName: registry
+          featureStatus: preview
           folders:
             - title:
                 en: Description

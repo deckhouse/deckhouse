@@ -4,7 +4,12 @@ description: ""
 ---
 
 {% alert level="warning" %}
-The registry mode, connection address, and other parameters are specified in the `ModuleConfig` of the [`deckhouse`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/) module.
 {% endalert %}
 
-<!-- SCHEMA -->
+{% include module-alerts.liquid %}
+
+{% include module-bundle.liquid %}
+
+The module does not have any settings.
+
+The operation mode of the registry for the Deckhouse Kubernetes Platform, connection address, and other parameters are specified in the [registry](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.

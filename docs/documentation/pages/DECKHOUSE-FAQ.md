@@ -732,7 +732,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
-When using the `registry` module, changing the registry address and parameters must be done through the [registry module](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+When using the [registry](modules/registry/) module, change the address and parameters of the registry in the [registry](modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [registry](modules/registry/examples.html) module documentation.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -971,7 +971,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 {% alert level="warning" %}
 When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
-To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -1147,7 +1147,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-pla
 
 {% alert level="warning" %}
 When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
-To switch to `Unmanaged` mode, follow the [instruction](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
 {% endalert %}
 
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):

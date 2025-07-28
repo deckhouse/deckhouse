@@ -48,51 +48,49 @@ If such configurations exist:
 
 1. Create new Mirror Auth configurations in the `/etc/containerd/registry.d` directory. Example:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: custom-registry
-    spec:
-      bundles:
-        - '*'
-      content: |
-        #!/bin/bash
-        REGISTRY_ADDRESS="registry.io"
-        REGISTRY_SCHEME="https"
-        host_toml=$(cat <<EOF
-        [host]
-          [host."https://registry.deckhouse.ru"]
-            capabilities = ["pull", "resolve"]
-            skip_verify = true
-            ca = ["/path/to/ca.crt"]
-            [host."https://registry.deckhouse.ru".auth]
-              username = "username"
-              password = "password"
-              # If providing auth string:
-              auth = "<base64>"
-        EOF
-        )
-        mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
-        echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
-      nodeGroups:
-        - '*'
-      weight: 0
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: custom-registry
+   spec:
+     bundles:
+       - '*'
+     content: |
+       #!/bin/bash
+       REGISTRY_ADDRESS="registry.io"
+       REGISTRY_SCHEME="https"
+       host_toml=$(cat <<EOF
+       [host]
+         [host."https://registry.deckhouse.ru"]
+           capabilities = ["pull", "resolve"]
+           skip_verify = true
+           ca = ["/path/to/ca.crt"]
+           [host."https://registry.deckhouse.ru".auth]
+             username = "username"
+             password = "password"
+             # If providing auth string:
+             auth = "<base64>"
+       EOF
+       )
+       mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
+       echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
+     nodeGroups:
+       - '*'
+     weight: 0
+   ```
 
-    To test the configuration:
+   To test the configuration:
 
-    ```bash
-    # HTTPS:
-    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
+   ```bash
+   # HTTPS:
+   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
 
-    # HTTP:
-    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
-    ```
+   # HTTP:
+   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
+   ```
 
 1. Delete auth configurations from the `/etc/containerd/conf.d` directory.
-
----
 
 ## How to switch back to the previous Containerd V1 auth configuration?
 
@@ -106,39 +104,41 @@ If such configurations exist:
 
 1. Check the switching status using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
 
-    ```yaml
-    # ...
-    - lastTransitionTime: "..."
-      message: ""
-      reason: ""
-      status: "True"
-      type: Ready
-    hash: ..
-    mode: Unmanaged
-    target_mode: Unmanaged
-    ```
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: ""
+     reason: ""
+     status: "True"
+     type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
 
 1. Delete the secret registry-bashible-config:
 
-    ```bash
-    kubectl -n d8-system delete secret registry-bashible-config
-    ```
+   ```bash
+   d8 k -n d8-system delete secret registry-bashible-config
+   ```
 
 1. After deleting the secret, wait for the auth configuration to switch back to the legacy one in `Containerd V1`.
 
    You can use [this guide](./faq.html#how-to-check-the-registry-mode-switch-status) to track the switch. Example output:
 
-    ```yaml
-    # ...
-    - lastTransitionTime: "..."
-      message: ""
-      reason: ""
-      status: "True"
-      type: Ready
-    hash: ..
-    mode: Unmanaged
-    target_mode: Unmanaged
-    ```
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: ""
+     reason: ""
+     status: "True"
+     type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
 
 ## How to check the registry mode switch status?
 
@@ -146,7 +146,7 @@ The status of the registry mode switch can be retrieved using the following comm
 
 <!-- TODO(nabokihms): replace with d8 subcommand when available -->
 ```bash
-kubectl -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
+d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
 ```
 
 Example output:

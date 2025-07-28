@@ -5,27 +5,29 @@ description: ""
 
 ## Description
 
-The registry module is a component that implements the internal container image registry of Deckhouse.
+The module implements the internal container image registry.
 
-The internal registry allows for optimizing the downloading and storage of images, and also ensures high availability and fault tolerance for Deckhouse Kubernetes Platform.
+The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
 The module can operate in the following modes:
 
-- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and external registries is done through the `Deckhouse` `ModuleConfig`. The switching process is automatic — see the [usage examples](./examples.html) for more information.
+- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
 
-- `Unmanaged` — operates without using the internal registry. In this mode, access inside the cluster is performed via the address specified during cluster bootstrap, or via the [`helper change-registry`](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry) tool.
+- `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+
+- `Unmanaged` — operates without using the internal registry. In this mode, access inside the cluster is performed via an address that can be [set during the cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), or [changed in a deployed cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry).
 
 {% alert level="info" %}
-- The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration).
+- The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration).
 {% endalert %}
 
-### Direct Mode Architecture
+## Direct Mode Architecture
 
 In Direct mode, registry requests are processed directly, without intermediate caching.
 
 CRI requests to the registry are redirected based on its configuration, which is defined in the `containerd` configuration.
 
-For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the in-cluster proxy located on the control plane nodes.
+For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the in-cluster proxy located on the master nodes.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../../images/registry-module/direct-en.png)

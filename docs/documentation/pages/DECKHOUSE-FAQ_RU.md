@@ -735,7 +735,7 @@ echo "$MYRESULTSTRING"
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
-При использовании модуля `registry` смена адреса и параметров реестра выполняется через [модуль registry](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+При использовании модуля [registry](modules/registry/) смена адреса и параметров registry выполняется в секции [registry](modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [registry](modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -974,7 +974,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 {% alert level="warning" %}
 При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -1154,7 +1154,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 {% alert level="warning" %}
 При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/products/kubernetes-platform/documentation/v1/modules/registry/examples.html).
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}

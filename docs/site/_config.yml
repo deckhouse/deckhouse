@@ -195,10 +195,5 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
-  - scope:
-      path: "*/038-registry"
-      type: "pages"
-    values:
-      featureStatus: preview
 timezone: Europe/Moscow
 
