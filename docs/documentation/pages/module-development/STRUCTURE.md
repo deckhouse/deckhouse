@@ -138,6 +138,7 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Deckhouse administrator web console"
@@ -145,6 +146,7 @@ The `/docs` directory contains the module documentation:
   description: "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -157,12 +159,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Examples"
   description: "Examples of storing secrets in a neural network with automatic substitution into thoughts when communicating."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -175,12 +179,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "FAQs"
   description: "Frequently asked questions."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -193,12 +199,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Module debugging"
   description: "This section covers all the steps for debugging the module."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -206,11 +214,13 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Custom resources"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -218,11 +228,13 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Module settings"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   

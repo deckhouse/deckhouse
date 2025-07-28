@@ -1,4 +1,5 @@
 name: monitoring-deckhouse
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring

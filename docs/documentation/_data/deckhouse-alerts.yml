@@ -2355,6 +2355,36 @@ alerts:
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
       markupFormat: markdown
+    - name: D8NodeLocalDNSCacheDenialEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
+
+        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns denial cache is being frequently evicted.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8NodeLocalDNSCacheSuccessEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
+
+        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns success cache is being frequently evicted.
+      severity: "6"
+      markupFormat: markdown
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -5178,6 +5208,19 @@ alerts:
         Certificate is expiring soon.
       severity: "5"
       markupFormat: markdown
+    - name: NginxIngressValidationIsDisabled
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Validation is disabled to reduce load on the master nodes, as it requires additional resources.
+        To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
+        from the `ingressnginxcontroller` resource.
+      summary: |
+        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+      severity: "3"
+      markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
       moduleUrl: 340-monitoring-kubernetes
@@ -6361,6 +6404,7 @@ modules-having-alerts:
     - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
+    - node-local-dns
     - node-manager
     - okmeter
     - openvpn
