@@ -2,5 +2,5 @@ name: vsphere-csi
 weight: 30
 subsystems:
   - infrastructure
-namespace: d8-cloud-provider-vsphere
+namespace: d8-vsphere-csi
 stage: General Availability
