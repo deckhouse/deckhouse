@@ -325,7 +325,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			ar.nodeDeleteRollingUpdate(input, &node)
 		} else if !ar.needDrainNode(input, &node, &ng) || node.IsDrained {
 			ar.nodeDisruptionApproved(input, &node)
-		} else {
+		} else if !node.IsUnschedulable {
 			ar.nodeDrainingForDisruption(input, &node)
 		}
 	}
@@ -418,6 +418,7 @@ type updateApprovalNode struct {
 	IsWaitingForApproval bool
 
 	IsDisruptionRequired bool
+	IsUnschedulable      bool
 	IsDraining           bool
 	IsDrained            bool
 	IsRollingUpdate      bool
@@ -574,6 +575,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		IsReady:               isReady,
 		IsDisruptionRequired:  isDisruptionRequired,
 		IsDraining:            isDraining,
+		IsUnschedulable:       node.Spec.Unschedulable,
 		IsWaitingForApproval:  isWaitingForApproval,
 		IsDrained:             isDrained,
 		IsRollingUpdate:       isRollingUpdate,
