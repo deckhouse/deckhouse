@@ -49,3 +49,20 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 ```bash
 kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
+
+## Кто может просматривать результаты сканирования?
+
+Результаты сканирования (возможность просмотра [ресурсов](trivy-cr.html) с результатами сканирования) доступны пользователям с [ролями](../user-authz/#экспериментальная-ролевая-модель):
+* `d8:manage:networking:viewer` (и выше)
+* `d8:manage:permission:module:operator-trivy:view` 
+  
+## Возможно ли ограничить ресурсы сканируемые в namespace?
+
+На данный момент возможности ограничить перечень ресурсов сканируемых в namespace нет. Оператор сканирует все ресурсы в namespace с меткой `security-scanning.deckhouse.io/enabled=""`.
+
+## Как посмотреть отчет по моему приложению?
+
+Посмотреть отчет по своему приложению можно в Grafana Dashboard `Security/Trivy Image Vulnerability Overview`, отфильтровав необходимый `namespace` и ресурс.
+
+Также возможно посмотреть интересующие [ресурсы](trivy-cr.html) с результатами сканирования, создаваемые для конкретного приложения.  
+Информация о структуре именования и расположении данных ресурсов доступна в [описании](trivy-cr.html).
