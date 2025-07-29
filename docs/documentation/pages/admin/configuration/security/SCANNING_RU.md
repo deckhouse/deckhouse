@@ -64,7 +64,7 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
   d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
 
-## Где просматривать результаты сканирования
+## Просмотр результатов сканирования
 
 В Grafana:
 
