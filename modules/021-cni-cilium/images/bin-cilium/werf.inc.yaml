@@ -5,6 +5,7 @@
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromCacheVersion: "2"
 fromImage: common/src-artifact
 final: false
 git:
@@ -26,7 +27,7 @@ shell:
 ---
 image: {{ .ModuleName }}/cilium-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
-fromCacheVersion: "1"
+fromCacheVersion: "2"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
