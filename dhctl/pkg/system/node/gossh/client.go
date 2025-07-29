@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -77,6 +79,16 @@ func (s *Client) Start() error {
 		signers = append(signers, signer)
 	}
 
+	var agentClient agent.ExtendedAgent
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if socket != "" {
+		socketConn, err := net.Dial("unix", socket)
+		if err != nil {
+			return fmt.Errorf("Failed to open SSH_AUTH_SOCK: %v", err)
+		}
+		agentClient = agent.NewClient(socketConn)
+	}
+
 	var bastionClient *ssh.Client
 	var client *ssh.Client
 	if s.Settings.BastionHost != "" {
@@ -92,6 +104,10 @@ func (s *Client) Start() error {
 		if len(app.SSHBastionPass) > 0 {
 			log.DebugF("Initial password auth to bastion host\n")
 			AuthMethods = append(AuthMethods, ssh.Password(app.SSHBastionPass))
+		}
+
+		if socket != "" {
+			AuthMethods = append(AuthMethods, ssh.PublicKeysCallback(agentClient.Signers))
 		}
 
 		bastionConfig = &ssh.ClientConfig{
@@ -120,8 +136,8 @@ func (s *Client) Start() error {
 		becomePass = app.BecomePass
 	}
 
-	if len(s.privateKeys) == 0 && len(becomePass) == 0 {
-		return fmt.Errorf("one of SSH keys or become password should be not empty")
+	if len(s.privateKeys) == 0 && len(becomePass) == 0 && socket != "" {
+		return fmt.Errorf("one of SSH keys, SSH_AUTH_SOCK environment variable or become password should be not empty")
 	}
 
 	log.DebugF("Initial ssh privater keys auth to master host\n")
@@ -131,6 +147,10 @@ func (s *Client) Start() error {
 	if len(becomePass) > 0 {
 		log.DebugF("Initial password auth to master host\n")
 		AuthMethods = append(AuthMethods, ssh.Password(becomePass))
+	}
+
+	if socket != "" {
+		AuthMethods = append(AuthMethods, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
 	config := &ssh.ClientConfig{
