@@ -243,7 +243,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
-				// Allow one node, if 100% nodes in NodeGroup are ready
 				if ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
 					approvedNodes[ngn] = struct{}{}
 					if len(approvedNodes) == countToApprove {
@@ -253,23 +252,8 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			}
 		}
 
-		if len(approvedNodes) == 0 {
-			continue
-		}
-
 		for approvedNode := range approvedNodes {
-			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
-				if !approvedNode.IsDrained {
-					if !approvedNode.IsDraining {
-						ar.nodeDraining(input, approvedNode.Name, ng.Name)
-					} else {
-						input.Logger.Info("approveUpdates is Drained wait", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
-					}
-					continue
-				}
-			}
-
-			ar.nodeApproved(input,approvedNode.Name,ng.Name)
+			ar.nodeApproved(input, approvedNode.Name, ng.Name)
 		}
 	}
 	return nil
@@ -315,7 +299,6 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		}
 
 		ngName := node.NodeGroup
-
 		ng := ar.nodeGroups[ngName]
 
 		switch ng.Disruptions.ApprovalMode {
@@ -335,18 +318,14 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			}
 		}
 
-		ar.finished = true
-
-		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name))
-			input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
-			continue
+			// If approvalMode == RollingUpdate simply delete machine
+			ar.nodeDeleteRollingUpdate(input, node.Name, ng.Name)
+		} else if !ar.needDrainNode(input, &node, &ng) || node.IsDrained {
+			ar.nodeDisruptionApproved(input, node.Name, ng.Name)
+		} else if !node.IsUnschedulable {
+			ar.nodeDraining(input, node.Name, ng.Name)
 		}
-
-		input.Logger.Info("approveDisruptions DisruptionApproved", slog.String("node", node.Name), slog.String("ng", ng.Name))
-		input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", node.Name)
-		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DisruptionApproved")
 	}
 
 	return nil
@@ -405,6 +384,19 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, nodeName, nodeNg string) {
+	input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", nodeName), slog.String("ng", nodeNg))
+	input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", nodeName)
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeDisruptionApproved(input *go_hook.HookInput, nodeName, nodeNg string) {
+	input.Logger.Info("Node DisruptionApproved", slog.String("node", nodeName), slog.String("ng", nodeNg))
+	input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", nodeName)
+	setNodeStatusesMetrics(input, nodeName, nodeNg, "DisruptionApproved")
+	ar.finished = true
 }
 
 func (ar *updateApprover) nodeDraining(input *go_hook.HookInput, nodeName, nodeNg string) {
