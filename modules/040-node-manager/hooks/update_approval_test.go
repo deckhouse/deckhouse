@@ -1413,7 +1413,7 @@ spec:
       drainBeforeApproval: true
     {{- end }}
 {{- else if eq .DisruptionsApprovalMode "RollingUpdate" }}
-  {{- if eq  .DisruptionsDrainBeforeApproval "false" }}
+  {{- if eq .DisruptionsDrainBeforeApproval "false" }}
   disruptions:
     automatic:
       drainBeforeApproval: false
