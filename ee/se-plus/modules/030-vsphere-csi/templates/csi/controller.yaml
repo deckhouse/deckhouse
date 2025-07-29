@@ -57,7 +57,7 @@
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := join "" (list "vsphereCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName "cloudProviderVsphere") }}
 {{- if $csiControllerImage }}
 
 {{- $csiControllerConfig := dict }}
