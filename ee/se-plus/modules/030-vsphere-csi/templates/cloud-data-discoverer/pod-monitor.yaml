@@ -35,5 +35,5 @@ spec:
       app: cloud-data-discoverer
   namespaceSelector:
     matchNames:
-      - d8-cloud-provider-vsphere
+      - d8-vsphere-csi
 {{- end }}
