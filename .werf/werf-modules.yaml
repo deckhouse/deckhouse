@@ -72,4 +72,5 @@
 ---
 # render images digest image
 {{ include "images_digest_image" (dict "Images" .Images "ModulesImagesDigestList" $ModulesImagesDigestList) }}
+
 ---
