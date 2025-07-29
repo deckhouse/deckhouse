@@ -130,3 +130,34 @@ properties:
     description: |
       Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
       Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
+
+  ingressClassHttp01:
+    type: string
+    x-examples: ["nginx"]
+    description: |
+      The name of the `ingressClass` used to confirm ownership of domain using the [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenges method.
+      If the parameter is omitted, the default `ingressClass` is used.
+
+  recursiveSettings:
+    type: object
+    description: |
+      DNS recursion settings for ACME DNS-01 self-check.
+    x-examples:
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
+        useOnlyRecursive: true
+    x-kubernetes-validations:
+      - rule: "self.useOnlyRecursive == false || size(self.nameservers) >= 1"
+        message: "At least one nameserver must be specified when useOnlyRecursive is true"
+    properties:
+      nameservers:
+        type: array
+        items:
+          type: string
+          description: |
+            List of recursive DNS servers (IP:port or HTTPS URLs) that cert-manager uses to validate ACME DNS-01 challenges via a self-check.
+          pattern: "^(?:[0-9]{1,3}(?:\\.[0-9]{1,3}){3}:\\d{1,5}|https?://[^\\s]+)$"
+      useOnlyRecursive:
+        type: boolean
+        description: |
+          When set to true, cert-manager restricts DNS-01 challenge validation to the specified recursive nameservers.
+        default: false

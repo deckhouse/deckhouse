@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.21.0
 	sigs.k8s.io/yaml v1.4.0

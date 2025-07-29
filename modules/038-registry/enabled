@@ -17,25 +17,28 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  # Like control-plane
-  if values::has global.clusterConfiguration ; then
-    echo "true" > "$MODULE_ENABLED_RESULT"
-  else
-    echo "false" > "$MODULE_ENABLED_RESULT"
-  fi
+  # By default, the module is disabled
+  echo "false" >"$MODULE_ENABLED_RESULT"
 
-  # # Only for "Static"
-  # if ! values::has global.clusterConfiguration.clusterType ; then
-  #   echo "Unknown cluster type"
-  #   echo "false" > "$MODULE_ENABLED_RESULT"
-  #   return
-  # fi
-  # cluster_type=$(values::get global.clusterConfiguration.clusterType)
-  # if [ "$cluster_type" != "Static" ]; then
-  #   echo "false" > "$MODULE_ENABLED_RESULT"
-  #   echo "The module is supported only for cluster type Static."
-  #   return
-  # fi
+  # Enable the module only if all of the following conditions are met:
+
+  # 1. global.clusterConfiguration exists — this indicates that the cluster is managed by Deckhouse.
+  #    If it's missing, the cluster is considered externally managed (e.g., AWS, Yandex Cloud),
+  #    and the module must not be enabled.
+  #    This check is consistent with the validation performed by the control-plane-manager on startup.
+
+  # 2. global.clusterConfiguration.defaultCRI is set and is in the allowed list
+  #    of container runtimes the module supports.
+
+  if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
+    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
+
+    case "$containerd_mode" in
+      "Containerd" | "ContainerdV2")
+        echo "true" >"$MODULE_ENABLED_RESULT"
+        ;;
+    esac
+  fi
 }
 
 enabled::run "$@"

@@ -25,6 +25,18 @@ positive:
         webhook: https://example.com/webhook
         auth:
           bearerToken: token
+
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        license: "somekey"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+        password: "p"
   - registry:
       mode: Direct
       direct:
@@ -50,21 +62,33 @@ negative:
 #      windows:
 #        - from: '8:00'
 #          to: '13:00'
-# TODO(nabokihms): Uncomment with the validation of the registry mode.
-#  - registry:
-#      mode: Direct
-#      proxy:
-#        imagesRepo: registry.deckhouse.io/test
-#  - registry:
-#      mode: Unmanaged
-#      proxy:
-#        imagesRepo: registry.deckhouse.io/test
-#  - registry:
-#      mode: Direct
-#      direct:
-#        imagesRepo: registry.deckhouse.io/test
-#      proxy:
-#        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Unmanaged
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Direct
+  - registry:
+      mode: Direct
+      direct:
+        license: "somekey"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        password: "p"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        license: "key"
+        username: "u"
+        password: "p"
 
   values:
   - internal:

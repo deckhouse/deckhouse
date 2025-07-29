@@ -1,5 +1,6 @@
 ---
 title: "The ingress-nginx module"
+description: "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using NGINX Ingress controller."
 ---
 
 Installs and manages the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) using Custom Resources. The module installs the Ingress controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud / bare metal infrastructure and various types of Kubernetes clusters.

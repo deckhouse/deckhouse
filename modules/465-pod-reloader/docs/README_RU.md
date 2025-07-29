@@ -1,5 +1,6 @@
 ---
 title: "Модуль pod-reloader"
+description: "Автоматический перезапуск подов при изменении ConfigMap или Secret в кластере Deckhouse Kubernetes Platform."
 ---
 
 Модуль создан на основе [Reloader](https://github.com/stakater/Reloader).

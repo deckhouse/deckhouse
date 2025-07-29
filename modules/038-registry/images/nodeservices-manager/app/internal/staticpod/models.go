@@ -17,7 +17,7 @@ limitations under the License.
 package staticpod
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
 )

@@ -17,6 +17,11 @@ memory: 50Mi
 {{- $config := $state.config }}
 {{- $config_checksum := printf "%s%s" (include (print $.Template.BasePath "/inclusterproxy/secret.yaml") $ | toString) | sha256sum }}
 
+{{- $auth_enable := false}}
+{{- with (($config.upstream).user).name }}
+{{- $auth_enable = true }}
+{{- end }}
+
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -39,11 +44,13 @@ spec:
         {{- include "registry_incluster_proxy_min_resources" $ | nindent 8 }}
       maxAllowed:
         {{- include "registry_incluster_proxy_max_resources" $ | nindent 8 }}
+    {{- if $auth_enable }}
     - containerName: "auth"
       minAllowed:
         {{- include "registry_incluster_proxy_min_resources" $ | nindent 8 }}
       maxAllowed:
         {{- include "registry_incluster_proxy_max_resources" $ | nindent 8 }}
+    {{- end }}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -130,6 +137,7 @@ spec:
             {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
+      {{- if $auth_enable }}
       - name: auth
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "dockerAuth") }}
@@ -160,6 +168,7 @@ spec:
             {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
+      {{- end }}
       volumes:
         - name: registry-incluster-proxy-config
           secret:

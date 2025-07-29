@@ -21,7 +21,7 @@ import (
 	"io"
 	"os"
 
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"sigs.k8s.io/yaml"
 )
 

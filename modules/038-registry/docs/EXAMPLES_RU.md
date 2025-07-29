@@ -1,166 +1,173 @@
 ---
-title: "Модуль registry: примеры"
+title: "Модуль registry: пример использования"
 description: ""
 ---
 
 ## Переключение на режим `Direct`
 
-Для переключения уже работающего кластера на режим `Direct` необходимо выполнить следующие шаги:
+Для переключения уже работающего кластера на режим `Direct` выполните следующие шаги:
 
-1. Убедитесь, что модуль `registry` включен и работает.
-
-```bash
-kubectl get module registry
-```
-
-<!-- markdownlint-disable MD029 -->
-2. Добавьте следующие настройки в `ModuleConfig` модуля `deckhouse`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    mode: Direct
-    direct:
-      host: registry.deckhouse.ru/deckhouse/ee
-      scheme: https
-      license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
-```
-
-{% alert level="warning" %}
-Если у вас используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/) для корректной настройки.
+{% alert level="danger" %}
+- Во время первого переключения сервис `Containerd V1` будет перезапущен, так как выполнится переключение на [новую конфигурацию авторизации](faq.html#как-подготовить-containerd-v1).
+- При изменении режима registry или параметров registry, Deckhouse будет перезапущен.
 {% endalert %}
 
-<!-- markdownlint-disable MD029 -->
-3. Проверьте статус переключения registry в секрете `registry-state` используя [инструкцию](./faq.html#how-to-check-the-registry-mode-switch-status).
+1. Если кластер запущен с `Containerd V1`, [подготовьте пользовательские конфигурации containerd](faq.html#как-подготовить-containerd-v1).
 
-<!--
-Ниже приведены примеры запуска и отключения модуля `registry`
+1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`, используя следующую команду:
 
-## Bootstrap кластера с Proxy режимом
+   ```bash
+   d8 k get nodes
+   ```
 
-- Подготовьте конфигурационные файлы для bootstrap-а нового кластера
-- Добавьте в `config.yml` манифест [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) с указанием использования `Proxy` режима. Пример:
+   Пример вывода:
 
-  ```yaml
-  apiVersion: deckhouse.io/v2alpha1
-  kind: InitConfiguration
-  deckhouse:
-  registry:
-    mode: Proxy
-    proxy:
-      imagesRepo: nexus.company.my/deckhouse/ee
-      username: "nexus-user"
-      password: "nexus-p@ssw0rd"
-      scheme: HTTPS
-      ca: |
-        -----BEGIN CERTIFICATE-----
-        ...
-        -----END CERTIFICATE-----
-  ```
+   ```console
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+   ```
 
-  Где:
-  - `registry.mode` - выбранный режим registry
-  - `registry.proxy` - параметры для режима proxy (если `registry.mode: Proxy`). Подробнее в разделе [настройка](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-registry-proxy)
-- Выполните bootstrap кластера
+   Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
-## Bootstrap кластера с Mirror режимом
+   ```console
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
 
-- Создайте `d8.tar` архив с запакованными docker образами используя утилиту `d8 mirror pull`, аналогично документации:
-  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry);
-  - [ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B0%D0%B5%D0%BC%D1%8B%D1%85-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D0%B5%D0%B9-deckhouse-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry).
+1. Убедитесь, что модуль `registry` включен и работает. Для этого выполните следующую команду:
+
+   ```bash
+   d8 k get module registry -o wide
+   ```
+
+   Пример вывода:
+
+   ```console
+   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
+   registry   38     ...  Ready   True                         True
+   ```
+
+1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+
+   Пример конфигурации:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           scheme: HTTPS
+           license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
+   ```
+
+1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Direct
+   target_mode: Direct
+   ```
+
+## Переключение на режим Unmanaged
+
+{% alert level="danger" %}
+При изменении режима registry или параметров registry Deckhouse будет перезапущен.
+{% endalert %}
+
+{% alert level="warning" %}
+Переключение в режим `Unmanaged` доступно только из режима `Direct`. Конфигурационные параметры registry будут взяты из предыдущего активного режима.
+{% endalert %}
+
+Для переключения кластера на режим `Unmanaged` выполните следующие шаги:
+
+1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`, используя следующую команду:
+
+   ```bash
+   d8 k get nodes
+   ```
+
+   Пример вывода:
   
-  Пример:
+   ```console
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+   ```
 
-  ```bash
-  d8 mirror pull \
-    --source='registry.deckhouse.ru/deckhouse/ee' \
-    --license='<LICENSE_KEY>' '<--release=X.Y.Z or --min-version=X.Y>' $(pwd)/d8.tar
-  ```
+   Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
-- Подготовьте конфигурационные файлы для bootstrap-а нового кластера
-- Добавьте в `config.yml` манифест [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) с указанием использования `Mirror`. Пример:
+   ```console
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
 
-  ```yaml
-  apiVersion: deckhouse.io/v2alpha1
-  kind: InitConfiguration
-  deckhouse:
-  registry:
-    mode: Detached
-    detached:
-      imagesBundlePath: ~/deckhouse/d8.tar
-  ```
+1. Убедитесь, что модуль `registry` запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
-  Где:
-  - `registry.mode` - выбранный режим registry
-  - `registry.detached` - параметры для режима detached (если `registry.mode: Detached`). Подробнее в разделе [настройка](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-registry-detached)
-- Выполните bootstrap кластера. Во время шага `051_bootstrap_system_registry_img_push` будет выполнен автоматический пуш образов в `registry`
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Direct
+   target_mode: Direct
+   ```
 
-## Запуск Proxy режима на запущенном кластере
+1. Установите настройки режима `Unmanaged` в ModuleConfig `deckhouse`:
 
-- Запустите модуль registry. Пример:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+   ```
 
-  ```bash
-  kubectl apply -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: registry
-  spec:
-    version: 1
-    enabled: true
-    settings:
-      mode: Proxy
-      proxy:
-        host: registry.deckhouse.ru
-        scheme: https
-        path: /deckhouse/ee
-        password: "password"
-        user: "user"
-  EOF
-  ```
+1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
-  Где:
-  - `settings.mode` - выбранный режим registry
-  - `settings.proxy` - параметры для режима proxy (если `registry.mode: Proxy`). Подробнее в разделе [настройка](./configuration.html)
-- Дождитесь применения конфигурации для `containerd` через bashible
-- Выполните переключение на новый адрес docker registry. Для подключения используйте адрес:
-  - ?????????????????????
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
 
-## Запуск Mirror режима на запущенном кластере
-
-- Запустите модуль registry. Пример:
-
-  ```bash
-  kubectl apply -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: registry
-  spec:
-    version: 1
-    enabled: true
-    settings:
-      mode: Detached
-  EOF
-  ```
-
-  Где:
-  - `settings.mode` - выбранный режим registry
-  - `settings.detached` - параметры для режима detached (если `registry.mode: Detached`). Подробнее в разделе [настройка](./configuration.html)
-
-- **TODO**:
-- Дождитесь применения конфигурации для `containerd` через bashible
-- Выполните переключение на новый адрес docker registry. Для подключения используйте адрес: ...
-
-## Выключение модуля
-
-- **TODO**:
-- Переключение на другой registry
-- Отключение модуля registry
--->
+1. При необходимости переключения на предыдущую auth-конфигурацию `Containerd V1` ознакомьтесь с [инструкцией](faq.html#как-переключиться-на-предыдущую-конфигурацию-авторизации-containerd-v1)

@@ -17,7 +17,7 @@ limitations under the License.
 package nodeservices
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 // User represents a user with a name and a password hash

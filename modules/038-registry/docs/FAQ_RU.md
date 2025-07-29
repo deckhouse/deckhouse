@@ -3,47 +3,207 @@ title: "Модуль registry: FAQ"
 description: ""
 ---
 
-## Как посмотреть статус переключения режима registry?
+## Как подготовить Containerd V1?
 
-Статус переключения режима registry можно получить с помощью команды:
+При переключении на режим `Direct` сервис `Containerd V1` будет перезапущен.  
+Конфигурация авторизации будет изменена на Mirror Auth (данная конфигурация используется по умолчанию в `Containerd V2`).  
+После возврата в режим `Unmanaged` обновлённая конфигурация авторизации останется без изменений.
+
+Пример структуры Mirror Auth-конфигурации:
 
 ```bash
-kubectl -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'"
+tree /etc/containerd/registry.d
+.
+├── registry.d8-system.svc:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
 ```
-<!-- TODO(nabokihms): заменить на подкоманду d8, когда она будет реализована -->
 
-### Что означают условия в `registry-state`?
+Пример конфигурации файла `hosts.toml`:
 
-Каждое условие может быть в состоянии `True` или `False`, а так же иметь поле `message`, в котором содержится описание состояния. Ниже приведены все типа условий, которые могут быть в `registry-state` и их описание:
+```toml
+[host]
+  [host."https://registry.deckhouse.ru"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+    ca = ["/path/to/ca.crt"]
+    [host."https://registry.deckhouse.ru".auth]
+      username = "username"
+      password = "password"
+      # If providing auth string:
+      auth = "<base64>"
+```
 
-| Условие                           | Описание                                                                                                                                                                                                 |
-|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ContainerdConfigPreflightReady`  | Состояние проверки конфигурации `containerd` перед переключением режима. Проверяется, что на узле используется именно `containerd` и что его конфигурация не содержит ручных пользовательских изменений. |
-| `TransitionContainerdConfigReady` | Состояние подготовки конфигурации `containerd` в новый режим. Проверяется, что конфигурация `containerd` успешно подготовлена для нового режима.                                                         |
-| `FinalContainerdConfigReady`      | Состояние завершения переключения режима. Проверяется, что все изменения в конфигурации `containerd` успешно применены и система готова к работе в новом режиме.                                         |
-| `DeckhouseRegistrySwitchReady`    | Переключение на новый адрес container registry. Проверяется, что новый адрес успешно применен и компоненты Deckhouse готовы к работе с новым registry.                                                   |
-| `InClusterProxyReady`             | Состояние готовности In-Cluster Proxy. Проверяется, что In-Cluster Proxy успешно запущен и работает.                                                                                                     |
-| `CleanupInClusterProxy`           | Состояние очистки In-Cluster Proxy, если прокси не нужен для работы желаемого режима. Проверяется, что все ресурсы, связанные с In-Cluster Proxy, успешно удалены.                                       |
-| `NodeServicesReady`               | Состояние готовности сервисов на узлах. Проверяется, что все необходимые сервисы на узлах успешно запущены и работают.                                                                                   |
-| `CleanupNodeServices`             | Состояние очистки сервисов на узлах, если сервисы не нужны для работы желаемого режима. Проверяется, что все ресурсы, связанные с сервисами на узлах, успешно удалены.                                   |
-| `Ready`                           | Общее состояние готовности registry к работе в указанном режиме. Проверяется, что все предыдущие условия выполнены и модуль готов к работе.                                                              |
+Перед переключением убедитесь, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry), расположенные в директории `/etc/containerd/conf.d`.
 
-<!--
-Ниже приведены вопросы и ответы по эксплуатации запущенного модуля `registry`
+Если такие конфигурации существуют:
 
-## Как переключить режим с Mirror на Proxy?
+{% alert level="danger" %}
+- После удаления [пользовательских конфигураций авторизации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) из директории `/etc/containerd/conf.d`, сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
 
-- **TODO**:
-
-## Как переключить режим с Proxy на Mirror?
-
-- **TODO**:
-
-{% alert level="warning" %}
-**Обратите внимание!** На данный момент работает через последовательное [выключение](./examples.html#%D0%B2%D1%8B%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8F) и [включение модуля](./examples.html#%D0%B7%D0%B0%D0%BF%D1%83%D1%81%D0%BA-mirror-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0-%D0%BD%D0%B0-%D0%B7%D0%B0%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D0%BE%D0%BC-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5)
+- Новые Mirror Auth-конфигурации, добавленные в `/etc/containerd/registry.d`, вступят в силу только после перехода в режим `Direct`.
 {% endalert %}
 
-## Как переключиться upstream на новый registry в режиме Proxy?
+1. Создайте новые Mirror Auth-конфигурации в директории `/etc/containerd/registry.d`. Пример:
 
-- **TODO**:
--->
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: custom-registry
+   spec:
+     bundles:
+       - '*'
+     content: |
+       #!/bin/bash
+       REGISTRY_ADDRESS="registry.io"
+       REGISTRY_SCHEME="https"
+       host_toml=$(cat <<EOF
+       [host]
+         [host."https://registry.deckhouse.ru"]
+           capabilities = ["pull", "resolve"]
+           skip_verify = true
+           ca = ["/path/to/ca.crt"]
+           [host."https://registry.deckhouse.ru".auth]
+             username = "username"
+             password = "password"
+             # If providing auth string:
+             auth = "<base64>"
+       EOF
+       )
+       mkdir -p "/etc/containerd/registry.d/${REGISTRY_ADDRESS}"
+       echo "$host_toml" > "/etc/containerd/registry.d/${REGISTRY_ADDRESS}/hosts.toml"
+     nodeGroups:
+       - '*'
+     weight: 0
+   ```
+
+   Для проверки новой конфигурации выполните:
+
+   ```bash
+   # HTTPS:
+   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ registry.io/registry/path:tag
+
+   # HTTP:
+   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http registry.io/registry/path:tag
+   ```
+
+1. Удалите auth-конфигурации из директории `/etc/containerd/conf.d`.
+
+## Как переключиться на предыдущую конфигурацию авторизации Containerd V1?
+
+{% alert level="danger" %}
+- Переключение возможно только в режиме `Unmanaged`.
+- При переключении на старую конфигурацию авторизации `Containerd V1` пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
+- Добавить [пользовательские auth-конфигурации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-авторизацию-в-дополнительный-registry) для старой схемы авторизации (в каталог `/etc/containerd/conf.d`) можно только после переключения на неё.
+{% endalert %}
+
+Чтобы переключиться на предыдущую конфигурацию авторизации Containerd V1, выполните следующие шаги:
+
+1. Перейдите в режим `Unmanaged`.
+
+1. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: ""
+     reason: ""
+     status: "True"
+     type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
+
+1. Удалите секрет `registry-bashible-config`:
+
+   ```bash
+   d8 k -n d8-system delete secret registry-bashible-config
+   ```
+
+1. После удаления дождитесь завершения переключения на старую конфигурацию авторизации в `Containerd V1`.  
+   Для отслеживания используйте [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: ""
+     reason: ""
+     status: "True"
+     type: Ready
+   hash: ..
+   mode: Unmanaged
+   target_mode: Unmanaged
+   ```
+
+## Как посмотреть статус переключения режима registry?
+
+Статус переключения режима registry можно получить с помощью следующей команды:
+
+<!-- TODO(nabokihms): заменить на подкоманду d8, когда она будет реализована -->
+```bash
+d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
+```
+
+Пример вывода:
+
+```yaml
+conditions:
+  - lastTransitionTime: "2025-07-15T12:52:46Z"
+    message: 'registry.deckhouse.ru: all 157 items are checked'
+    reason: Ready
+    status: "True"
+    type: RegistryContainsRequiredImages
+  - lastTransitionTime: "2025-07-11T11:59:03Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: ContainerdConfigPreflightReady
+  - lastTransitionTime: "2025-07-15T12:47:47Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: TransitionContainerdConfigReady
+  - lastTransitionTime: "2025-07-15T12:52:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: InClusterProxyReady
+  - lastTransitionTime: "2025-07-15T12:54:53Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: DeckhouseRegistrySwitchReady
+  - lastTransitionTime: "2025-07-15T12:55:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: FinalContainerdConfigReady
+  - lastTransitionTime: "2025-07-15T12:55:48Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: Ready
+mode: Direct
+target_mode: Direct
+```
+
+Вывод отображает состояние процесса переключения. Каждое условие может находиться в статусе `True` или `False`, а также содержать поле `message` с пояснением.
+
+Описание условий:
+
+| Условие                           | Описание                                                                                                                                                                                          |
+| --------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ContainerdConfigPreflightReady`  | Состояние проверки конфигурации `containerd`. Проверяется, что на узлах отсутствуют пользовательские auth конфигурации `containerd`.                                                              |
+| `TransitionContainerdConfigReady` | Состояние подготовки конфигурации `containerd` в новый режим. Проверяется, что конфигурация `containerd` успешно подготовлена и содержит одновременно конфигурации нового и старого режима.       |
+| `FinalContainerdConfigReady`      | Состояние завершения переключения `containerd` в новый режим. Проверяется, что конфигурация `containerd` успешно применена и содержит конфигурацию нового режима.                                 |
+| `DeckhouseRegistrySwitchReady`    | Состояние переключения Deckhouse и его компонентов на использование нового registry. Значение `True` указывает, что Deckhouse успешно переключился на сконфигурированный registry и готов к работе. |
+| `InClusterProxyReady`             | Состояние готовности In-Cluster Proxy. Проверяется, что In-Cluster Proxy успешно запущен и работает.                                                                                              |
+| `CleanupInClusterProxy`           | Состояние очистки In-Cluster Proxy, если прокси не нужен для работы желаемого режима. Проверяется, что все ресурсы, связанные с In-Cluster Proxy, успешно удалены.                                |
+| `Ready`                           | Общее состояние готовности registry к работе в указанном режиме. Проверяется, что все предыдущие условия выполнены и модуль готов к работе.                                                       |

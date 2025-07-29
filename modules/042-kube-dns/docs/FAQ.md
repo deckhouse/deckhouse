@@ -59,7 +59,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
 1. Replace the previous `clusterDomain` with the new one. To do this, execute the command:
 
    ```bash
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 **Important!** If your Kubernetes version is 1.20 and higher, your controllers in the cluster use [advanced ServiceAccount tokens](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) to work with API server. Those tokens have extra fields `iss:` and `aud:` that contain `clusterDomain` (e.g. `"iss": "https://kubernetes.default.svc.cluster.local"`). After changing the clusterDomain, the API server will start issuing tokens with the new service-account-issuer, but thanks to the configuration of additionalAPIAudiences and additionalAPIIssuers, the apiserver will continue to accept the old tokens.

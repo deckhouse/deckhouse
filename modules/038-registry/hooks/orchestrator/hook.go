@@ -297,5 +297,5 @@ func configFromSecret(secret v1core.Secret) (Params, error) {
 		}
 		ret.CA = cert
 	}
-	return ret, nil
+	return ret, ret.Validate()
 }

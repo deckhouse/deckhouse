@@ -195,6 +195,10 @@ spec:
                       description: "Список разрешенных ролей кластера для связывания с пользователями."
                     allowedVolumes:
                       description: Список разрешенных volume-плагинов.
+                    allowedServiceTypes:
+                      description: Список разрешенных типов сервисов.
+                    blockWildcardDomains:
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.                      
                     verifyImageSignatures:
                       description: |
                         Список политик проверки подписи образов контейнеров.

@@ -26,7 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
-	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	editionavailablextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	editionenabledextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
@@ -192,7 +194,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
-	case kubeconfig.Name:
+	case kubeconfigextender.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
 
@@ -212,6 +214,22 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message += ": " + errMsg.Error()
 		}
 
+	case editionavailablextender.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
+		reason = v1alpha1.ModuleReasonEditionAvailableExtender
+		_, errMsg := r.exts.EditionAvailable.Filter(module.Name, map[string]string{})
+		if errMsg != nil {
+			message = errMsg.Error()
+		}
+
+	case editionenabledextender.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
+		reason = v1alpha1.ModuleReasonEditionEnabledExtender
+		_, errMsg := r.exts.EditionEnabled.Filter(module.Name, map[string]string{})
+		if errMsg != nil {
+			message = errMsg.Error()
+		}
+
 	case k8sversionextender.Name:
 		reason = v1alpha1.ModuleReasonKubernetesVersionExtender
 		_, errMsg := k8sversionextender.Instance().Filter(module.Name, map[string]string{})
@@ -221,8 +239,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
-		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+		reason = v1alpha1.ModuleReasonBootstrappedExtender
+		message = v1alpha1.ModuleMessageBootstrappedExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender
@@ -234,9 +252,10 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	}
 
 	// do not change phase of not installed module
-	if module.Status.Phase != v1alpha1.ModulePhaseAvailable {
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseUnavailable {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	}
+
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
 	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }

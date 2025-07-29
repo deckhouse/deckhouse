@@ -1,5 +1,6 @@
 ---
 title: "The pod-reloader module"
+description: "Automatic pod restart on ConfigMap or Secret changes in the Deckhouse Kubernetes Platform cluster."
 ---
 
 The module utilizes [Reloader](https://github.com/stakater/Reloader).

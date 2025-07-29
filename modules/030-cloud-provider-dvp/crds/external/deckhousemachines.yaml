@@ -87,12 +87,7 @@ spec:
                       description: |-
                         Fraction is a guaranteed share of CPU time that will be allocated to the virtual machine.
                         Expressed as a percentage.
-                      enum:
-                        - 5%
-                        - 10%
-                        - 25%
-                        - 50%
-                        - 100%
+                      pattern: ^100%$|^[1-9][0-9]?%$
                       type: string
                   required:
                     - cores

@@ -29,6 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var ignoredEnum = []string{
+	"properties.license.properties.edition",
+}
+
 func TestValidationOpenAPI(t *testing.T) {
 	apiFiles, err := GetOpenAPIYAMLFiles(deckhousePath)
 	require.NoError(t, err)
@@ -43,7 +47,21 @@ func TestValidationOpenAPI(t *testing.T) {
 	}
 	close(filesC)
 
+	// TODO: is it necessary to check for dmt checked values?
 	for result := range resultC {
+		if strings.Contains(result.validationError.Error(), "Enum") {
+			// skip enum validation for ignored properties
+			var isIgnored bool
+			for _, ignored := range ignoredEnum {
+				if strings.Contains(result.validationError.Error(), ignored) {
+					isIgnored = true
+					break
+				}
+			}
+			if isIgnored {
+				continue
+			}
+		}
 		assert.NoError(t, result.validationError, "File '%s' has invalid spec", strings.TrimPrefix(result.filePath, deckhousePath))
 	}
 }

@@ -1,5 +1,6 @@
 ---
 title: "The monitoring-ping module"
+description: "Network connectivity monitoring between Deckhouse Kubernetes Platform cluster nodes."
 ---
 
 ## Description

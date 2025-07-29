@@ -146,7 +146,7 @@ index e55d58682..8930eef92 100644
  	if n.cfg.DisableCatchAll && ing.Spec.DefaultBackend != nil {
  		return fmt.Errorf("this deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.defaultBackend' or set DisableCatchAll flag to false")
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 89530abc0..42a1c00a0 100644
+index 6951275c9..5c810a0de 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
 @@ -116,12 +116,24 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
@@ -176,6 +176,53 @@ index 89530abc0..42a1c00a0 100644
  			// disable http/2
  			// https://github.com/kubernetes/kubernetes/issues/80313
  			// https://github.com/kubernetes/ingress-nginx/issues/6323#issuecomment-737239159
+@@ -275,26 +287,27 @@ func (n *NGINXController) Start() {
+ 	// TODO: For now, as the the IngressClass logics has changed, is up to the
+ 	// cluster admin to create different Leader Election IDs.
+ 	// Should revisit this in a future
+-	electionID := n.cfg.ElectionID
+-
+-	setupLeaderElection(&leaderElectionConfig{
+-		Client:     n.cfg.Client,
+-		ElectionID: electionID,
+-		OnStartedLeading: func(stopCh chan struct{}) {
+-			if n.syncStatus != nil {
+-				go n.syncStatus.Run(stopCh)
+-			}
++	if n.cfg.ValidationWebhook == "" { // Disabled in validation mode
++		electionID := n.cfg.ElectionID
++		setupLeaderElection(&leaderElectionConfig{
++			Client:     n.cfg.Client,
++			ElectionID: electionID,
++			OnStartedLeading: func(stopCh chan struct{}) {
++				if n.syncStatus != nil {
++					go n.syncStatus.Run(stopCh)
++				}
+
+-			n.metricCollector.OnStartedLeading(electionID)
+-			// manually update SSL expiration metrics
+-			// (to not wait for a reload)
+-			n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
+-			n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
+-		},
+-		OnStoppedLeading: func() {
+-			n.metricCollector.OnStoppedLeading(electionID)
+-		},
+-	})
++				n.metricCollector.OnStartedLeading(electionID)
++				// manually update SSL expiration metrics
++				// (to not wait for a reload)
++				n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
++				n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
++			},
++			OnStoppedLeading: func() {
++				n.metricCollector.OnStoppedLeading(electionID)
++			},
++		})
++	}
+
+ 	cmd := n.command.ExecCommand()
+
 diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
 index d3bc4ee86..3842fcfd2 100644
 --- a/pkg/flags/flags.go

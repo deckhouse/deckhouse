@@ -3,8 +3,10 @@ title: "Модуль registry: настройка"
 description: ""
 ---
 
-{% alert level="warning" %}
-Режим работы registry, адрес для подключения и другие параметры указываются в `ModuleConfig` модуля [`deckhouse`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/).
-{% endalert %}
+{% include module-alerts.liquid %}
 
-<!-- SCHEMA -->
+{% include module-bundle.liquid %}
+
+Модуль не имеет настроек.
+
+Режим работы registry Deckhouse Kubernetes Platform, адрес для подключения и другие параметры указываются в секции [registry](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.

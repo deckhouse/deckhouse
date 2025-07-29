@@ -244,6 +244,33 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if !moduleConfig.IsEnabled() {
+		// delete all pending releases for EnabledByModuleConfig disabled modules
+		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			releases := new(v1alpha1.ModuleReleaseList)
+			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
+			if err := r.client.List(ctx, releases, selector); err != nil {
+				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
+				return ctrl.Result{}, fmt.Errorf("list module releases: %w", err)
+			}
+
+			pendingReleases := make([]*v1alpha1.ModuleRelease, 0)
+			for _, release := range releases.Items {
+				if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
+					pendingReleases = append(pendingReleases, &release)
+				}
+			}
+
+			if len(pendingReleases) > 0 {
+				for _, release := range pendingReleases {
+					err := r.client.Delete(ctx, release)
+					if err != nil && !apierrors.IsNotFound(err) {
+						r.logger.Error("failed to delete pending release", slog.String("pending_release", release.Name), log.Err(err))
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
+
 		if err := r.disableModule(ctx, module); err != nil {
 			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err

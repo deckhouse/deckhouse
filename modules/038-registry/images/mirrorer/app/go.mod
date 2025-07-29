@@ -3,7 +3,7 @@ module mirrorer
 go 1.23.1
 
 require (
-	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.20.2
 	golang.org/x/sync v0.10.0
 	sigs.k8s.io/yaml v1.5.0
