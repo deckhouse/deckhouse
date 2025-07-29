@@ -41,6 +41,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
+	"d8-vsphere-csi",
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
@@ -160,6 +161,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-user-authn:basic-auth-proxy",
 	"system:serviceaccount:d8-user-authn:dex",
 	"system:serviceaccount:d8-user-authz:webhook",
+	"system:serviceaccount:d8-vsphere-csi:cloud-data-discoverer",
 	"system:serviceaccount:kube-system:d8-control-plane-manager",
 	"system:serviceaccount:kube-system:d8-kube-dns",
 	"system:serviceaccount:kube-system:d8-kube-proxy",

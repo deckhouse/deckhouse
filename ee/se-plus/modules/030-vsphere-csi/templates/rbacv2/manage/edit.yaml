@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-vsphere-csi
-  name: d8:manage:permission:module:cloud-provider-vsphere:edit
+  name: d8:manage:permission:module:vsphere-csi:edit
 rules:
 - apiGroups:
   - deckhouse.io
