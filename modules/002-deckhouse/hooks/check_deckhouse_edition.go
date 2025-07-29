@@ -49,7 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/1 * * * *", // every minute
 		},
 	},
-}, handleModuleConfig)
+}, handleModuleConfigWrap())
 var reEditionFromPath = regexp.MustCompile(`^/deckhouse/(.+)$`)
 var allExpectedEditions = []string{"ce", "be", "ee", "se", "se-plus"}
 
@@ -63,13 +63,17 @@ func validateEdition(edition string) bool {
 	return slices.Contains(allExpectedEditions, edition)
 }
 
-func handleModuleConfig(input *go_hook.HookInput) error {
+func handleModuleConfigWrap() func(*go_hook.HookInput) error {
 	// skip check for dev
 	version := strings.TrimSuffix(string(versionContent), "\n")
 	if version == "dev" {
-		return nil
+		return func(_ *go_hook.HookInput) error { return nil }
 	}
 
+	return handleModuleConfig
+}
+
+func handleModuleConfig(input *go_hook.HookInput) error {
 	// set metrics on hook result
 	var found bool
 	defer func(found *bool) {
