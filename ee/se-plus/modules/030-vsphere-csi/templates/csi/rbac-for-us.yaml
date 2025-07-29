@@ -1,6 +1,6 @@
 {{- include "helm_lib_csi_controller_rbac" . }}
 
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
+{{- if ne .Values.vsphereCsi.internal.compatibilityFlag "Legacy" }}
 # ===========
 # vsphere csi reads cm with its "internal-feature-states"
 # ===========
