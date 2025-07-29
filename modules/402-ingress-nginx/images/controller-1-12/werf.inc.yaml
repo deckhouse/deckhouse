@@ -315,13 +315,13 @@ import:
 #   includePaths:
 #   - lib/libz.so*
 #   before: install
-# - image: libs/glibc
-#   add: /usr
-#   to: /chroot
-#   includePaths:
-#   - lib64/libc.so*
-#   - lib64/ld-linux-x86-64.so*
-#   before: install
+- image: libs/glibc
+  add: /usr
+  to: /chroot
+  includePaths:
+  - lib64/libc.so*
+  - lib64/ld-linux-x86-64.so*
+  before: install
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -427,7 +427,7 @@ shell:
   - cp -a /usr/lib64/libcrypto.so* /chroot/lib64 # !
   - cp -a /usr/lib64/libz.so* /chroot/lib64  # !
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
+  # - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
   # - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
@@ -563,7 +563,7 @@ final: false
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-28.02"
+fromCacheVersion: "2025-07-28.03"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -613,6 +613,9 @@ import:
   to: /usr/bin/unshare
   before: install
 shell:
+  install:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get -y install file
   setup:
   - /tmp/apps/chmod 1777 /tmp
   - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
