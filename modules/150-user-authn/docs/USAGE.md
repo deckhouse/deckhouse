@@ -179,7 +179,20 @@ spec:
 ```
 
 {% alert level="warning" %}
-When using Keycloak as an Identity Provider, remove the `Email verified` mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for correct processing of `true` value of [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field  and to grant permissions to unverified users.
+If KeyCloak does not use Email account confirmation, to use it as an Identity Provider, you need to delete the Email verified mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for the correct processing of the true value of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field and the correct granting of rights to unverified users.
+
+If it is not possible to edit or delete the `Email verified` mapping, then you need to create a separate `Client scopes` `email_dkp` and add two mappings there:
+- `email`: «Client Scopes» → «email_dkp» → «Add mapper» → «From predefined mappers» → «email»
+- `email verified`: «Client Scopes» → «email_dkp» → «Add mapper» → «By configuration» → «Hardcoded claim», where you need to specify the following fields: «Name: email verified», «Token Claim Name: emailVerified», «Claim value: true», «Claim JSON Type: boolean». In the client registered for the DKP cluster in `Clients`, it is necessary to change the `Client scopes` `email` to `email_dkp`.
+
+You also need to specify the `insecureSkipEmailVerified: true` field in `dexProvider` and correct the name of the `Client scope` in `.spec.oidc.scopes` to `email_dkp`, as in the example:
+```yaml
+    scopes:
+      - openid
+      - profile
+      - email_dkp
+      - groups
+```
 {% endalert %}
 
 #### Okta
