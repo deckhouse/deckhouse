@@ -89,7 +89,7 @@ Example of getting a list of modules:
 
 ```console
 $ kubectl get module
-NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
@@ -171,7 +171,7 @@ After turning on the module, it should enter the download phase:
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
+NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
 
@@ -183,16 +183,16 @@ After a successful download, the module will enter the installation phase (`Inst
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
-module-one  900      example  Installing    False     False
+NAME        STAGE    SOURCE   PHASE         ENABLED   READY
+module-one           example  Installing    False     False
 ```
 
 If the module was successfully installed, it will enter the `Ready` phase:
 
 ```shell
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
-module-one  900      example  Ready  True     True
+NAME        STAGE    SOURCE   PHASE  ENABLED  READY
+module-one           example  Ready  True     True
 ```
 
 Example of a Module object in the cluster when the module has been successfully installed:
@@ -244,15 +244,15 @@ In case of any errors, the module will enter the `Error` phase:
 
 ```console
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
-module-one  910      example  Error  True     Error
+NAME        STAGE    SOURCE   PHASE  ENABLED  READY
+module-one           example  Error  True     Error
 ```
 
 If the enabled module has several available sources, and a source for the module is not explicitly selected in its ModuleConfig, the module will enter the `Conflict` phase:
 
 ```console
 $ kubectl get module module-one
-NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
+NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
 
@@ -348,7 +348,7 @@ Below is an example of the output:
 
 ```console
 $ kubectl get module
-NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 ...
 module-one                   Available   False     False                      
 module-two                   Available   False     False     

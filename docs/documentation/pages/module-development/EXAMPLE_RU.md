@@ -177,7 +177,7 @@ lang: ru
 
    ```console
    $ kubectl get module
-   NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+   NAME       STAGE    SOURCE   PHASE       ENABLED   READY
    ...
    helloworld                   Available   False     False     
    ...

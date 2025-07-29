@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.43.0"
+  WERF_VERSION: "v2.42.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -36,8 +36,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -70,7 +72,6 @@ jobs:
     outputs:
       ref: ${{ steps.pr_props.outputs.ref }}
       ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
-      edition: ${{ steps.pr_props.outputs.edition }}
       pr_title: ${{ steps.pr_props.outputs.pr_title }}
       pr_description: ${{ steps.pr_props.outputs.pr_description }}
       diff_url: ${{ steps.pr_props.outputs.diff_url }}
@@ -78,6 +79,11 @@ jobs:
       security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+      build_ce: ${{ steps.pr_props.outputs.build_ce }}
+      build_be: ${{ steps.pr_props.outputs.build_be }}
+      build_se: ${{ steps.pr_props.outputs.build_se }}
+      build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
+      build_ee: ${{ steps.pr_props.outputs.build_ee }}
 
     # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
     if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
@@ -209,27 +215,9 @@ jobs:
               core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
             }
 
-            // Set edition from current labels.
-            const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
-            const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
-            const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-            const hasBE = pr.labels.some((l) => l.name === 'edition/be');
-            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
-            const hasSE_plus = pr.labels.some((l) => l.name === 'edition/se+');
-            let edition = defaultEdition;
-            if (hasCE) {
-              edition = 'CE';
-            } else if (hasEE) {
-              edition = 'EE';
-            } else if (hasBE) {
-              edition = 'BE';
-            } else if (hasSE) {
-              edition = 'SE';
-            } else if (hasSE_plus) {
-              edition = 'SE-plus';
-            }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
-            core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
             // Set security rootless scan from labels.
             const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
             // Construct head commit ref using pr number.
@@ -249,12 +237,17 @@ jobs:
             core.setOutput('should_check', shouldCheckFiles.toString());
             core.setOutput('ref', ref);
             core.setOutput('ref_slug', `pr${pr.number}`);
-            core.setOutput('edition', edition);
             core.setOutput('pr_title', pr.title);
             core.setOutput('pr_description', pr.body);
             core.setOutput('diff_url', diff_url);
             core.setOutput('labels', JSON.stringify(pr.labels));
             core.setOutput('security_rootless_scan', security_rootless_scan);
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
             core.setCommandEcho(false);
 
       # Checkhout the head commit of the PR branch.
@@ -540,8 +533,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -637,7 +628,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -701,7 +691,7 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ee')
+    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -858,8 +848,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -955,7 +943,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1019,7 +1006,7 @@ jobs:
 
   build_se:
     name: Build SE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se')
+    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -1176,8 +1163,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1273,7 +1258,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1337,7 +1321,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se-plus')
+    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -1494,8 +1478,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1591,7 +1573,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1655,7 +1636,7 @@ jobs:
 
   build_be:
     name: Build BE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/be')
+    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -1812,8 +1793,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1909,7 +1888,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1973,7 +1951,7 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ce')
+    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -2130,8 +2108,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2227,7 +2203,6 @@ jobs:
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -2296,7 +2271,7 @@ jobs:
     needs:
       - build_fe
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: ${{ github.event.repository.name }}
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}

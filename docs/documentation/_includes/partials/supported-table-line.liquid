@@ -1,0 +1,220 @@
+{%- if page.lang == 'ru' %}
+<!-- Prepare CE list -->
+{% assign ceVersions = "" | split: "," %}
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {%- for ceVersion in site.data.supported_versions.osDistributions[osKey]['ce_support']['versions'] %}
+  {%- if ceVersion == osVersion %}
+    {% assign ceVersions = ceVersions | push: ceVersion %}
+  {%- endif %}
+  {%- endfor %}
+{%- endfor %}
+
+<!-- Prepare CSE list -->
+{% assign cseVersions = "" | split: "," %}
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {%- for cseVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
+    {%- if cseVersion == osVersion %}
+      {% assign cseVersions = cseVersions | push: cseVersion %}
+    {%- endif %}
+  {%- endfor %}
+{%- endfor %}
+
+<!-- Prepare common list -->
+{% assign commonVersions = "" | split: "," %}
+{%- for os in ceVersions %}
+  {% if cseVersions contains os %}
+    {% assign commonVersions = commonVersions | push: os %}
+  {% endif %}
+{%- endfor %}
+
+<!-- Update CE list -->
+{% assign ceVersions = "" | split: "," %}
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {%- for ceVersion in site.data.supported_versions.osDistributions[osKey]['ce_support']['versions'] %}
+    {%- if ceVersion == osVersion %}
+      {% assign exclude = false %}
+      {% for commonVersion in commonVersions %}
+        {%- if commonVersion == ceVersion %}{% assign exclude = true %}{% endif %}
+      {% endfor %}
+      {% if exclude == false %}{% assign ceVersions = ceVersions | push: ceVersion %}{% endif %}
+    {%- endif %}
+  {%- endfor %}
+{%- endfor %}
+
+<!-- Update CSE list -->
+{% assign cseVersions = "" | split: "," %}
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {%- for cseVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
+    {%- if cseVersion == osVersion %}
+      {% assign exclude = false %}
+      {% for commonVersion in commonVersions %}
+        {%- if commonVersion == cseVersion %}{% assign exclude = true %}{% endif %}
+      {% endfor %}
+      {% if exclude == false %}{% assign cseVersions = cseVersions | push: cseVersion %}{% endif %}
+    {%- endif %}
+  {%- endfor %}
+{%- endfor %}
+
+<!-- Prepare other list -->
+{% assign otherVersions = "" | split: "," %}
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {% assign exclude = false %}
+  {% for commonVersion in commonVersions %}
+    {%- if commonVersion == osVersion %}{% assign exclude = true %}{% endif %}
+  {% endfor %}
+  {% for cseVersion in cseVersions %}
+    {%- if cseVersion == osVersion %}{% assign exclude = true %}{% endif %}
+  {% endfor %}
+  {% for ceVersion in ceVersions %}
+    {%- if ceVersion == osVersion %}{% assign exclude = true %}{% endif %}
+  {% endfor %}
+  {% if exclude == false %}{% assign otherVersions = otherVersions | push: osVersion %}{% endif %}
+{%- endfor %}
+
+{% assign rowsCount = 0 %}
+{% if commonVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign commonExists = true %}{% endif %}
+{% if ceVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign ceExists = true %}{% endif %}
+{% if cseVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign cseExists = true %}{% endif %}
+{% if otherVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign otherExists = true %}{% endif %}
+
+{% for i in (1..rowsCount) %}
+<tr>
+  <!-- OS name -->
+  {% if i == 1 %}
+  <td class="name" {% if rowsCount > 1 %}rowspan="{{ rowsCount }}"{% endif %}>
+    <span>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif %}
+    </span>
+  </td>
+  {% endif %}
+  {% if commonExists == true %}
+  <td class="versions">
+    {% for commonVersion in commonVersions %}
+    {{ commonVersion }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign commonExists = false %}
+  </td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'] or site.data.supported_versions.osDistributions[osKey]['ce_support']['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'][page.lang] }}<br>{{ site.data.supported_versions.osDistributions[osKey]['ce_support']['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+  {% continue %}
+  {% endif %}
+  {% if cseExists == true %}
+  <td class="versions">
+    {% for cseVersion in cseVersions %}
+    {{ cseVersion }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign cseExists = false %}
+  </td>
+  <td><div class="icon"><img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется."></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+{% continue %}
+  {% endif %}
+  {% if ceExists == true %}
+  <td class="versions">
+    {% for ceVersion in ceVersions %}
+    {{ ceVersion }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign ceExists = false %}
+  </td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ not_supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['ce_support']['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['ce_support']['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% continue %}
+  {% endif %}
+  {% if otherExists == true %}
+  <td class="versions">
+    {% for otherVersion in otherVersions %}
+    {{ otherVersion }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign otherExists = false %}
+  </td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+      <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+      {% else %}
+      <img src="{{ supported_img_url }}">
+      {% endif %}
+    </div>
+  </td>
+  <td><div class="icon"><img src="{{ not_supported_img_url }}"></div></td>
+  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% continue %}
+  {% endif %}
+{% endfor %}
+{% endif %}
+
+{%- if page.lang == 'en' %}
+<tr>
+  <!-- OS name -->
+  <td class="name">
+    <span>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif %}
+    </span>
+  </td>
+  <td class="versions">
+    {%- for osData in osItem[1] %}
+    {%- assign osVersion = osData[0] %}
+    {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
+    {%- unless forloop.last %},{% endunless %}
+    {%- endfor %}
+  </td>
+  <td style="text-align: center; width: 170px;">
+    <div class="icon">
+      <img src="{{ supported_img_url }}">
+    </div>
+  </td>
+  <td style="text-align: center;">
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endif %}
