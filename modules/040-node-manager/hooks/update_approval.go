@@ -320,12 +320,13 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			}
 		}
 
-		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
+		switch {
+		case ng.Disruptions.ApprovalMode == "RollingUpdate":
 			// If approvalMode == RollingUpdate simply delete machine
 			ar.nodeDeleteRollingUpdate(input, &node)
-		} else if !ar.needDrainNode(input, &node, &ng) || node.IsDrained {
+		case !ar.needDrainNode(input, &node, &ng) || node.IsDrained:
 			ar.nodeDisruptionApproved(input, &node)
-		} else if !node.IsUnschedulable {
+		case !node.IsUnschedulable:
 			ar.nodeDrainingForDisruption(input, &node)
 		}
 	}
