@@ -367,13 +367,23 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 }
 
 func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApprovalNode) {
-	patch := upToDatePatch
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             nil,
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+				"update.node.deckhouse.io/disruption-required":  nil,
+				"update.node.deckhouse.io/disruption-approved":  nil,
+				drainedAnnotationKey:                            nil,
+			},
+		},
+	}
 	if node.IsDrained {
 		patch["spec"] = map[string]interface{}{
 			"unschedulable": nil,
 		}
 	}
-	input.Logger.Info("processUpdatedNodes UpToDate", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.Logger.Info("Node UpToDate", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
 	input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 	ar.finished = true
@@ -434,17 +444,6 @@ type updateNodeGroup struct {
 }
 
 var (
-	upToDatePatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             nil,
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-				"update.node.deckhouse.io/disruption-required":  nil,
-				"update.node.deckhouse.io/disruption-approved":  nil,
-				drainedAnnotationKey:                            nil,
-			},
-		},
-	}
 	approvedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
