@@ -301,7 +301,7 @@ bin/crane: bin ## Install crane deps for update-patchversion script.
 
 bin/trdl: bin
 	@if ! command -v werf >/dev/null 2>&1; then \
-		curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
+		curl -sSfL https://tuf.trdl.dev/targets/releases/0.7.0/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
 		chmod +x bin/trdl; \
 	fi
 
