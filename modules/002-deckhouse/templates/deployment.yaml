@@ -209,13 +209,13 @@ spec:
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
               value: "4223"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
-              value: "30"
+              value: "100"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
-              value: "60"
+              value: "200"
             - name: KUBE_CLIENT_QPS
-              value: "20"
+              value: "100"
             - name: KUBE_CLIENT_BURST
-              value: "40"
+              value: "200"
             - name: GOGC
               value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
