@@ -1259,6 +1259,13 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
+                controllerNginxProfilingEnabled:
+                  type: boolean
+                  default: false
+                  description: |
+                    Enables heap of nginx profiling, the profile is written to /tmp/heapprof* files.
+
+                    > Be careful when using this parameter!!!
               oneOf:
                 - properties:
                     inlet:

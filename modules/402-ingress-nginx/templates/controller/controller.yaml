@@ -183,6 +183,10 @@ spec:
         - name: LUA_USE_GEOIP2
           value: "true"
         {{- end }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        - name: PROFILING
+          value: "true"
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /controller/healthz
@@ -327,6 +331,11 @@ spec:
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
+{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        - name: valgrind
+          mountPath: /chroot/tmp/valgrind
+          readOnly: false
+{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
@@ -411,6 +420,12 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
+{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+      - name: valgrind
+        hostPath:
+          path: /var/log/valgrind
+          type: DirectoryOrCreate
+{{- end }}
 {{- end }}
 
 {{- $context := . }}
