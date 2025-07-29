@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -230,7 +232,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		return &pb.AbortResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
@@ -252,6 +254,13 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	})
 	if err != nil {
 		return &pb.AbortResult{Err: err.Error()}
+	}
+
+	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+		err = sshClient.Start()
+		if err != nil {
+			return &pb.AbortResult{Err: fmt.Errorf("cannot start sshClient: %w", err).Error()}
+		}
 	}
 
 	var commanderUUID uuid.UUID

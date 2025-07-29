@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -77,7 +77,7 @@ func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastru
 		return nil
 	}
 
-	cl.Settings.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
+	cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
 	return nil
 }
 

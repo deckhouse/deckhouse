@@ -54,18 +54,22 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		return nil // Local runs don't use ssh client.
 	}
 
-	sshClient := wrapper.Client()
-	if _, err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
 	}
 
-	if len(sshClient.Settings.AvailableHosts()) == 0 {
+	sshClient := wrapper.Client()
+
+	if len(sshClient.Session().AvailableHosts()) == 0 {
 		mastersIPs, err := GetMasterHostsIPs()
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Settings.SetAvailableHosts(mastersIPs)
+		sshClient.Session().SetAvailableHosts(mastersIPs)
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -75,7 +79,11 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	if bastionHost != "" {
-		sshClient.Settings.BastionHost = bastionHost
+		sshClient.Session().BastionHost = bastionHost
+	}
+
+	if err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
 	return nil
@@ -147,7 +155,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				if err := b.initSSHClient(); err != nil {
 					return err
 				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{})
+				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{}, nil)
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -161,9 +169,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 
 		if err := b.initSSHClient(); err != nil {
-			return err
-		}
-		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
 
@@ -206,10 +211,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	})
 
 	if err != nil {
-		return err
-	}
-
-	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 
