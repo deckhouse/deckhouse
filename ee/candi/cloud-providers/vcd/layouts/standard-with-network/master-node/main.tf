@@ -17,18 +17,3 @@ locals {
   external_network_name = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
   external_network_type = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
 }
-
-module "dnat" {
-  source = "../../../terraform-modules/dnat"
-
-  organization          = var.providerClusterConfiguration.organization
-  edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
-  edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
-  internal_network_name = var.providerClusterConfiguration.mainNetwork
-  internal_address      = module.master_node.master_ip_address_for_ssh
-  external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
-  external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
-  external_network_name = local.external_network_name
-  external_network_type = local.external_network_type
-  node_index            = var.nodeIndex
-}

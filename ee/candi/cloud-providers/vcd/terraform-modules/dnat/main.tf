@@ -11,7 +11,7 @@ data "vcd_nsxt_edgegateway" "gateway" {
   name  = var.edge_gateway_name
 }
 
-# NSX-T DNAT rule only for the first master node
+# NSX-T DNAT rule
 
 data "vcd_nsxt_app_port_profile" "ssh" {
   count = local.use_nsxv ? 0 : 1
@@ -26,9 +26,9 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
 
-  name        = format("master-%d-%s-dnat-ssh", var.node_index, var.internal_network_name)
+  name        = format("%s-dnat-ssh", var.rule_name_prefix)
   rule_type   = "DNAT"
-  description = format("SSH DNAT rule for master-%d of %s", var.node_index, var.internal_network_name)
+  description = var.rule_description
 
   external_address    = var.external_address
   dnat_external_port  = var.external_port
@@ -37,13 +37,13 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
   app_port_profile_id = data.vcd_nsxt_app_port_profile.ssh[0].id
 }
 
-# NSX-V DNAT rule only for the first master node
+# NSX-V DNAT rule
 
 resource "vcd_nsxv_dnat" "master-dnat" {
   count = local.use_nsxv ? 1 : 0
 
   enabled     = true
-  description = format("SSH DNAT rule for master-%d of %s", var.node_index, var.internal_network_name)
+  description = var.rule_description
   org         = var.organization
 
   edge_gateway = var.edge_gateway_name
@@ -56,4 +56,3 @@ resource "vcd_nsxv_dnat" "master-dnat" {
   protocol           = "tcp"
   translated_port    = 22
 }
-

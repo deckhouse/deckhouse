@@ -80,7 +80,7 @@ apiVersions:
               properties:
                 rootDiskSizeGb:
                   description: |
-                    root disk size in gigabytes.
+                    Root disk size in gigabytes.
                   example: 50
                   default: 50
                   type: integer
@@ -204,7 +204,7 @@ apiVersions:
                 properties:
                   rootDiskSizeGb:
                     description: |
-                      root disk size in gigabytes.
+                      Root disk size in gigabytes.
                     example: 50
                     default: 50
                     type: integer
@@ -254,6 +254,50 @@ apiVersions:
                       type: string
                       description: An IP address with a CIDR prefix.
                       pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+        bastion:
+          type: object
+          additionalProperties: false
+          description: |
+            Parameters for the bastion host, which is used to access the cluster's nodes.
+          properties:
+            rootDiskSizeGb:
+              description: |
+                Root disk size in gigabytes.
+              example: 50
+              default: 50
+              type: integer
+              minimum: 1
+            placementPolicy:
+              description: |
+                Placement policy to be used on this machine.
+
+                If no placement policy is specified, the default placement policy will be used to create the bastion host.
+              type: string
+            sizingPolicy:
+              description: |
+                Sizing policy to be used on this machine.
+
+                If no sizing policy is specified, the default sizing policy will be used to create the bastion host.
+              type: string
+            storageProfile:
+              description: |
+                Storage profile to be used on this machine.
+              type: string
+            template:
+              description: |
+                Path of the template OVA that is to be used.
+
+                Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+
+                If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+
+                You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+            mainNetworkIPAddress:
+              type: string
+              description: |
+                The IP address of the bastion host in the `mainNetwork`.
+                If not set, the DHCP client will be enabled.
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
         sshPublicKey:
           type: string
           description: |

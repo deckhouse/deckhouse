@@ -5,6 +5,16 @@ variable "organization" {
   type = string
 }
 
+variable "rule_name_prefix" {
+  type = string
+  description = "The name of the DNAT rule. Effective only for NSX-T."
+}
+
+variable "rule_description" {
+  type = string
+  default = ""
+}
+
 variable "edge_gateway_name" {
   type = string
 }
@@ -34,9 +44,5 @@ variable "external_address" {
 }
 
 variable "external_port" {
-  type = number
-}
-
-variable "node_index" {
   type = number
 }
