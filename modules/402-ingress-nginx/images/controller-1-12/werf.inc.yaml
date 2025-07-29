@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-07-28.01"
+# fromCacheVersion: "2025-07-28.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -49,7 +49,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-28.01"
+# fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -89,7 +89,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
-fromCacheVersion: "2025-07-28.01"
+# fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -120,7 +120,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-28.01"
+# fromCacheVersion: "2025-07-28.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -147,13 +147,9 @@ shell:
   - rm -rf /usr/local
   - /build.sh
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
-from: dev-registry.deckhouse.io/base_images@sha256:ba05eb87026e03684f98cd53356dc269cea28ce6938ee67d1fc9e2e5a2686e3d
-final: false
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-28.01"
+fromCacheVersion: "2025-07-28.02"
 final: false
 mount:
 - from: build_dir
@@ -201,50 +197,104 @@ import:
   add: /d8-curl
   to: /chroot/usr/bin/curl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-dev
-  add: /usr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil
+  add: /
   to: /chroot
   includePaths:
-  - lib/libabsl_base.so*
-  - lib/libabsl_city.so*
-  - lib/libabsl_cord_internal.so*
-  - lib/libabsl_cord.so*
-  - lib/libabsl_cordz_functions.so*
-  - lib/libabsl_cordz_handle.so*
-  - lib/libabsl_cordz_info.so*
-  - lib/libabsl_crc_cord_state.so*
-  - lib/libabsl_crc_internal.so*
-  - lib/libabsl_crc32c.so*
-  - lib/libabsl_debugging_internal.so*
-  - lib/libabsl_demangle_internal.so*
-  - lib/libabsl_exponential_biased.so*
-  - lib/libabsl_hash.so*
-  - lib/libabsl_int128.so*
-  - lib/libabsl_low_level_hash.so*
-  - lib/libabsl_malloc_internal.so*
-  - lib/libabsl_random_internal_platform.so*
-  - lib/libabsl_random_internal_pool_urbg.so*
-  - lib/libabsl_random_internal_randen_hwaes_impl.so*
-  - lib/libabsl_random_internal_randen_hwaes.so*
-  - lib/libabsl_random_internal_randen_slow.so*
-  - lib/libabsl_random_internal_randen.so*
-  - lib/libabsl_random_internal_seed_material.so*
-  - lib/libabsl_random_seed_gen_exception.so*
-  - lib/libabsl_raw_hash_set.so*
-  - lib/libabsl_raw_logging_internal.so*
-  - lib/libabsl_spinlock_wait.so*
-  - lib/libabsl_stacktrace.so*
-  - lib/libabsl_status.so*
-  - lib/libabsl_statusor.so*
-  - lib/libabsl_str_format_internal.so*
-  - lib/libabsl_strerror.so*
-  - lib/libabsl_strings_internal.so*
-  - lib/libabsl_strings.so*
-  - lib/libabsl_symbolize.so*
-  - lib/libabsl_synchronization.so*
-  - lib/libabsl_throw_delegate.so*
-  - lib/libabsl_time_zone.so*
-  - lib/libabsl_time.so*
+  - usr/lib/libabsl_base.so*
+  - usr/lib/libabsl_city.so*
+  - usr/lib/libabsl_cord_internal.so*
+  - usr/lib/libabsl_cord.so*
+  - usr/lib/libabsl_cordz_functions.so*
+  - usr/lib/libabsl_cordz_handle.so*
+  - usr/lib/libabsl_cordz_info.so*
+  - usr/lib/libabsl_crc_cord_state.so*
+  - usr/lib/libabsl_crc_internal.so*
+  - usr/lib/libabsl_crc32c.so*
+  - usr/lib/libabsl_debugging_internal.so*
+  - usr/lib/libabsl_demangle_internal.so*
+  - usr/lib/libabsl_exponential_biased.so*
+  - usr/lib/libabsl_hash.so*
+  - usr/lib/libabsl_int128.so*
+  - usr/lib/libabsl_low_level_hash.so*
+  - usr/lib/libabsl_malloc_internal.so*
+  - usr/lib/libabsl_random_internal_platform.so*
+  - usr/lib/libabsl_random_internal_pool_urbg.so*
+  - usr/lib/libabsl_random_internal_randen_hwaes_impl.so*
+  - usr/lib/libabsl_random_internal_randen_hwaes.so*
+  - usr/lib/libabsl_random_internal_randen_slow.so*
+  - usr/lib/libabsl_random_internal_randen.so*
+  - usr/lib/libabsl_random_internal_seed_material.so*
+  - usr/lib/libabsl_random_seed_gen_exception.so*
+  - usr/lib/libabsl_raw_hash_set.so*
+  - usr/lib/libabsl_raw_logging_internal.so*
+  - usr/lib/libabsl_spinlock_wait.so*
+  - usr/lib/libabsl_stacktrace.so*
+  - usr/lib/libabsl_status.so*
+  - usr/lib/libabsl_statusor.so*
+  - usr/lib/libabsl_str_format_internal.so*
+  - usr/lib/libabsl_strerror.so*
+  - usr/lib/libabsl_strings_internal.so*
+  - usr/lib/libabsl_strings.so*
+  - usr/lib/libabsl_symbolize.so*
+  - usr/lib/libabsl_synchronization.so*
+  - usr/lib/libabsl_throw_delegate.so*
+  - usr/lib/libabsl_time_zone.so*
+  - usr/lib/libabsl_time.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libbrotlicommon.so*
+  - usr/lib/libbrotlidec.so*
+  - usr/lib/libbrotlienc.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libffi
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libffi.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-gmp
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libgmp.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libgcrypt
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libgcrypt.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libgpg-error
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libgpg-error.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-krb5
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libgssapi_krb5.so*
+  - usr/lib/libkrb5.so*
+  - usr/lib/libkrb5support.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libpcre2-8.so*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/lib/libgcc_s.so*
+  - usr/lib/libzstd.so*
+  - usr/lib/libstdc++.so*
   before: install
 # - image: tools/openssl
 #   add: /usr
@@ -372,13 +422,13 @@ shell:
   # For NGINX
   - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64 # !
   - cp -a /lib64/libcrypt.so* /chroot/lib64
-  - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
+  # - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
   - cp -a /lib64/libssl.so* /chroot/lib64
   - cp -a /usr/lib64/libcrypto.so* /chroot/lib64 # !
   - cp -a /usr/lib64/libz.so* /chroot/lib64  # !
   - cp -a /usr/lib64/libm.so* /chroot/lib64
   - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
-  - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
+  # - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
   # - cp -a /lib64/libabsl_city.so* /chroot/lib64
@@ -421,29 +471,29 @@ shell:
   # - cp -a /lib64/libabsl_time_zone.so* /chroot/lib64
   # - cp -a /lib64/libabsl_time.so* /chroot/lib64
   - cp -a /lib64/libaddress_sorting.so* /chroot/lib64
-  - cp -a /lib64/libbrotlicommon.so* /chroot/lib64 # !
-  - cp -a /lib64/libbrotlidec.so* /chroot/lib64 # !
-  - cp -a /lib64/libbrotlienc.so* /chroot/lib64 # !
+  # - cp -a /lib64/libbrotlicommon.so* /chroot/lib64 # !
+  # - cp -a /lib64/libbrotlidec.so* /chroot/lib64 # !
+  # - cp -a /lib64/libbrotlienc.so* /chroot/lib64 # !
   - cp -a /lib64/libcares.so* /chroot/lib64
   - cp -a /lib64/libcom_err.so* /chroot/lib64
   - cp -a /lib64/libcurl.so* /chroot/lib64
-  - cp -a /lib64/libffi.so* /chroot/lib64 # !
-  - cp -a /lib64/libgcrypt.so* /chroot/lib64
-  - cp -a /lib64/libgmp.so* /chroot/lib64 # !
+  # - cp -a /lib64/libffi.so* /chroot/lib64 # !
+  # - cp -a /lib64/libgcrypt.so* /chroot/lib64 # !
+  # - cp -a /lib64/libgmp.so* /chroot/lib64 # !
   - cp -a /lib64/libgnutls.so* /chroot/lib64
-  - cp -a /lib64/libgpg-error.so* /chroot/lib64
+  # - cp -a /lib64/libgpg-error.so* /chroot/lib64 # !
   - cp -a /lib64/libgpr.so* /chroot/lib64
   - cp -a /lib64/libgrpc.so* /chroot/lib64
   - cp -a /lib64/libgrpc++.so* /chroot/lib64
   - cp -a /lib64/libgsasl.so* /chroot/lib64
-  - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64 # Возможно есть в krb5
+  # - cp -a /lib64/libgssapi_krb5.so* /chroot/lib64 # !
   - cp -a /lib64/libhogweed.so* /chroot/lib64
-  - cp -a /lib64/libidn.so* /chroot/lib64
-  - cp -a /lib64/libidn2.so* /chroot/lib64
+  - cp -a /lib64/libidn.so* /chroot/lib64 # !
+  - cp -a /lib64/libidn2.so* /chroot/lib64 # !
   - cp -a /lib64/libk5crypto.so* /chroot/lib64
   - cp -a /lib64/libkeyutils.so* /chroot/lib64
-  - cp -a /lib64/libkrb5.so* /chroot/lib64 # !
-  - cp -a /lib64/libkrb5support.so* /chroot/lib64 # !
+  # - cp -a /lib64/libkrb5.so* /chroot/lib64 # !
+  # - cp -a /lib64/libkrb5support.so* /chroot/lib64 # !
   - cp -a /lib64/liblber.so* /chroot/lib64
   - cp -a /lib64/libldap.so* /chroot/lib64
   - cp -a /lib64/liblua-5.3.so* /chroot/lib64
@@ -455,18 +505,18 @@ shell:
   - cp -a /lib64/libngtcp2.so* /chroot/lib64
   - cp -a /lib64/libntlm.so* /chroot/lib64
   - cp -a /lib64/libp11-kit.so* /chroot/lib64
-  - cp -a /lib64/libpcre.so* /chroot/lib64 # !
+  - cp -a /lib64/libpcre.so* /chroot/lib64
   - cp -a /lib64/libprotobuf.so* /chroot/lib64
   - cp -a /lib64/libpsl.so* /chroot/lib64
   - cp -a /lib64/libre2.so* /chroot/lib64
   - cp -a /lib64/libsasl2.so* /chroot/lib64
   - cp -a /lib64/libselinux.so* /chroot/lib64
   - cp -a /lib64/libssh2.so* /chroot/lib64
-  - cp -a /lib64/libstdc++.so* /chroot/lib64
+  # - cp -a /lib64/libstdc++.so* /chroot/lib64
   - cp -a /lib64/libtasn1.so* /chroot/lib64
   - cp -a /lib64/libunistring.so* /chroot/lib64
   - cp -a /lib64/libupb.so* /chroot/lib64
-  - cp -a /lib64/libzstd.so* /chroot/lib64 # Серега собирает
+  # - cp -a /lib64/libzstd.so* /chroot/lib64
 
   # - cp -a /lib64/* /chroot/lib64/ #  symlink: lib64 → usr/lib64
   # - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
@@ -474,10 +524,46 @@ shell:
   # Utils for final image
   - cp -a /tools/{setcap,coreutils,rm,chmod,ln,mkdir} /tmp/apps
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil
+from: dev-registry.deckhouse.io/base_images@sha256:4639a3555de0fbd0855e417ad667d16b86b08fa5d21313144262682e8dd34a26
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli
+from: dev-registry.deckhouse.io/base_images@sha256:5bd143b84d1dde8841b7cd1e2d621ea59fe6ef9938acc4b06922e1fe4928dc68
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libffi
+from: dev-registry.deckhouse.io/base_images@sha256:c0781182bd2b1218d235b1f5d7cc09ac20e4ff4954e840ac4862fbbdfb213173
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-gmp
+from: dev-registry.deckhouse.io/base_images@sha256:6e3839c1ffdf3341bdf8e63f3c50f2920eff1dbdc76d6ad38d59b55779c1d511
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libgcrypt
+from: dev-registry.deckhouse.io/base_images@sha256:f9d3a8784767faa3dbe48330f3267eec0737cdadf3ebf99e2c3f26a101724d77
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libgpg-error
+from: dev-registry.deckhouse.io/base_images@sha256:27b93b6f2ca7fa88d39259e9adb8ad6c4d5561ff1e7e611196b9efe4c42d71c8
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-krb5
+from: dev-registry.deckhouse.io/base_images@sha256:54f8cd1e23c46cb0342dc70cd10333bacb60ed142e681062ff6f46f7c26a2bb1
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
+from: dev-registry.deckhouse.io/base_images@sha256:fad2fd8fe87db24253398c3a3e03464936fa34862e6bd1e5853bd0bfefb169cb
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd
+from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
+final: false
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-28.01"
+fromCacheVersion: "2025-07-28.02"
 mount:
 - from: build_dir
   to: /tmp/apps
