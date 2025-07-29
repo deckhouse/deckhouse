@@ -193,14 +193,14 @@ func (c *Cache) deleteFiles() {
 	layerDigests := make(map[string]struct{}, len(c.storage))
 	for _, v := range c.storage {
 		layerDigests[v.layerDigest] = struct{}{}
+		fmt.Println(v.layerDigest)
 	}
 	c.RUnlock()
 
 	files := c.getFileList()
-
 	for _, file := range files {
+		fmt.Println(file, filepath.Base(file))
 		if _, ok := layerDigests[filepath.Base(file)]; ok {
-			c.logger.Info("file is in the cache, skipping", slog.String("path", file))
 			continue
 		}
 		stat, err := os.Stat(file)
