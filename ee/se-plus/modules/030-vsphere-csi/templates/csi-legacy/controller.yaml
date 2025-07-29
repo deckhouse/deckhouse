@@ -24,7 +24,7 @@
   readOnly: true
 {{- end }}
 
-{{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPluginLegacy") }}
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPluginLegacy" "cloudProviderVsphere") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "fullname" "csi-controller-legacy" }}
