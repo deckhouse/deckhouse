@@ -69,9 +69,9 @@ type Values struct {
 
 func (p Params) Validate() error {
 	switch p.Mode {
-	case registry_const.ModeUnmanaged:
+	case registry_const.ModeUnmanaged, registry_const.ModeLocal:
 		return nil
-	case registry_const.ModeDirect:
+	case registry_const.ModeDirect, registry_const.ModeProxy:
 		return validation.ValidateStruct(&p,
 			validation.Field(&p.ImagesRepo, validation.Required),
 			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),

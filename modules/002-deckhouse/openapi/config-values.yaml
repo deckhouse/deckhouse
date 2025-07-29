@@ -421,22 +421,17 @@ properties:
           Proxy mode properties
         x-example:
           - imagesRepo: registry.deckhouse.io/deckhouse/ee
-            license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            scheme: HTTPS
-          - imagesRepo: registry.deckhouse.io/deckhouse/ee
-            username: user
-            password: password
-            scheme: HTTP
-            ttl: "168h"
-          - imagesRepo: registry.deckhouse.io/deckhouse/ee
-            username: user
-            password: password
+            license: "DECKHOUSE_LICENSE_KEY"
+            ttl: "168h10m5s"
+          - imagesRepo: "my-private-registry.com/deckhouse"
+            username: "user"
+            password: "password"
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
               MIIC...
               -----END CERTIFICATE-----
-            ttl: "168h10m5s"
+            ttl: "168h"
         properties:
           <<: *registryDirectProperties
           ttl:
@@ -454,10 +449,16 @@ properties:
               - "168h10m5s"
 
 x-deckhouse-validations:
-- expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) : true"
-  message: "When mode is 'Direct', 'direct' section must be specified."
-- expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.direct) : true"
-  message: "When mode is 'Unmanaged', 'direct' section must be omitted."
+# Registry common
+- expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) && !has(self.registry.proxy) : true"
+  message: "When mode is 'Direct', only 'direct' must be specified."
+- expression: "self.registry.mode == 'Proxy' ? has(self.registry.proxy) && !has(self.registry.direct) : true"
+  message: "When mode is 'Proxy', only 'proxy' must be specified."
+- expression: "self.registry.mode == 'Local' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
+  message: "When mode is 'Local', 'direct' and 'proxy' options must be omitted."
+- expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
+  message: "When mode is 'Unmanaged', 'direct' and 'proxy' options must be omitted."
+# Registry Direct mode
 - expression: "has(self.registry.direct) ? has(self.registry.direct.imagesRepo) : true"
   message: "'imagesRepo' is required when 'direct' section is specified."
 - expression: "has(self.registry.direct) ? (has(self.registry.direct.username) ? has(self.registry.direct.password) : true) : true"
@@ -466,13 +467,12 @@ x-deckhouse-validations:
   message: "'username' is required when 'password' is provided in the 'direct' section."
 - expression: "has(self.registry.direct) ? !(has(self.registry.direct.license) && (has(self.registry.direct.username) || has(self.registry.direct.password))) : true"
   message: "'license' and 'username'/'password' are mutually exclusive in the 'direct' section."
-# TODO(nabokihms): Uncomment the following validation rules. Commented for easier switching between registry modes.
-# x-deckhouse-validations:
-# - expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) && !has(self.registry.proxy) && !has(self.registry.local) : true"
-#   message: "When mode is 'Direct', only 'direct' must be specified."
-# - expression: "self.registry.mode == 'Proxy' ? has(self.registry.proxy) && !has(self.registry.direct) && !has(self.registry.local) : true"
-#   message: "When mode is 'Proxy', only 'proxy' must be specified."
-# - expression: "self.registry.mode == 'Local' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
-#   message: "When mode is 'Local', 'direct', and 'proxy' options must be omitted."
-# - expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.proxy) && !has(self.registry.direct) : true"
-#   message: "When mode is 'Unmanaged', 'direct', and 'proxy' options must be omitted."
+# Registry Proxy mode
+- expression: "has(self.registry.proxy) ? has(self.registry.proxy.imagesRepo) : true"
+  message: "'imagesRepo' is required when 'proxy' section is specified."
+- expression: "has(self.registry.proxy) ? (has(self.registry.proxy.username) ? has(self.registry.proxy.password) : true) : true"
+  message: "'password' is required when 'username' is provided in the 'proxy' section."
+- expression: "has(self.registry.proxy) ? (has(self.registry.proxy.password) ? has(self.registry.proxy.username) : true) : true"
+  message: "'username' is required when 'password' is provided in the 'proxy' section."
+- expression: "has(self.registry.proxy) ? !(has(self.registry.proxy.license) && (has(self.registry.proxy.username) || has(self.registry.proxy.password))) : true"
+  message: "'license' and 'username'/'password' are mutually exclusive in the 'proxy' section."
