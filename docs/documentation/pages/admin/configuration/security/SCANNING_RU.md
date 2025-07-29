@@ -25,7 +25,7 @@ DKP запускает регулярное сканирование всех к
 Чтобы выполнить сканирование в конкретном пространстве имён, добавьте для него лейбл `security-scanning.deckhouse.io/enabled=""`.
 
 Как только в кластере обнаруживается хотя бы одно пространство имён с указанным лейблом,
-сканирование `default` прекращается.
+сканирование пространства имён `default` прекращается.
 Чтобы снова включить сканирование для пространства имён `default`, добавьте для него лейбл следующей командой:
 
 ```shell
@@ -68,7 +68,7 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 
 В Grafana:
 
-- `Security/Trivy Image Vulnerability Overview` — сводный обзор уязвимостей в образах и ресурсах кластера.
+- `Security/Trivy Image Vulnerability Overview` — сводный обзор уязвимостей в образах контейнеров, запущенных в кластере.
 
   ![Пример дашборда в Grafana](../../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
@@ -76,12 +76,12 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 
   ![Пример дашборда в Grafana](../../../images/operator-trivy/cis-kubernetes-benchmark-dashboard.png)
 
-В ресурсах кластера:
+В кластере:
 
 - Отчеты о безопасности кластера:
   - [`ClusterComplianceReport`](scanning.html#clustercompliancereport)
   - [`RbacAssessmentReport`](scanning.html#rbacassessmentreport)
-- Отчеты о безопасности ресурсов кластера:
+- Отчеты о безопасности нагрузки в кластере:
   - [`VulnerabilityReport`](scanning.html#vulnerabilityreport) — уязвимости в образах контейнеров;
   - [`SbomReport`](scanning.html#sbomreport) — состав ПО в образах (SBOM);
   - [`ConfigAuditReport`](scanning.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
