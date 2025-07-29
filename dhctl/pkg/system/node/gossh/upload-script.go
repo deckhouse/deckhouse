@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"golang.org/x/crypto/ssh"
 )
@@ -164,8 +165,7 @@ func (u *SSHUploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDi
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
-	tarCmd := exec.Command("tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
-	err = tarCmd.Run()
+	err = tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)
 	if err != nil {
 		return nil, fmt.Errorf("tar bundle: %v", err)
 	}
