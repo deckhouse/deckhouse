@@ -65,10 +65,12 @@ func moduleConfigValidationHandler(
 			cfg                      = new(v1alpha1.ModuleConfig)
 			ok                       bool
 			allowExperimentalModules = setting.Get().AllowExperimentalModules
+			IsExperimental           bool
 		)
 		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 			definition := module.GetModuleDefinition()
-			if definition.IsExperimental() {
+			IsExperimental = definition.IsExperimental()
+			if IsExperimental {
 				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})
 			}
 		}
@@ -106,7 +108,9 @@ func moduleConfigValidationHandler(
 				}
 
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
-
+				if IsExperimental {
+					metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 0.0, map[string]string{"module": obj.GetName()})
+				}
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -136,14 +140,11 @@ func moduleConfigValidationHandler(
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
-			metricStorage.GaugeSet(telemetry.WrapName("can_use_experimental_modules"), 1.0, map[string]string{"module": obj.GetName()})
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
-					definition := module.GetModuleDefinition()
-					if !allowExperimentalModules && definition.IsExperimental() {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
-					}
+				if IsExperimental && !allowExperimentalModules {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
 				}
+
 			}
 
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
