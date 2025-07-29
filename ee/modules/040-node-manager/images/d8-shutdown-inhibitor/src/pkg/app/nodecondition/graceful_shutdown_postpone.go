@@ -79,7 +79,8 @@ func uncordonOnStart(nodeName string) error {
 	}
 
 	// wait until node is ready
-	if nodeNotReadyCondition.Status == "False" &&
+	if nodeNotReadyCondition != nil &&
+		nodeNotReadyCondition.Status == "False" &&
 		nodeNotReadyCondition.Type == "Ready" &&
 		nodeNotReadyCondition.Reason == "KubeletNotReady" {
 		return fmt.Errorf("node %q is not ready", nodeName)
