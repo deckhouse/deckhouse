@@ -1259,6 +1259,23 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
+                controllerNginxProfilingEnabled:
+                  type: boolean
+                  default: false
+                  description: |
+                    Enables NGINX profiling using Valgrind.
+                    A memory analysis report is saved to the /var/log/valgrind directory on the host.
+                    When enabled, Valgrind creates a file named memcheck.${timestamp}.log.
+
+                    After debugging is complete, terminate the pod process manually or disable profiling mode, for example:
+
+                    > kubectl -n d8-ingress-nginx delete po main-controller-xxx
+
+                    The report contains information about the process behavior, including potential memory leaks.
+
+                    > Caution: Enabling this option significantly increases memory usage and slows down HTTP/S request handling by the NGINX process.
+
+                    > Be aware: When the option under Ingress is enabled, the IngressNginxController starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:
@@ -1296,6 +1313,8 @@ spec:
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
+                - message: .spec.controllerNginxProfilingEnabled experimental option available only in version 1.10
+                  rule: 'self.controllerNginxProfilingEnabled == true ? self.controllerVersion in [''1.10'']: true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

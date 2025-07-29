@@ -209,7 +209,7 @@ import:
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
+  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel valgrind mount
   setup:
   - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
@@ -221,6 +221,7 @@ shell:
       /chroot/usr/local/nginx
       /chroot/usr/share
       /chroot/usr/bin
+      /chroot/usr/lib
       /chroot/usr/lib/locale
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
@@ -238,6 +239,7 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
+      /chroot/tmp/
       /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
@@ -270,6 +272,7 @@ shell:
   - cp -a /usr/lib64/gconv /chroot/usr/lib64/
   - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
   - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
+  - cp -a /usr/lib/valgrind /chroot/usr/lib/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /usr/local/bin /chroot/usr/local/
   - cp -a /usr/local/lib /chroot/usr/local/
@@ -278,6 +281,7 @@ shell:
   - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
+  - cp -a /usr/bin/valgrind /chroot/usr/local/
   - chown www-data:www-data /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
@@ -288,6 +292,10 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
   to: /chroot
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+  add: /usr/bin/mount
+  to: /usr/bin/mount
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/dbg
@@ -330,15 +338,12 @@ shell:
   - chown www-data:www-data /usr/bin/nginx
   - chown www-data:www-data /usr/bin/curl
   - chown www-data:www-data /chroot/etc
-  - chmod 1777 /tmp
-  - setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - chmod 1777 /tmp /chroot/tmp /chroot/tmp/nginx
+  - mkdir -p /chroot/var/log/valgrind
+  - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - setcap cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - rm -rf /etc/pki
   - ln -sf /chroot/etc/pki /etc/pki
   - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
