@@ -490,9 +490,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -591,9 +589,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -880,9 +876,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -981,9 +975,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1270,9 +1262,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1371,9 +1361,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1660,9 +1648,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1761,9 +1747,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2050,9 +2034,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2151,9 +2133,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2440,9 +2420,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2541,9 +2519,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2830,9 +2806,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2931,9 +2905,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3220,9 +3192,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3321,9 +3291,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3610,9 +3578,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3711,9 +3677,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4000,9 +3964,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4101,9 +4063,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4390,9 +4350,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4491,9 +4449,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4780,9 +4736,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4881,9 +4835,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5170,9 +5122,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5271,9 +5221,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5560,9 +5508,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -5661,9 +5607,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }}
-          export FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }}
-          export FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
