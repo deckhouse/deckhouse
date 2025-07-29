@@ -390,8 +390,8 @@ func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApp
 }
 
 func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
-	input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name), slog.String("ng", node.NodeGroup))
-	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "instances.deckhouse.io", "" , node.Name)
+	input.Logger.Info("Delete Instance due to RollingUpdate strategy", slog.String("name", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "Instance", "" , node.Name)
 	ar.finished = true
 }
 
