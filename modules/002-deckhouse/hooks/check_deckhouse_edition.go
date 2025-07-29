@@ -28,8 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-var versionContent, _ = os.ReadFile("/deckhouse/version")
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -65,6 +63,11 @@ func validateEdition(edition string) bool {
 
 func handleModuleConfigWrap() func(*go_hook.HookInput) error {
 	// skip check for dev
+	versionContent, err := os.ReadFile("/deckhouse/version")
+	if err != nil {
+		return handleModuleConfig
+	}
+
 	version := strings.TrimSuffix(string(versionContent), "\n")
 	if version == "dev" {
 		return func(_ *go_hook.HookInput) error { return nil }
