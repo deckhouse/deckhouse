@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -114,35 +115,55 @@ func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.Va
 	}
 }
 
-func clusterConfigurationHandler(mm moduleManager, cli client.Client) http.Handler {
+func validateClusterConfiguration(schemaStore *config.SchemaStore, clusterConfiguration []byte) (*kwhvalidating.ValidatorResult, error) {
+	_, err := schemaStore.Validate(&clusterConfiguration, config.ValidateOptionOmitDocInError(true))
+	if err != nil {
+		return rejectResult(err.Error())
+	}
+
+	return allowResult(nil)
+}
+
+func clusterConfigurationHandler(mm moduleManager, cli client.Client, schemaStore *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		secret, ok := obj.(*v1.Secret)
-		if !ok {
-			log.Debug("unexpected type", log.Type("expected", v1.Secret{}), log.Type("got", obj))
-			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
+		switch ar.Operation {
+		case model.OperationDelete:
+			return rejectResult("It is forbidden to delete secret d8-cluster-configuration")
+
+		default:
+			secret, ok := obj.(*v1.Secret)
+			if !ok {
+				log.Debug("unexpected type", log.Type("expected", v1.Secret{}), log.Type("got", obj))
+				return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
+			}
+
+			clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
+			if !ok {
+				log.Debug("no cluster-configuration found in secret", slog.String("namespace", obj.GetNamespace()), slog.String("name", obj.GetName()))
+				return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+			}
+
+			clusterConfigurationValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+				return validateClusterConfiguration(schemaStore, clusterConfigurationRaw)
+			})
+
+			clusterConf := new(clusterConfig)
+			if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
+				log.Debug("failed to unmarshal cluster configuration", log.Err(err))
+				return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
+			}
+
+			k8sVersionValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+				return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
+			})
+
+			criValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+				return validateDefaultCRI(clusterConf.DefaultCRI, cli)
+			})
+
+			chain := kwhvalidating.NewChain(nil, clusterConfigurationValidator, k8sVersionValidator, criValidator)
+			return chain.Validate(ctx, ar, obj)
 		}
-
-		clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-		if !ok {
-			log.Debug("no cluster-configuration found in secret", slog.String("namespace", obj.GetNamespace()), slog.String("name", obj.GetName()))
-			return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
-		}
-
-		clusterConf := new(clusterConfig)
-		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
-			log.Debug("failed to unmarshal cluster configuration", log.Err(err))
-			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
-		}
-		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
-		})
-
-		criValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			return validateDefaultCRI(clusterConf.DefaultCRI, cli)
-		})
-
-		chain := kwhvalidating.NewChain(nil, k8sVersionValidator, criValidator)
-		return chain.Validate(ctx, ar, obj)
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
