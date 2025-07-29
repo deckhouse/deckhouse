@@ -31,7 +31,7 @@ data "vcd_vm_placement_policy" "vmpp" {
   vdc_id = data.vcd_org_vdc.vdc[0].id
 }
 
-resource "vcd_vapp_vm" "node" {
+resource "vcd_vapp_vm" "bastion" {
   vapp_name        = var.vapp_name
   name             = local.name
   computer_name    = local.name
