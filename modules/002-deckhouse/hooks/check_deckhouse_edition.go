@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -25,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -46,7 +49,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/1 * * * *", // every minute
 		},
 	},
-}, handleModuleConfig)
+}, handleModuleConfigWrap())
+
 var reEditionFromPath = regexp.MustCompile(`^/deckhouse/(.+)$`)
 var allExpectedEditions = []string{"ce", "be", "ee", "se", "se-plus"}
 
@@ -60,56 +64,72 @@ func validateEdition(edition string) bool {
 	return slices.Contains(allExpectedEditions, edition)
 }
 
-func handleModuleConfig(input *go_hook.HookInput) error {
-	// set metrics on hook result
-	var found bool
-	defer func(found *bool) {
-		var value float64
-		if !*found {
-			value = 1.0
-		}
-		input.MetricsCollector.Set("d8_edition_not_found", value, nil)
-	}(&found)
+func handleModuleConfigWrap() func(*go_hook.HookInput) error {
+	// skip check for dev
+	versionContent, readErr := os.ReadFile("/deckhouse/version")
 
-	// check values.global.deckhouseEdition
-	edition, ok := input.Values.GetOk("global.deckhouseEdition")
-	if ok && validateEdition(edition.String()) {
-		found = true
+	if readErr == nil {
+		version := strings.TrimSuffix(string(versionContent), "\n")
+		if version == "dev" {
+			return func(_ *go_hook.HookInput) error { return nil }
+		}
+	}
+
+	return func(input *go_hook.HookInput) error {
+		if readErr != nil {
+			input.Logger.Warn("can't read deckhouse version file", log.Err(readErr))
+		}
+
+		// set metrics on hook result
+		var found bool
+		defer func(found *bool) {
+			var value float64
+			if !*found {
+				value = 1.0
+			}
+			input.MetricsCollector.Set("d8_edition_not_found", value, nil)
+		}(&found)
+
+		// check values.global.deckhouseEdition
+		edition, ok := input.Values.GetOk("global.deckhouseEdition")
+		if ok && validateEdition(edition.String()) {
+			found = true
+			return nil
+		}
+
+		// check values.global.registry
+		registryAddress, ok := input.Values.GetOk("global.modulesImages.registry.address")
+		if ok && registryAddress.String() == "registry.deckhouse.io" {
+			// if prod registry, check path
+			registryPath, ok := input.Values.GetOk("global.modulesImages.registry.path")
+			if !ok {
+				input.Logger.Warn("global value global.modulesImages.registry.path not set")
+				return nil
+			}
+
+			// regex to extract edition from path
+			// e.g. /deckhouse/ce, /deckhouse/be, /deckhouse/ee, /deckhouse/se, /deckhouse/se-plus
+			reResult := reEditionFromPath.FindStringSubmatch(registryPath.String())
+			if len(reResult) > 0 && validateEdition(reResult[1]) {
+				found = true
+				return nil
+			}
+
+			input.Logger.Warn("global value global.modulesImages.registry.path does not match edition regex")
+		}
+
+		// check moduleConfig spec.settings.licence.edition
+		moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
+		for _, moduleEditionSnap := range moduleEditions {
+			moduleEdition := moduleEditionSnap.String()
+			if validateEdition(moduleEdition) {
+				found = true
+				return nil
+			}
+		}
+
+		// if we reach this point, it means no edition was found
+		input.Logger.Warn("deckhouse edition not found")
 		return nil
 	}
-
-	// check values.global.registry
-	registryAddress, ok := input.Values.GetOk("global.modulesImages.registry.address")
-	if ok && registryAddress.String() == "registry.deckhouse.io" {
-		// if prod registry, check path
-		registryPath, ok := input.Values.GetOk("global.modulesImages.registry.path")
-		if !ok {
-			input.Logger.Warn("global value global.modulesImages.registry.path not set")
-			return nil
-		}
-
-		// regex to extract edition from path
-		// e.g. /deckhouse/ce, /deckhouse/be, /deckhouse/ee, /deckhouse/se, /deckhouse/se-plus
-		reResult := reEditionFromPath.FindStringSubmatch(registryPath.String())
-		if len(reResult) > 0 && validateEdition(reResult[1]) {
-			found = true
-			return nil
-		}
-
-		input.Logger.Warn("global value global.modulesImages.registry.path does not match edition regex")
-	}
-
-	// check moduleConfig spec.settings.licence.edition
-	moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
-	for _, moduleEditionSnap := range moduleEditions {
-		moduleEdition := moduleEditionSnap.String()
-		if validateEdition(moduleEdition) {
-			found = true
-			return nil
-		}
-	}
-
-	// if we reach this point, it means no edition was found
-	input.Logger.Warn("deckhouse edition not found")
-	return nil
 }
