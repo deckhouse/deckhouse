@@ -124,7 +124,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveUpdates(input)
+	err = approver.approveDisruptions(input)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveDisruptions(input)
+	err = approver.approveUpdates(input)
 	if err != nil {
 		return err
 	}
@@ -215,13 +215,13 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		countToApprove := concurrency - currentUpdates
-		approvedNodes := make([]updateApprovalNode, 0, countToApprove)
+		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
 
 		if len(approvedNodes) < countToApprove {
 			for _, ngn := range nodeGroupNodes {
 				// IsDrained or IsDraining first
 				if (ngn.IsDrained || ngn.IsDraining) && ngn.IsWaitingForApproval {
-					approvedNodes = append(approvedNodes, ngn)
+					approvedNodes[ngn] = struct{}{}
 					if len(approvedNodes) == countToApprove {
 						break
 					}
@@ -233,7 +233,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			for _, ngn := range nodeGroupNodes {
 				// get !ngn.IsReady if it is below the limit
 				if !ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
-					approvedNodes = append(approvedNodes, ngn)
+					approvedNodes[ngn] = struct{}{}
 					if len(approvedNodes) == countToApprove {
 						break
 					}
@@ -245,7 +245,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			for _, ngn := range nodeGroupNodes {
 				// Allow one node, if 100% nodes in NodeGroup are ready
 				if ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
-					approvedNodes = append(approvedNodes, ngn)
+					approvedNodes[ngn] = struct{}{}
 					if len(approvedNodes) == countToApprove {
 						break
 					}
@@ -257,7 +257,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			continue
 		}
 
-		for _, approvedNode := range approvedNodes {
+		for approvedNode := range approvedNodes {
 			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
 				if !approvedNode.IsDrained {
 					if !approvedNode.IsDraining {
@@ -339,7 +339,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if node.IsWaitingForApproval {
+		if !node.IsApproved {
 			continue
 		}
 		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
@@ -536,7 +536,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		isDisruptionRequired = true
 	}
 	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v != "user" {
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -551,7 +551,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		nodeGroup = ""
 	}
 	// This annotation is now only used by bashible, there are other means to drain the node manually.
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v != "user" {
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
 		isDrained = true
 	}
 
