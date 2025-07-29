@@ -367,7 +367,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 }
 
 func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApprovalNode) {
-	patch := UpToDatePatch
+	patch := upToDatePatch
 	if node.IsDrained {
 		patch["spec"] = map[string]interface{}{
 			"unschedulable": nil,
@@ -387,7 +387,7 @@ func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node
 
 func (ar *updateApprover) nodeDisruptionApproved(input *go_hook.HookInput, node *updateApprovalNode) {
 	input.Logger.Info("Node DisruptionApproved", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
-	input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", node.Name)
+	input.PatchCollector.PatchWithMerge(disruptionApprovedPatch, "v1", "Node", "", node.Name)
 	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DisruptionApproved")
 	ar.finished = true
 }
@@ -434,7 +434,7 @@ type updateNodeGroup struct {
 }
 
 var (
-	UpToDatePatch = map[string]interface{}{
+	upToDatePatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/approved":             nil,
@@ -453,7 +453,7 @@ var (
 			},
 		},
 	}
-	DisruptionApprovedPatch = map[string]interface{}{
+	disruptionApprovedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/disruption-approved": "",
