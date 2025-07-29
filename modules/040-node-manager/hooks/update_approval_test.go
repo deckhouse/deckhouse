@@ -904,6 +904,7 @@ metadata:
   annotations:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/drained: "bashible"
 spec:
   unschedulable: true
 
