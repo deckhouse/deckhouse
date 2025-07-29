@@ -118,7 +118,7 @@ spec:
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG
-          value: {{ .Values.cloudProviderVsphere.internal.compatibilityFlag | quote }}
+          value: {{ .Values.vsphereCsi.internal.compatibilityFlag | quote }}
         livenessProbe:
           httpGet:
             path: /healthz
