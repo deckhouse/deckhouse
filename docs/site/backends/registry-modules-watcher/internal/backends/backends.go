@@ -81,6 +81,7 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 	defer bm.mu.Unlock()
 
 	bm.backendAddrs[backend] = struct{}{}
+	// do a metric with len(bm.backendAddrs)
 
 	state := bm.scanner.GetState()
 	bm.logger.Info("Sending documentation to new backend",

@@ -132,6 +132,7 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 	}
 
 	operation := func() error {
+		// do a metric
 		resp, err := s.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)

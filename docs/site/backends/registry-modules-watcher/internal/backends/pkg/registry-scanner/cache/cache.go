@@ -42,7 +42,7 @@ type versionData struct {
 
 type Cache struct {
 	m   sync.RWMutex
-	val map[registryName]map[moduleName]moduleData
+	val map[registryName]map[moduleName]moduleData // do a metric gauge ModulesInCacheLen with registry name labels
 }
 
 func New() *Cache {
