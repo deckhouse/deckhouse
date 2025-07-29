@@ -26,6 +26,7 @@ shell:
   - rm -rf /src/cilium/.git
 ---
 image: {{ .ModuleName }}/cilium-artifact
+fromCacheVersion: "1"
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
