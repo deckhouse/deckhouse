@@ -400,14 +400,17 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registry": map[string]interface{}{
-		"dockerAuth":         "imageHash-registry-dockerAuth",
-		"dockerDistribution": "imageHash-registry-dockerDistribution",
+		"dockerAuth":          "imageHash-registry-dockerAuth",
+		"dockerDistribution":  "imageHash-registry-dockerDistribution",
+		"mirrorer":            "imageHash-registry-mirrorer",
+		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
+		"cfssl165":                        "imageHash-registrypackages-cfssl165",
 		"containerd1727":                  "imageHash-registrypackages-containerd1727",
 		"containerd213":                   "imageHash-registrypackages-containerd213",
 		"crictl129":                       "imageHash-registrypackages-crictl129",

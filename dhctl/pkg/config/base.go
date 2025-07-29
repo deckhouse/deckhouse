@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -65,6 +66,13 @@ func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, er
 	err = metaConfig.LoadImagesDigests(imagesDigestsJSON)
 	if err != nil {
 		return nil, err
+	}
+
+	if !metaConfig.Registry.IsDirect() {
+		if metaConfig.Images["systemRegistry"] == nil {
+			return nil, fmt.Errorf("RegistryMode allowed only in Enterprise / Standard editions.\n" +
+				"Please remove mode from InitConfiguration, or set it to 'Direct'.")
+		}
 	}
 
 	err = metaConfig.LoadInstallerVersion()
@@ -183,8 +191,34 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		if err := yaml.Unmarshal(providerClusterConfigData, &parsedProviderClusterConfig); err != nil {
 			return nil, err
 		}
-
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
+
+		// Read provider secondary devices
+		providerSecondaryDevicesConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-secondary-devices-configuration", metav1.GetOptions{})
+		// Continue if not found
+		if err !=nil && !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+
+		// If not found -> generate ProviderSecondaryDevicesConfig with default vars
+		providerSecondaryDevicesConfigData := []byte{}
+		if providerSecondaryDevicesConfig != nil {
+			providerSecondaryDevicesConfigData = providerSecondaryDevicesConfig.Data["cloud-provider-secondary-devices-configuration.yaml"]
+		}
+		if metaConfig.ProviderSecondaryDevicesConfig, err = NewProviderSecondaryDevicesConfigFromData(
+			providerSecondaryDevicesConfigData,
+		); err != nil {
+			return nil, err
+		}
+
+		// Validate provider secondary devices
+		var cloud ClusterConfigCloudSpec
+		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloud); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+		}
+		if err := metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
+			return nil, err
+		}
 	}
 
 	return metaConfig.Prepare()

@@ -6427,6 +6427,7 @@ modules-having-alerts:
     - openvpn
     - operator-prometheus
     - prometheus
+    - registry
     - runtime-audit-engine
     - secret-copier
     - terraform-manager

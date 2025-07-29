@@ -7,6 +7,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.21.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
