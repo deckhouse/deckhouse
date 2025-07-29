@@ -10,8 +10,7 @@ title: "Модуль operator-trivy: Custom Resources (от aquasecurity.github.
 
 ### VulnerabilityReport
 
-`VulnerabilityReport` — объект, содержащий отчёт об уязвимостях, обнаруженных в контейнерном образе, используемом в Kubernetes-рабочей нагрузке.  
-Подробности доступны в [официальной документации Trivy Operator](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/vulnerability-report/).
+[`VulnerabilityReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/vulnerability-report/) — объект, содержащий отчёт об уязвимостях, обнаруженных в контейнерном образе, используемом в Kubernetes-рабочей нагрузке.  
 
 Отчёт включает список известных уязвимостей в пакетах операционной системы и приложениях, сгруппированных по уровням серьёзности (Critical, High, Medium и т.д.).
 
@@ -82,8 +81,7 @@ report:
 
 ### ConfigAuditReport
 
-`ConfigAuditReport` — объект, содержащий результаты проверки конфигурации Kubernetes-объекта с помощью инструментов аудита, таких как Trivy.  
-Подробнее — в [официальной документации Trivy Operator](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/configaudit-report/).
+[`ConfigAuditReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/configaudit-report/) — объект, содержащий результаты проверки конфигурации Kubernetes-объекта с помощью инструментов аудита, таких как Trivy.  
 
 Отчёт включает список замечаний к конфигурации, сгруппированных по категориям (например, Security) и уровням серьёзности (Critical, High и т.д.).
 
