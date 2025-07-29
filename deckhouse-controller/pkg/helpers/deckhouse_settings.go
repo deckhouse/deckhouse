@@ -82,9 +82,10 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings, metricStor
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
-	metricStorage.Grouped().ExpireGroupMetrics(telemetry.WrapName("is_experimental_modules_enabled"))
 	if c.settings.AllowExperimentalModules {
 		metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
+	} else {
+		metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 0.0, map[string]string{"module": "deckhouse-controller"})
 	}
 }
 
