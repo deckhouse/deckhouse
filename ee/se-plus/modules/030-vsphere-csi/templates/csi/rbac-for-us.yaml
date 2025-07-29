@@ -8,7 +8,7 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:cloud-provider-vsphere:csi
+  name: d8:vsphere-csi:csi
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: [""]
@@ -72,7 +72,7 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:cloud-provider-vsphere:csi
+  name: d8:vsphere-csi:csi
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
@@ -81,6 +81,6 @@ subjects:
   namespace: d8-{{ .Chart.Name }}
 roleRef:
   kind: ClusterRole
-  name: d8:cloud-provider-vsphere:csi
+  name: d8:vsphere-csi:csi
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
