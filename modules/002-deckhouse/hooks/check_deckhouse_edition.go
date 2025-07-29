@@ -67,9 +67,11 @@ func handleModuleConfigWrap() func(*go_hook.HookInput) error {
 	// skip check for dev
 	versionContent, readErr := os.ReadFile("/deckhouse/version")
 
-	version := strings.TrimSuffix(string(versionContent), "\n")
-	if version == "dev" {
-		return func(_ *go_hook.HookInput) error { return nil }
+	if readErr == nil {
+		version := strings.TrimSuffix(string(versionContent), "\n")
+		if version == "dev" {
+			return func(_ *go_hook.HookInput) error { return nil }
+		}
 	}
 
 	return func(input *go_hook.HookInput) error {
