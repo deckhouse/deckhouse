@@ -95,10 +95,7 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	imageOptions := make([]remote.Option, 0)
 	if !c.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
-		imageOptions = append(imageOptions, remote.WithTransport(metrics.MetricRoundTripper{
-			Next: remote.DefaultTransport,
-			MS:   c.metricStorage,
-		}))
+		imageOptions = append(imageOptions, metrics.RoundTripperRemoteOption(c.metricStorage))
 	}
 
 	imageOptions = append(imageOptions, remote.WithContext(ctx))

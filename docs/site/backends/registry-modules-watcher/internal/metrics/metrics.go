@@ -7,6 +7,7 @@ import (
 
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 const (
@@ -28,9 +29,16 @@ func RegisterMetrics(ms *metricstorage.MetricStorage) error {
 	return nil
 }
 
+func RoundTripperRemoteOption(ms *metricstorage.MetricStorage) remote.Option {
+	return remote.WithTransport(MetricRoundTripper{
+		Next:          remote.DefaultTransport,
+		MetricStorage: ms,
+	})
+}
+
 type MetricRoundTripper struct {
-	Next http.RoundTripper
-	MS   *metricstorage.MetricStorage
+	Next          http.RoundTripper
+	MetricStorage *metricstorage.MetricStorage
 }
 
 func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -42,8 +50,8 @@ func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	// After request
 	requestTime := time.Now().Unix() - timeBeforeRequest
-	l.MS.HistogramObserve(RegistryRequestTimeMetric, float64(requestTime), map[string]string{"status_code": resp.Status}, []float64{0.5, 0.95, 0.99})
-	l.MS.GaugeAdd(RegistryRequestsCount, 1.0, map[string]string{})
+	l.MetricStorage.HistogramObserve(RegistryRequestTimeMetric, float64(requestTime), map[string]string{"status_code": resp.Status}, []float64{0.5, 0.95, 0.99})
+	l.MetricStorage.GaugeAdd(RegistryRequestsCount, 1.0, map[string]string{})
 
 	return resp, err
 }
