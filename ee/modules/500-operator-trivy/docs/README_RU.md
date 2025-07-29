@@ -17,16 +17,20 @@ description: Периодическое сканирование на уязви
 kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 ```
 
-С результаты сканирования можно ознакомиться в:
-Grafana Dashboard:
-  -  `Security/Trivy Image Vulnerability Overview` - сводка по найденным уязвимостям в ресурсах кластера
-  -  `Security/CIS Kubernetes Benchmark` - информация о соответствии кластером требованиям CIS Kubernetes Benchmark
+## Где просматривать результаты сканирования
+
+В Grafana:
+
+- `Security/Trivy Image Vulnerability Overview` — сводный обзор уязвимостей в образах и ресурсах кластера.
+- `Security/CIS Kubernetes Benchmark` — результаты проверки соответствия кластера требованиям CIS Kubernetes Benchmark.
+
 В ресурсах кластера:
-  - Отчеты о безопасности кластера:
-    - [`ClusterComplianceReport`](trivy-cr.html#clustercompliancereport)
-    - [`RbacAssessmentReport`](trivy-cr.html#rbacassessmentreport)
-  - Отчеты о безопасности ресурсов кластера:
-    - [`VulnerabilityReport`](trivy-cr.html#vulnerabilityreport)
-    - [`SbomReport`](trivy-cr.html#sbomreport)
-    - [`ConfigAuditReport`](trivy-cr.html#configauditreport)
-    - [`ExposedSecretReport`](trivy-cr.html#exposedsecretreport)
+
+- Отчеты о безопасности кластера:
+  - [`ClusterComplianceReport`](trivy-cr.html#clustercompliancereport)
+  - [`RbacAssessmentReport`](trivy-cr.html#rbacassessmentreport)
+- Отчеты о безопасности ресурсов кластера:
+  - [`VulnerabilityReport`](trivy-cr.html#vulnerabilityreport) — уязвимости в образах контейнеров;
+  - [`SbomReport`](trivy-cr.html#sbomreport) — состав ПО в образах (SBOM);
+  - [`ConfigAuditReport`](trivy-cr.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
+  - [`ExposedSecretReport`](trivy-cr.html#exposedsecretreport) — утечки секретов в контейнерах.

@@ -2,17 +2,22 @@
 title: "Модуль operator-trivy: Custom Resources (от aquasecurity.github.io)"
 ---
 
-## Безопасность ресурсов кластера
+## Object-level security
 
 ### VulnerabilityReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/vulnerability-report/)
+`VulnerabilityReport` is a resource that contains a report on vulnerabilities found in a container image used in a Kubernetes workload.  
+Details are available in the [official Trivy Operator documentation](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/vulnerability-report/).
 
-`VulnerabilityReport` представляет собой список последних уязвимостей, обнаруженных в образе контейнера заданной рабочей нагрузки Kubernetes. 
-Он состоит из списка уязвимостей пакетов ОС и приложений с краткой сводкой уязвимостей, сгруппированных по уровню серьёзности. Для многоконтейнерной рабочей нагрузки trivy-operator создаёт несколько экземпляров VulnerabilityReport в пространстве имён рабочей нагрузки, при этом ссылка владельца указывает на эту рабочую нагрузку.   
-Каждый отчёт следует соглашению об именовании: `<вид рабочей нагрузки>-<имя рабочей нагрузки>-<имя контейнера>`
+The report includes a list of known vulnerabilities in OS packages and application dependencies, grouped by severity levels (Critical, High, Medium, etc.).
 
-Пример:
+For each container in a multi-container workload, `operator-trivy` creates a separate `VulnerabilityReport` in the corresponding namespace.  
+The link to the Kubernetes object is established via the `ownerReference` field.
+
+Resource names follow the pattern: `<workload type>-<workload name>-<container name>`
+
+Example:
+
 ```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: VulnerabilityReport
@@ -25,21 +30,20 @@ metadata:
     trivy-operator.resource.name: nginx-6d4cf56db6
     trivy-operator.resource.namespace: default
     resource-spec-hash: 7cb64cb677
-  uid: 8aa1a7cb-a319-4b93-850d-5a67827dfbbf
   ownerReferences:
     - apiVersion: apps/v1
-      blockOwnerDeletion: false
-      controller: true
       kind: ReplicaSet
       name: nginx-6d4cf56db6
       uid: aa345200-cf24-443a-8f11-ddb438ff8659
+      controller: true
+      blockOwnerDeletion: false
 report:
   artifact:
     repository: library/nginx
     tag: '1.16'
   os:
     family: debian
-    name:   '10.3'
+    name: '10.3'
   registry:
     server: index.docker.io
   scanner:
@@ -49,41 +53,53 @@ report:
   summary:
     criticalCount: 2
     highCount: 0
-    lowCount: 0
     mediumCount: 0
+    lowCount: 0
     unknownCount: 0
   vulnerabilities:
-    - fixedVersion: 0.9.1-2+deb10u1
-      installedVersion: 0.9.1-2
-      links: []
-      primaryLink: 'https://avd.aquasec.com/nvd/cve-2019-20367'
+    - vulnerabilityID: CVE-2019-20367
       resource: libbsd0
-      score: 9.1
+      installedVersion: 0.9.1-2
+      fixedVersion: 0.9.1-2+deb10u1
       severity: CRITICAL
+      score: 9.1
       target: library/nginx:1.21.6
-      title: ''
-      vulnerabilityID: CVE-2019-20367
-    - fixedVersion: ''
-      installedVersion: 0.6.1-2
-      links: []
-      primaryLink: 'https://avd.aquasec.com/nvd/cve-2018-25009'
+      primaryLink: https://avd.aquasec.com/nvd/cve-2019-20367
+    - vulnerabilityID: CVE-2018-25009
       resource: libwebp6
-      score: 9.1
+      installedVersion: 0.6.1-2
+      fixedVersion: ''
       severity: CRITICAL
+      score: 9.1
       target: library/nginx:1.16
       title: 'libwebp: out-of-bounds read in WebPMuxCreateInternal'
-      vulnerabilityID: CVE-2018-25009
+      primaryLink: https://avd.aquasec.com/nvd/cve-2018-25009
 ```
+
 ### ConfigAuditReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/configaudit-report/)
+`ConfigAuditReport` is a resource that contains the results of a configuration audit of a Kubernetes object using tools such as Trivy.  
+See more in the [official Trivy Operator documentation](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/configaudit-report/).
 
-`ConfigAuditReport` представляет собой проверку конфигурации объекта Kubernetes, выполняемую инструментами аудита конфигурации, такими как Trivy.  
-Примерами проверок являются настройка образа контейнера для запуска от имени пользователя без прав root или проверка наличия у контейнера запросов на ресурсы и ограничений. Проверки могут относиться к рабочим нагрузкам Kubernetes и другим объектам Kubernetes в пространстве имён, таким как Services, ConfigMaps, Roles и RoleBindings.
+The report includes a list of configuration issues grouped by categories (e.g., Security) and severity levels (Critical, High, etc.).
 
-Каждый отчёт принадлежит базовому объекту Kubernetes и хранится в том же пространстве имён, следуя соглашению об именовании `<вид_рабочей_нагрузки>-<имя_рабочей_нагрузки>`.
+Examples of checks include:
 
-Пример:
+- running a container as a non-root user;
+- defining resource requests and limits for containers;
+- configuring network access (hostNetwork, hostPID, etc.);
+- setting security flags to prevent privilege escalation.
+
+`ConfigAuditReport` can be created for any namespaced resource, including:
+
+- workloads (`Pod`, `Deployment`, `StatefulSet`, etc.);
+- auxiliary resources (`Service`, `ConfigMap`, `Role`, `RoleBinding`, etc.).
+
+Each report is linked to the audited object via `ownerReference` and stored in the same namespace.  
+Resource names follow the pattern: `<workload type>-<workload name>`
+
+Example:
+
 ```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: ConfigAuditReport
@@ -94,18 +110,11 @@ metadata:
     trivy-operator.resource.kind: ReplicaSet
     trivy-operator.resource.name: nginx-6d4cf56db6
     trivy-operator.resource.namespace: default
-    plugin-config-hash: 7f65d98b75
-    resource-spec-hash: 7cb64cb677
-  uid: d5cf8847-c96d-4534-beb9-514a34230302
   ownerReferences:
     - apiVersion: apps/v1
-      blockOwnerDeletion: false
-      controller: true
       kind: ReplicaSet
       name: nginx-6d4cf56db6
-      uid: aa345200-cf24-443a-8f11-ddb438ff8659
 report:
-  updateTimestamp: '2021-05-20T12:38:10Z'
   scanner:
     name: Trivy 
     vendor: Aqua Security
@@ -113,78 +122,50 @@ report:
   summary:
     criticalCount: 2
     highCount: 0
-    lowCount: 9
     mediumCount: 0
+    lowCount: 9
   checks:
-    - category: Security
-      checkID: hostPIDSet
-      messages:
-        - Host PID is not configured
+    - checkID: hostPIDSet
       severity: CRITICAL
+      messages: ["Host PID is not configured"]
       success: true
-    - category: Security
-      checkID: hostIPCSet
-      messages:
-        - Host IPC is not configured
-      severity: CRITICAL
-      success: true
-    - category: Security
-      checkID: hostNetworkSet
-      messages:
-        - Host network is not configured
+    - checkID: notReadOnlyRootFilesystem
       severity: LOW
-      success: true
-    - category: Security
-      checkID: notReadOnlyRootFilesystem
-      messages:
-        - Filesystem should be read only
+      messages: ["Filesystem should be read only"]
+      success: false
       scope:
         type: Container
         value: nginx
-      severity: LOW
-      success: false
-    - category: Security
-      checkID: privilegeEscalationAllowed
-      messages:
-        - Privilege escalation should not be allowed
-      scope:
-        type: Container
-        value: nginx
-      severity: CRITICAL
-      success: false
 ```
+
 ### ExposedSecretReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/exposedsecret-report/)  
+[`ExposedSecretReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/exposedsecret-report/) is a report on potential secrets discovered in a container image used in a Kubernetes workload.
 
-`ExposedSecretReport` представляет секреты, найденные в образе контейнера заданной рабочей нагрузки Kubernetes.  
-Он состоит из списка раскрытых секретов с краткой информацией, сгруппированной по уровню важности.  
-Для многоконтейнерной рабочей нагрузки оператор Trivy создаст несколько экземпляров `ExposedSecretsReports` в пространстве имен рабочей нагрузки со ссылкой на владельца, заданной на эту рабочую нагрузку. Каждый отчет следует следующему соглашению об именовании: `<вид рабочей нагрузки>-<имя рабочей нагрузки>-<имя контейнера>`.
+The report lists strings that contain sensitive data (e.g., tokens, keys, passwords) found in files within the image. Each finding includes a category, rule ID, severity level, and file path.
 
-Пример: 
+For each container in a multi-container workload, `operator-trivy` creates a separate `ExposedSecretReport` in the workload’s namespace.  
+The report is linked to the workload via the `ownerReference`.
+
+Resource names follow the pattern: `<workload type>-<workload name>-<container name>`
+
+Example:
+
 ```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: ExposedSecretReport
 metadata:
-  creationTimestamp: "2022-06-29T14:25:54Z"
-  generation: 2
+  name: replicaset-app-67b77f5965-app
+  namespace: default
   labels:
-    resource-spec-hash: 8495697ff5
     trivy-operator.container.name: app
     trivy-operator.resource.kind: ReplicaSet
     trivy-operator.resource.name: app-67b77f5965
     trivy-operator.resource.namespace: default
-  name: replicaset-app-67b77f5965-app
-  namespace: default
   ownerReferences:
-  - apiVersion: apps/v1
-    blockOwnerDeletion: false
-    controller: true
-    kind: ReplicaSet
-    name: app-67b77f5965
-    uid: 04a744fe-1126-42d5-bb8b-0917bdb51a28
-  resourceVersion: "1420"
-  uid: 2b2697bb-d528-4d4d-8312-a74dcab6ac65
+    - apiVersion: apps/v1
+      kind: ReplicaSet
+      name: app-67b77f5965
 report:
   artifact:
     repository: myimagewithsecret
@@ -196,35 +177,40 @@ report:
     vendor: Aqua Security
     version: 0.35.0
   secrets:
-  - category: Stripe
-    match: 'publishable_key: *****'
-    ruleID: stripe-access-token
-    severity: HIGH
-    target: "/app/config/secret.yaml"
-    title: Stripe
-  - category: Stripe
-    match: 'secret_key: *****'
-    ruleID: stripe-access-token
-    severity: HIGH
-    target: "/app/config/secret.yaml"
-    title: Stripe
+    - category: Stripe
+      ruleID: stripe-access-token
+      severity: HIGH
+      target: "/app/config/secret.yaml"
+      match: "publishable_key: *****"
+      title: Stripe
+    - category: Stripe
+      ruleID: stripe-access-token
+      severity: HIGH
+      target: "/app/config/secret.yaml"
+      match: "secret_key: *****"
+      title: Stripe
   summary:
     criticalCount: 0
     highCount: 2
-    lowCount: 0
     mediumCount: 0
+    lowCount: 0
   updateTimestamp: "2022-06-29T14:29:37Z"
 ```
 
 ### SbomReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/sbom-report/)
+[`SbomReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/sbom-report/) is a report containing the SBOM (Software Bill of Materials) for a container image used in a Kubernetes workload.
 
-Экземпляр SbomReport представляет собой последний SBOM (Software Bill of Materials), найденный в образе контейнера заданной рабочей нагрузки Kubernetes.  
-Он состоит из списка пакетов ОС и спецификаций приложений со сводкой компонентов и зависимостей. Для многоконтейнерной рабочей нагрузки trivy-operator создает несколько экземпляров SbomReports в пространстве имен рабочей нагрузки, при этом ссылка владельца указывает на эту рабочую нагрузку.  
-Каждый отчет следует соглашению об именовании: `<вид рабочей нагрузки>-<имя рабочей нагрузки>-<имя контейнера>.`
+It lists all software components, including OS packages and application dependencies found in the container.  
+This information is useful for analyzing image contents, performing security audits, and ensuring compliance with vendor requirements.
 
-Пример:
+For a multi-container workload, `trivy-operator` creates a separate `SbomReport` for each container.  
+The report is stored in the same namespace as the workload and linked via the `ownerReference`.
+
+Resource names follow the pattern: `<workload type>-<workload name>-<container name>`
+
+Example:
+
 ```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: SbomReport
@@ -384,15 +370,24 @@ report:
     dependenciesCount: 5
   updateTimestamp: "2023-07-10T09:37:21Z
 ```
-## Безопасность кластера
+
+## Cluster-level security
 
 ### RbacAssessmentReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/rbacassessment-report/)
+[`RbacAssessmentReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/rbacassessment-report/) is a report based on the analysis of RBAC (Role-Based Access Control) settings in the Kubernetes cluster.
 
-`RbacAssessmentReport` представляет проверки, выполненные инструментами аудита конфигурации по оценке Kubernetes RBAC. Например, проверяет, что заданная роль не предоставляет доступ к секретам всхе групп
+It includes results of checks performed by configuration audit tools such as Trivy.  
+Examples of checks include identifying roles that:
 
-Каждый отчёт принадлежит базовому объекту Kubernetes и хранится в том же пространстве имён, следуя соглашению об именовании `<Role>-<role-name>`.
+- grant excessive privileges (e.g., full access to secrets across all API groups);
+- violate the principle of least privilege.
+
+Each report is associated with a specific `Role` or `ClusterRole` and is stored in the same namespace as the audited object.
+
+Resource names follow the pattern: `<Role|ClusterRole>-<role name>`
+
+Example:
 
 ```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
@@ -552,23 +547,20 @@ report:
   updateTimestamp: null
 ```
 
-
 ### ClusterComplianceReport
 
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/clustercompliance-report/)
+[`ClusterComplianceReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/clustercompliance-report/) is a cluster-wide resource that contains a summary report on cluster compliance with security requirements.
 
+Currently, it supports compliance checks against the [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) — a set of best practices for secure Kubernetes configuration.
 
-`ClusterComplianceReport` — это cluster-wide ресурс, содержащий последние результаты проверок соответствия кластера требованиям информационной безопасности. 
-На данный момент поддержано  проверка соответствия требованиям [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes).
+Report structure:
 
-Структура отчета:
+- `spec.compliance.controls` — defines the compliance checks.
+- `status` — contains the results of the checks defined in `spec`. Results are based on reports from various security scanners.
 
-`spec.compliance.controls`: представляет описание проверки
-`status`: представляет результаты проверок (согласно `spec`), извлеченные из отчетов сканеров безопасности.
+> The results of this report can also be viewed in the Grafana dashboard `Security / CIS Kubernetes Benchmark`.
 
-> Данный отчет также можно посмотреть в Grafana Dashboard `Security/CIS Kubernetes Benchmark`
-
-Пример отчета (фрагмент):
+Example:
 
 ```yaml 
 apiVersion: aquasecurity.github.io/v1alpha1
@@ -604,16 +596,3 @@ spec:
     passCount: 107
   updateTimestamp: "2025-07-29T06:00:00Z"
 ```
-
-<!-- ### InfraAssessmentReport
-
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/infraassessment-report/)
-Этих объектов почему-то нет
--->
-
-<!-- ### ClusterVulnerabilityReport
-Этого объекта тоже нет
-
-[Reference](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/clustervulnerability-report/)
-
-`ClusterVulnerabilityReport` содержит информацию о последних уязвимостях, обнаруженных в плоскости управления и компонентах узлов кластера Kubernetes. Он содержит список уязвимостей плоскости управления и компонентов узлов с кратким описанием уязвимостей, сгруппированных по уровню серьёзности. ClusterVulnerabilityReports основаны на CVE из рекомендаций по уязвимостям K8s. -->
