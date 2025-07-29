@@ -1630,8 +1630,8 @@ entries:
                     ru: FAQ
                   url: /modules/operator-trivy/faq.html
                 - title:
-                    en: "Custom Resources (by aquasecurity.github.io)"
-                    ru: "Custom Resources (от aquasecurity.github.io)"
+                    en: "Custom Resources"
+                    ru: "Custom Resources"
                   url: /modules/operator-trivy/trivy-cr.html                  
     - title:
         en: Storage
