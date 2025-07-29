@@ -215,13 +215,43 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		countToApprove := concurrency - currentUpdates
 		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
-		for _, ngn := range nodeGroupNodes {
-			if ngn.IsWaitingForApproval {
-				approvedNodes[ngn] = struct{}{}
-				if len(approvedNodes) == countToApprove {
+
+		//     Allow one node, if 100% nodes in NodeGroup are ready
+		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
+			var allReady = true
+			for _, ngn := range nodeGroupNodes {
+				if !ngn.IsReady {
+					allReady = false
 					break
 				}
 			}
+
+			if allReady {
+				for _, ngn := range nodeGroupNodes {
+					if ngn.IsWaitingForApproval {
+						approvedNodes[ngn] = struct{}{}
+						if len(approvedNodes) == countToApprove {
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if len(approvedNodes) < countToApprove {
+			//    Allow one of not ready nodes, if any
+			for _, ngn := range nodeGroupNodes {
+				if !ngn.IsReady && ngn.IsWaitingForApproval {
+					approvedNodes[ngn] = struct{}{}
+					if len(approvedNodes) == countToApprove {
+						break
+					}
+				}
+			}
+		}
+
+		if len(approvedNodes) == 0 {
+			continue
 		}
 
 		for approvedNode := range approvedNodes {
