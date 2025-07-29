@@ -25,6 +25,7 @@ import (
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	handler "registry-modules-watcher/internal/http"
+	"registry-modules-watcher/internal/metrics"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
@@ -59,6 +60,10 @@ func main() {
 	// * * * * * * * * *
 	// Metric storage
 	metricStorage := metricstorage.NewMetricStorage("watcher")
+	err := metrics.RegisterMetrics(metricStorage)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
 	// metricStorage.HistogramObserve()
 
 	// * * * * * * * * *

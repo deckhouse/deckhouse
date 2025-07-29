@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
+	"registry-modules-watcher/internal/metrics"
 	"time"
 
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -107,8 +108,8 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	)
 
 	requestTime := time.Now().Unix() - timeBeforeRequest
-	c.metricStorage.HistogramObserve("registry_request_time", float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
-	c.metricStorage.GaugeAdd("registry_requests_count", 1.0, map[string]string{})
+	c.metricStorage.HistogramObserve(metrics.RegistryRequestTimeMetric, float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
+	c.metricStorage.GaugeAdd(metrics.RegistryRequestsCount, 1.0, map[string]string{})
 
 	return image, err
 }
