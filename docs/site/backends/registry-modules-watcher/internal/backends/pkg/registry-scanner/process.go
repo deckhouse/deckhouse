@@ -140,6 +140,14 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		}
 	}
 
+	// Check if we can reuse tar file from another release with same digest
+	if versionInfo, found := s.cache.GetVersionInfoByDigest(releaseDigest); found {
+		s.logger.Info("reusing tar file by digest", slog.String("module", module), slog.String("digest", releaseDigest[:12]))
+		versionData.TarFile = versionInfo.TarFile
+		versionData.Version = versionInfo.Version
+		return versionData, nil
+	}
+
 	// Only download image if cache miss
 	s.logger.Info("cache miss, downloading image", slog.String("module", module), slog.String("channel", releaseChannel))
 	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
