@@ -79,7 +79,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627a
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
-from: dev-registry.deckhouse.io/base_images@sha256:ab69c3c44e9f54aa5c798e7a6ca7d7015b31d6c0248c05562e1c63aa08fbedab
+from: dev-registry.deckhouse.io/base_images@sha256:21954c21efadd332e4eebeff0598071db052a73c76214c64e5adb7a416d8b4cc
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
@@ -261,7 +261,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-07-28.1"
+fromCacheVersion: "2025-07-29.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
