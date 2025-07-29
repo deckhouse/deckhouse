@@ -1,5 +1,5 @@
 ---
-title: "Module operator-trivy: Custom Resources"
+title: "The operator-trivy module: Custom Resources"
 ---
 
 The `operator-trivy` module uses a set of custom resources developed by the [Trivy Operator project from Aqua Security](https://aquasecurity.github.io/trivy-operator/) to represent vulnerability scan results, configuration audits, and cluster compliance checks.
