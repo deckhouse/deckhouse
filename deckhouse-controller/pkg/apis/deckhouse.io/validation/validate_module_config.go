@@ -123,6 +123,9 @@ func moduleConfigValidationHandler(
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
+			if IsExperimental {
+				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})
+			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
 
