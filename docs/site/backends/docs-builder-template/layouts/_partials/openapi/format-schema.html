@@ -8,6 +8,7 @@
 {{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
 {{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
 {{ $required  := .required }} {{/* Array of the required parameters. */}}
+{{ $mode := .mode}}
 
 {{- $description :=  "" }}
 
@@ -95,7 +96,7 @@
   {{- range $subParameterName, $subParameterAttributes := $data.properties }}
     {{- $subParameterLangData := index $langData.properties $subParameterName }}
 
-    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters ) }}
+    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters "mode" $mode) }}
   {{ end }}
   </ul>
 {{- else if and (reflect.IsMap $data) $data.items }}
@@ -104,7 +105,7 @@
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
       {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
-      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "mode" $mode) }}
     {{- end }}
     </ul>
   {{- else }}{{/* Array of non-objects (string, integer, etc.) */}}
@@ -116,7 +117,7 @@
 
     {{- if $keysToShowIsExist }}
       <ul>
-      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "mode" $mode) }}
       </ul>
     {{- end }}
 
