@@ -60,3 +60,7 @@ Upstream PR <https://github.com/cilium/cilium/pull/40246>.
 ## 011-add-least-conn-lb-algorithm.patch
 
 Added an implementation of the Least Connections load balancing algorithm.
+
+## 012-added-kernel-verifier-stats-logging.patch 
+
+Added kernel verifier stats logging on bpf prog loading
