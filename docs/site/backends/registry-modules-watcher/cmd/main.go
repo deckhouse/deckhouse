@@ -90,7 +90,7 @@ func main() {
 	for _, registry := range strings.Split(*registries, ",") {
 		logger.Info("watch modules", slog.String("source", registry))
 
-		client, err := registryclient.NewClient(registry,
+		client, err := registryclient.NewClient(registry, metricStorage,
 			registryclient.WithAuth(regsecretRaw),
 		)
 		if err != nil {

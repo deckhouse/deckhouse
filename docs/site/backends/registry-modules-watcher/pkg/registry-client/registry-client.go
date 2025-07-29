@@ -43,7 +43,7 @@ type client struct {
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo string, options ...Option) (registryscanner.Client, error) {
+func NewClient(repo string, metricStorage *metricsstorage.MetricStorage, options ...Option) (registryscanner.Client, error) {
 	opts := &registryOptions{}
 
 	for _, opt := range options {
@@ -51,8 +51,9 @@ func NewClient(repo string, options ...Option) (registryscanner.Client, error) {
 	}
 
 	client := &client{
-		registryURL: repo,
-		options:     opts,
+		registryURL:   repo,
+		metricStorage: metricStorage,
+		options:       opts,
 	}
 
 	if !opts.withoutAuth {
