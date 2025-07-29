@@ -69,7 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	f.RegisterCRD("instances.deckhouse.io", "deckhouse.io/v1alpha1", "Instance", true)
+	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
