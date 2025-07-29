@@ -1,3 +1,4 @@
+
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -26,9 +27,9 @@
 #####################################################################
 {{ $binariesFromALT := "" }}
 # from base install script
-{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### see what is it
+{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / simlink sh -> bash
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
 # clang dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
@@ -43,7 +44,7 @@
 # from bpftool-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }} #### problem with dynamic link
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -415,6 +416,18 @@ import:
   before: install
   add: /usr/lib/libmnl.so.0
   to: /usr/lib/libmnl.so.0
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
 git:
 {{- include "image mount points" . }}
 imageSpec:
