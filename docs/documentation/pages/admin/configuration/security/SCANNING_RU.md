@@ -70,11 +70,11 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 
 - `Security/Trivy Image Vulnerability Overview` — сводный обзор уязвимостей в образах и ресурсах кластера.
 
-  [!Пример дашборда в Grafana](../../images/trivy-image-vulnerability-dashboard.png)
+  ![Пример дашборда в Grafana](../../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
 - `Security/CIS Kubernetes Benchmark` — результаты проверки соответствия кластера требованиям CIS Kubernetes Benchmark.
 
-  [!Пример дашборда в Grafana](../../images/cis-kubernetes-benchmark-dashboard.png)
+  ![Пример дашборда в Grafana](../../../images/operator-trivy/cis-kubernetes-benchmark-dashboard.png)
 
 В ресурсах кластера:
 
@@ -683,3 +683,4 @@ spec:
     failCount: 9
     passCount: 107
   updateTimestamp: "2025-07-29T06:00:00Z"
+```
