@@ -1,4 +1,4 @@
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "none" }}
+{{- if ne .Values.vsphereCsi.internal.compatibilityFlag "none" }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver
