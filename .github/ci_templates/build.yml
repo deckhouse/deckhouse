@@ -59,6 +59,9 @@ steps:
   - name: Build and push deckhouse images
     id: build
     env:
+{!{- if eq $buildType "dev" }!}
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+{!{- end }!}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
