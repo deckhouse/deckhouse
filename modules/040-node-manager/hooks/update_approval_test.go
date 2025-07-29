@@ -1274,6 +1274,7 @@ metadata:
     node.deckhouse.io/group: master
 {{- if eq $nodeName $.DisruptionNode }}
   annotations:
+    update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- end }}
@@ -1301,6 +1302,7 @@ metadata:
     node.deckhouse.io/group: worker
 {{ if eq $nodeName $.DisruptionNode }}
   annotations:
+    update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- end }}
