@@ -9,7 +9,7 @@ spec:
   type: ClusterIP
   sessionAffinity: ClientIP
   ports:
-    - port: 443
+    - port: 8443
       name: https
       targetPort: https
   selector:
