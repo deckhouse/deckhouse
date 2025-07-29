@@ -19,7 +19,6 @@ import (
 	"fmt"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/metrics"
-	"time"
 
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -96,20 +95,18 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	imageOptions := make([]remote.Option, 0)
 	if !c.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
+		imageOptions = append(imageOptions, remote.WithTransport(metrics.MetricRoundTripper{
+			Next: remote.DefaultTransport,
+			MS:   c.metricStorage,
+		}))
 	}
 
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
-
-	timeBeforeRequest := time.Now().Unix()
 
 	image, err := remote.Image(
 		ref,
 		imageOptions...,
 	)
-
-	requestTime := time.Now().Unix() - timeBeforeRequest
-	c.metricStorage.HistogramObserve(metrics.RegistryRequestTimeMetric, float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
-	c.metricStorage.GaugeAdd(metrics.RegistryRequestsCount, 1.0, map[string]string{})
 
 	return image, err
 }
