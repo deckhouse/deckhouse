@@ -131,6 +131,7 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+        container.apparmor.security.beta.kubernetes.io/controller: unconfined
       {{- if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
@@ -168,6 +169,15 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add:
+            - SYS_ADMIN
+        {{- end }}
         env:
         - name: POD_NAME
           valueFrom:
@@ -181,6 +191,10 @@ spec:
           value: "127.0.0.1"
         {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
+          value: "true"
+        {{- end }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        - name: PROFILING
           value: "true"
         {{- end }}
         livenessProbe:
@@ -327,6 +341,11 @@ spec:
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
+{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        - name: valgrind
+          mountPath: /chroot/var/log/valgrind
+          readOnly: false
+{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
@@ -411,6 +430,12 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
+{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+      - name: valgrind
+        hostPath:
+          path: /var/log/valgrind
+          type: DirectoryOrCreate
+{{- end }}
 {{- end }}
 
 {{- $context := . }}

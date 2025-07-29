@@ -128,6 +128,17 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
+	_, found, err = unstructured.NestedBool(spec, "controllerNginxProfilingEnabled")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get controllerNginxProfilingEnabled from ingress controller spec: %v", err)
+	}
+	if !found {
+		err = unstructured.SetNestedField(spec, "false", "controllerNginxProfilingEnabled")
+		if err != nil {
+			return nil, fmt.Errorf("cannot set default controllerNginxProfilingEnabled in ingress controller spec: %v", err)
+		}
+	}
+
 	// Set validationEnabled to false if suspended annotation is present
 	metadata, _, err := unstructured.NestedMap(obj.Object, "metadata")
 	if err != nil {

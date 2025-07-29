@@ -15,4 +15,37 @@
 # limitations under the License.
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
-unshare  -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+
+timestamp=$(date +%Y%m%d_%H%M%S)
+logfile="/var/log/valgrind/memcheck.${timestamp}.log"
+
+if [[ "$PROFILING" == "true" ]]; then
+  echo "Profiling enabled"
+
+  echo "Drop NGINX capabilities"
+  nginxchroot="/chroot/usr/local/nginx/sbin/nginx"
+
+  if [ -z "$(getcap $nginxchroot)" ]; then
+    echo "No capabilities set, skipping removal"
+  else
+    setcap -r $nginxchroot
+  fi
+
+  echo "Mounting proc fs"
+  # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
+  mount -t proc /proc /chroot/proc
+
+  echo "Run profiling with Valgrind"
+  echo "The log will be written to a file $logfile"
+  unshare -R /chroot /usr/local/valgrind \
+    --trace-children=yes \
+    --log-file="$logfile" \
+    --tool=memcheck \
+    --leak-check=full \
+    --show-leak-kinds=all \
+    /usr/local/nginx/sbin/nginx "$@"
+
+else
+  echo "Regular mode"
+  unshare  -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+fi
