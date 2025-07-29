@@ -2,6 +2,10 @@
 title: "Модуль operator-trivy: Custom Resources (от aquasecurity.github.io)"
 ---
 
+Модуль `operator-trivy` использует набор кастомных ресурсов, разработанных проектом [Trivy Operator от Aqua Security](https://aquasecurity.github.io/trivy-operator/), для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.
+
+Ниже приведено описание ключевых CRD, создаваемых оператором, с примерами и ссылками на официальную документацию.
+
 ## Безопасность на уровне объектов
 
 ### VulnerabilityReport
@@ -561,7 +565,7 @@ report:
 
 Пример:
 
-```yaml 
+```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: ClusterComplianceReport
 metadata:

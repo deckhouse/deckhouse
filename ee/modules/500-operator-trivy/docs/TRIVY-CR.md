@@ -1,6 +1,10 @@
 ---
-title: "Модуль operator-trivy: Custom Resources (от aquasecurity.github.io)"
+title: "Модуль operator-trivy: Custom Resources"
 ---
+
+The `operator-trivy` module uses a set of custom resources developed by the [Trivy Operator project from Aqua Security](https://aquasecurity.github.io/trivy-operator/) to represent vulnerability scan results, configuration audits, and cluster compliance checks.
+
+Below is a description of the key CRDs created by the operator, including examples and links to the official documentation.
 
 ## Object-level security
 
@@ -562,7 +566,7 @@ Report structure:
 
 Example:
 
-```yaml 
+```yaml
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: ClusterComplianceReport
 metadata:
