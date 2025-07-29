@@ -273,10 +273,7 @@ func (c *Cache) calculateCacheSize() int64 {
 }
 
 func (c *Cache) layerDigestToPath(digest string) string {
-	// digest format is sha256:1234567....
-	// remove sha256: and convert to path
-	hash := digest[7:]
-	return filepath.Join(c.root, "packages", hash[:2], hash)
+	return filepath.Join(c.root, "packages", digest[:2], digest)
 }
 
 func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
