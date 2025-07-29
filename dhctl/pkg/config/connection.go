@@ -44,6 +44,7 @@ type SSHConfig struct {
 	SSHBastionUser      string               `json:"sshBastionUser,omitempty"`
 	SSHBastionPassword  string               `json:"sshBastionPassword,omitempty"`
 	SudoPassword        string               `json:"sudoPassword,omitempty"`
+	LegacyMode          bool                 `json:"legacyMode,omitempty"`
 }
 
 type SSHAgentPrivateKey struct {
@@ -203,6 +204,7 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHPort = port
 	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
 	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
+	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
 
 	return nil
 }
