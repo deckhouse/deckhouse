@@ -208,7 +208,6 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		if currentUpdates >= concurrency {
 			continue
 		}
-
 		// Skip ng, if it has no waiting nodes
 		if !hasWaitingForApproval {
 			continue
@@ -216,44 +215,17 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		countToApprove := concurrency - currentUpdates
 		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
-
-		if len(approvedNodes) < countToApprove {
-			for _, ngn := range nodeGroupNodes {
-				// IsDrained or IsDraining first
-				if (ngn.IsDrained || ngn.IsDraining) && ngn.IsWaitingForApproval {
-					approvedNodes[ngn] = struct{}{}
-					if len(approvedNodes) == countToApprove {
-						break
-					}
-				}
-			}
-		}
-
-		if len(approvedNodes) < countToApprove {
-			for _, ngn := range nodeGroupNodes {
-				// get !ngn.IsReady if it is below the limit
-				if !ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
-					approvedNodes[ngn] = struct{}{}
-					if len(approvedNodes) == countToApprove {
-						break
-					}
-				}
-			}
-		}
-
-		if len(approvedNodes) < countToApprove {
-			for _, ngn := range nodeGroupNodes {
-				if ngn.IsReady && !ngn.IsDrained && !ngn.IsDraining && ngn.IsWaitingForApproval {
-					approvedNodes[ngn] = struct{}{}
-					if len(approvedNodes) == countToApprove {
-						break
-					}
+		for _, ngn := range nodeGroupNodes {
+			if ngn.IsWaitingForApproval {
+				approvedNodes[ngn] = struct{}{}
+				if len(approvedNodes) == countToApprove {
+					break
 				}
 			}
 		}
 
 		for approvedNode := range approvedNodes {
-			ar.nodeApproved(input, approvedNode.Name, ng.Name)
+			ar.nodeApproved(input, &approvedNode)
 		}
 	}
 	return nil
@@ -320,11 +292,11 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
 			// If approvalMode == RollingUpdate simply delete machine
-			ar.nodeDeleteRollingUpdate(input, node.Name, ng.Name)
+			ar.nodeDeleteRollingUpdate(input, &node)
 		} else if !ar.needDrainNode(input, &node, &ng) || node.IsDrained {
-			ar.nodeDisruptionApproved(input, node.Name, ng.Name)
+			ar.nodeDisruptionApproved(input, &node)
 		} else if !node.IsUnschedulable {
-			ar.nodeDraining(input, node.Name, ng.Name)
+			ar.nodeDraining(input, &node)
 		}
 	}
 
@@ -346,70 +318,61 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 
 		nodeChecksum := node.ConfigurationChecksum
 		ngName := node.NodeGroup
-
 		ngChecksum := ar.ngChecksums[ngName]
 
 		if nodeChecksum == "" || ngChecksum == "" {
 			continue
 		}
-
 		if nodeChecksum != ngChecksum {
 			continue
 		}
-
 		if !node.IsReady {
 			continue
 		}
 
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"update.node.deckhouse.io/approved":             nil,
-					"update.node.deckhouse.io/waiting-for-approval": nil,
-					"update.node.deckhouse.io/disruption-required":  nil,
-					"update.node.deckhouse.io/disruption-approved":  nil,
-					drainedAnnotationKey:                            nil,
-				},
-			},
-		}
-		if node.IsDrained {
-			patch["spec"] = map[string]interface{}{
-				"unschedulable": nil,
-			}
-		}
-		input.Logger.Info("processUpdatedNodes UpToDate", slog.String("node", node.Name), slog.String("ng", ngName))
-		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
-		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
-		ar.finished = true
+		ar.nodeUpToDate(input, &node)
 	}
 
 	return nil
 }
 
-func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, nodeName, nodeNg string) {
-	input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", nodeName), slog.String("ng", nodeNg))
-	input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", nodeName)
+func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApprovalNode) {
+	patch := UpToDatePatch
+	if node.IsDrained {
+		patch["spec"] = map[string]interface{}{
+			"unschedulable": nil,
+		}
+	}
+	input.Logger.Info("processUpdatedNodes UpToDate", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 	ar.finished = true
 }
 
-func (ar *updateApprover) nodeDisruptionApproved(input *go_hook.HookInput, nodeName, nodeNg string) {
-	input.Logger.Info("Node DisruptionApproved", slog.String("node", nodeName), slog.String("ng", nodeNg))
-	input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", nodeName)
-	setNodeStatusesMetrics(input, nodeName, nodeNg, "DisruptionApproved")
+func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
 	ar.finished = true
 }
 
-func (ar *updateApprover) nodeDraining(input *go_hook.HookInput, nodeName, nodeNg string) {
-	input.Logger.Info("Node Draining", slog.String("node", nodeName), slog.String("ng", nodeNg))
-	input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", nodeName)
-	setNodeStatusesMetrics(input, nodeName, nodeNg, "Draining")
+func (ar *updateApprover) nodeDisruptionApproved(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node DisruptionApproved", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(DisruptionApprovedPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DisruptionApproved")
 	ar.finished = true
 }
 
-func (ar *updateApprover) nodeApproved(input *go_hook.HookInput, nodeName, nodeNg string) {
-	input.Logger.Info("Node Approved", slog.String("node", nodeName), slog.String("ng", nodeNg))
-	input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", nodeName)
-	setNodeStatusesMetrics(input, nodeName, nodeNg, "Approved")
+func (ar *updateApprover) nodeDraining(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node Draining", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "Draining")
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeApproved(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node Approved", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "Approved")
 	ar.finished = true
 }
 
@@ -441,6 +404,17 @@ type updateNodeGroup struct {
 }
 
 var (
+	UpToDatePatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             nil,
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+				"update.node.deckhouse.io/disruption-required":  nil,
+				"update.node.deckhouse.io/disruption-approved":  nil,
+				drainedAnnotationKey:                            nil,
+			},
+		},
+	}
 	approvedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
