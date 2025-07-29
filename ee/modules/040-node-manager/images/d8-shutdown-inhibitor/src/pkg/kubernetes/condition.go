@@ -16,7 +16,11 @@ type Condition struct {
 }
 
 func ConditionFromJSON(condition []byte) (*Condition, error) {
-	if len(condition) == 0 || condition[0] != '{' {
+	if len(condition) == 0 {
+		return nil, nil
+	}
+
+	if condition[0] != '{' {
 		return nil, fmt.Errorf("expect condition as JSON object, got: %s", string(condition))
 	}
 
