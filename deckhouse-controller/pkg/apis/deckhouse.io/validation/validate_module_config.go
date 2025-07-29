@@ -147,7 +147,6 @@ func moduleConfigValidationHandler(
 				if IsExperimental && !allowExperimentalModules {
 					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
 				}
-
 			}
 
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
