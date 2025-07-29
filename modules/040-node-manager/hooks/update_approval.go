@@ -393,7 +393,6 @@ func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApp
 func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
 	input.Logger.Info("Delete instances due to RollingUpdate strategy", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
 	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "Instance", "", node.Name)
-	input.PatchCollector.PatchWithMerge(RollingUpdatePatch, "v1", "Node", "", node.Name)
 	ar.finished = true
 }
 
@@ -446,13 +445,6 @@ type updateNodeGroup struct {
 }
 
 var (
-	RollingUpdatePatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/rolling-update": "controler",
-			},
-		},
-	}
 	approvedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
