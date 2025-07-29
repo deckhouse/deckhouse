@@ -4,17 +4,17 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-    module: cloud-provider-vsphere
+    module: vsphere-csi
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-    rbac.deckhouse.io/namespace: d8-cloud-provider-vsphere
+    rbac.deckhouse.io/namespace: d8-vsphere-csi
   name: d8:manage:permission:module:cloud-provider-vsphere:edit
 rules:
 - apiGroups:
   - deckhouse.io
   resourceNames:
-  - cloud-provider-vsphere
+  - vsphere-csi
   resources:
   - moduleconfigs
   verbs:
