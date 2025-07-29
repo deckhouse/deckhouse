@@ -66,3 +66,7 @@ apiVersions:
         description: |
           A sudo password for the user.
         type: string
+      legacyMode:
+        description: |
+          Switch to legacy SSH mode
+        type: boolean
