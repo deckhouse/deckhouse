@@ -199,7 +199,7 @@ func (c *Cache) deleteFiles() {
 	files := c.getFileList()
 
 	for _, file := range files {
-		if _, ok := layerDigests[file]; ok {
+		if _, ok := layerDigests[filepath.Base(file)]; ok {
 			continue
 		}
 		stat, err := os.Stat(file)
