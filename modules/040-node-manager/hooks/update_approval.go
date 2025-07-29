@@ -261,10 +261,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			if approvedNode.IsDisruptionApproved && ng.Disruptions.ApprovalMode == "Automatic" && ar.needDrainNode(input, &approvedNode, &ng) {
 				if !approvedNode.IsDrained {
 					if !approvedNode.IsDraining {
-						input.Logger.Info("approveUpdates Draining", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
-						input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", approvedNode.Name)
-						setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Draining")
-						ar.finished = true
+						ar.nodeDraining(input, approvedNode.Name, ng.Name)
 					} else {
 						input.Logger.Info("approveUpdates is Drained wait", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
 					}
@@ -272,40 +269,11 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 				}
 			}
 
-			input.Logger.Info("approveUpdates Approved", slog.String("node", approvedNode.Name), slog.String("ng", ng.Name))
-			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNode.Name)
-			setNodeStatusesMetrics(input, approvedNode.Name, ng.Name, "Approved")
-			ar.finished = true
+			ar.nodeApproved(input,approvedNode.Name,ng.Name)
 		}
 	}
 	return nil
 }
-
-var (
-	approvedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             "",
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-			},
-		},
-	}
-	DisruptionApprovedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/disruption-approved": "",
-				"update.node.deckhouse.io/disruption-required": nil,
-			},
-		},
-	}
-	drainingPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				drainingAnnotationKey: "bashible",
-			},
-		},
-	}
-)
 
 func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
 	// we can not drain single control-plane node because deckhouse webhook will evict
@@ -439,6 +407,20 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 	return nil
 }
 
+func (ar *updateApprover) nodeDraining(input *go_hook.HookInput, nodeName, nodeNg string) {
+	input.Logger.Info("Node Draining", slog.String("node", nodeName), slog.String("ng", nodeNg))
+	input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", nodeName)
+	setNodeStatusesMetrics(input, nodeName, nodeNg, "Draining")
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeApproved(input *go_hook.HookInput, nodeName, nodeNg string) {
+	input.Logger.Info("Node Approved", slog.String("node", nodeName), slog.String("ng", nodeNg))
+	input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", nodeName)
+	setNodeStatusesMetrics(input, nodeName, nodeNg, "Approved")
+	ar.finished = true
+}
+
 type updateApprovalNode struct {
 	Name      string
 	NodeGroup string
@@ -465,6 +447,32 @@ type updateNodeGroup struct {
 
 	Concurrency *intstr.IntOrString
 }
+
+var (
+	approvedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             "",
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+			},
+		},
+	}
+	DisruptionApprovedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/disruption-approved": "",
+				"update.node.deckhouse.io/disruption-required": nil,
+			},
+		},
+	}
+	drainingPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainingAnnotationKey: "bashible",
+			},
+		},
+	}
+)
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng ngv1.NodeGroup
