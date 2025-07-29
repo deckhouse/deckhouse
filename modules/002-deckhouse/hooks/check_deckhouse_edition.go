@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -26,6 +27,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+var versionContent, _ = os.ReadFile("/deckhouse/version")
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -61,6 +64,12 @@ func validateEdition(edition string) bool {
 }
 
 func handleModuleConfig(input *go_hook.HookInput) error {
+	// skip check for dev
+	version := strings.TrimSuffix(string(versionContent), "\n")
+	if version == "dev" {
+		return nil
+	}
+
 	// set metrics on hook result
 	var found bool
 	defer func(found *bool) {
