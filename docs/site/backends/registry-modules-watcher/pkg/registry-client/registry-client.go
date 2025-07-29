@@ -100,12 +100,10 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
-	image, err := remote.Image(
+	return remote.Image(
 		ref,
 		imageOptions...,
 	)
-
-	return image, err
 }
 
 func (c *client) Modules(ctx context.Context) ([]string, error) {
