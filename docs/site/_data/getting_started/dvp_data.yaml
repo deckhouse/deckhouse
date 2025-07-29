@@ -32,9 +32,6 @@ installTypes:
     pages_title:
       en: "Deckhouse Virtualization Platform for bare metal"
       ru: "Deckhouse Virtualization Platform на bare metal"
-    gen_pages_title:
-      en: " for bare metal"
-      ru: " на bare metal"
     type: baremetal
     name:
       en: Bare metal
