@@ -33,6 +33,22 @@ resource "vcd_vapp_org_network" "vapp_network" {
   reboot_vapp_on_removal = true
 }
 
+module "bastion" {
+  source            = "../../../terraform-modules/bastion"
+  organization      = var.providerClusterConfiguration.organization
+  vdc_name          = var.providerClusterConfiguration.virtualDataCenter
+  prefix            = var.clusterConfiguration.cloud.prefix
+  vapp_name         = var.providerClusterConfiguration.virtualApplicationName
+  network_name      = var.providerClusterConfiguration.mainNetwork
+  ip_address        = var.providerClusterConfiguration.bastion.mainNetworkIPAddress
+  template          = var.providerClusterConfiguration.bastion.instanceClass.template
+  ssh_public_key    = var.providerClusterConfiguration.sshPublicKey
+  placement_policy  = var.providerClusterConfiguration.bastion.instanceClass.placementPolicy
+  storage_profile   = var.providerClusterConfiguration.bastion.instanceClass.storageProfile
+  sizing_policy     = var.providerClusterConfiguration.bastion.instanceClass.sizingPolicy
+  root_disk_size_gb = var.providerClusterConfiguration.bastion.instanceClass.rootDiskSizeGB
+}
+
 module "snat" {
   source                = "../../../terraform-modules/snat"
   organization          = var.providerClusterConfiguration.organization
@@ -45,6 +61,22 @@ module "snat" {
   external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
   external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
 }
+
+module "dnat_bastion" {
+  source                = "../../../terraform-modules/dnat"
+  organization          = var.providerClusterConfiguration.organization
+  rule_name_prefix      = format("%s-bastion", var.clusterConfiguration.cloud.prefix)
+  rule_description      = format("SSH DNAT rule for bastion of %s", var.providerClusterConfiguration.virtualApplicationName)
+  edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
+  edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
+  internal_network_name = var.providerClusterConfiguration.mainNetwork
+  internal_address      = module.bastion.bastion_ip_address_for_ssh
+  external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
+  external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
+  external_network_name = local.external_network_name
+  external_network_type = local.external_network_type
+}
+
 
 module "firewall" {
   count = local.create_default_firewall_rules ? 1 : 0
