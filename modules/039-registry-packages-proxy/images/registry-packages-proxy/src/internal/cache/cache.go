@@ -200,6 +200,7 @@ func (c *Cache) deleteFiles() {
 
 	for _, file := range files {
 		if _, ok := layerDigests[filepath.Base(file)]; ok {
+			c.logger.Info("file is in the cache, skipping", slog.String("path", file))
 			continue
 		}
 		stat, err := os.Stat(file)
