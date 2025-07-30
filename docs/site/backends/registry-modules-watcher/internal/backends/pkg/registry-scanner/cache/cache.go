@@ -59,9 +59,6 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 }
 
 func (c *Cache) GetCache() map[registryName]map[moduleName]moduleData {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
 	return c.val
 }
 

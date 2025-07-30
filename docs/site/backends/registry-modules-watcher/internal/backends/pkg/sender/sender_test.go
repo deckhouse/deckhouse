@@ -29,7 +29,7 @@ import (
 
 func TestSender(t *testing.T) {
 	logger := log.NewNop()
-	s := New(logger)
+	s := New(logger, nil)
 
 	MaxInterval = 10 * time.Millisecond
 

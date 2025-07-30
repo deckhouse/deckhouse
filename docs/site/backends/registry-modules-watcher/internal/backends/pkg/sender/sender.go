@@ -23,12 +23,14 @@ import (
 	"net/http"
 	neturl "net/url"
 	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var (
@@ -42,6 +44,7 @@ type Sender struct {
 	client *http.Client
 
 	logger *log.Logger
+	ms     *metricsstorage.MetricStorage
 }
 
 // New creates a new sender instance with the provided logger.
@@ -56,7 +59,7 @@ func (s *Sender) newBackOff() *backoff.ExponentialBackOff {
 
 // New creates a new sender instance with the provided logger.
 // It initializes an HTTP client with a custom transport.
-func New(logger *log.Logger) *Sender {
+func New(logger *log.Logger, ms *metricsstorage.MetricStorage) *Sender {
 	tr := &http.Transport{
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Second,
@@ -66,6 +69,7 @@ func New(logger *log.Logger) *Sender {
 	return &Sender{
 		client: client,
 		logger: logger,
+		ms:     ms,
 	}
 }
 
@@ -132,7 +136,17 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 	}
 
 	operation := func() error {
-		// do a metric
+		//before request
+		timeBeforeRequest := time.Now().UnixMilli()
+		// after request
+		defer func() {
+			timeAfterRequest := time.Now().UnixMilli()
+			requestTime := timeAfterRequest - timeBeforeRequest
+			s.ms.HistogramObserve(metrics.SenderDeleteRequestsMillisecondsMetric, float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
+			s.ms.HistogramObserve(metrics.SenderDeleteRequestsCountMetric, 1.0, map[string]string{}, []float64{0.5, 0.95, 0.99})
+		}()
+
+		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)

@@ -61,7 +61,7 @@ func main() {
 	// * * * * * * * * *
 	// Metric storage
 	metricStorage := metricstorage.NewMetricStorage("watcher")
-	err := metrics.RegisterMetrics(metricStorage)
+	err := metrics.RegisterMetrics(metricStorage, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -125,7 +125,7 @@ func main() {
 
 	// * * * * * * * * *
 	// New sender
-	sender := sender.New(logger.Named("sender"))
+	sender := sender.New(logger.Named("sender"), metricStorage)
 
 	// * * * * * * * * *
 	// New backends service
