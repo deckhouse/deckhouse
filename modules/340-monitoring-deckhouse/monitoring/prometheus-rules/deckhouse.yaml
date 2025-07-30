@@ -567,7 +567,7 @@
         ```
 
         Provided error: {{ $labels.error }}
-  - alert: D8DeckhouseMigratedModuleNotFound
+  - alert: DeckhouseMigratedModuleNotFound
     expr: d8_migrated_module_not_found == 1
     for: 30m
     labels:
@@ -602,7 +602,8 @@
         kubectl get modulesources -o yaml
         
         # Check available modules in all sources
-        deckhouse-controller registry get modules
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
         
         # Check Deckhouse logs for more details
         kubectl -n d8-system logs -f -l app=deckhouse

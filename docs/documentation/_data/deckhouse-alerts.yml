@@ -974,7 +974,7 @@ alerts:
         Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
       markupFormat: markdown
-    - name: D8DeckhouseMigratedModuleNotFound
+    - name: DeckhouseMigratedModuleNotFound
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
@@ -999,7 +999,8 @@ alerts:
         kubectl get modulesources -o yaml
 
         # Check available modules in all sources
-        deckhouse-controller registry get modules
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources 
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
 
         # Check Deckhouse logs for more details
         kubectl -n d8-system logs -f -l app=deckhouse
