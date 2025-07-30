@@ -14,6 +14,14 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-zlib-dev
+from: dev-registry.deckhouse.io/base_images@sha256:b12783f529c63559290502f4309bcf468864b86ba776254b604fc7b487238b24
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
+from: dev-registry.deckhouse.io/base_images@sha256:0b01a89c86aaea5f3e589367648504a645b14569bbe69fb23d254d3aa3aa2c45
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -35,9 +43,9 @@ import:
   add: /src
   to: /src
   before: install
-- image: libs/zlib
+- image: {{ .ModuleName }}/{{ .ImageName }}-zlib-dev
   add: /
-  to: /libs/zlib
+  to: /
   before: install
   includePaths:
     - usr/lib
@@ -46,9 +54,9 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: tools/elfutils
+- image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
   add: /
-  to: /tools/elfutils
+  to: /
   before: install
   includePaths:
     - usr/lib
