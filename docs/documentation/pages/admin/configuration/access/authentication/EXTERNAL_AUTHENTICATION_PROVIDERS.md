@@ -167,11 +167,11 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
   In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
   ```yaml
-      scopes:
-        - openid
-        - profile
-        - email_dkp
-        - groups
+  scopes:
+   - openid
+   - profile
+   - email_dkp
+   - groups
   ```
 
 #### Blitz Identity Provider

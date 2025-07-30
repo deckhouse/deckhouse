@@ -160,11 +160,11 @@ spec:
   В ресурсе DexProvider укажите параметр `insecureSkipEmailVerified: true` и в поле `.spec.oidc.scopes` замените название Client Scope на `email_dkp`, следуя примеру:
 
   ```yaml
-      scopes:
-        - openid
-        - profile
-        - email_dkp
-        - groups
+  scopes:
+   - openid
+   - profile
+   - email_dkp
+   - groups
   ```
 
 #### Blitz Identity Provider
