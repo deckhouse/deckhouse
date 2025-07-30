@@ -10,6 +10,6 @@ lang: ru
 [Глоссарий](glossary.html) содержит список терминов, используемых в Deckhouse Kubernetes Platform, и помогает понять контекст.
 
 Некоторые концепции Deckhouse Kubernetes Platform глубже раскрываются в отдельных статьях раздела:
-- [Модули](modules.html)
+<!-- - [Модули](modules.html) -->
 - [Проекты](projects.html)
 - [Ролевая модель](rbac.html)
