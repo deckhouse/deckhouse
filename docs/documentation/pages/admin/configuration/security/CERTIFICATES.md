@@ -49,8 +49,7 @@ DKP supports the following default certificate issuers (`ClusterIssuer`):
 - `selfsigned` — issues self-signed certificates.  
   Useful for internal services where external trust is not required.
 
-- `selfsigned-no-trust` — also issues self-signed certificates but without automatically adding the root certificate to the trust store.  
-  Suitable for manual trust management.
+- `selfsigned-no-trust` — also issues self-signed certificates but without automatically adding the root certificate to the trust store. Suitable for manual trust management.
 
 In some cases, additional types of `ClusterIssuer` may be needed:
 
@@ -60,19 +59,16 @@ In some cases, additional types of `ClusterIssuer` may be needed:
 
 ### Adding a ClusterIssuer with `DNS-01` validation via webhook
 
-To verify domain ownership with Let’s Encrypt using the `DNS-01` method,  
-the `cert-manager` module must be able to create TXT records in the DNS zone associated with the domain.
+To verify domain ownership with Let’s Encrypt using the `DNS-01` method, the `cert-manager` module must be able to create TXT records in the DNS zone associated with the domain.
 
 `cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.  
 A full list is available in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
-If your provider is not directly supported, you can configure a webhook and deploy a custom ACME handler in the cluster  
-that performs the necessary DNS record updates.
+If your provider is not directly supported, you can configure a webhook and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates.
 
 The following example is based on using Yandex Cloud DNS:
 
-1. To handle the webhook, deploy the `Yandex Cloud DNS ACME webhook` service in the cluster  
-   according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
+1. To handle the webhook, deploy the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
 
 1. Create a ClusterIssuer resource using the following example:
 
@@ -149,11 +145,9 @@ The following example is based on using Yandex Cloud DNS:
        secretName: internal-ca-key-pair    # Name of the created secret.
    ```
 
-You can now use the created ClusterIssuer to issue certificates
-for all DKP components or for a specific component.
+You can now use the created ClusterIssuer to issue certificates for all DKP components or for a specific component.
 
-For example, to use this ClusterIssuer for issuing certificates for all DKP components,
-set its name in the global parameter `clusterIssuerName`:
+For example, to use this ClusterIssuer for issuing certificates for all DKP components, set its name in the global parameter `clusterIssuerName`:
 
 ```yaml
   spec:
