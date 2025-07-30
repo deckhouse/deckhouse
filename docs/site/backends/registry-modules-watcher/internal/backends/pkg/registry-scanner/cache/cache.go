@@ -42,7 +42,7 @@ type versionData struct {
 
 type Cache struct {
 	m   sync.RWMutex
-	val map[registryName]map[moduleName]moduleData // do a metric gauge ModulesInCacheLen with registry name labels
+	val map[registryName]map[moduleName]moduleData
 }
 
 func New() *Cache {
@@ -56,6 +56,13 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	defer c.m.RUnlock()
 
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
+}
+
+func (c *Cache) GetCache() map[registryName]map[moduleName]moduleData {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	return c.val
 }
 
 func (c *Cache) GetReleaseChecksum(version *internal.VersionData) (string, bool) {

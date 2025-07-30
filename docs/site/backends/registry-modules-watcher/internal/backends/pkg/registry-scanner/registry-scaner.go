@@ -69,6 +69,10 @@ func (s *registryscanner) GetState() []backends.DocumentationTask {
 	return s.cache.GetState()
 }
 
+func (s *registryscanner) GetCache() *cache.Cache {
+	return s.cache
+}
+
 func (s *registryscanner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
 	s.updateHandler = updateHandler
 }

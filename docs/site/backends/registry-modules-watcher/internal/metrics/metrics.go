@@ -17,6 +17,7 @@ package metrics
 import (
 	"fmt"
 	"net/http"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"time"
 
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -25,8 +26,13 @@ import (
 )
 
 const (
-	RegistryRequestTimeMetric = "registry_request_time"
-	RegistryRequestsCount     = "registry_requests_count"
+	RegistryRequestTimeMetric        = "registry_request_time"
+	RegistryRequestsCountMetric      = "registry_requests_count"
+	RegistryScannerCacheLengthMetric = "registry_scanner_cache_length"
+)
+
+var (
+	DefaultBuckets = []float64{0.5, 0.95, 0.99}
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage) error {
@@ -35,9 +41,14 @@ func RegisterMetrics(ms *metricstorage.MetricStorage) error {
 		return fmt.Errorf("can not register registry_request_time: %w", err)
 	}
 
-	_, err = ms.RegisterGauge(RegistryRequestsCount, []string{}, options.WithHelp("Checks count of requests to registry"))
+	_, err = ms.RegisterGauge(RegistryRequestsCountMetric, []string{}, options.WithHelp("Checks count of requests to registry"))
 	if err != nil {
 		return fmt.Errorf("can not register registry_requests_count: %w", err)
+	}
+
+	_, err = ms.RegisterGauge(RegistryScannerCacheLengthMetric, []string{"registry"})
+	if err != nil {
+		return fmt.Errorf("can not register registry_scanner_cache_length: %w", err)
 	}
 
 	return nil
@@ -65,7 +76,25 @@ func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	// After request
 	requestTime := time.Now().Unix() - timeBeforeRequest
 	l.MetricStorage.HistogramObserve(RegistryRequestTimeMetric, float64(requestTime), map[string]string{"status_code": resp.Status}, []float64{0.5, 0.95, 0.99})
-	l.MetricStorage.GaugeAdd(RegistryRequestsCount, 1.0, map[string]string{})
+	l.MetricStorage.GaugeAdd(RegistryRequestsCountMetric, 1.0, map[string]string{})
 
 	return resp, err
+}
+
+func ObserveCache(ms *metricstorage.MetricStorage, cache *cache.Cache) {
+	cacheData := cache.GetCache()
+	for registry, module := range cacheData {
+		cacheLength := 0
+		for range module {
+			cacheLength++
+		}
+
+		ms.GaugeSet(
+			RegistryScannerCacheLengthMetric,
+			float64(len(module)),
+			map[string]string{
+				"registry": string(registry),
+			},
+		)
+	}
 }

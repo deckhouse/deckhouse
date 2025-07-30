@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+
 	"registry-modules-watcher/internal/backends"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
@@ -73,14 +74,22 @@ func main() {
 		Addr:    "localhost:8080",
 		Handler: h,
 	}
-	go srv.ListenAndServe()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("listen: %w", err)
+		}
+	}()
 
 	metricHandler := handler.NewMetricHandler(logger.Named("http-metrics"), metricStorage)
 	metricServer := &http.Server{
 		Addr:    "localhost:9090",
 		Handler: metricHandler,
 	}
-	go metricServer.ListenAndServe()
+	go func() {
+		if err := metricServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("listen: %w", err)
+		}
+	}()
 
 	// * * * * * * * * *
 	// dockerconfigjson
@@ -121,6 +130,23 @@ func main() {
 	// * * * * * * * * *
 	// New backends service
 	backends := backends.New(registryscanner, sender, logger)
+
+	// * * * * * * * * *
+	// New metric ticker
+	go func() {
+		// 30 second ticker
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				cache := registryscanner.GetCache()
+				metrics.ObserveCache(metricStorage, cache)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// * * * * * * * * *
 	// Init kube client
