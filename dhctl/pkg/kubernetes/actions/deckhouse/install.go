@@ -517,13 +517,12 @@ func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:                 cfg.GetImage(true),
-		LogLevel:                 cfg.LogLevel,
-		AllowExperimentalModules: cfg.AllowExperimentalModules,
-		Bundle:                   cfg.Bundle,
-		IsSecureRegistry:         cfg.IsRegistryAccessRequired(),
-		KubeadmBootstrap:         cfg.KubeadmBootstrap,
-		MasterNodeSelector:       cfg.MasterNodeSelector,
+		Registry:           cfg.GetImage(true),
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
 }
 
