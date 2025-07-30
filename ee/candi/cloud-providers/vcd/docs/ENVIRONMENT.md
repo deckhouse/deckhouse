@@ -18,7 +18,7 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 
 The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
-Network (internal network) can be configured either by your VMware Cloud Director service provider or manually by you. If you choose the `StandardWithNetwork` placement scheme, the network will be created automatically. The following section describes how to configure the internal network manually.
+Network (internal network) can be configured either by your VMware Cloud Director service provider or manually by you. If you choose the `WithNAT` placement scheme, the network will be created automatically. The following section describes how to configure the internal network manually.
 
 ### User permissions
 

@@ -477,7 +477,7 @@ apiVersions:
         - required: [layout, internalNetworkDNSServers, internalNetworkCIDR, edgeGateway, bastion]
           properties:
             layout:
-              enum: [StandardWithNetwork]
+              enum: [WithNAT]
               type: string
             edgeGateway:
               type: object
