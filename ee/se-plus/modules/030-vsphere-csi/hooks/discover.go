@@ -117,7 +117,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 		input.Logger.Info("found vSphere storage classes using storage_classes snapshots", slog.Any("storage_classes", storageClasses))
-		input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
+		input.Values.Set("vsphereCsi.internal.storageClasses", storageClasses)
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("vsphereCsi.internal.providerDiscoveryData", discoveryData)
 
 	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores); err != nil {
 		return err
@@ -155,7 +155,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 		storageClassStorageDomain[getStorageClassName(ds.Name)] = ds
 	}
 
-	classExcludes, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude")
+	classExcludes, ok := input.Values.GetOk("vsphereCsi.storageClass.exclude")
 	if ok {
 		for _, esc := range classExcludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
@@ -194,7 +194,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 	})
 
 	input.Logger.Info("Found vSphere storage classes using cloud_provider_discovery_data", slog.Any("data", storageClasses))
-	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
+	input.Values.Set("vsphereCsi.internal.storageClasses", storageClasses)
 	return nil
 }
 
