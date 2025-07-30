@@ -6,12 +6,12 @@ metadata:
   finalizers:
   - modules.deckhouse.io/module-registered
   name: test-module
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   enabled: true
 status:
   message: ""
-  version: ""
+  version: "1"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module

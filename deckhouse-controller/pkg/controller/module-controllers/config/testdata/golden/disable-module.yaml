@@ -4,12 +4,12 @@ kind: ModuleConfig
 metadata:
   creationTimestamp: null
   name: test-module
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   enabled: false
 status:
   message: ""
-  version: ""
+  version: "1"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
