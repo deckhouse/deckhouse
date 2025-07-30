@@ -132,7 +132,6 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Checksum:       releaseDigestStr,
 		Version:        "",
 		TarFile:        make([]byte, 0),
-		Image:          releaseImage,
 	}
 
 	if versionInfo, found := s.cache.GetVersionInfoByDigest(releaseDigestStr); found {
@@ -150,6 +149,9 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 
 	versionData.Version = version
 	versionData.TarFile = tarFile
+
+	// Cache the extracted data
+	s.cache.CacheVersionInfo(releaseDigestStr, version, tarFile)
 
 	return versionData, nil
 }

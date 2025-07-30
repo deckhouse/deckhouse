@@ -261,6 +261,18 @@ func (c *Cache) GetVersionInfoByDigest(digest string) (VersionInfo, bool) {
 	return versionInfo, true
 }
 
+// CacheVersionInfo stores version information in cache by digest
+func (c *Cache) CacheVersionInfo(digest, version string, tarFile []byte) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	c.versions[digest] = VersionInfo{
+		Version:  version,
+		TarFile:  tarFile,
+		Channels: []string{}, // Will be populated during SyncWithRegistryVersions
+	}
+}
+
 // convertToDocumentationTasks converts cache data to documentation tasks
 func (c *Cache) convertToDocumentationTasks(task backends.Task) []backends.DocumentationTask {
 	tasks := []backends.DocumentationTask{}
