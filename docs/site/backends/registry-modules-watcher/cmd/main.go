@@ -140,8 +140,20 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				cache := registryscanner.GetCache()
-				metrics.ObserveCache(metricStorage, cache)
+				cache := registryscanner.GetCache().GetCache()
+				for registry, module := range cache {
+					cacheLength := 0
+					for range module {
+						cacheLength++
+					}
+					metricStorage.GaugeSet(
+						metrics.RegistryScannerCacheLengthMetric,
+						float64(len(module)),
+						map[string]string{
+							"registry": string(registry),
+						},
+					)
+				}
 			case <-ctx.Done():
 				return
 			}

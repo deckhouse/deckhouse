@@ -17,7 +17,6 @@ package metrics
 import (
 	"fmt"
 	"net/http"
-	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"time"
 
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -85,22 +84,4 @@ func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	l.MetricStorage.GaugeAdd(RegistryRequestsCountMetric, 1.0, map[string]string{})
 
 	return resp, err
-}
-
-func ObserveCache(ms *metricstorage.MetricStorage, cache *cache.Cache) {
-	cacheData := cache.GetCache()
-	for registry, module := range cacheData {
-		cacheLength := 0
-		for range module {
-			cacheLength++
-		}
-
-		ms.GaugeSet(
-			RegistryScannerCacheLengthMetric,
-			float64(len(module)),
-			map[string]string{
-				"registry": string(registry),
-			},
-		)
-	}
 }

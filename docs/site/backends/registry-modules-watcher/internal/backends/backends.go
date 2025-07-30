@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type Sender interface {
@@ -59,11 +59,11 @@ type BackendManager struct {
 	backendAddrs map[string]struct{} // list of backend IP addresses
 
 	logger *log.Logger
-	ms     *metricsstorage.MetricStorage
+	ms     *metricstorage.MetricStorage
 }
 
 // New creates a new BackendManager instance
-func New(scanner RegistryScanner, sender Sender, logger *log.Logger, ms *metricsstorage.MetricStorage) *BackendManager {
+func New(scanner RegistryScanner, sender Sender, logger *log.Logger, ms *metricstorage.MetricStorage) *BackendManager {
 	bm := &BackendManager{
 		scanner:      scanner,
 		sender:       sender,
