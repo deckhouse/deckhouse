@@ -101,29 +101,6 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	)
 }
 
-func (c *client) imageDigest(ctx context.Context, imageURL string) (string, error) {
-	var nameOpts []name.Option
-
-	ref, err := name.ParseReference(imageURL, nameOpts...)
-	if err != nil {
-		return "", fmt.Errorf("parse reference: %w", err)
-	}
-
-	imageOptions := make([]remote.Option, 0)
-	if !c.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
-	}
-
-	imageOptions = append(imageOptions, remote.WithContext(ctx))
-
-	descriptor, err := remote.Get(ref, imageOptions...)
-	if err != nil {
-		return "", fmt.Errorf("get image descriptor: %w", err)
-	}
-
-	return descriptor.Digest.String(), nil
-}
-
 func (c *client) Modules(ctx context.Context) ([]string, error) {
 	return c.list(ctx, c.registryURL)
 }

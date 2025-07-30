@@ -159,9 +159,9 @@ func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTas
 			assert.Equal(t, expectedTask.Module, actualTask.Module, "Module mismatch for %s", key)
 			assert.Equal(t, expectedTask.Version, actualTask.Version, "Version mismatch for %s", key)
 			assert.Equal(t, expectedTask.ReleaseChannels, actualTask.ReleaseChannels, "ReleaseChannels mismatch for %s", key)
+			assert.Equal(t, 1536, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
 			assert.Equal(t, expectedTask.Task, actualTask.Task, "Task mismatch for %s", key)
-			assert.Greater(t, len(actualTask.TarFile), 500, "TarFile should be a reasonable size (>500 bytes) for %s", key)
-			assert.Less(t, len(actualTask.TarFile), 5000, "TarFile should not be too large (<5000 bytes) for %s", key)
+			assert.Greater(t, len(actualTask.TarFile), 0, "TarFile should not be empty for %s", key)
 		}
 	}
 }
@@ -217,7 +217,6 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	// All ReleaseImage calls are made regardless of cache
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
@@ -278,7 +277,6 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	// All ReleaseImage calls are made regardless of cache
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
