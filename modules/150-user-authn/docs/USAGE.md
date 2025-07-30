@@ -178,22 +178,30 @@ spec:
       - groups
 ```
 
-{% alert level="warning" %}
-If KeyCloak does not use Email account confirmation, to use it as an Identity Provider, you need to delete the Email verified mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for the correct processing of the true value of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field and the correct granting of rights to unverified users.
+If email verification is not enabled in KeyCloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
 
-If it is not possible to edit or delete the `Email verified` mapping, then you need to create a separate `Client scopes`with the name, for example, `email_dkp` and add two mappings there:
-- `email`: «Client Scopes» → «email_dkp» → «Add mapper» → «From predefined mappers» → «email»
-- `email verified`: «Client Scopes» → «email_dkp» → «Add mapper» → «By configuration» → «Hardcoded claim», where you need to specify the following fields: «Name: email verified», «Token Claim Name: emailVerified», «Claim value: true», «Claim JSON Type: boolean». In the client registered for the DKP cluster in `Clients`, it is necessary to change the `Client scopes` `email` to `email_dkp`.
+* Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
+  This is required for proper processing of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
 
-You also need to specify the `insecureSkipEmailVerified: true` field in `dexProvider` and replace the `Client scope` name of the `email` with `email_dkp` in the `.spec.oidc.scopes` field, as in the example:
-```yaml
-    scopes:
-      - openid
-      - profile
-      - email_dkp
-      - groups
-```
-{% endalert %}
+* If you can't modify or delete the `Email verified` mapping, create a new Client Scope named `email_dkp` (or any other name) and add two mappings:
+  * `email`: "Client Scopes" → `email_dkp` → "Add mapper" → "From predefined mappers" → `email`.
+  * `email verified`: "Client Scopes" → `email_dkp` → "Add mapper" → "By configuration" → "Hardcoded claim". Specify the following fields:
+    * "Name": `email verified`
+    * "Token Claim Name": `emailVerified`
+    * "Claim value": `true`
+    * "Claim JSON Type": `boolean`
+
+  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+
+  In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
+  
+  ```yaml
+      scopes:
+        - openid
+        - profile
+        - email_dkp
+        - groups
+  ```
 
 #### Okta
 
