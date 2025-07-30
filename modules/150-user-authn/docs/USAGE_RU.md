@@ -186,11 +186,11 @@ spec:
 {% alert level="warning" %}
 В случае, если в KeyCloak не используется подтверждение учетных записей по Email, для использования его как `Identity Provider`, нужно [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалить маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»). Это необходимо для корректной обработки значения `true` поля [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
 
-Если нет возможности редактировать или удалить маппинг `Email verified`, то необходимо создать отдельный `Client scopes` `email_dkp` и добавить туда два маппинга:
+Если нет возможности редактировать или удалить маппинг `Email verified`, то необходимо создать отдельный `Client scope` c именем, например, `email_dkp` и добавить туда два маппинга:
 - `email`: «Client Scopes» → «email_dkp» → «Add mapper» → «From predefined mappers» → «email»
 - `email verified`: «Client Scopes» → «email_dkp» → «Add mapper» → «By configuration» → «Hardcoded claim», где нужно указать следующие поля: «Name: email verified», «Token Claim Name: emailVerified», «Claim value: true», «Claim JSON Type: boolean». В зарегистрированном для кластера DKP клиенте в `Clients` необходимо поменять `Client scopes` `email` на `email_dkp`. 
 
-Также необходимо указать в `dexProvider` поле `insecureSkipEmailVerified: true` и поправить в `.spec.oidc.scopes` название `Client scope` на `email_dkp`, как в примере:
+Также необходимо указать в `dexProvider` поле `insecureSkipEmailVerified: true` и заменить в `.spec.oidc.scopes` название `Client scope` `email` на `email_dkp`, как в примере:
 ```yaml
     scopes:
       - openid
