@@ -52,35 +52,35 @@ lang: ru
   <tbody>
     <tr>
       <td><strong>Experimental</strong></td>
-      <td style="background-color:#d68787">Эксперименты</td>
-      <td style="background-color:#d68787">Эксперименты</td>
-      <td style="background-color:#d68787">Эксперименты</td>
-      <td style="background-color:#F8C989">Опытная эксплуатация</td>
-      <td style="background-color:#F8C989">Опытная эксплуатация</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFE0B2">Опытная эксплуатация</td>
+      <td style="background-color:#FFE0B2">Опытная эксплуатация</td>
     </tr>
     <tr>
       <td><strong>Preview</strong></td>
-      <td style="background-color:#d68787">Эксперименты</td>
-      <td style="background-color:#f0b4b8">Ограниченная эксплуатация</td>
-      <td style="background-color:#f0b4b8">Ограниченная эксплуатация</td>
-      <td style="background-color:#a4deb5">Промышленная эксплуатация</td>
-      <td style="background-color:#a4deb5">Промышленная эксплуатация</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
     </tr>
     <tr>
       <td><strong>General Availability</strong></td>
-      <td style="background-color:#d68787">Эксперименты</td>
-      <td style="background-color:#f0b4b8">Ограниченная эксплуатация</td>
-      <td style="background-color:#f0b4b8">Ограниченная эксплуатация</td>
-      <td style="background-color:#a4deb5">Промышленная эксплуатация</td>
-      <td style="background-color:#68b374">Промышленная эксплуатация в ответственных системах</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
+      <td style="background-color:#A5D6A7">Промышленная эксплуатация в ответственных системах</td>
     </tr>
     <tr>
       <td><strong>Deprecated</strong></td>
-      <td style="background-color:#D3D3D3">Отказ от использования</td>
-      <td style="background-color:#D3D3D3">Отказ от использования</td>
-      <td style="background-color:#D3D3D3">Отказ от использования</td>
-      <td style="background-color:#D3D3D3">Отказ от использования</td>
-      <td style="background-color:#D3D3D3">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
     </tr>
   </tbody>
 </table>

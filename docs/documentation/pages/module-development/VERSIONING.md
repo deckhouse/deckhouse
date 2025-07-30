@@ -35,7 +35,7 @@ During its life cycle, a module may be at any of the following stages:
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined according to the following table:
 
 <table class="versioning-table">
-  <thead>
+<thead>
     <tr class="header-row">
       <th rowspan="2">Lifecycle Stage</th>
       <th colspan="5">Update Channels</th>
@@ -51,35 +51,35 @@ Depending on the stage of the module lifecycle and the release channel from whic
   <tbody>
     <tr>
       <td><strong>Experimental</strong></td>
-      <td style="background-color:#d68787">Experiments</td>
-      <td style="background-color:#d68787">Experiments</td>
-      <td style="background-color:#d68787">Experiments</td>
-      <td style="background-color:#F8C989">Beta testing</td>
-      <td style="background-color:#F8C989">Beta testing</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFE0B2">Beta testing</td>
+      <td style="background-color:#FFE0B2">Beta testing</td>
     </tr>
     <tr>
       <td><strong>Preview</strong></td>
-      <td style="background-color:#d68787">Experiments</td>
-      <td style="background-color:#f0b4b8">Limited use</td>
-      <td style="background-color:#f0b4b8">Limited use</td>
-      <td style="background-color:#a4deb5">Production use</td>
-      <td style="background-color:#a4deb5">Production use</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
     </tr>
     <tr>
       <td><strong>General Availability</strong></td>
-      <td style="background-color:#d68787">Experiments</td>
-      <td style="background-color:#f0b4b8">Limited use</td>
-      <td style="background-color:#f0b4b8">Limited use</td>
-      <td style="background-color:#a4deb5">Production use</td>
-      <td style="background-color:#68b374">Production use in critical systems</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
+      <td style="background-color:#A5D6A7">Production use in critical systems</td>
     </tr>
     <tr>
       <td><strong>Deprecated</strong></td>
-      <td style="background-color:#D3D3D3">Deprecated</td>
-      <td style="background-color:#D3D3D3">Deprecated</td>
-      <td style="background-color:#D3D3D3">Deprecated</td>
-      <td style="background-color:#D3D3D3">Deprecated</td>
-      <td style="background-color:#D3D3D3">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
     </tr>
   </tbody>
 </table>
