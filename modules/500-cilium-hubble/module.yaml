@@ -1,4 +1,5 @@
 name: cilium-hubble
+stage: "General Availability"
 subsystems:
   - networking
 namespace: d8-cni-cilium

@@ -169,12 +169,12 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
+	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}
 
-	storageClassMap := make(map[string]*storage.StorageClass, len(storageClassSnapshots))
+	storageClassMap := make(map[string]storage.StorageClass, len(storageClassSnapshots))
 	for _, s := range storageClassSnapshots {
 		storageClassMap[s.Name] = s
 	}

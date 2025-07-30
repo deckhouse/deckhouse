@@ -735,6 +735,10 @@ echo "$MYRESULTSTRING"
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
+При использовании модуля [registry](modules/registry/) смена адреса и параметров registry выполняется в секции [registry](modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [registry](modules/registry/examples.html).
+{% endalert %}
+
+{% alert level="warning" %}
 Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 {% endalert %}
 
@@ -969,6 +973,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+{% endalert %}
+
+{% alert level="warning" %}
 - Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, используйте соответствующую ей документацию.
 - Для коммерческих изданий требуется действующий лицензионный ключ с поддержкой нужного издания. При необходимости можно [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html).
 - Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
@@ -1142,6 +1151,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```
 
 ### Как переключить Deckhouse EE на CSE?
+
+{% alert level="warning" %}
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+{% endalert %}
 
 {% alert level="warning" %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
