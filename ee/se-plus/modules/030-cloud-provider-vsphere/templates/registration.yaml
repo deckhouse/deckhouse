@@ -16,7 +16,7 @@ data:
   instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
   machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
   {{- $vsphereValues := dict }}
-   {{- $mainNetwork := "" }}
+  {{- $mainNetwork := "" }}
   {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}
     {{- $mainNetwork = $providerDiscoveryData.instances.mainNetwork | default "" }}
   {{- end }}

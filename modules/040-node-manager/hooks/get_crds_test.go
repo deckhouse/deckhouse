@@ -1553,6 +1553,24 @@ spec:
 			})
 		})
 
+		Context("Fill default mainNetwork for vSphere", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.vsphere", []byte(`
+					instances:
+						mainNetwork: mynet
+				`))
+				f.RunHook()
+			})
+
+			It("should inject mainNetwork into instanceClass when missing in CRD", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				val := f.ValuesGet("nodeManager.internal.nodeGroups.0.instanceClass.mainNetwork")
+				Expect(val.Exists()).To(BeTrue())
+				Expect(val.String()).To(Equal("mynet"))
+			})
+		})
+
 		Context("NG with taints and labels", func() {
 			BeforeEach(func() {
 				ng := `

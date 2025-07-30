@@ -54,6 +54,18 @@ const (
 	kubeVersionStatusField = "kubernetesVersion"
 )
 
+// cloud providers names in lower case
+var fillCloudSpecificDefaults = map[string]func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error{
+	"vsphere": func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
+		if _, ok := instanceClass["mainNetwork"]; !ok {
+			if val, ok := cloudVariables["instances"].(map[string]interface{})["mainNetwork"]; ok {
+				instanceClass["mainNetwork"] = val
+			}
+		}
+		return nil
+	},
+}
+
 type InstanceClassCrdInfo struct {
 	Name string
 	Spec interface{}
@@ -427,11 +439,19 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			// Put instanceClass.spec into values.
 			ngForValues["instanceClass"] = instanceClassSpec
 			if specMap, ok := instanceClassSpec.(map[string]interface{}); ok {
-				if _, exists := specMap["mainNetwork"]; !exists {
-					if val, ok := input.Values.GetOk("nodeManager.internal.cloudProvider.vsphere.instances.mainNetwork"); ok {
-						specMap["mainNetwork"] = val.String()
+				// Add cloud specific defaults.
+				providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
+				if raw, ok := input.Values.GetOk("nodeManager.internal.cloudProvider." + providerName); ok {
+					if raw.IsObject() {
+						cloudVariables := raw.Value()
+						if cloudVariablesMap, ok := cloudVariables.(map[string]interface{}); ok {
+							if fillFn, ok := fillCloudSpecificDefaults[providerName]; ok {
+								fillFn(cloudVariablesMap, specMap)
+							}
+						}
 					}
 				}
+
 				ngForValues["instanceClass"] = specMap
 			}
 			var zones []string
