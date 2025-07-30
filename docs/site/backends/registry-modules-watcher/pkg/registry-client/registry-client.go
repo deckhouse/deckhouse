@@ -68,12 +68,6 @@ func (c *client) Name() string {
 	return c.registryURL
 }
 
-func (c *client) ReleaseImageDigest(ctx context.Context, moduleName, tag string) (string, error) {
-	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
-
-	return c.imageDigest(ctx, imageURL)
-}
-
 func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
 

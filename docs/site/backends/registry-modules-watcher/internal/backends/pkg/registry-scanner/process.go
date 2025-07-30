@@ -113,49 +113,34 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	// First get digest without downloading the image
-	releaseDigest, err := s.registryClients[registry].ReleaseImageDigest(ctx, module, releaseChannel)
-	if err != nil {
-		return nil, fmt.Errorf("get release digest: %w", err)
-	}
-
-	versionData := &internal.VersionData{
-		Registry:       registry,
-		ModuleName:     module,
-		ReleaseChannel: releaseChannel,
-		Checksum:       releaseDigest,
-		Version:        "",
-		TarFile:        make([]byte, 0),
-	}
-
-	// Check if we already have this release in cache
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-		if ok {
-			s.logger.Info("using cached data", slog.String("module", module), slog.String("version", version))
-			versionData.Version = version
-			versionData.TarFile = tarFile
-			return versionData, nil
-		}
-	}
-
-	// Check if we can reuse tar file from another release with same digest
-	if versionInfo, found := s.cache.GetVersionInfoByDigest(releaseDigest); found {
-		s.logger.Info("reusing tar file by digest", slog.String("module", module), slog.String("digest", releaseDigest[:12]))
-		versionData.TarFile = versionInfo.TarFile
-		versionData.Version = versionInfo.Version
-		return versionData, nil
-	}
-
-	// Only download image if cache miss
-	s.logger.Info("cache miss, downloading image", slog.String("module", module), slog.String("channel", releaseChannel))
 	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get release image: %w", err)
 	}
 
-	versionData.Image = releaseImage
+	releaseDigest, err := releaseImage.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get digest: %w", err)
+	}
+
+	releaseDigestStr := releaseDigest.String()
+
+	versionData := &internal.VersionData{
+		Registry:       registry,
+		ModuleName:     module,
+		ReleaseChannel: releaseChannel,
+		Checksum:       releaseDigestStr,
+		Version:        "",
+		TarFile:        make([]byte, 0),
+		Image:          releaseImage,
+	}
+
+	if versionInfo, found := s.cache.GetVersionInfoByDigest(releaseDigestStr); found {
+		s.logger.Info("reusing tar file by digest", slog.String("module", module), slog.String("digest", releaseDigestStr[:12]))
+		versionData.TarFile = versionInfo.TarFile
+		versionData.Version = versionInfo.Version
+		return versionData, nil
+	}
 
 	// Extract version and tar file from image
 	version, tarFile, err := s.extractVersionAndTarFromImage(ctx, registry, module, releaseImage)

@@ -156,40 +156,85 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 		}
 	}
 
-	// Find tasks to create (new or changed)
-	var createTasks []backends.DocumentationTask
+	// Find tasks to create (new or changed) and delete (changed digests) - group by digest
+	createTasksByDigest := make(map[string]*backends.DocumentationTask)
+	deleteTasksByDigest := make(map[string]*backends.DocumentationTask)
+	
 	for key, registryRelease := range registryReleases {
 		cacheRelease, exists := c.releases[key]
 
 		// Create task if release doesn't exist or digest changed
 		if !exists || cacheRelease.Digest != registryRelease.Digest {
+			// If digest changed, we need to delete the old version first
+			if exists && cacheRelease.Digest != registryRelease.Digest {
+				if versionInfo, ok := c.versions[cacheRelease.Digest]; ok {
+					if existingTask, ok := deleteTasksByDigest[cacheRelease.Digest]; ok {
+						// Add channel to existing delete task
+						existingTask.ReleaseChannels = append(existingTask.ReleaseChannels, key.Channel)
+					} else {
+						// Create new delete task
+						deleteTasksByDigest[cacheRelease.Digest] = &backends.DocumentationTask{
+							Registry:        key.Registry,
+							Module:          key.Module,
+							Version:         versionInfo.Version,
+							ReleaseChannels: []string{key.Channel},
+							TarFile:         versionInfo.TarFile,
+							Task:            backends.TaskDelete,
+						}
+					}
+				}
+			}
+			
+			// Create task for new version
 			versionInfo := registryVersionsMap[registryRelease.Digest]
-			createTasks = append(createTasks, backends.DocumentationTask{
-				Registry:        key.Registry,
-				Module:          key.Module,
-				Version:         versionInfo.Version,
-				ReleaseChannels: []string{key.Channel},
-				TarFile:         versionInfo.TarFile,
-				Task:            backends.TaskCreate,
-			})
-		}
-	}
-
-	// Find tasks to delete (releases that no longer exist in registry)
-	var deleteTasks []backends.DocumentationTask
-	for key, cacheRelease := range c.releases {
-		if _, exists := registryReleases[key]; !exists {
-			if versionInfo, ok := c.versions[cacheRelease.Digest]; ok {
-				deleteTasks = append(deleteTasks, backends.DocumentationTask{
+			if existingTask, ok := createTasksByDigest[registryRelease.Digest]; ok {
+				// Add channel to existing task
+				existingTask.ReleaseChannels = append(existingTask.ReleaseChannels, key.Channel)
+			} else {
+				// Create new task
+				createTasksByDigest[registryRelease.Digest] = &backends.DocumentationTask{
 					Registry:        key.Registry,
 					Module:          key.Module,
 					Version:         versionInfo.Version,
 					ReleaseChannels: []string{key.Channel},
 					TarFile:         versionInfo.TarFile,
-					Task:            backends.TaskDelete,
-				})
+					Task:            backends.TaskCreate,
+				}
 			}
 		}
+	}
+
+	// Find tasks to delete (releases that no longer exist in registry) - group by digest
+	for key, cacheRelease := range c.releases {
+		if _, exists := registryReleases[key]; !exists {
+			if versionInfo, ok := c.versions[cacheRelease.Digest]; ok {
+				if existingTask, ok := deleteTasksByDigest[cacheRelease.Digest]; ok {
+					// Add channel to existing task
+					existingTask.ReleaseChannels = append(existingTask.ReleaseChannels, key.Channel)
+				} else {
+					// Create new task
+					deleteTasksByDigest[cacheRelease.Digest] = &backends.DocumentationTask{
+						Registry:        key.Registry,
+						Module:          key.Module,
+						Version:         versionInfo.Version,
+						ReleaseChannels: []string{key.Channel},
+						TarFile:         versionInfo.TarFile,
+						Task:            backends.TaskDelete,
+					}
+				}
+			}
+		}
+	}
+
+	// Convert maps to slices
+	var createTasks []backends.DocumentationTask
+	for _, task := range createTasksByDigest {
+		createTasks = append(createTasks, *task)
+	}
+	
+	var deleteTasks []backends.DocumentationTask
+	for _, task := range deleteTasksByDigest {
+		deleteTasks = append(deleteTasks, *task)
 	}
 
 	// Update cache with registry data
