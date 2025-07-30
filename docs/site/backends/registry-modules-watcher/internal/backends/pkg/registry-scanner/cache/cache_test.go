@@ -297,12 +297,6 @@ func TestCache(t *testing.T) {
 		cache := New()
 		cache.SyncWithRegistryVersions(testVersions)
 
-		t.Run("GetReleaseChecksum", func(t *testing.T) {
-			checksum, found := cache.GetReleaseChecksum(&testVersions[0])
-			assert.True(t, found, "Checksum should be found")
-			assert.Equal(t, "checksum", checksum, "Checksum should match")
-		})
-
 		t.Run("GetReleaseVersionData", func(t *testing.T) {
 			version, tarFile, found := cache.GetReleaseVersionData(&testVersions[0])
 			assert.True(t, found, "Version data should be found")
@@ -315,7 +309,7 @@ func TestCache(t *testing.T) {
 			newChannelVersion := internal.VersionData{
 				Registry:       "TestReg",
 				ModuleName:     "TestModule",
-				ReleaseChannel: "stable", // Different channel
+				ReleaseChannel: "stable",   // Different channel
 				Checksum:       "checksum", // Same checksum as alpha/beta
 			}
 

@@ -58,28 +58,6 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-func (c *Cache) GetReleaseChecksum(version *internal.VersionData) (string, bool) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	r, ok := c.val[registryName(version.Registry)]
-	if !ok {
-		return "", false
-	}
-
-	m, ok := r[moduleName(version.ModuleName)]
-	if !ok {
-		return "", false
-	}
-
-	rc, ok := m.releaseChecksum[releaseChannelName(version.ReleaseChannel)]
-	if !ok {
-		return "", false
-	}
-
-	return rc, true
-}
-
 func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte, bool) {
 	c.m.RLock()
 	defer c.m.RUnlock()

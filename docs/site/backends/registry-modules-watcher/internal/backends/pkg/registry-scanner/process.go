@@ -133,48 +133,27 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Image:          releaseImage,
 	}
 
-	// Check if we already have this release in cache
-	// First, try to find by specific release channel
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-		if ok {
-			versionData.Version = version
-			versionData.TarFile = tarFile
-			s.logger.Debug("found cached version data by release channel", 
-				slog.String("module", versionData.ModuleName),
-				slog.String("channel", versionData.ReleaseChannel),
-				slog.String("version", version))
-			return versionData, nil
-		}
-	}
-
-	// If not found by specific channel, search across all channels by checksum
+	// Search across all channels by checksum
 	version, tarFile, ok := s.cache.GetVersionDataByChecksum(versionData)
 	if ok {
 		versionData.Version = version
 		versionData.TarFile = tarFile
-		s.logger.Debug("found cached version data by checksum across channels", 
-			slog.String("module", versionData.ModuleName),
-			slog.String("channel", versionData.ReleaseChannel),
-			slog.String("version", version),
-			slog.String("checksum", versionData.Checksum))
 		return versionData, nil
 	}
 
 	// Extract version from image
-	extractedVersion, err := getVersionFromImage(versionData.Image)
+	version, err = getVersionFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
-	versionData.Version = extractedVersion
+	versionData.Version = version
 
 	// Extract tar file
-	extractedTarFile, err := s.extractTar(ctx, versionData)
+	tarFile, err = s.extractTar(ctx, versionData)
 	if err != nil {
 		return nil, fmt.Errorf("extract tar: %w", err)
 	}
-	versionData.TarFile = extractedTarFile
+	versionData.TarFile = tarFile
 
 	return versionData, nil
 }
