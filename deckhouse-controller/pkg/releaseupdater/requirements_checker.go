@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric"
@@ -376,13 +377,21 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	modules := strings.Split(migratedModules, ",")
 	for i, module := range modules {
 		modules[i] = strings.TrimSpace(module)
+
+		// remove empty module names
+		if modules[i] == "" {
+			c.logger.Warn("empty module name in migratedModules requirement, removing it")
+			modules = append(modules[:i], modules[i+1:]...)
+			i--
+		}
 	}
 
 	if len(modules) == 0 {
 		return nil
 	}
 
-	c.logger.Debug("Checking migrated modules", "modules", modules)
+	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
+
 	moduleSources := &v1alpha1.ModuleSourceList{}
 	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
 		return fmt.Errorf("failed to list ModuleSources: %w", err)
@@ -394,21 +403,23 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		for _, source := range moduleSources.Items {
 			if c.isModuleAvailableInSource(moduleName, &source) {
 				found = true
-				c.logger.Debug("Migrated module found in source", "module", moduleName, "sourceName", source.Name)
+				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
 				break
 			}
 		}
 
 		if !found {
-			c.logger.Warn("Migrated module not found in any ModuleSource registry", "module", moduleName)
+			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
+
 			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
 		}
 
 		c.clearMigratedModuleNotFoundAlert(moduleName)
 	}
 
-	c.logger.Debug("All migrated modules found in registries")
+	c.logger.Debug("all migrated modules found in registries")
+
 	return nil
 }
 
