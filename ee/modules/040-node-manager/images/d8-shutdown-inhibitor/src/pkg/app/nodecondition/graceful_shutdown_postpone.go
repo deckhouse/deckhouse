@@ -66,7 +66,8 @@ func uncordonOnStart(nodeName string) error {
 	}
 
 	// hold cordon if inhibitor is already in shutdown state
-	if podArePresentCondition.Status == "True" &&
+	if podArePresentCondition != nil &&
+		podArePresentCondition.Status == "True" &&
 		podArePresentCondition.Type == GracefulShutdownPostponeType &&
 		podArePresentCondition.Reason == ReasonPodsArePresent {
 		return nil
@@ -78,7 +79,8 @@ func uncordonOnStart(nodeName string) error {
 	}
 
 	// wait until node is ready
-	if nodeNotReadyCondition.Status == "False" &&
+	if nodeNotReadyCondition != nil &&
+		nodeNotReadyCondition.Status == "False" &&
 		nodeNotReadyCondition.Type == "Ready" &&
 		nodeNotReadyCondition.Reason == "KubeletNotReady" {
 		return fmt.Errorf("node %q is not ready", nodeName)
