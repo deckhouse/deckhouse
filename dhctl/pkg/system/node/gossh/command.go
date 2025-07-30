@@ -413,22 +413,33 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	return o.Bytes(), e.Bytes(), err
 }
 
+type singleWriter struct {
+	b  bytes.Buffer
+	mu sync.Mutex
+}
+
+func (w *singleWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.b.Write(p)
+}
+
 func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 	c.Cmd(ctx)
 	defer c.session.Close()
 
-	var o bytes.Buffer
+	var o singleWriter
 	c.session.Stdout = &o
 	c.session.Stderr = &o
 
 	err := c.start()
 	if err != nil {
-		return o.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
+		return o.b.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
 
 	err = c.wait()
 
-	return o.Bytes(), err
+	return o.b.Bytes(), err
 }
 
 func (c *SSHCommand) WithTimeout(timeout time.Duration) {
