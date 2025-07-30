@@ -115,6 +115,11 @@ spec:
             secretKeyRef:
               name: cloud-data-discoverer
               key: zoneTagCategory
+        - name: VM_FOLDER_PATH
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: vmFolderPath
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG

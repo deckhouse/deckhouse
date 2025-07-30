@@ -114,6 +114,10 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		return errors.New("zones cannot be empty")
 	}
 
+	if m.VMFolderPath != nil {
+		p.VMFolderPath = m.VMFolderPath
+	}
+
 	if m.SSHKeys != nil {
 		p.SSHPublicKey = &(*m.SSHKeys)[0]
 	}
