@@ -77,37 +77,18 @@ func TestCache(t *testing.T) {
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
 
-			// Update beta channel to point to a new version
-			updatedVersions := []internal.VersionData{
-				{
-					Registry:       "TestReg",
-					ModuleName:     "TestModule",
-					ReleaseChannel: "alpha",
-					Version:        "1.0.0",
-					TarFile:        []byte("test"),
-					Checksum:       "checksum",
-				},
-				{
-					Registry:       "TestReg",
-					ModuleName:     "TestModule",
-					ReleaseChannel: "beta",
-					Version:        "2.0.0",
-					TarFile:        []byte("new version"),
-					Checksum:       "newchecksum",
-				},
+			newVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "TestModule",
+				ReleaseChannel: "beta",
+				Version:        "2.0.0",
+				TarFile:        []byte("new version"),
+				Checksum:       "newchecksum",
 			}
 
-			tasks := cache.SyncWithRegistryVersions(updatedVersions)
+			tasks := cache.SyncWithRegistryVersions(append(testVersions, newVersion))
 
 			expectedTasks := []backends.DocumentationTask{
-				{
-					Registry:        "TestReg",
-					Module:          "TestModule",
-					Version:         "1.0.0",
-					ReleaseChannels: []string{"beta"},
-					TarFile:         []byte("test"),
-					Task:            backends.TaskDelete,
-				},
 				{
 					Registry:        "TestReg",
 					Module:          "TestModule",
@@ -118,7 +99,7 @@ func TestCache(t *testing.T) {
 				},
 			}
 
-			assert.Equal(t, expectedTasks, tasks, "Should return delete and create tasks for version change")
+			assert.Equal(t, expectedTasks, tasks, "Only new version should be returned as task")
 
 			expectedCachedTasks := []backends.DocumentationTask{
 				{
@@ -239,8 +220,8 @@ func TestCache(t *testing.T) {
 			// Consume the initial tasks state
 			cache.GetState()
 
-			// Add a new release channel (stable) to the same version
-			versionsWithNewChannel := []internal.VersionData{
+			// Same version but new release channel
+			newChannelVersions := []internal.VersionData{
 				{
 					Registry:       "TestReg",
 					ModuleName:     "TestModule",
@@ -261,28 +242,15 @@ func TestCache(t *testing.T) {
 					Registry:       "TestReg",
 					ModuleName:     "TestModule",
 					ReleaseChannel: "stable",
-					Version:        "1.0.0", // Same version, new channel
+					Version:        "1.0.0", // Same version
 					TarFile:        []byte("test"),
 					Checksum:       "checksum",
 				},
 			}
 
-			tasks := cache.SyncWithRegistryVersions(versionsWithNewChannel)
+			tasks := cache.SyncWithRegistryVersions(append(testVersions, newChannelVersions...))
 
 			expectedTasks := []backends.DocumentationTask{
-				{
-					Registry:        "TestReg",
-					Module:          "TestModule",
-					Version:         "1.0.0",
-					ReleaseChannels: []string{"stable"},
-					TarFile:         []byte("test"),
-					Task:            backends.TaskCreate,
-				},
-			}
-
-			assert.Equal(t, expectedTasks, tasks, "Should return task with new release channel")
-			
-			expectedCachedTasks := []backends.DocumentationTask{
 				{
 					Registry:        "TestReg",
 					Module:          "TestModule",
@@ -291,8 +259,10 @@ func TestCache(t *testing.T) {
 					TarFile:         []byte("test"),
 				},
 			}
+
+			assert.Equal(t, expectedTasks, tasks, "Should return task with new release channel")
 			state := cache.GetState()
-			assert.Equal(t, expectedCachedTasks, state, "Should have all channels grouped in state")
+			assert.Equal(t, expectedTasks, state, "Should have task with new release channel in state")
 		})
 
 		t.Run("RemoveVersion", func(t *testing.T) {
