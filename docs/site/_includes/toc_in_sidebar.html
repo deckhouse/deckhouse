@@ -2,6 +2,11 @@
     $(document).ready(function () {
         // Handler for .ready() called.
 
+        function getHeaderHeight() {
+            const header = $('header');
+            return header.outerHeight(true);
+        }
+
         const $toc = $('#toc-sidebar');
 
         $toc.toc({
@@ -17,13 +22,16 @@
             }
         });
 
-      $toc.on('click', 'a', function () {
-        const target = decodeURI($(this).attr('href'));
+        $toc.on('click', 'a', function () {
+            const target = decodeURI($(this).attr('href'));
+            const targetElement = $(target);
+            const headerHeight = getHeaderHeight();
+            const scrollOffset = targetElement.offset().top - headerHeight;
 
-        $('html, body').animate({
-          scrollTop: $(target).offset().top - 150
-        }, 300);
-      });
+            $('html, body').animate({
+            scrollTop: scrollOffset - 15
+            }, 300);
+        });
 
         if (!$.trim($toc.html())) {
             $toc.hide();
@@ -64,8 +72,11 @@
                 const targetElement = $(target);
 
                 if(targetElement.length && targetElement.offset()) {
+                    const headerHeight = getHeaderHeight();
+                    const scrollOffset = targetElement.offset().top - headerHeight;
+
                     $('html, body').animate({
-                        scrollTop: $(target).offset().top - 150
+                        scrollTop: scrollOffset - 15
                     }, 0);
                 }
             }
