@@ -163,7 +163,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
-		r.logger.Debug("release channel not set")
+		r.logger.Warn("release channel not set")
 		return res, nil
 	}
 
