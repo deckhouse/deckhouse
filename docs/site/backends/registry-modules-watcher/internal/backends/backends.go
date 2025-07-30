@@ -17,9 +17,11 @@ package backends
 import (
 	"context"
 	"log/slog"
+	"registry-modules-watcher/internal/metrics"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type Sender interface {
@@ -57,15 +59,17 @@ type BackendManager struct {
 	backendAddrs map[string]struct{} // list of backend IP addresses
 
 	logger *log.Logger
+	ms     *metricsstorage.MetricStorage
 }
 
 // New creates a new BackendManager instance
-func New(scanner RegistryScanner, sender Sender, logger *log.Logger) *BackendManager {
+func New(scanner RegistryScanner, sender Sender, logger *log.Logger, ms *metricsstorage.MetricStorage) *BackendManager {
 	bm := &BackendManager{
 		scanner:      scanner,
 		sender:       sender,
 		backendAddrs: make(map[string]struct{}),
 		logger:       logger,
+		ms:           ms,
 	}
 
 	scanner.SubscribeOnUpdate(bm.handleUpdate)
@@ -81,7 +85,8 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 	defer bm.mu.Unlock()
 
 	bm.backendAddrs[backend] = struct{}{}
-	// do a metric with len(bm.backendAddrs)
+
+	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsCountMetric, float64(len(bm.backendAddrs)), map[string]string{})
 
 	state := bm.scanner.GetState()
 	bm.logger.Info("Sending documentation to new backend",
@@ -99,6 +104,8 @@ func (bm *BackendManager) Delete(_ context.Context, backend string) {
 	defer bm.mu.Unlock()
 
 	delete(bm.backendAddrs, backend)
+
+	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsCountMetric, float64(len(bm.backendAddrs)), map[string]string{})
 }
 
 // handleUpdate sends documentation updates to all registered backends

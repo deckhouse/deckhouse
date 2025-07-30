@@ -129,7 +129,7 @@ func main() {
 
 	// * * * * * * * * *
 	// New backends service
-	backends := backends.New(registryscanner, sender, logger)
+	backends := backends.New(registryscanner, sender, logger, metricStorage)
 
 	// * * * * * * * * *
 	// New metric ticker
