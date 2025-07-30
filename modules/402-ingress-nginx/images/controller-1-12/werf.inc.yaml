@@ -282,17 +282,17 @@ import:
   - usr/lib/libkrb5.so*
   - usr/lib/libkrb5support.so*
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
-  add: /
-  to: /chroot
-  includePaths:
-  - usr/lib/libpcre2-8.so*
-  before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
+#   add: /
+#   to: /chroot
+#   includePaths:
+#   - usr/lib/libpcre2-8.so*
+#   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd
   add: /
   to: /chroot
   includePaths:
-  - usr/lib/libgcc_s.so*
+  # - usr/lib/libgcc_s.so*
   - usr/lib/libzstd.so*
   - usr/lib/libstdc++.so*
   before: install
@@ -315,13 +315,13 @@ import:
 #   includePaths:
 #   - lib/libz.so*
 #   before: install
-- image: libs/glibc
-  add: /usr
-  to: /chroot
-  includePaths:
-  - lib64/libc.so.6
-  - lib64/ld-linux-x86-64.so
-  before: install
+# - image: libs/glibc
+#   add: /usr
+#   to: /chroot
+#   includePaths:
+#   - lib64/libc.so.6
+#   - lib64/ld-linux-x86-64.so
+#   before: install
 - image: libs/musl
   add: /usr/lib/libc.so
   to: /chroot/lib64/libc.musl-x86_64.so.1
@@ -426,14 +426,14 @@ shell:
   # For NGINX
   - cp -a /lib64/ld-linux-x86-64.so* /chroot/lib64 # !
   - cp -a /lib64/libcrypt.so* /chroot/lib64
-  # - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
+  - cp -a /lib64/libpcre2-8.so* /chroot/lib64 # !
   - cp -a /lib64/libssl.so* /chroot/lib64
   - cp -a /usr/lib64/libcrypto.so* /chroot/lib64 # !
   - cp -a /usr/lib64/libz.so* /chroot/lib64  # !
   - cp -a /usr/lib64/libm.so* /chroot/lib64
-  # - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
-  # - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
-  - ln -s libc.so.6 /chroot/lib64/libc.so
+  - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
+  - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
+  # - ln -s libc.so.6 /chroot/lib64/libc.so
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
   # - cp -a /lib64/libabsl_city.so* /chroot/lib64
