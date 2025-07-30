@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 type AnnotationsOnly struct {
@@ -65,16 +64,7 @@ func moduleConfigValidationHandler(
 			cfg                      = new(v1alpha1.ModuleConfig)
 			ok                       bool
 			allowExperimentalModules = setting.Get().AllowExperimentalModules
-			IsExperimental           bool
 		)
-		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
-			definition := module.GetModuleDefinition()
-
-			IsExperimental = definition.IsExperimental()
-			if IsExperimental {
-				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})
-			}
-		}
 
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
@@ -109,9 +99,6 @@ func moduleConfigValidationHandler(
 				}
 
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
-				if IsExperimental {
-					metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 0.0, map[string]string{"module": obj.GetName()})
-				}
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -123,9 +110,6 @@ func moduleConfigValidationHandler(
 			cfg, ok = obj.(*v1alpha1.ModuleConfig)
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
-			}
-			if IsExperimental {
-				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})
 			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
@@ -145,8 +129,12 @@ func moduleConfigValidationHandler(
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-				if IsExperimental && !allowExperimentalModules {
-					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
+				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+					definition := module.GetModuleDefinition()
+
+					if definition.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
+					}
 				}
 			}
 

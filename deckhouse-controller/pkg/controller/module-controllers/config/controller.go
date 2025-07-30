@@ -44,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -95,6 +96,8 @@ func RegisterController(
 	if err != nil {
 		return fmt.Errorf("create controller: %w", err)
 	}
+
+	r.metricStorage.Grouped().ExpireGroupMetrics(telemetry.WrapName("experimental_module"))
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
@@ -273,6 +276,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 	}
 
+	if module.IsExperimental() {
+		r.metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": moduleConfig.GetName()})
+	}
+
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
@@ -359,6 +366,8 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	// clear conflict metrics
 	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	r.metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
