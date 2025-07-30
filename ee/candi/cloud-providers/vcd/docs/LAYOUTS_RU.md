@@ -36,9 +36,9 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-## StandardWithNetwork
+## WithNAT
 
-![Схема размещения StandardWithNetwork](../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+![Схема размещения WithNAT](../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
 
 При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
 
