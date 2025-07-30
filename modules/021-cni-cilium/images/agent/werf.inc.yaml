@@ -83,6 +83,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/agent-binaries-artifact
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60) }}
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
@@ -240,6 +241,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ .ModuleName }}/agent-distroless
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60) }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
