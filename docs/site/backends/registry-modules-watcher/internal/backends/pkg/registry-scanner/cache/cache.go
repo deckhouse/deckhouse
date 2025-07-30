@@ -159,7 +159,7 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 	// Find tasks to create (new or changed) and delete (changed digests) - group by digest
 	createTasksByDigest := make(map[string]*backends.DocumentationTask)
 	deleteTasksByDigest := make(map[string]*backends.DocumentationTask)
-	
+
 	for key, registryRelease := range registryReleases {
 		cacheRelease, exists := c.releases[key]
 
@@ -184,7 +184,7 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 					}
 				}
 			}
-			
+
 			// Create task for new version
 			versionInfo := registryVersionsMap[registryRelease.Digest]
 			if existingTask, ok := createTasksByDigest[registryRelease.Digest]; ok {
@@ -231,7 +231,7 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 	for _, task := range createTasksByDigest {
 		createTasks = append(createTasks, *task)
 	}
-	
+
 	var deleteTasks []backends.DocumentationTask
 	for _, task := range deleteTasksByDigest {
 		deleteTasks = append(deleteTasks, *task)
@@ -248,7 +248,7 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 	return result
 }
 
-// GetTarFileByDigest returns tar file for given digest if it exists in cache
+// GetVersionInfoByDigest returns VersionInfo for given digest if it exists in cache
 func (c *Cache) GetVersionInfoByDigest(digest string) (VersionInfo, bool) {
 	c.m.RLock()
 	defer c.m.RUnlock()
