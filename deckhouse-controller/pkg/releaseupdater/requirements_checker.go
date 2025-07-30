@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
@@ -42,7 +43,6 @@ const (
 	systemNamespace                     = "kube-system"
 	k8sAutomaticVersion                 = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
-	MigratedModuleNotFoundMetricName    = "d8_migrated_module_not_found"
 	MigratedModulesRequirementFieldName = "migratedModules"
 )
 
@@ -427,21 +427,14 @@ func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, sour
 // setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
 func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
 	// Set the metric value to 1 to trigger alert
-	c.metricStorage.GaugeSet(MigratedModuleNotFoundMetricName, 1, map[string]string{
+	c.metricStorage.GaugeSet(metrics.MigratedModuleNotFoundMetricName, 1, map[string]string{
 		"module_name": moduleName,
-		"severity":    "6",
-		"alert_type":  "migrated_module_missing",
 	})
-
-	// Log the alert for debugging
-	c.logger.Error("ALERT: Migrated module not found in registry", "module", moduleName, "severity", "6")
 }
 
 // clearMigratedModuleNotFoundAlert clears the alert when module is found
 func (c *migratedModulesCheck) clearMigratedModuleNotFoundAlert(moduleName string) {
-	c.metricStorage.GaugeSet(MigratedModuleNotFoundMetricName, 0, map[string]string{
+	c.metricStorage.GaugeSet(metrics.MigratedModuleNotFoundMetricName, 0, map[string]string{
 		"module_name": moduleName,
-		"severity":    "6",
-		"alert_type":  "migrated_module_missing",
 	})
 }
