@@ -149,7 +149,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-28.02"
+fromCacheVersion: "2025-07-30.03"
 final: false
 mount:
 - from: build_dir
@@ -319,8 +319,9 @@ import:
   add: /usr
   to: /chroot
   includePaths:
-  - lib64/libc.so*
-  - lib64/ld-linux-x86-64.so*
+  - lib64/libc.so.6
+  - lib64/ld-linux-x86-64.so
+  - libc_nonshared.a
   before: install
 shell:
   install:
@@ -429,6 +430,7 @@ shell:
   - cp -a /usr/lib64/libm.so* /chroot/lib64
   # - cp -a /usr/lib64/libc.so* /chroot/lib64 # !
   # - cp -a /usr/lib64/libgcc_s.so* /chroot/lib64
+  - ln -s libc.so.6 /chroot/lib64/libc.so
   # For modules
   # - cp -a /lib64/libabsl_base.so* /chroot/lib64
   # - cp -a /lib64/libabsl_city.so* /chroot/lib64
@@ -563,7 +565,7 @@ final: false
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-28.03"
+fromCacheVersion: "2025-07-30.03"
 mount:
 - from: build_dir
   to: /tmp/apps
