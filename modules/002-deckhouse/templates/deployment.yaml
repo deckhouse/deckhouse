@@ -208,6 +208,8 @@ spec:
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
               value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
