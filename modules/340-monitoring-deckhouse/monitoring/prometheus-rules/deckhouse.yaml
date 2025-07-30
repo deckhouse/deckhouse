@@ -599,7 +599,7 @@
         
         ```bash
         # Check ModuleSource status
-        kubectl get modulesources -o yaml
+        kubectl get modulesources
         
         # Check available modules in all sources
         kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
