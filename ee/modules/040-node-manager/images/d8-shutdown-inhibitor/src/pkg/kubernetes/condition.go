@@ -16,13 +16,18 @@ type Condition struct {
 }
 
 func ConditionFromJSON(condition []byte) (*Condition, error) {
-	var conditionJSON Condition
-	if string(condition) != "''" {
-		err := json.Unmarshal(condition, &conditionJSON)
-		if err != nil {
-			return nil, fmt.Errorf("condition json unmarshal: %w", err)
-		}
+	if len(condition) == 0 {
+		return nil, nil
 	}
 
+	if condition[0] != '{' {
+		return nil, fmt.Errorf("expect condition as JSON object, got: %s", string(condition))
+	}
+
+	var conditionJSON Condition
+	err := json.Unmarshal(condition, &conditionJSON)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal condition JSON object: %w (%s)", err, string(condition))
+	}
 	return &conditionJSON, nil
 }
