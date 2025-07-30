@@ -474,6 +474,8 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 			if err != nil {
 				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
+			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+			return nil
 
 		} else if errGetting != nil {
 			return fmt.Errorf("Cannot check d8-cloud-provider-discovery-data secret before creating it: %v", errGetting)
