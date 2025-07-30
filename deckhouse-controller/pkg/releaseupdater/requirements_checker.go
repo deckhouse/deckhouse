@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric"
@@ -377,14 +378,11 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	modules := strings.Split(migratedModules, ",")
 	for i, module := range modules {
 		modules[i] = strings.TrimSpace(module)
-
-		// remove empty module names
-		if modules[i] == "" {
-			c.logger.Warn("empty module name in migratedModules requirement, removing it")
-			modules = append(modules[:i], modules[i+1:]...)
-			i--
-		}
 	}
+
+	modules = slices.DeleteFunc(modules, func(module string) bool {
+		return module == ""
+	})
 
 	if len(modules) == 0 {
 		return nil
