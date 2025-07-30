@@ -43,7 +43,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage) error {
 	return nil
 }
 
-func RoundTripperRemoteOption(ms *metricstorage.MetricStorage) remote.Option {
+func RoundTripOption(ms *metricstorage.MetricStorage) remote.Option {
 	return remote.WithTransport(MetricRoundTripper{
 		Next:          remote.DefaultTransport,
 		MetricStorage: ms,
