@@ -149,7 +149,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-30.03"
+fromCacheVersion: "2025-07-30.04"
 final: false
 mount:
 - from: build_dir
@@ -321,7 +321,10 @@ import:
   includePaths:
   - lib64/libc.so.6
   - lib64/ld-linux-x86-64.so
-  - libc_nonshared.a
+  before: install
+- image: libs/musl
+  add: /usr/lib/libc.so
+  to: /chroot/lib64/libc.musl-x86_64.so.1
   before: install
 shell:
   install:
@@ -565,7 +568,7 @@ final: false
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
 # fromImage: common/distroless
-fromCacheVersion: "2025-07-30.03"
+fromCacheVersion: "2025-07-30.04"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -617,7 +620,7 @@ import:
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install file
+  - apt-get -y install file glibc
   setup:
   - /tmp/apps/chmod 1777 /tmp
   - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
