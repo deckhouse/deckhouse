@@ -95,9 +95,9 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	imageOptions := make([]remote.Option, 0)
 	if !c.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
-		imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
 	}
 
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	return remote.Image(
@@ -124,6 +124,7 @@ func (c *client) list(ctx context.Context, url string) ([]string, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	repo, err := name.NewRepository(url, nameOpts...)
