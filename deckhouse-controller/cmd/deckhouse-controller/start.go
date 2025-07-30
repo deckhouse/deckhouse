@@ -252,7 +252,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	}
 
 	// load modules from FS, start controllers and run deckhouse config event loop
-	if err = deckhouseController.Start(ctx, operator.MetricStorage); err != nil {
+	if err = deckhouseController.Start(ctx); err != nil {
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 

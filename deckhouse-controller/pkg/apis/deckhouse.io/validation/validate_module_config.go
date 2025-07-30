@@ -69,6 +69,7 @@ func moduleConfigValidationHandler(
 		)
 		if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 			definition := module.GetModuleDefinition()
+
 			IsExperimental = definition.IsExperimental()
 			if IsExperimental {
 				metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": obj.GetName()})

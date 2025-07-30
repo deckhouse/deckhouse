@@ -51,19 +51,20 @@ func DefaultDeckhouseSettings() *DeckhouseSettings {
 	return settings
 }
 
-func NewDeckhouseSettingsContainer(spec *DeckhouseSettings) *DeckhouseSettingsContainer {
-	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{})}
+func NewDeckhouseSettingsContainer(spec *DeckhouseSettings, metricStorage metric.Storage) *DeckhouseSettingsContainer {
+	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{}), metricStorage: metricStorage}
 }
 
 type DeckhouseSettingsContainer struct {
-	settings *DeckhouseSettings
-	lock     sync.Mutex
-	inited   chan struct{}
+	settings      *DeckhouseSettings
+	lock          sync.Mutex
+	inited        chan struct{}
+	metricStorage metric.Storage
 }
 
 // Set update settings in container
 // TODO: notify controllers and requeue all releases
-func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings, metricStorage metric.Storage) {
+func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	if settings == nil {
 		panic("argument should be defined")
 	}
@@ -82,10 +83,11 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings, metricStor
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
+
 	if c.settings.AllowExperimentalModules {
-		metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
+		c.metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
 	} else {
-		metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 0.0, map[string]string{"module": "deckhouse-controller"})
+		c.metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 0.0, map[string]string{"module": "deckhouse-controller"})
 	}
 }
 
