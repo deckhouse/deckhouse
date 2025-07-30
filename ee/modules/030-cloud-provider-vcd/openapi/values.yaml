@@ -239,6 +239,7 @@ properties:
             additionalProperties: false
             description: |
               Parameters for the bastion host, which is used to access the cluster's nodes.
+            required: [template, storageProfile, sizingPolicy]
             properties:
               rootDiskSizeGb:
                 description: |
@@ -246,23 +247,29 @@ properties:
                 example: 50
                 default: 50
                 type: integer
-                minimum: 1
+                minimum: 0
               placementPolicy:
                 description: |
                   Placement policy to be used on this machine.
 
                   If no placement policy is specified, the default placement policy will be used to create the bastion host.
                 type: string
+                minLength: 1
+                maxLength: 128
               sizingPolicy:
                 description: |
                   Sizing policy to be used on this machine.
 
                   If no sizing policy is specified, the default sizing policy will be used to create the bastion host.
                 type: string
+                minLength: 1
+                maxLength: 128
               storageProfile:
                 description: |
                   Storage profile to be used on this machine.
                 type: string
+                minLength: 1
+                maxLength: 128
               template:
                 description: |
                   Path of the template OVA that is to be used.
@@ -272,6 +279,8 @@ properties:
                   If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
                   You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                minLength: 1
+                maxLength: 128
               mainNetworkIPAddress:
                 type: string
                 description: |
