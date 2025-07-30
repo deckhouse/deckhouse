@@ -11,7 +11,7 @@ You can configure `ContainerdV2` as the primary container runtime either at the 
 Migration to `ContainerdV2` is possible under the following conditions:
 
 - Nodes meet the requirements described in the [cluster-wide parameters](/installing/configuration.html#clusterconfiguration-defaultcri).
-- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 
 ## How to enable ContainerdV2
 
