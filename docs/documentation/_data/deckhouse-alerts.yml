@@ -974,41 +974,6 @@ alerts:
         Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
       markupFormat: markdown
-    - name: DeckhouseMigratedModuleNotFound
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |
-        The migrated module `{{ $labels.module_name }}` specified in DeckhouseRelease was not found in any available ModuleSource registry.
-
-        This may indicate:
-        - The module source registry is not properly configured.
-        - The module has not been published to the registry yet.
-        - There is a network issue preventing access to the registry.
-
-        Please check:
-        1. ModuleSource configurations: `kubectl get modulesources`.
-        2. Registry accessibility and credentials.
-        3. Module availability in the configured registries.
-
-        To investigate, run the following commands:
-
-        ```bash
-        # Check ModuleSource status
-        kubectl get modulesources -o yaml
-
-        # Check available modules in all sources
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources 
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
-
-        # Check Deckhouse logs for more details
-        kubectl -n d8-system logs -f -l app=deckhouse
-        ```
-      summary: |
-        Migrated module {{ $labels.module_name }} not found in registry.
-      severity: "6"
-      markupFormat: markdown
     - name: D8DeckhouseModuleHookFailsTooOften
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -3539,6 +3504,41 @@ alerts:
       summary: |
         Deckhouse memory usage is too high.
       severity: "3"
+      markupFormat: markdown
+    - name: DeckhouseMigratedModuleNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The migrated module `{{ $labels.module_name }}` specified in DeckhouseRelease was not found in any available ModuleSource registry.
+
+        This may indicate:
+        - The module source registry is not properly configured.
+        - The module has not been published to the registry yet.
+        - There is a network issue preventing access to the registry.
+
+        Please check:
+        1. ModuleSource configurations: `kubectl get modulesources`.
+        2. Registry accessibility and credentials.
+        3. Module availability in the configured registries.
+
+        To investigate, run the following commands:
+
+        ```bash
+        # Check ModuleSource status
+        kubectl get modulesources -o yaml
+
+        # Check available modules in all sources
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+
+        # Check Deckhouse logs for more details
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Migrated module {{ $labels.module_name }} not found in registry.
+      severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
