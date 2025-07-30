@@ -31,7 +31,7 @@ func (s *Starter) Start(ctx context.Context) {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 
 	var wg sync.WaitGroup
-	errCh := make(chan error)
+	errCh := make(chan error, 10)
 
 	for i := range s.tasks {
 		wg.Add(1)
