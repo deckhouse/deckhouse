@@ -1556,10 +1556,12 @@ spec:
 		Context("Fill default mainNetwork for vSphere", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.vsphere", []byte(`
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider", []byte(`
 ---
-      instances:
-        mainNetwork: mynet
+type: vsphere
+vsphere:
+  instances:
+    mainNetwork: mynet
 `))
 				f.RunHook()
 			})
