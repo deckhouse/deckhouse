@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -43,7 +44,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(),
+			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
 		}
 
 		tasks := scanner.processRegistries(context.Background())
@@ -82,7 +83,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(),
+			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
 		}
 
 		scanner.processRegistries(context.Background())
