@@ -6,7 +6,7 @@ locals {
   external_network_name                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
   external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
-  bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion), "placementPolicy") ? var.providerClusterConfiguration.bastion.placementPolicy : ""
+  bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
   dnat_bastion_external_port               = contains(keys(var.providerClusterConfiguration.edgeGateway), "externalPort") ? var.providerClusterConfiguration.edgeGateway.externalPort : 22
 }
 
@@ -42,13 +42,13 @@ module "bastion" {
   prefix            = var.clusterConfiguration.cloud.prefix
   vapp_name         = module.vapp.name
   network_name      = vcd_vapp_org_network.vapp_network.org_network_name
-  ip_address        = var.providerClusterConfiguration.bastion.mainNetworkIPAddress
-  template          = var.providerClusterConfiguration.bastion.template
+  ip_address        = var.providerClusterConfiguration.bastion.instanceClass.mainNetworkIPAddress
+  template          = var.providerClusterConfiguration.bastion.instanceClass.template
   ssh_public_key    = var.providerClusterConfiguration.sshPublicKey
   placement_policy  = local.bastion_placement_policy
-  storage_profile   = var.providerClusterConfiguration.bastion.storageProfile
-  sizing_policy     = var.providerClusterConfiguration.bastion.sizingPolicy
-  root_disk_size_gb = var.providerClusterConfiguration.bastion.rootDiskSizeGb
+  storage_profile   = var.providerClusterConfiguration.bastion.instanceClass.storageProfile
+  sizing_policy     = var.providerClusterConfiguration.bastion.instanceClass.sizingPolicy
+  root_disk_size_gb = var.providerClusterConfiguration.bastion.instanceClass.rootDiskSizeGb
 }
 
 module "snat" {
