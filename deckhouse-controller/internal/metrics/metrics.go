@@ -22,10 +22,15 @@ func RegisterMetrics(metricStorage metric.Storage) {
 
 const (
 	MigratedModuleNotFoundMetricName = "d8_migrated_module_not_found"
+	MigratedModuleNotFoundGroup      = "migrated_module_not_found"
 )
 
 func registerModuleMetrics(metricStorage metric.Storage) {
-	metricStorage.RegisterGauge(MigratedModuleNotFoundMetricName, map[string]string{
-		"module_name": "",
-	})
+	// metricStorage.Grouped().GaugeSet(
+	// 	MigratedModuleNotFoundGroup,
+	// 	MigratedModuleNotFoundMetricName,
+	// 	0,
+	// 	map[string]string{
+	// 		"module_name": "",
+	// 	})
 }

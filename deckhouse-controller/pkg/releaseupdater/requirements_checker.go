@@ -369,6 +369,8 @@ func (c *migratedModulesCheck) GetName() string {
 }
 
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
+
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
@@ -412,8 +414,6 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 
 			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
 		}
-
-		c.clearMigratedModuleNotFoundAlert(moduleName)
 	}
 
 	c.logger.Debug("all migrated modules found in registries")
@@ -436,14 +436,11 @@ func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, sour
 // setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
 func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
 	// Set the metric value to 1 to trigger alert
-	c.metricStorage.GaugeSet(metrics.MigratedModuleNotFoundMetricName, 1, map[string]string{
-		"module_name": moduleName,
-	})
-}
-
-// clearMigratedModuleNotFoundAlert clears the alert when module is found
-func (c *migratedModulesCheck) clearMigratedModuleNotFoundAlert(moduleName string) {
-	c.metricStorage.GaugeSet(metrics.MigratedModuleNotFoundMetricName, 0, map[string]string{
-		"module_name": moduleName,
-	})
+	c.metricStorage.Grouped().GaugeSet(
+		metrics.MigratedModuleNotFoundGroup,
+		metrics.MigratedModuleNotFoundMetricName,
+		1,
+		map[string]string{
+			"module_name": moduleName,
+		})
 }
