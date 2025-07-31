@@ -490,7 +490,7 @@ entries:
                     - title:
                         en: Migrating container runtime to ContainerdV2
                         ru: Миграция container runtime на ContainerdV2
-                      url: /admin/configuration/platform-scaling/node/migrating.html 
+                      url: /admin/configuration/platform-scaling/node/migrating.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами

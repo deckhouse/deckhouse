@@ -1,4 +1,5 @@
 name: monitoring-kubernetes
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring

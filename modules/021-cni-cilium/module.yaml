@@ -5,3 +5,5 @@ weight: 21
 subsystems:
   - networking
 namespace: d8-cni-cilium
+requirements:
+  deckhouse: ">= 1.68"

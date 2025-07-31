@@ -255,7 +255,7 @@ How will the agent help?
     guestOSInfo:
       id: fedora
       kernelRelease: 6.11.4-301.fc41.x86_64
-      kernelVersion: '#1 SMP PREEMPT_DYNAMIC Sun Oct 20 15:02:33 UTC 2024'
+      kernelVersion: "#1 SMP PREEMPT_DYNAMIC Sun Oct 20 15:02:33 UTC 2024"
       machine: x86_64
       name: Fedora Linux
       prettyName: Fedora Linux 41 (Cloud Edition)

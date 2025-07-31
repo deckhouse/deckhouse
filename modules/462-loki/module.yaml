@@ -1,4 +1,5 @@
 name: loki
+stage: "Experimental"
 subsystems:
   - infrastructure
 namespace: d8-monitoring
