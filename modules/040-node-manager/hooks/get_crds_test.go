@@ -270,13 +270,11 @@ apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
   name: proper1
-spec: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
   name: proper2
-spec: {}
 `
 		stateICImproper = `
 ---
@@ -1556,8 +1554,16 @@ spec:
 		})
 
 		Context("Fill default mainNetwork for vSphere", func() {
+			const icWithEmptySpec = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: proper1
+spec: {}
+`
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + icWithEmptySpec))
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider", []byte(`
 ---
 type: vsphere
