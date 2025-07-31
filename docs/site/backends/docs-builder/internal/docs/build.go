@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/spf13/fsync"
@@ -28,10 +29,23 @@ import (
 )
 
 func (svc *Service) Build() error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		if svc.metrics != nil {
+			svc.metrics.CounterAdd("docs_builder_build_total", 1, map[string]string{"status": status})
+			svc.metrics.HistogramObserve("docs_builder_build_duration_seconds", dur, map[string]string{"status": status}, nil)
+			if status == "ok" {
+				svc.updateCachedModulesGauge()
+			}
+		}
+	}()
+
 	err := svc.buildHugo()
 	if err != nil {
 		svc.isReady.Store(false)
-
+		status = "fail"
 		return fmt.Errorf("hugo build: %w", err)
 	}
 

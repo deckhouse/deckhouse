@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
@@ -41,15 +42,17 @@ type Service struct {
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
 
-	logger *log.Logger
+	logger  *log.Logger
+	metrics *metricsstorage.MetricStorage
 }
 
-func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger) *Service {
+func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger, metrics *metricsstorage.MetricStorage) *Service {
 	svc := &Service{
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
 		logger:               logger,
+		metrics:              metrics,
 	}
 
 	if !highAvailability {

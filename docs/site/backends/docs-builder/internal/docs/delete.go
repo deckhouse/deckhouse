@@ -16,11 +16,26 @@ package docs
 
 import (
 	"fmt"
+	"time"
 )
 
 func (svc *Service) Delete(moduleName string, channels []string) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		if svc.metrics != nil {
+			svc.metrics.CounterAdd("docs_builder_delete_total", 1, map[string]string{"status": status})
+			svc.metrics.HistogramObserve("docs_builder_delete_duration_seconds", dur, map[string]string{"status": status}, nil)
+			if status == "ok" {
+				svc.updateCachedModulesGauge()
+			}
+		}
+	}()
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
+		status = "fail"
 		return fmt.Errorf("clean module files: %w", err)
 	}
 

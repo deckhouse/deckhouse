@@ -60,14 +60,18 @@ func main() {
 		log.WithHandlerType(log.TextHandlerType),
 	)
 
-	mStorage := metricsstorage.NewMetricStorage("tst")
+	mStorage := metricsstorage.NewMetricStorage("docs_builder")
+
+	if err := RegisterMetrics(mStorage); err != nil {
+		logger.Fatal("failed to register metrics", log.Err(err))
+	}
 
 	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
 		logger.Fatal("new leases manager", log.Err(err))
 	}
 
-	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))
+	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger, mStorage), logger.Named("v1"))
 
 	srv := &http.Server{
 		Addr:    listenAddress,
@@ -78,9 +82,7 @@ func main() {
 		Addr:    metricsAddress,
 		Handler: mStorage.Handler(),
 	}
-	// TODO добавить отдельный файл RegisterMetrics
-	// В остальных файлах добавить логики
-	// mStorage.RegisterHistogram()
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	logger.Info("starting application")
