@@ -2,11 +2,9 @@ module registry-modules-watcher
 
 go 1.23.8
 
-toolchain go1.23.2
-
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250722110301-96e9c3372a9a
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250731141939-1dbece3b86eb
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250731134809-b4a1740bb436
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
