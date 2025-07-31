@@ -46,7 +46,6 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
@@ -266,8 +265,6 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err = deckhouseController.Start(ctx); err != nil {
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
-
-	metrics.RegisterMetrics(operator.MetricStorage)
 
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)

@@ -14,23 +14,7 @@
 
 package metrics
 
-import "github.com/flant/shell-operator/pkg/metric"
-
-func RegisterMetrics(metricStorage metric.Storage) {
-	registerModuleMetrics(metricStorage)
-}
-
 const (
 	MigratedModuleNotFoundMetricName = "d8_migrated_module_not_found"
 	MigratedModuleNotFoundGroup      = "migrated_module_not_found"
 )
-
-func registerModuleMetrics(metricStorage metric.Storage) {
-	// metricStorage.Grouped().GaugeSet(
-	// 	MigratedModuleNotFoundGroup,
-	// 	MigratedModuleNotFoundMetricName,
-	// 	0,
-	// 	map[string]string{
-	// 		"module_name": "",
-	// 	})
-}
