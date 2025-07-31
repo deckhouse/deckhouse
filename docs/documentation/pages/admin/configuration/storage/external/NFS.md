@@ -32,8 +32,8 @@ d8 k get module csi-nfs -w
 In the output, you should see information about the `csi-nfs` module:
 
 ```console
-NAME      STAGE   STATE     SOURCE     STATUS
-csi-nfs           Enabled   Embedded   Ready
+NAME      STAGE   SOURCE    PHASE       ENABLED    READY
+csi-nfs           Embedded  Available   True       True
 ```
 
 ## Creating a StorageClass

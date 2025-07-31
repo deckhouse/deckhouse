@@ -57,8 +57,8 @@ If the parameter is not specified, no group-based filtering will be applied.
    Example output:
 
    ```console
-   NAME         STAGE   SOURCE     PHASE   ENABLED   READY
-   user-authn           Embedded   Ready   True      True
+   NAME         STAGE   SOURCE     PHASE       ENABLED   READY
+   user-authn           Embedded   Available   True      True
    ```
 
    Enable the module via CL:
