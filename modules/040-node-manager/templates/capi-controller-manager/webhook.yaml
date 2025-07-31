@@ -522,4 +522,6 @@ webhooks:
           - DELETE
         resources:
           - ipaddressclaims
-    sideEffects: None{{- end }}
+    sideEffects: None
+{{- end }}
+
