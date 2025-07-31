@@ -436,7 +436,7 @@ Parameters that can be used in `module.yaml`:
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-If `stage` is set to `Experimental`, the module will not be can enabled by default. To enable it, set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
+If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
   For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
