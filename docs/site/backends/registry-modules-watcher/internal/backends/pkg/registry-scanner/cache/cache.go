@@ -58,13 +58,13 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 	}
 
 	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
-		log.Info(
+		log.Debug(
 			"collector func triggered",
 			slog.Int("registry_len", len(c.val)),
 		)
 
 		for registry, modules := range c.val {
-			log.Info(
+			log.Debug(
 				"collector func registry triggered",
 				slog.Int("registry_len", len(modules)),
 			)
