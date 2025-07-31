@@ -5,6 +5,7 @@ metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-zvirt
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

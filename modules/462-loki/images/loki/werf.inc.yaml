@@ -4,7 +4,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /modules/462-loki/images/{{ $.ImageName }}/patches
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
     to: /patches
     stageDependencies:
       install:
@@ -20,7 +20,7 @@ shell:
     - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

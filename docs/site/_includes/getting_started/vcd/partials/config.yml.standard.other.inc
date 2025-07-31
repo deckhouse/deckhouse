@@ -119,27 +119,37 @@ spec:
   version: 2
   enabled: true
   settings:
-      # [<ru>] Настройки metallb-пула для входящего трафика.
-      # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
-      # [<en>] Metallb pool settings for incoming traffic.
-      # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
+    # [<ru>] Настройки metallb-пула для входящего трафика.
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
+    # [<en>] Metallb pool settings for incoming traffic.
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
     addressPools:
     - addresses:
-      - *!CHANGE_SUBNET_METALLB_POOL*.10/32
+        - *!CHANGE_SUBNET_METALLB_POOL*.10/32
       name: frontend-pool
       protocol: layer2
-    # [<ru>] Размещение спикера на frontend-узлах.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
-    # [<en>] Speaker placement on frontend hosts.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
-    speaker:
-      nodeSelector:
-        node-role.deckhouse.io/frontend: ""
-      tolerations:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
-        operator: Equal
-        value: frontend
+---
+# [<en>] Load balancer class for Ingress resources.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
+# [<ru>] Класс балансировщика нагрузки для ресурсов Ingress.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: ingress
+spec:
+  # [<en>] IP range from the address pool.
+  # [<ru>] Диапазон IP-адресов из пула.
+  addressPool:
+    - 192.168.207.100-192.168.207.101  # <- замените на свои свободные IP в сети frontend-нод
+  # [<en>] Set false to apply this class only when explicitly requested.
+  # [<ru>] False — класс используется только при явном указании.
+  isDefault: false
+  # [<en>] Limit allocation to nodes with the frontend role.
+  # [<ru>] Ограничить выдачу IP-адресов только нодам с ролью frontend.
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  type: L2
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
@@ -260,15 +270,15 @@ spec:
   ingressClass: nginx
   # [<en>] The way traffic goes to cluster from the outer network.
   # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-    realIPHeader: X-Forwarded-For
+  inlet: LoadBalancer
+  loadBalancer:
+    loadBalancerClass: ingress
   nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.deckhouse.io/frontend: ""
   tolerations:
-  - operator: Exists
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: frontend
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
@@ -299,10 +309,10 @@ spec:
   email: admin@deckhouse.io
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
-  # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+  # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
-  # [<ru>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   password: <GENERATED_PASSWORD_HASH>

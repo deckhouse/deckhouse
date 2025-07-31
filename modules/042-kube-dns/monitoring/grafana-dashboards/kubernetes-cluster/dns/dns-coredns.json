@@ -489,7 +489,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.14",
+      "pluginVersion": "10.4.15",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -521,6 +521,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -632,7 +633,8 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -644,10 +646,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
+          "range": true,
           "refId": "B",
           "step": 60
         }
@@ -657,6 +661,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -744,10 +749,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod) / sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"()\"}[$__rate_interval])) by (pod)  / sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"()\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{ pod }}",
+          "range": true,
           "refId": "C",
           "step": 40
         }
@@ -835,7 +842,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.14",
+      "pluginVersion": "10.4.15",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -843,10 +850,12 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -868,6 +877,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "description": "If the graph is non-empty, it means that some CoreDNS requests resulted in panic. You can see a specific error in the container logs.",
@@ -977,10 +987,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 40
         },
@@ -988,10 +1000,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -1502,7 +1516,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1601,7 +1616,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1655,6 +1671,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "fieldConfig": {
@@ -1700,7 +1717,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1761,7 +1779,8 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (to)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1773,10 +1792,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1786,6 +1807,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "fieldConfig": {
@@ -1831,7 +1853,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1892,7 +1915,8 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_responses_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1904,10 +1928,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_responses_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B"
             }
           ],
@@ -1916,6 +1942,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "description": "If the graph is non-empty, it means that some CoreDNS requests resulted in panic. You can see a specific error in the container logs.",
@@ -1962,7 +1989,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2024,10 +2052,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (upstream)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
+              "range": true,
               "refId": "A",
               "step": 40
             },
@@ -2035,10 +2065,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B"
             }
           ],
@@ -2093,7 +2125,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2202,7 +2235,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2301,7 +2335,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2429,7 +2464,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2591,7 +2627,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.15",
           "reverseYBuckets": false,
           "targets": [
             {
@@ -2701,7 +2737,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.15",
           "reverseYBuckets": false,
           "targets": [
             {
@@ -2709,10 +2745,12 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
+              "range": true,
               "refId": "A"
             }
           ],
@@ -2845,13 +2883,17 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(coredns_forward_request_duration_seconds_sum,to)",
+        "definition": "label_values(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\"},to)",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "upstream",
         "options": [],
-        "query": "label_values(coredns_forward_request_duration_seconds_sum,to)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\"},to)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

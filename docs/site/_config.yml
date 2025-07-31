@@ -166,11 +166,6 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
-      path: "*/031-ceph-csi"
-      type: "pages"
-    values:
-      featureStatus: deprecated
-  - scope:
       path: "*/500-operator-trivy"
       type: "pages"
     values:

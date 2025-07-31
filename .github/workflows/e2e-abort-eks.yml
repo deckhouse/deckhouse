@@ -40,7 +40,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.10"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -49,7 +49,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -87,6 +90,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -303,7 +307,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -328,9 +331,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -598,7 +601,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -623,9 +625,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -893,7 +895,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -918,9 +919,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1188,7 +1189,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1213,9 +1213,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1483,7 +1483,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1508,9 +1507,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1778,7 +1777,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1803,9 +1801,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -2073,7 +2071,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2098,9 +2095,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \

@@ -1,5 +1,10 @@
 # Changelog v1.68
 
+## [MALFORMED]
+
+
+ - #12058 unknown section "ceph-csi"
+
 ## Know before update
 
 
@@ -46,7 +51,6 @@
  - **[candi]** Escaped character `%` in systemd for work proxy in containerd configuration. [#11483](https://github.com/deckhouse/deckhouse/pull/11483)
  - **[candi]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
  - **[candi]** Set `dhctl` to ignore metadata changes in the `vcd_vapp_vm` resource. [#11201](https://github.com/deckhouse/deckhouse/pull/11201)
- - **[ceph-csi]** CVE update go mod. [#12058](https://github.com/deckhouse/deckhouse/pull/12058)
  - **[chrony]** Fixed a security vulnerability in `chrony-exporter`. [#11558](https://github.com/deckhouse/deckhouse/pull/11558)
  - **[chrony]** Fixed a port conflict. [#11449](https://github.com/deckhouse/deckhouse/pull/11449)
  - **[chrony]** Added the missing libcap library. [#11431](https://github.com/deckhouse/deckhouse/pull/11431)
@@ -78,6 +82,7 @@
  - **[deckhouse-controller]** Fix DeckhouseRelease approval in the Manual update mode. [#12527](https://github.com/deckhouse/deckhouse/pull/12527)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
  - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
+ - **[dhctl]** Do not create a local-converger lock for commanderMode [#13454](https://github.com/deckhouse/deckhouse/pull/13454)
  - **[dhctl]** Escape special shell characters in sudo preflight check. [#12533](https://github.com/deckhouse/deckhouse/pull/12533)
  - **[dhctl]** sudoPassword from the connection-config not used in dhctl CLI and dhctl server [#12419](https://github.com/deckhouse/deckhouse/pull/12419)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)

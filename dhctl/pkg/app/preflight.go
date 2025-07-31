@@ -21,7 +21,7 @@ var (
 	PreflightSkipSSHForward                   = false
 	PreflightSkipAvailabilityPorts            = false
 	PreflightSkipResolvingLocalhost           = false
-	PreflightSkipDeckhouseVersionCheck        = false
+	PreflightSkipDeckhouseEditionCheck        = false
 	PreflightSkipRegistryThroughProxy         = false
 	PreflightSkipPublicDomainTemplateCheck    = false
 	PreflightSkipSSHCredentialsCheck          = false
@@ -43,7 +43,7 @@ const (
 	SSHForwardArgName                = "preflight-skip-ssh-forward-check"
 	PortsAvailabilityArgName         = "preflight-skip-availability-ports-check"
 	ResolvingLocalhostArgName        = "preflight-skip-resolving-localhost-check"
-	DeckhouseVersionCheckArgName     = "preflight-skip-deckhouse-version-check"
+	DeckhouseEditionCheckArgName     = "preflight-skip-deckhouse-edition-check"
 	RegistryThroughProxyCheckArgName = "preflight-skip-registry-through-proxy"
 	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
 	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
@@ -65,7 +65,7 @@ var PreflightSkipOptionsMap = map[string]*bool{
 	SSHForwardArgName:                &PreflightSkipSSHForward,
 	PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
 	ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
-	DeckhouseVersionCheckArgName:     &PreflightSkipDeckhouseVersionCheck,
+	DeckhouseEditionCheckArgName:     &PreflightSkipDeckhouseEditionCheck,
 	RegistryThroughProxyCheckArgName: &PreflightSkipRegistryThroughProxy,
 	PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
 	SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
@@ -104,9 +104,9 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(ResolvingLocalhostArgName, "Skip resolving the localhost domain").
 		Envar(configEnvName("PREFLIGHT_SKIP_RESOLVING_LOCALHOST_CHECK")).
 		BoolVar(PreflightSkipOptionsMap[ResolvingLocalhostArgName])
-	cmd.Flag(DeckhouseVersionCheckArgName, "Skip verifying deckhouse version").
-		Envar(configEnvName("PREFLIGHT_SKIP_INCOMPATIBLE_VERSION_CHECK")).
-		BoolVar(PreflightSkipOptionsMap[DeckhouseVersionCheckArgName])
+	cmd.Flag(DeckhouseEditionCheckArgName, "Skip verifying deckhouse edition").
+		Envar(configEnvName("PREFLIGHT_SKIP_INCOMPATIBLE_EDITION_CHECK")).
+		BoolVar(PreflightSkipOptionsMap[DeckhouseEditionCheckArgName])
 	cmd.Flag(RegistryThroughProxyCheckArgName, "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_THROUGH_PROXY")).
 		BoolVar(PreflightSkipOptionsMap[RegistryThroughProxyCheckArgName])

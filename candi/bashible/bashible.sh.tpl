@@ -199,12 +199,8 @@ function main() {
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
-{{- if .registry }}
-  export REGISTRY_ADDRESS="{{ .registry.address }}"
-  export SCHEME="{{ .registry.scheme }}"
-  export REGISTRY_PATH="{{ .registry.path }}"
-  export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
-{{- end }}
+  export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
+  export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
@@ -243,7 +239,7 @@ function main() {
     fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
-    $BOOTSTRAP_DIR/bashible-new.sh --no-lock
+    bash --noprofile --norc -c "$BOOTSTRAP_DIR/bashible-new.sh --no-lock"
 
     # At this step we already know that new version is functional
     mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
@@ -293,7 +289,7 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
+    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then

@@ -1,3 +1,4 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- define "huaweicloud_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -68,6 +69,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "caphc-controller-manager")) | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: caphc-controller-manager
       imagePullSecrets:
         - name: deckhouse-registry
@@ -105,6 +107,13 @@ spec:
               secretKeyRef:
                 name: huaweicloud-credentials
                 key: project-id
+          {{- if $providerClusterConfiguration.provider.enterpriseProjectID }}
+          - name: HUAWEICLOUD_ENTERPRISE_PROJECT_ID
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: enterprise-project-id
+          {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz

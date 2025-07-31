@@ -1,10 +1,10 @@
 diff --git a/api/v1/models/daemon_configuration_status.go b/api/v1/models/daemon_configuration_status.go
-index f55612181d..3aad3ee0ea 100644
+index 40f9345ceb..b43e02659f 100644
 --- a/api/v1/models/daemon_configuration_status.go
 +++ b/api/v1/models/daemon_configuration_status.go
-@@ -50,6 +50,12 @@ type DaemonConfigurationStatus struct {
- 	// Configured compatibility mode for --egress-multi-home-ip-rule-compat
- 	EgressMultiHomeIPRuleCompat bool `json:"egress-multi-home-ip-rule-compat,omitempty"`
+@@ -53,6 +53,12 @@ type DaemonConfigurationStatus struct {
+ 	// Enable route MTU for pod netns when CNI chaining is used
+ 	EnableRouteMTUForCNIChaining bool `json:"enableRouteMTUForCNIChaining,omitempty"`
 
 +	// MAC address for host side veth interface
 +	EndpointInterfaceHostMAC string `json:"endpointInterfaceHostMAC,omitempty"`
@@ -16,13 +16,13 @@ index f55612181d..3aad3ee0ea 100644
  	Immutable ConfigurationMap `json:"immutable,omitempty"`
 
 diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
-index a93f7d34fa..04b88002b9 100644
+index e7290116b8..409ac9df65 100644
 --- a/api/v1/openapi.yaml
 +++ b/api/v1/openapi.yaml
-@@ -2496,6 +2496,12 @@ definitions:
-       routeMTU:
-         description: MTU for network facing routes
-         type: integer
+@@ -2694,6 +2694,12 @@ definitions:
+       enableRouteMTUForCNIChaining:
+         description: Enable route MTU for pod netns when CNI chaining is used
+         type: boolean
 +      endpointInterfaceHostMAC:
 +        description: MAC address for host side veth interface
 +        type: string
@@ -33,11 +33,11 @@ index a93f7d34fa..04b88002b9 100644
          "$ref": "#/definitions/DatapathMode"
        ipam-mode:
 diff --git a/api/v1/server/embedded_spec.go b/api/v1/server/embedded_spec.go
-index 927cea0090..32ec28791c 100644
+index f199be313b..f80f5a905f 100644
 --- a/api/v1/server/embedded_spec.go
 +++ b/api/v1/server/embedded_spec.go
-@@ -2310,6 +2310,14 @@ func init() {
-           "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
+@@ -2631,6 +2631,14 @@ func init() {
+           "description": "Enable route MTU for pod netns when CNI chaining is used",
            "type": "boolean"
          },
 +        "endpointInterfaceHostMAC": {
@@ -51,8 +51,8 @@ index 927cea0090..32ec28791c 100644
          "immutable": {
            "description": "Immutable configuration (read-only)",
            "$ref": "#/definitions/ConfigurationMap"
-@@ -7435,6 +7443,14 @@ func init() {
-           "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
+@@ -8390,6 +8398,14 @@ func init() {
+           "description": "Enable route MTU for pod netns when CNI chaining is used",
            "type": "boolean"
          },
 +        "endpointInterfaceHostMAC": {
@@ -66,28 +66,39 @@ index 927cea0090..32ec28791c 100644
          "immutable": {
            "description": "Immutable configuration (read-only)",
            "$ref": "#/definitions/ConfigurationMap"
-diff --git a/daemon/cmd/config.go b/daemon/cmd/config.go
-index f7ef6cd257..d171474074 100644
---- a/daemon/cmd/config.go
-+++ b/daemon/cmd/config.go
-@@ -199,6 +199,8 @@ func (h *getConfig) Handle(params GetConfigParams) middleware.Responder {
- 			IPV6: option.Config.EnableIPv6Masquerade,
+diff --git a/daemon/restapi/config.go b/daemon/restapi/config.go
+index 60a4d16d07..12875911aa 100644
+--- a/daemon/restapi/config.go
++++ b/daemon/restapi/config.go
+@@ -374,6 +374,8 @@ func (h *getConfigHandler) Handle(params daemonapi.GetConfigParams) middleware.R
  		},
- 		EgressMultiHomeIPRuleCompat: option.Config.EgressMultiHomeIPRuleCompat,
-+		EndpointInterfaceHostMAC:    option.Config.EndpointInterfaceHostMAC,
-+		EndpointInterfaceMAC:        option.Config.EndpointInterfaceMAC,
- 		GROMaxSize:                  int64(d.bigTCPConfig.GetGROIPv6MaxSize()),
- 		GSOMaxSize:                  int64(d.bigTCPConfig.GetGSOIPv6MaxSize()),
- 		GROIPV4MaxSize:              int64(d.bigTCPConfig.GetGROIPv4MaxSize()),
+ 		EgressMultiHomeIPRuleCompat:         option.Config.EgressMultiHomeIPRuleCompat,
+ 		InstallUplinkRoutesForDelegatedIPAM: option.Config.InstallUplinkRoutesForDelegatedIPAM,
++		EndpointInterfaceHostMAC:            option.Config.EndpointInterfaceHostMAC,
++		EndpointInterfaceMAC:                option.Config.EndpointInterfaceMAC,
+ 		GROMaxSize:                          int64(h.bigTCPConfig.GetGROIPv6MaxSize()),
+ 		GSOMaxSize:                          int64(h.bigTCPConfig.GetGSOIPv6MaxSize()),
+ 		GROIPV4MaxSize:                      int64(h.bigTCPConfig.GetGROIPv4MaxSize()),
 diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
-index 7edac7e95b..94a57d21b5 100644
+index ec853bf20b..c318b72823 100644
 --- a/pkg/datapath/connector/veth.go
 +++ b/pkg/datapath/connector/veth.go
-@@ -62,11 +62,19 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu, groIPv6MaxSize, gsoIPv
+@@ -51,6 +51,10 @@ func SetupVeth(id string, mtu, groIPv6MaxSize, gsoIPv6MaxSize, groIPv4MaxSize, g
+ // fields such as mac, NodeMac, ifIndex and ifName. Returns a pointer for the created
+ // veth, a pointer for the peer link and error if something fails.
+ func SetupVethWithNames(lxcIfName, peerIfName string, mtu, groIPv6MaxSize, gsoIPv6MaxSize, groIPv4MaxSize, gsoIPv4MaxSize int, ep *models.EndpointChangeRequest, sysctl sysctl.Sysctl) (*netlink.Veth, netlink.Link, error) {
++	var (
++		epHostMAC, epLXCMAC mac.MAC
++		err                 error
++	)
+ 	// systemd 242+ tries to set a "persistent" MAC addr for any virtual device
+ 	// by default (controlled by MACAddressPolicy). As setting happens
+ 	// asynchronously after a device has been created, ep.Mac and ep.HostMac
+@@ -59,11 +63,19 @@ func SetupVethWithNames(lxcIfName, peerIfName string, mtu, groIPv6MaxSize, gsoIP
  	// explicitly setting MAC addrs for both veth ends. This sets
  	// addr_assign_type for NET_ADDR_SET which prevents systemd from changing
  	// the addrs.
--	epHostMAC, err = mac.GenerateRandMAC()
+-	epHostMAC, err := mac.GenerateRandMAC()
 +	if ep.HostMac != "" {
 +		epHostMAC, err = mac.ParseMAC(ep.HostMac)
 +	} else {
@@ -96,7 +107,7 @@ index 7edac7e95b..94a57d21b5 100644
  	if err != nil {
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
  	}
--	epLXCMAC, err = mac.GenerateRandMAC()
+-	epLXCMAC, err := mac.GenerateRandMAC()
 +	if ep.Mac != "" {
 +		epLXCMAC, _ = mac.ParseMAC(ep.Mac)
 +	} else {
@@ -106,10 +117,10 @@ index 7edac7e95b..94a57d21b5 100644
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
  	}
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index 1258c1af89..400058a1b1 100644
+index 6f67475ca3..17941eae2f 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
-@@ -330,6 +330,12 @@ const (
+@@ -345,6 +345,12 @@ const (
  	// LoopbackIPv4 is the default address for service loopback
  	LoopbackIPv4 = "169.254.42.1"
 
@@ -123,12 +134,12 @@ index 1258c1af89..400058a1b1 100644
  	// It is disabled by default for backwards compatibility.
  	EnableEndpointRoutes = false
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index b3ffe32d05..0f4c854a2e 100644
+index 9d2a64e5e7..8e09bc6aed 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -1039,6 +1039,12 @@ const (
- 	// EndpointStatusState enables CiliumEndpoint.Status.State
- 	EndpointStatusState = "state"
+@@ -988,6 +988,12 @@ const (
+ 	// K8sHeartbeatTimeout configures the timeout for apiserver heartbeat
+ 	K8sHeartbeatTimeout = "k8s-heartbeat-timeout"
 
 +	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
 +	EndpointInterfaceHostMAC = "endpoint-interface-host-mac"
@@ -139,7 +150,7 @@ index b3ffe32d05..0f4c854a2e 100644
  	// EnableIPv4FragmentsTrackingName is the name of the option to enable
  	// IPv4 fragments tracking for L4-based lookups. Needs LRU map support.
  	EnableIPv4FragmentsTrackingName = "enable-ipv4-fragment-tracking"
-@@ -1954,6 +1960,12 @@ type DaemonConfig struct {
+@@ -1841,6 +1847,12 @@ type DaemonConfig struct {
  	// LocalRouterIPv6 is the link-local IPv6 address used for Cilium's router device
  	LocalRouterIPv6 string
 
@@ -152,34 +163,34 @@ index b3ffe32d05..0f4c854a2e 100644
  	// EnableEndpointRoutes enables use of per endpoint routes
  	EnableEndpointRoutes bool
 
-@@ -2434,6 +2446,8 @@ var (
- 		KVStoreOpt:                   make(map[string]string),
- 		LogOpt:                       make(map[string]string),
- 		LoopbackIPv4:                 defaults.LoopbackIPv4,
-+		EndpointInterfaceHostMAC:     defaults.EndpointInterfaceHostMAC,
-+		EndpointInterfaceMAC:         defaults.EndpointInterfaceMAC,
- 		EnableEndpointRoutes:         defaults.EnableEndpointRoutes,
- 		AnnotateK8sNode:              defaults.AnnotateK8sNode,
- 		K8sServiceCacheSize:          defaults.K8sServiceCacheSize,
-@@ -2999,6 +3013,8 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -2288,6 +2300,8 @@ var (
+ 		KVStoreOpt:                      make(map[string]string),
+ 		LogOpt:                          make(map[string]string),
+ 		LoopbackIPv4:                    defaults.LoopbackIPv4,
++		EndpointInterfaceHostMAC:        defaults.EndpointInterfaceHostMAC,
++		EndpointInterfaceMAC:            defaults.EndpointInterfaceMAC,
+ 		EnableEndpointRoutes:            defaults.EnableEndpointRoutes,
+ 		AnnotateK8sNode:                 defaults.AnnotateK8sNode,
+ 		K8sServiceCacheSize:             defaults.K8sServiceCacheSize,
+@@ -2855,6 +2869,8 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.L2AnnouncerRetryPeriod = vp.GetDuration(L2AnnouncerRetryPeriod)
- 	c.EnableWireguardUserspaceFallback = vp.GetBool(EnableWireguardUserspaceFallback)
+ 	c.WireguardPersistentKeepalive = vp.GetDuration(WireguardPersistentKeepalive)
  	c.EnableWellKnownIdentities = vp.GetBool(EnableWellKnownIdentities)
 +	c.EndpointInterfaceHostMAC = vp.GetString(EndpointInterfaceHostMAC)
 +	c.EndpointInterfaceMAC = vp.GetString(EndpointInterfaceMAC)
  	c.EnableXDPPrefilter = vp.GetBool(EnableXDPPrefilter)
+ 	c.EnableTCX = vp.GetBool(EnableTCX)
  	c.DisableCiliumEndpointCRD = vp.GetBool(DisableCiliumEndpointCRDName)
- 	c.EgressMasqueradeInterfaces = vp.GetString(EgressMasqueradeInterfaces)
-diff --git a/plugins/cilium-cni/main.go b/plugins/cilium-cni/main.go
-index 217981d3a1..c6e227d1c9 100644
---- a/plugins/cilium-cni/main.go
-+++ b/plugins/cilium-cni/main.go
-@@ -476,6 +476,8 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
- 		K8sPodName:            string(cniArgs.K8S_POD_NAME),
- 		K8sNamespace:          string(cniArgs.K8S_POD_NAMESPACE),
- 		DatapathConfiguration: &models.EndpointDatapathConfiguration{},
-+		Mac:                   conf.EndpointInterfaceMAC,
-+		HostMac:               conf.EndpointInterfaceHostMAC,
+diff --git a/plugins/cilium-cni/cmd/endpoint.go b/plugins/cilium-cni/cmd/endpoint.go
+index 22287c95a8..3ebe27d90b 100644
+--- a/plugins/cilium-cni/cmd/endpoint.go
++++ b/plugins/cilium-cni/cmd/endpoint.go
+@@ -86,6 +86,8 @@ func (c *defaultEndpointConfiguration) PrepareEndpoint(ipam *models.IPAMResponse
+ 		K8sUID:                 string(c.CniArgs.K8S_POD_UID),
+ 		ContainerInterfaceName: c.Args.IfName,
+ 		DatapathConfiguration:  &models.EndpointDatapathConfiguration{},
++		Mac:                    c.Conf.EndpointInterfaceMAC,
++		HostMac:                c.Conf.EndpointInterfaceHostMAC,
  	}
 
- 	if conf.IpamMode == ipamOption.IPAMDelegatedPlugin {
+ 	if c.Conf.IpamMode == ipamOption.IPAMDelegatedPlugin {

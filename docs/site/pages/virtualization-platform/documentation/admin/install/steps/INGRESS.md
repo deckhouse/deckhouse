@@ -1,5 +1,5 @@
 ---
-title: "Set up Ingress and DNS"
+title: "Other settings"
 permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.html
 ---
 
@@ -159,7 +159,7 @@ To access the cluster's web interfaces, you can create a static user:
 1. Generate a password:
 
    ```shell
-   echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+   echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
 
    `<USER-PASSWORD>` — the password to be set for the user.
@@ -192,3 +192,12 @@ To access the cluster's web interfaces, you can create a static user:
    ```
 
 Now you can log in to the cluster web interfaces using your email and password. For further configuration, it is recommended to review the section [Access Control / Role Model](../../platform-management/access-control/role-model.html).
+
+## Enable console module
+
+{% alert level="info" %}
+The module is available only to EE edition users.
+{% endalert %}
+
+The `console` module will allow you to manage virtualization components through the Deckhouse web interface.
+To enable it, use the instructions in [Web Interface](https://deckhouse.io/modules/console/stable/) section.

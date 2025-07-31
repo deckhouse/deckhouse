@@ -49,6 +49,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: kube-state-metrics
+      automountServiceAccountToken: true
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
@@ -95,6 +96,7 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
@@ -107,6 +109,7 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
@@ -119,6 +122,7 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
@@ -131,10 +135,11 @@ spec:
                       each:
                         type: Gauge
                         gauge:
+                          nilIsZero: true
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                          valueFrom: [maxAllowed, cpu]   
+                          valueFrom: [maxAllowed, cpu]
                       commonLabels:
                         resource: "cpu"
                         unit: "core"

@@ -489,7 +489,7 @@ cloudInstances:
     overprovisioningRate: 30%
 ```
 
-## Как выключить machine-controller-manager в случае выполнения потенциально деструктивных изменений в кластере?
+## Как выключить machine-controller-manager/CAPI в случае выполнения потенциально деструктивных изменений в кластере?
 
 {% alert level="danger" %}
 Использовать эту настройку допустимо только тогда, когда вы четко понимаете, зачем это необходимо.
@@ -499,6 +499,12 @@ cloudInstances:
 
 ```yaml
 mcmEmergencyBrake: true
+```
+
+Для отключения CAPI установите следующий параметр в конфигурации:
+
+```yaml
+capiEmergencyBrake: true
 ```
 
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
@@ -698,7 +704,7 @@ spec:
                 privileged_without_host_devices = false
                 runtime_engine = ""
                 runtime_root = ""
-                runtime_type = "io.containerd.runc.v1"
+                runtime_type = "io.containerd.runc.v2"
                 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
                   BinaryName = "/usr/bin/nvidia-container-runtime"
                   SystemdCgroup = false
@@ -922,6 +928,10 @@ spec:
 
 ### Как добавить авторизацию в дополнительный registry?
 
+{% alert level="warning" %}
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+{% endalert %}
+
 Разверните скрипт `NodeGroupConfiguration`:
 
 ```yaml
@@ -969,6 +979,10 @@ spec:
 ```
 
 ### Как настроить сертификат для дополнительного registry?
+
+{% alert level="warning" %}
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+{% endalert %}
 
 {% alert level="info" %}
 Помимо containerd, сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в операционной системе.

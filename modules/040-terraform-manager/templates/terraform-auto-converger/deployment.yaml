@@ -57,8 +57,9 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       serviceAccountName: terraform-auto-converger
-      {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex") }}
+      {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex" "Zvirt") }}
       initContainers:
       - name: to-tofu-migrator
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
@@ -133,6 +134,17 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        livenessProbe:
+            httpGet:
+              path: /livez
+              port: 9100
+              scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 9100
+            scheme: HTTPS
         ports:
         - containerPort: 9100
           name: https-metrics

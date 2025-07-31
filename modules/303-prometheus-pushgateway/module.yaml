@@ -1,10 +1,9 @@
 name: prometheus-pushgateway
-weight: 303
+stage: "General Availability"
 subsystems:
   - observability
 namespace: kube-prometheus-pushgateway
 
 requirements:
-  bootstrapped: true
   modules:
     prometheus: ">= 0.0.0"

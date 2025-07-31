@@ -65,7 +65,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			l.logger.Debugf("the %q module disabled too long, delete module releases", module.Name)
+			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
@@ -172,15 +172,15 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if mpo.Status.Weight == 0 {
 			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, opts)
+			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
 
-			def, err := md.DownloadModuleDefinitionByVersion(mpo.Name, mpo.Spec.ImageTag)
+			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
 				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
 			}
 
 			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = def.Weight
+			mpo.Status.Weight = imageInfo.ModuleDefinition.Weight
 			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
 			_ = l.client.Status().Update(ctx, &mpo)
 		}
@@ -210,7 +210,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 				return fmt.Errorf("check the '%s' module symlink: %w", mpo.Name, err)
 			}
 			l.logger.Info("module symlink is absent on file system, restore it", slog.String("name", mpo.Name))
-			if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
+			if err := l.createModuleSymlink(ctx, mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 				return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 			}
 		} else {
@@ -222,7 +222,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			// check if module symlink leads to current version
 			if filepath.Base(downloadedModulePath) != downloader.DefaultDevVersion {
 				l.logger.Info("module symlink is incorrect, restore it", slog.String("name", mpo.Name))
-				if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
+				if err := l.createModuleSymlink(ctx, mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 				}
 			}
@@ -321,7 +321,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				return fmt.Errorf("check the '%s' module symlink: %w", release.Spec.ModuleName, err)
 			}
 			l.logger.Info("module symlink is absent on file system, restore it", slog.String("name", release.Spec.ModuleName))
-			if err = l.createModuleSymlink(release.Spec.ModuleName, release.GetModuleVersion(), source, release.Spec.Weight, false); err != nil {
+			if err := l.createModuleSymlink(ctx, release.Spec.ModuleName, release.GetModuleVersion(), source, release.Spec.Weight, false); err != nil {
 				return fmt.Errorf("create module symlink: %w", err)
 			}
 		} else {
@@ -339,7 +339,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			// check if module symlink leads to the current version
 			if moduleVersion != release.GetModuleVersion() {
 				l.logger.Info("module symlink is incorrect, restore it", slog.String("name", release.Spec.ModuleName), slog.String("current_version", moduleVersion), slog.String("desired_version", release.GetModuleVersion()))
-				if err = l.createModuleSymlink(release.Spec.ModuleName, release.GetModuleVersion(), source, release.Spec.Weight, false); err != nil {
+				if err := l.createModuleSymlink(ctx, release.Spec.ModuleName, release.GetModuleVersion(), source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)
 				}
 			}
@@ -398,7 +398,7 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 
 // createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
 // attempting to download version/tag of the module and creating correct symlink
-func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
+func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
 	l.logger.Info("module is absent on filesystem, restore it from source",
 		slog.String("name", moduleName),
 		slog.String("version", moduleVersion),
@@ -421,12 +421,12 @@ func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSou
 	if err != nil || !info.IsDir() {
 		l.logger.Info("downloading the module from the registry", slog.String("name", moduleName), slog.String("version", moduleVersion))
 		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.logger)
-		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, options)
+		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options)
 
 		if mpo {
 			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")
 		} else {
-			_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
+			_, err = md.DownloadByModuleVersion(ctx, moduleName, moduleVersion)
 		}
 		if err != nil {
 			return fmt.Errorf("download the '%s' module of the '%s' version/tag: %w", moduleName, moduleVersion, err)

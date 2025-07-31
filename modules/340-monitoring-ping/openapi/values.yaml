@@ -6,35 +6,12 @@ properties:
     type: object
     default: {}
     properties:
-      targets:
-        x-examples:
-        - cluster_targets:
-          - ipAddress: 192.168.199.186
-            name: test-master
-          - ipAddress: 192.168.199.238
-            name: test-worker
-          external_targets:
-          - host: google.com
-          - host: google.com
-            name: google
-        - {}
-        type: object
-        properties:
-          cluster_targets:
-            type: array
-            items:
-              type: object
-              properties:
-                name:
-                  type: string
-                ipAddress:
-                  type: string
-          external_targets:
-            type: array
-            items:
-              type: object
-              properties:
-                name:
-                  type: string
-                host:
-                  type: string
+      clusterTargets:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            ipAddress:
+              type: string

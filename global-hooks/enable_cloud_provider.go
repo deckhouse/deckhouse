@@ -23,6 +23,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var cloudProviderNameToModule = map[string]string{
@@ -36,6 +38,7 @@ var cloudProviderNameToModule = map[string]string{
 	"Zvirt":       "cloudProviderZvirt",
 	"Dynamix":     "cloudProviderDynamix",
 	"Huaweicloud": "cloudProviderHuaweicloud",
+	"DVP":         "cloudProviderDvp",
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -85,12 +88,15 @@ func applyClusterConfigForProviderFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func enableCloudProvider(input *go_hook.HookInput) error {
-	cloudConfigSnap := input.Snapshots["cloud_config"]
+	cloudConfigSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cloud_config")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cloud_config snapshot: %w", err)
+	}
 
 	providerNameToEnable := ""
 
 	if len(cloudConfigSnap) > 0 {
-		providerNameToEnable = cloudConfigSnap[0].(string)
+		providerNameToEnable = cloudConfigSnap[0]
 	} else {
 		for providerName, module := range cloudProviderNameToModule {
 			if input.ConfigValues.Exists(module) {

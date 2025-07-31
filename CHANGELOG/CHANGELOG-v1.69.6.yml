@@ -1,0 +1,17 @@
+cni-cilium:
+  fixes:
+    - summary: Fixed race condition when deleting element from ipcache map during VM migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13344
+docs:
+  fixes:
+    - summary: Fix broken links in the Storage overview.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13422
+metallb:
+  fixes:
+    - summary: Fixed IP pool exhaustion on LoadBalancer deletion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13352
+node-manager:
+  fixes:
+    - summary: Revert cluster autoscaler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13416
+

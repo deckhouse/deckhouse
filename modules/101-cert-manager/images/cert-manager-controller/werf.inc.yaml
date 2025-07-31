@@ -34,14 +34,14 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- image: common/jq-artifact
+- image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install

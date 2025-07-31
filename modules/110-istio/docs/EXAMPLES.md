@@ -661,8 +661,79 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
+{% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
+
 ### Auto upgrading istio data-plane
 
 {% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
+
+## Customizing istio-proxy sidecar resource management
+
+You can override the global istio-proxy sidecar resource limits for specific workloads by adding annotations to your application Pods.
+
+### Supported annotations
+
+Use these Pod annotations to customize sidecar resources:
+
+| Annotation                          | Description                 | Example Value |
+|-------------------------------------|-----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | CPU request for sidecar     | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | CPU limit for sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Memory request for sidecar  | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Memory limit for sidecar    | `512Mi`       |
+
+### Configuration Examples
+
+For Deployments:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your deployment spec
+```
+
+For ReplicaSets:
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your deployment spec
+```
+
+For Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your pod spec
+```
+
+{% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (`sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`).{% endalert %}

@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -19,6 +18,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -134,6 +136,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		DesiredIPs:                desiredIPs,
 		LBAllowSharedIP:           lbAllowSharedIP,
 		AnnotationMLBC:            mlbcAnnotation,
+		Conditions:                service.Status.Conditions,
 	}, nil
 }
 
@@ -177,11 +180,10 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 	}
 
 	l2LBServices := make([]L2LBServiceConfig, 0, 4)
-	mlbcMap, mlbcDefaultName := makeMLBCMapFromSnapshot(input.Snapshots["mlbc"])
+	mlbcMap, mlbcDefaultName := makeMLBCMapFromSnapshot(input.NewSnapshots.Get("mlbc"))
 
-	for _, serviceSnap := range input.Snapshots["services"] {
-		service, ok := serviceSnap.(ServiceInfo)
-		if !ok {
+	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfo](input.NewSnapshots.Get("services")) {
+		if err != nil {
 			continue
 		}
 
@@ -213,28 +215,26 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 			continue
 		}
 
-		nodes := getNodesByMLBC(mlbcForUse, input.Snapshots["nodes"])
+		nodes := getNodesByMLBC(mlbcForUse, input.NewSnapshots.Get("nodes"))
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue
 		}
 
+		conditions := updateCondition(service.Conditions, metav1.Condition{
+			Type:    "network.deckhouse.io/load-balancer-class",
+			Message: mlbcForUse.Name,
+			Status:  "True",
+			Reason:  "LoadBalancerClassBound",
+		})
 		if patchStatusInformation {
 			patch := map[string]any{
 				"status": map[string]any{
-					"conditions": []metav1.Condition{
-						{
-							Type:               "network.deckhouse.io/load-balancer-class",
-							Message:            mlbcForUse.Name,
-							Status:             "True",
-							Reason:             "LoadBalancerClassBound",
-							LastTransitionTime: metav1.NewTime(time.Now()),
-						},
-					},
+					"conditions": conditions,
 				},
 			}
 
-			input.PatchCollector.MergePatch(patch,
+			input.PatchCollector.PatchWithMerge(patch,
 				"v1",
 				"Service",
 				service.Namespace,
@@ -294,16 +294,20 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 	return nil
 }
 
-func makeMLBCMapFromSnapshot(snapshot []go_hook.FilterResult) (map[string]MetalLoadBalancerClassInfo, string) {
+func makeMLBCMapFromSnapshot(snapshots []sdkpkg.Snapshot) (map[string]MetalLoadBalancerClassInfo, string) {
 	mlbcMap := make(map[string]MetalLoadBalancerClassInfo)
 	var mlbcDefaultName string
-	for _, mlbcSnap := range snapshot {
-		if mlbc, ok := mlbcSnap.(MetalLoadBalancerClassInfo); ok {
-			mlbcMap[mlbc.Name] = mlbc
-			if mlbc.IsDefault {
-				mlbcDefaultName = mlbc.Name
-			}
+
+	for mlbc, err := range sdkobjectpatch.SnapshotIter[MetalLoadBalancerClassInfo](snapshots) {
+		if err != nil {
+			continue
+		}
+
+		mlbcMap[mlbc.Name] = mlbc
+		if mlbc.IsDefault {
+			mlbcDefaultName = mlbc.Name
 		}
 	}
+
 	return mlbcMap, mlbcDefaultName
 }

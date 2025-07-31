@@ -1,0 +1,53 @@
+{% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
+{% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
+
+<div markdown="0">
+<table class="supported_versions fixed-header-table table__small" style="table-layout: fixed">
+  <colgroup>
+    <col width="*">
+    <col width="64px">
+    <col width="64px">
+  </colgroup>
+<thead class="versioning-table">
+  <tr>
+    <th style="text-align: lest; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
+    {%- for edition in site.data.virtualization-platform.comparison.editions %}
+    <th style="text-align: center; white-space: nowrap;">{{edition | upcase }}</th>
+    {%- endfor %}
+  </tr>
+</thead>
+<tbody>
+{%- for featureSection in site.data.virtualization-platform.comparison.featureSections %}
+  {% if featureSection['title'][page.lang] %}
+  <tr>
+    <td style="text-align: left; white-space: nowrap;" colspan="3">
+      <strong>{{ featureSection['title'][page.lang] }}</strong>
+    </td>
+  </tr>
+  {% endif %}
+  {%- for feature in featureSection['features'] %}
+    {% unless feature['title'][page.lang] %}{% continue %}{% endunless %}
+    <tr>
+      <td style="text-align: left">
+        {{ feature['title'][page.lang] }}
+      </td>
+      {%- for edition in site.data.virtualization-platform.comparison.editions %}
+      <td style="text-align: center;">
+        <div class="icon" style="padding: 0 0;">
+          {% case feature.editions[edition] %}
+            {% when "supported" %}
+              {{ supported }}
+            {% when "not_supported" %}
+              {{ not_supported }}
+            {% else %}
+              <img src="/images/icons/intermediate_v2.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+          {% endcase %}
+        </div>
+      </td>
+      {%- endfor %}
+    </tr>
+  {%- endfor %}
+{%- endfor %}
+</tbody>
+</table>
+</div>

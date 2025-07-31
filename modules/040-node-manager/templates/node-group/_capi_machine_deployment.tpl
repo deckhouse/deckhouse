@@ -27,8 +27,15 @@ metadata:
     capacity.cluster-autoscaler.kubernetes.io/cpu: {{ $ng.nodeCapacity.cpu | quote }}
     capacity.cluster-autoscaler.kubernetes.io/memory: {{ $ng.nodeCapacity.memory | quote }}
   {{- end }}
+  {{- if $ng.serializedLabels }}
+    capacity.cluster-autoscaler.kubernetes.io/labels: {{ $ng.serializedLabels | quote }}
+  {{- end }}
+  {{- if $ng.serializedTaints }}
+    capacity.cluster-autoscaler.kubernetes.io/taints: {{ $ng.serializedTaints | quote }}
+  {{- end }}
 spec:
   clusterName: {{ $context.Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
+  selector: {}
   template:
     metadata:
       {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 6 }}

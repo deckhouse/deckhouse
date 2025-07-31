@@ -28,8 +28,8 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.28
-defaultCRI: "Containerd"
+kubernetesVersion: 1.29
+defaultCRI: "ContainerdV2"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1

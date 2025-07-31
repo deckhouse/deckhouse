@@ -176,7 +176,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
    ```console
    $ kubectl get module
-   NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+   NAME       STAGE    SOURCE   PHASE       ENABLED   READY
    ...
    helloworld                   Available   False     False     
    ...

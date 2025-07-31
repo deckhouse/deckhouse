@@ -32,6 +32,11 @@ import (
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/shirou/gopsutil/v3/process"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +61,7 @@ const (
 	modulesDirEnv      = "MODULES_DIR"
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
+	serviceDeckhouse = "deckhouse"
 	leaseName        = "deckhouse-leader-election"
 	defaultNamespace = "d8-system"
 	leaseDuration    = 35
@@ -91,16 +97,25 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 
 		operator.StartAPIServer()
 
-		if os.Getenv("DECKHOUSE_HA") == "true" {
-			logger.Info("Deckhouse starts in HA mode")
-			runHAMode(ctx, operator, logger)
-			return nil
+		versionFile := "/deckhouse/version"
+
+		version := "unknown"
+		content, err := os.ReadFile(versionFile)
+		if err != nil {
+			logger.Warn("cannot get deckhouse version", log.Err(err))
+		} else {
+			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if err := run(ctx, operator, logger); err != nil {
-			logger.Error("run", log.Err(err))
-			os.Exit(1)
+		if version == "dev" && os.Getenv("DECKHOUSE_HA") == "false" {
+			if err := run(ctx, operator, logger); err != nil {
+				logger.Error("run", log.Err(err))
+				os.Exit(1)
+			}
 		}
+
+		logger.Info("Deckhouse starts in HA mode")
+		runWithLeaderElection(ctx, operator, logger)
 
 		return nil
 	}
@@ -156,7 +171,7 @@ func entrypoint(logger *log.Logger) error {
 	return nil
 }
 
-func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
+func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
@@ -181,7 +196,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 	}
 
-	if err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
+	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: v1.ObjectMeta{
@@ -211,15 +226,16 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 			},
 		},
 		ReleaseOnCancel: true,
-	}); err != nil {
-		operator.Logger.Error("run", log.Err(err))
+	})
+	if err != nil {
+		operator.Logger.Error("run with leader elector", log.Err(err))
 	}
 
 	go func() {
 		<-ctx.Done()
 		logger.Info("Context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			logger.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
+			logger.Fatal("Couldn't shutdown deckhouse", log.Err(err))
 		}
 	}()
 
@@ -264,6 +280,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+	telemetryShutdown := registerTelemetry(ctx)
+
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
 	rm := reaperMutex{}
@@ -271,6 +289,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 		select {
 		case <-ctx.Done():
 			logger.Info("Context canceled - exiting")
+
 			exitCh <- struct{}{}
 			return
 
@@ -283,6 +302,10 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					environ = append(environ, skipEntrypointKeyValue)
 				}
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -350,6 +373,10 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -416,4 +443,46 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+}
+
+func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
+	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
+
+	if endpoint == "" {
+		return func(_ context.Context) error {
+			return nil
+		}
+	}
+
+	opts := make([]otlptracegrpc.Option, 0, 1)
+
+	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
+	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	if authToken != "" {
+		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
+			"Authorization": "Bearer " + strings.TrimSpace(authToken),
+		}))
+	}
+
+	exporter, _ := otlptracegrpc.New(ctx, opts...)
+
+	resource := sdkresource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(AppName),
+		semconv.ServiceVersionKey.String(DeckhouseVersion),
+		semconv.TelemetrySDKLanguageKey.String("en"),
+		semconv.K8SDeploymentName(AppName),
+	)
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	return provider.Shutdown
 }

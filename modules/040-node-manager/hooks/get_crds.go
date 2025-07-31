@@ -22,6 +22,7 @@ import (
 	"hash/fnv"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -32,6 +33,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
@@ -252,15 +256,23 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
-	// Default zones. Take them from input.Snapshots["machine_deployments"]
-	// and from input.Snapshots["cloud_provider_secret"].zones
+	// Default zones. Take them from input.NewSnapshots.Get("machine_deployments")
+	// and from input.NewSnapshots.Get("cloud_provider_secret").zones
 	defaultZones := set.New()
-	for _, machineInfoItem := range input.Snapshots["machine_deployments"] {
-		machineInfo := machineInfoItem.(MachineDeploymentCrdInfo)
+	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.NewSnapshots.Get("machine_deployments")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machine_deployments' snapshots: %w", err)
+		}
+
 		defaultZones.Add(machineInfo.Zone)
 	}
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		secretInfo := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{})
+
+	cloudProviderSecrets, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.NewSnapshots, "cloud_provider_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
+	}
+	if len(cloudProviderSecrets) > 0 {
+		secretInfo := cloudProviderSecrets[0]
 		zonesUntyped := secretInfo["zones"]
 
 		switch v := zonesUntyped.(type) {
@@ -285,20 +297,24 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
-	iCatalogRaw := input.Snapshots["instance_types_catalog"]
-	var instanceTypeCatalog *capacity.InstanceTypesCatalog
+	instanceTypeCatalog := new(capacity.InstanceTypesCatalog)
+	iCatalogRaws := input.NewSnapshots.Get("instance_types_catalog")
 
-	if len(iCatalogRaw) == 1 {
-		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
-	} else {
-		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
+	if len(iCatalogRaws) == 1 {
+		err := iCatalogRaws[0].UnmarshalTo(instanceTypeCatalog)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
+		}
 	}
 
-	for _, v := range input.Snapshots["ngs"] {
-		nodeGroup := v.(NodeGroupCrdInfo)
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.NewSnapshots.Get("ngs")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(nodeGroup, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -313,9 +329,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
+			for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.NewSnapshots.Get("ics")) {
+				if err != nil {
+					return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+				}
 
-			for _, icsItem := range input.Snapshots["ics"] {
-				ic := icsItem.(InstanceClassCrdInfo)
 				instanceClasses[ic.Name] = ic.Spec
 			}
 
@@ -467,12 +485,20 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 
+		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
+		ngForValues["serializedTaints"] = serializeTaints(nodeGroup)
+
 		if ngForValues["cri"] == nil {
 			ngForValues["cri"] = ngv1.CRI{}
 		}
 		cri := ngForValues["cri"].(ngv1.CRI)
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
+
+		gpu, ok := ngForValues["gpu"].(ngv1.GPU)
+		if ok {
+			ngForValues["gpu"] = gpu
+		}
 
 		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
 		if ok {
@@ -504,9 +530,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
 
-	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+	if len(input.NewSnapshots.Get("ngs")) != len(finalNodeGroups) {
 		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
-			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+			len(finalNodeGroups), len(input.NewSnapshots.Get("ngs")))
 	}
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
@@ -519,6 +545,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	res["nodeType"] = nodeGroupSpec.NodeType
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI
+	}
+	if !nodeGroupSpec.GPU.IsEmpty() {
+		res["gpu"] = nodeGroupSpec.GPU
 	}
 	if nodeGroupSpec.StaticInstances != nil {
 		res["staticInstances"] = *nodeGroupSpec.StaticInstances
@@ -556,8 +585,12 @@ var epochTimestampAccessor = func() int64 {
 
 var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
 	var fromSecret string
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		if secretInfo, ok := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{}); ok {
+	secretInfoSnapshots := input.NewSnapshots.Get("cloud_provider_secret")
+
+	if len(secretInfoSnapshots) > 0 {
+		var secretInfo map[string]interface{}
+		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
+		if err == nil {
 			if kind, ok := secretInfo["instanceClassKind"].(string); ok {
 				fromSecret = kind
 			}
@@ -596,4 +629,25 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	absWindowStart := ((ts - drift - 1) / EpochWindowSize) * EpochWindowSize
 	epoch := absWindowStart + EpochWindowSize + drift
 	return strconv.FormatInt(epoch, 10)
+}
+
+func serializeLabels(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Labels) == 0 {
+		return ""
+	}
+
+	return labels.FormatLabels(info.Spec.NodeTemplate.Labels)
+}
+
+func serializeTaints(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Taints) == 0 {
+		return ""
+	}
+
+	res := make([]string, 0, len(info.Spec.NodeTemplate.Taints))
+	for _, taint := range info.Spec.NodeTemplate.Taints {
+		res = append(res, taint.ToString())
+	}
+
+	return strings.Join(res, ",")
 }

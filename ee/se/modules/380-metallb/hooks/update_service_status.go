@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -15,10 +16,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/metallb/service-update",
+	Queue: "/modules/metallb/discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "l2lb_services",
@@ -27,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyL2LBServiceFilter,
 		},
 	},
-}, handleL2LBServices)
+}, dependency.WithExternalDependencies(handleL2LBServices))
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var l2LBService SDNInternalL2LBService
@@ -49,8 +55,8 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func handleL2LBServices(input *go_hook.HookInput) error {
-	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.Snapshots["l2lb_services"])
+func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error {
+	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
 		totalIPs := len(ips)
@@ -62,29 +68,38 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 			assignedIPs++
 			IPsForStatus = append(IPsForStatus, map[string]string{"ip": ip})
 		}
+
+		k8sClient, err := dc.GetK8sClient()
+		if err != nil {
+			return err
+		}
+		service, err := k8sClient.CoreV1().Services(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
 		conditionStatus := metav1.ConditionFalse
 		reason := "NotAllIPsAssigned"
 		if totalIPs == assignedIPs {
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
+		conditions := updateCondition(service.Status.Conditions, metav1.Condition{
+			Status:  conditionStatus,
+			Type:    "AllPublicIPsAssigned",
+			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
+			Reason:  reason,
+		})
 		patch := map[string]any{
 			"status": map[string]any{
 				"loadBalancer": map[string]any{
 					"ingress": IPsForStatus,
 				},
-				"conditions": []metav1.Condition{
-					{
-						Status:  conditionStatus,
-						Type:    "AllPublicIPsAssigned",
-						Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
-						Reason:  reason,
-					},
-				},
+				"conditions": conditions,
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch,
+		input.PatchCollector.PatchWithMerge(patch,
 			"v1",
 			"Service",
 			namespacedName.Namespace,
@@ -98,13 +113,13 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getNamespacedNameOfServicesWithIPs(snapshot []go_hook.FilterResult) map[types.NamespacedName][]string {
+func getNamespacedNameOfServicesWithIPs(snapshots []sdkpkg.Snapshot) map[types.NamespacedName][]string {
 	result := make(map[types.NamespacedName][]string)
-	for _, serviceSnap := range snapshot {
-		service, ok := serviceSnap.(L2LBServiceStatusInfo)
-		if !ok {
+	for service, err := range sdkobjectpatch.SnapshotIter[L2LBServiceStatusInfo](snapshots) {
+		if err != nil {
 			continue
 		}
+
 		namespacedNameKey := types.NamespacedName{Name: service.Name, Namespace: service.Namespace}
 		ips, exists := result[namespacedNameKey]
 		if !exists {
@@ -114,5 +129,16 @@ func getNamespacedNameOfServicesWithIPs(snapshot []go_hook.FilterResult) map[typ
 
 		result[namespacedNameKey] = ips
 	}
+
 	return result
+}
+
+func updateCondition(conditions []metav1.Condition, newCondition metav1.Condition) []metav1.Condition {
+	for i, condition := range conditions {
+		if condition.Type == newCondition.Type {
+			conditions[i] = newCondition
+			return conditions
+		}
+	}
+	return append(conditions, newCondition)
 }

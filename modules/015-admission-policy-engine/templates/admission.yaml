@@ -1,0 +1,47 @@
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-pods-with-skip-pss-label"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+    - name: exclude-existing-label
+      expression: >
+        (
+          (has(object.metadata) && has(object.metadata.labels) && 'security.deckhouse.io/skip-pss-check' in object.metadata.labels
+            ? object.metadata.labels['security.deckhouse.io/skip-pss-check']
+            : ''
+          )
+          !=
+          (has(oldObject.metadata) && has(oldObject.metadata.labels) && 'security.deckhouse.io/skip-pss-check' in oldObject.metadata.labels
+            ? oldObject.metadata.labels['security.deckhouse.io/skip-pss-check']
+            : ''
+          )
+        )
+  validations:
+    - expression: >-
+        (!has(object.metadata.labels) ||
+         !('security.deckhouse.io/skip-pss-check' in object.metadata.labels) ||
+         object.metadata.labels['security.deckhouse.io/skip-pss-check'] != 'true')
+      message: "Pods with label 'security.deckhouse.io/skip-pss-check=true' are not allowed"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-skip-pss-label-binding"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-pods-with-skip-pss-label"
+  matchResources:
+    namespaceSelector: {}  # Applies to all namespaces
+  validationActions: [Deny]

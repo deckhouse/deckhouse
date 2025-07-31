@@ -478,7 +478,7 @@ cloudInstances:
     overprovisioningRate: 30%
 ```
 
-## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?
+## How do I disable machine-controller-manager/CAPI in the case of potentially cluster-damaging changes?
 
 {% alert level="danger" %}
 Use this switch only if you know what you are doing and clearly understand the consequences.
@@ -488,6 +488,12 @@ Set the `mcmEmergencyBrake` parameter to true:
 
 ```yaml
 mcmEmergencyBrake: true
+```
+
+For disabling CAPI, set the `capiEmergencyBrake` parameter to true:
+
+```yaml
+capiEmergencyBrake: true
 ```
 
 ## How do I restore the master node if kubelet cannot load the control plane components?
@@ -688,7 +694,7 @@ spec:
                 privileged_without_host_devices = false
                 runtime_engine = ""
                 runtime_root = ""
-                runtime_type = "io.containerd.runc.v1"
+                runtime_type = "io.containerd.runc.v2"
                 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
                   BinaryName = "/usr/bin/nvidia-container-runtime"
                   SystemdCgroup = false
@@ -912,6 +918,10 @@ spec:
 
 ### How to add additional registry auth?
 
+{% alert level="warning" %}
+If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
+{% endalert %}
+
 Deploy `NodeGroupConfiguration` script:
 
 ```yaml
@@ -960,6 +970,10 @@ spec:
 ```
 
 ### How to configure a certificate for an additional registry?
+
+{% alert level="warning" %}
+If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
+{% endalert %}
 
 {% alert level="info" %}
 In addition to containerd, the certificate can be [simultaneously added](examples.html#adding-a-certificate-to-the-os-and-containerd) into the OS.

@@ -1,0 +1,13 @@
+name: registry-packages-proxy
+critical: true
+weight: 39
+subsystems:
+  - infrastructure
+namespace: d8-cloud-instance-manager
+description: |
+  Internal registry packages proxy
+descriptions:
+  en: Internal registry packages proxy
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

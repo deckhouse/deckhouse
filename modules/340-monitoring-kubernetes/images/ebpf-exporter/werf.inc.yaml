@@ -32,7 +32,7 @@ shell:
   - rm -rf libbpf/.git .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -53,7 +53,7 @@ shell:
   - chmod 0700 /entrypoint/entrypoint
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+fromImage: builder/golang-bookworm
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.10"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -50,7 +50,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
   DEPLOY_CHANNEL: alpha
 
@@ -1328,6 +1331,14 @@ jobs:
           git remote set-url origin https://x-access-token:${{secrets.BOATSWAIN_GITHUB_TOKEN}}@github.com/${{ github.repository }}
           git checkout -b "${RELEASE_BRANCH_NAME}"
           git push --force origin "${RELEASE_BRANCH_NAME}"
+
+      - name: Send failure report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --custom-message "🛑Deploy to channel alpha failed!🛑\n[URL]($WORKFLOW_URL)"
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish

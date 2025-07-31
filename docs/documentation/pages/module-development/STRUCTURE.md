@@ -39,10 +39,11 @@ Example module folder structure containing build and publish rules using GitHub 
 │  │  └─ 📝 deploy_prod.yaml
 ├─ 📁 .werf/
 │  ├─ 📁 workflows/
+│  │  ├─ 📝 base-images.yaml
 │  │  ├─ 📝 bundle.yaml
 │  │  ├─ 📝 images.yaml
 │  │  ├─ 📝 images-digest.yaml
-│  │  ├─ 📝 python-deps.yaml
+│  │  ├─ 📝 batch-go.yaml
 │  │  └─ 📝 release.yaml
 ├─ 📁 charts/
 │  └─ 📁 helm_lib/
@@ -65,8 +66,13 @@ Example module folder structure containing build and publish rules using GitHub 
 │  ├─ 📝 ADVANCED_USAGE.md
 │  └─ 📝 ADVANCED_USAGE.ru.md
 ├─ 📁 hooks/
-│  ├─ 📝 hook1.py
-│  └─ 📝 hook2.py
+│  ├─ 📁 batch/
+│  │  ├─ 📁 my-hooks/
+│  │  │  ├─ 📝 my-hook1.go
+│  │  │  └─ 📝 my-hook2.go
+│  │  ├─ 📝 go.mod
+│  │  ├─ 📝 go.sum
+│  │  ├─ 📝 main.go
 ├─ 📁 images/
 │  ├─ 📁 nginx
 │  │  └─ 📝 Dockerfile
@@ -132,6 +138,7 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Deckhouse administrator web console"
@@ -139,6 +146,7 @@ The `/docs` directory contains the module documentation:
   description: "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -151,12 +159,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Examples"
   description: "Examples of storing secrets in a neural network with automatic substitution into thoughts when communicating."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -169,12 +179,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "FAQs"
   description: "Frequently asked questions."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -187,12 +199,14 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Module debugging"
   description: "This section covers all the steps for debugging the module."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -200,11 +214,13 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Custom resources"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -212,11 +228,13 @@ The `/docs` directory contains the module documentation:
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Module settings"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -228,18 +246,19 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 
 ## hooks
 
-The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
+The `/hooks/batch` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 
-[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
+[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Go library](https://github.com/deckhouse/module-sdk) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
-- When run with the `--config` parameter, the hook must output its configuration in YAML format.
-- When run without parameters, the hook must perform its intended action.
+- When run with the `hook config` arguments, it should output its hook configuration in JSON format.
+- When run with the `hook list` arguments, it should output a run of all hooks with their sequence number.
+- When run with the `hook run 0` arguments, the logic of the hook with number 0 should be executed.
 
 The hook files must be executable. Add the appropriate permissions using the `chmod +x <path to the hook file>` command.
 
-You can find Python hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
+You can find Go hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can also be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
 
 ## images
 
@@ -339,6 +358,98 @@ properties:
       English description. Markdown markup.</code>
 ```
 
+#### x-deckhouse-validations (CEL validations)
+
+When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
+
+When using CEL validations, keep the following features in mind:
+
+- Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
+- All parameters at the current level are available in expressions via the `self` variable.
+- Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
+- Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
+- If there are multiple validation errors, the user will see all messages from the corresponding rules.
+
+##### Examples of complex rules
+
+Below are examples of complex validation rules described in CEL:
+
+- Checking whether the parameter value falls within the range:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas must be between minReplicas and maxReplicas"
+  ```
+
+- Checking for the presence of a key:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "The key 'Available' must be present"
+  ```
+
+- Checking that exactly one of two lists is non-empty:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Exactly one of the lists must be non-empty"
+  ```
+
+- Checking a value by regular expression:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "All values must contain only letters"
+  ```
+
+##### Scalar and array value validation
+
+Validation of scalar values and arrays has the following features:
+
+- If the property is a scalar (e.g., number or string), then in the CEL expression `self` will be that value.
+- If the property is an array, then `self` will be an array, and you can use methods like `.size()`, `.all()`, `.exists()`, etc.
+
+Example for an array:
+
+```yaml
+type: object
+properties:
+  items:
+    type: array
+    items:
+      type: string
+    x-deckhouse-validations:
+      - expression: "self.size() > 0"
+        message: "The items list must not be empty"
+```
+
+##### Validation of additionalProperties (map)
+
+For objects with additionalProperties (map), you can validate keys and values using methods like `.all(key, ...)`, `.exists(key, ...)`, etc.
+
+Example:
+
+```yaml
+type: object
+properties:
+  mymap:
+    type: object
+    additionalProperties:
+      type: integer
+    x-deckhouse-validations:
+      - expression: "self.all(key, self[key] > 0)"
+        message: "All values in mymap must be greater than 0"
+```
+
 ### values.yaml
 
 This file is required for validating the source data when rendering templates without using extra Helm chart functions.
@@ -411,28 +522,30 @@ The `module.yaml` file in the root of the module folder contains the module's me
 The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
-- `namespace` — *String.* The namespace where the module components will be deployed..
+
+- `namespace` — *String.* The namespace where the module components will be deployed.
 - `subsystems` — *Array of strings.* List of subsystems the module belongs to.
 - `descriptions` — *Object.* Arbitrary text description of the module's purpose.
   - `en` — *String.* Description in English.
+  - `ru` — *String.* Description in Russian.
 - `disable` — *Object.* Parameters related to the behavior when disabling a module.
-- `confirmation` — *Boolean.* Require confirmation when disabling a module.
-- `message` — *String.* Message with information about what will happen when disabling a module.
+  - `confirmation` — *Boolean.* Requires confirmation when disabling the module.
+  - `message` — *String.* Message explaining what will happen when the module is disabled.
 
-If confirmation is required to disable a module (the `confirmation` parameter is set to `true`), then disabling the module will only be possible if the `modules.deckhouse.io/allow-disabling=true` label is set on the corresponding ModuleConfig object. If such a label is not present, then a warning will be displayed when attempting to disable the module, with the message from the `message` parameter added.
+  If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the annotation `modules.deckhouse.io/allow-disabling=true`. If this annotation is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
 - `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
-- `requirements` — *Object.* [Dependencies](../dependencies/) of a pod — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to be able to start the pod.
-- `bootstrapped` — *Boolean.* Pod dependency [on cluster installation status](../dependencies/#cluster-installation-status-dependency) (for built-in DKP pods only).
-- `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
-- `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
-- `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
+- `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
+- `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+  - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
+  - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
+  - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
-For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
-- `weight` — *Number.* The weight of the module. Used to control the order in which the module is launched compared to other modules. The lower the weight, the earlier the module will be launched. Default: 900.
+  For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
+- `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.
 
-  The order in which a module is launched can also be influenced by the list of [module dependencies](../dependencies/).  
+  The startup order can also be influenced by the list of [module dependencies](../dependencies/).
 
 Example of metadata description for the `hello-world` module:
 
@@ -440,17 +553,18 @@ Example of metadata description for the `hello-world` module:
 name: hello-world
 tags: ["test", "myTag"]
 weight: 960
-stage: "Sandbox"
+stage: "Experimental"
 namespace: "test"
+exclusiveGroup: "group"
 subsystems:
   - test
   - test1
 descriptions: 
   en: "The module to say hello to the world."
+  ru: "Модуль, который приветствует мир."
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
-    bootstrapped: true
 disable:
   confirmation: true
   message: "Disabling this module will delete all resources, created by the module."

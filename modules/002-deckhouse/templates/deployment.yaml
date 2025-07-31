@@ -1,14 +1,14 @@
 {{- define "deckhouse_resources" }}
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 cpu: 100m
-memory: 1000Mi
+memory: 300Mi
 {{- else }}
 cpu: 150m
-memory: 1000Mi
+memory: 600Mi
 {{- end }}
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -30,6 +30,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
+      controlledValues: RequestsOnly
       minAllowed:
         {{- include "deckhouse_resources" . | nindent 8 }}
       maxAllowed:
@@ -76,6 +77,7 @@ spec:
         app: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
         kubectl.kubernetes.io/default-container: deckhouse
 {{- if and (.Values.deckhouse.internal.chrootMode) (semverCompare "< 1.30" .Values.global.discovery.kubernetesVersion) }}
         container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
@@ -107,6 +109,9 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
@@ -153,6 +158,7 @@ spec:
   # managed by Deckhouse: use API-proxy
             - name: KUBERNETES_SERVICE_HOST
               value: 127.0.0.1
+              valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
             - name: KUBERNETES_SERVICE_PORT
               value: "6445"
   {{- else }}
@@ -242,6 +248,18 @@ spec:
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"
 {{- end }}
+            - name: TRACING_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: endpoint
+                  optional: true
+            - name: TRACING_OTLP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: token
+                  optional: true
           ports:
             - containerPort: 4222
               name: self
@@ -256,11 +274,11 @@ spec:
             periodSeconds: 5
             failureThreshold: 120
           resources:
+            limits:
+              memory: 6Gi # heavy load usage ~2Gi (x3)
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
-{{- end }}
           workingDir: /deckhouse
           volumeMounts:
           - mountPath: /tmp
@@ -300,7 +318,7 @@ spec:
                     namespace: d8-system
                     apiGroup: apps
                     apiVersion: v1
-                    resource: deployment
+                    resource: deployments
                     subresource: http
                     name: debugSrv
           ports:
@@ -329,6 +347,7 @@ spec:
       dnsPolicy: Default
 {{- end}}
       serviceAccountName: deckhouse
+      automountServiceAccountToken: true
       volumes:
       - emptyDir:
           medium: Memory

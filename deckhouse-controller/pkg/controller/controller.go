@@ -18,8 +18,10 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -28,6 +30,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +58,7 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -68,6 +72,8 @@ const (
 
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
+
+	bootstrappedGlobalValue = "clusterIsBootstrapped"
 )
 
 type DeckhouseController struct {
@@ -98,6 +104,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
+
+	// inject otel tripper
+	operator.KubeClient().RestConfig().Wrap(func(t http.RoundTripper) http.RoundTripper {
+		return otelhttp.NewTransport(t)
+	})
 
 	// Setting the controller-runtime logger to a no-op logger by default,
 	// unless debug mode is enabled. This is because the controller-runtime
@@ -158,7 +169,6 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
@@ -204,8 +214,29 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return module.GetVersion(), nil
 	})
 
+	bootstrappedHelper := func() (bool, error) {
+		value, ok := operator.ModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		if !ok {
+			return false, nil
+		}
+
+		bootstrapped, ok := value.(bool)
+		if !ok {
+			return false, errors.New("bootstrapped value not boolean")
+		}
+
+		return bootstrapped, nil
+	}
+
+	edition, err := d8edition.Parse(version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	exts := extenders.NewExtendersStack(edition, bootstrappedHelper, logger.Named("extenders"))
+
 	// register extenders
-	for _, extender := range extenders.Extenders() {
+	for _, extender := range exts.GetExtenders() {
 		if err = operator.ModuleManager.AddExtender(extender); err != nil {
 			return nil, fmt.Errorf("add extender: %w", err)
 		}
@@ -225,25 +256,25 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}

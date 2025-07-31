@@ -28,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -54,8 +56,8 @@ type Machine struct {
 	MachineClassKind string
 	MachineClassName string
 
-	nodeCreationTimestamp metav1.Time
-	nodeGroup             string
+	NodeCreationTimestamp metav1.Time
+	NodeGroup             string
 }
 
 type NodeGroupStatus struct {
@@ -227,53 +229,37 @@ func deleteMachines(input *go_hook.HookInput) error {
 		nodeGroupNameToNodeGroupStatus = make(map[string]*NodeGroupStatus)
 	)
 
-	for _, mcRaw := range input.Snapshots["mcs"] {
-		if mcRaw == nil {
-			continue
+	for mc, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("mcs")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to string: failed to iterate over 'mcs' snapshot: %w", err)
 		}
 
-		ic, ok := mcRaw.(string)
-		if !ok {
-			return fmt.Errorf("failed to assert to string")
-		}
-
-		preemptibleMachineClassesSet.Add(ic)
+		preemptibleMachineClassesSet.Add(mc)
 	}
 
 	if preemptibleMachineClassesSet.Size() == 0 {
 		return nil
 	}
 
-	for _, nodeRaw := range input.Snapshots["nodes"] {
-		if nodeRaw == nil {
-			continue
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.NewSnapshots.Get("nodes")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to Node: failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
-		node, ok := nodeRaw.(*Node)
-		if !ok {
-			return fmt.Errorf("failed to assert to *Node")
-		}
-
-		nodeNameToNodeMap[node.Name] = node
+		nodeNameToNodeMap[node.Name] = &node
 	}
 
-	for _, ngStatusRaw := range input.Snapshots["nodegroupstatuses"] {
-		if ngStatusRaw == nil {
-			continue
+	for ngStatus, err := range sdkobjectpatch.SnapshotIter[NodeGroupStatus](input.NewSnapshots.Get("nodegroupstatuses")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to NodeGroupStatus: failed to iterate over 'nodegroupstatuses' snapshot: %w", err)
 		}
 
-		ngStatus, ok := ngStatusRaw.(*NodeGroupStatus)
-		if !ok {
-			return fmt.Errorf("failed to assert to *NodeGroupStatus")
-		}
-
-		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = ngStatus
+		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = &ngStatus
 	}
 
-	for _, machineRaw := range input.Snapshots["machines"] {
-		machine, ok := machineRaw.(*Machine)
-		if !ok {
-			return fmt.Errorf("failed to assert to *Machine")
+	for machine, err := range sdkobjectpatch.SnapshotIter[Machine](input.NewSnapshots.Get("machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to Machine: failed to iterate over 'machines' snapshot: %w", err)
 		}
 
 		if machine.Terminating {
@@ -289,19 +275,19 @@ func deleteMachines(input *go_hook.HookInput) error {
 		}
 
 		if node, ok := nodeNameToNodeMap[machine.Name]; ok {
-			machine.nodeCreationTimestamp = node.CreationTimestamp
-			machine.nodeGroup = node.NodeGroup
+			machine.NodeCreationTimestamp = node.CreationTimestamp
+			machine.NodeGroup = node.NodeGroup
 		} else {
 			continue
 		}
 
 		// skip young Machines
-		if machine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
+		if machine.NodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
 			continue
 		}
 
 		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
-		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.nodeGroup]
+		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.NodeGroup]
 		if !ok {
 			continue
 		}
@@ -309,7 +295,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		machines = append(machines, machine)
+		machines = append(machines, &machine)
 	}
 
 	if len(machines) == 0 {
@@ -325,7 +311,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 func getMachinesToDelete(machines []*Machine) []string {
 	sort.Slice(machines, func(i, j int) bool {
-		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
+		return machines[i].NodeCreationTimestamp.Before(&machines[j].NodeCreationTimestamp)
 	})
 
 	// take 10% of old Machines

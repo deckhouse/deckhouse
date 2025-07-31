@@ -58,7 +58,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint

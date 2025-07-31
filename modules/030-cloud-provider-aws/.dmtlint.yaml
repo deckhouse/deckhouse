@@ -7,6 +7,7 @@ linters-settings:
       enum:
         - "properties.storageClass.properties.provision.items.properties.type"
         - "properties.storageClass.properties.provision.items.oneOf[*].properties.type"
+        - "properties.internal.properties.storageClasses.items.oneOf[*].properties.type"
   container:
     exclude-rules:
       read-only-root-filesystem:
@@ -20,9 +21,6 @@ linters-settings:
         - kind: Deployment
           name: cloud-controller-manager
       liveness-probe:
-        - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
         - kind: Deployment
           name: csi-controller
           container: provisioner
@@ -75,9 +73,6 @@ linters-settings:
         - kind: DaemonSet
           name: node-termination-handler
           container: node-termination-handler
-        - kind: Deployment
-          name: cloud-data-discoverer
-          container: kube-rbac-proxy
   templates:
     exclude-rules:
       pdb:

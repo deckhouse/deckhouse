@@ -68,7 +68,7 @@ spec:
       labels:
         app: cloud-controller-manager
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registration.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -77,6 +77,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: cloud-controller-manager

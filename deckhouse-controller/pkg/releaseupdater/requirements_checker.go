@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +29,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -39,15 +39,16 @@ const (
 	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
 	systemNamespace                     = "kube-system"
 	k8sAutomaticVersion                 = "Automatic"
+	reqCheckerServiceName               = "requirements-checker"
 )
 
 type RequirementsChecker[T any] interface {
-	MetRequirements(v *T) []NotMetReason
+	MetRequirements(ctx context.Context, v *T) []NotMetReason
 }
 
 type Check[T any] interface {
 	GetName() string
-	Verify(v *T) error
+	Verify(ctx context.Context, v *T) error
 }
 
 type NotMetReason struct {
@@ -63,11 +64,14 @@ type Checker[T any] struct {
 	logger *log.Logger
 }
 
-func (c *Checker[T]) MetRequirements(v *T) []NotMetReason {
+func (c *Checker[T]) MetRequirements(ctx context.Context, v *T) []NotMetReason {
+	ctx, span := otel.Tracer(reqCheckerServiceName).Start(ctx, "met-requirements")
+	defer span.End()
+
 	reasons := make([]NotMetReason, 0)
 
 	for _, fn := range c.fns {
-		err := fn.Verify(v)
+		err := fn.Verify(ctx, v)
 		if err != nil {
 			reasons = append(reasons, NotMetReason{
 				Reason:  fn.GetName(),
@@ -86,7 +90,7 @@ func (c *Checker[T]) MetRequirements(v *T) []NotMetReason {
 // 3) deckhouse kubernetes version check
 //
 // for more checks information - look at extenders
-func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err
@@ -94,8 +98,8 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 
 	return &Checker[v1alpha1.DeckhouseRelease]{
 		fns: []Check[v1alpha1.DeckhouseRelease]{
-			newDeckhouseVersionCheck(enabledModules),
-			newDeckhouseRequirementsCheck(enabledModules),
+			newDeckhouseVersionCheck(enabledModules, exts),
+			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
 		},
 		logger: logger,
@@ -104,14 +108,16 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 
 type deckhouseVersionCheck struct {
 	name string
+	exts *extenders.ExtendersStack
 
 	enabledModules set.Set
 }
 
-func newDeckhouseVersionCheck(enabledModules []string) *deckhouseVersionCheck {
+func newDeckhouseVersionCheck(enabledModules []string, exts *extenders.ExtendersStack) *deckhouseVersionCheck {
 	return &deckhouseVersionCheck{
 		name:           "deckhouse version check",
 		enabledModules: set.New(enabledModules...),
+		exts:           exts,
 	}
 }
 
@@ -119,8 +125,8 @@ func (c *deckhouseVersionCheck) GetName() string {
 	return c.name
 }
 
-func (c *deckhouseVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
-	releaseName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.GetVersion().String())
+func (c *deckhouseVersionCheck) Verify(_ context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	releaseName, err := c.exts.DeckhouseVersion.ValidateBaseVersion(dr.GetVersion().String())
 	if err != nil {
 		// invalid deckhouse version in deckhouse release
 		// or an enabled module has requirements
@@ -162,7 +168,7 @@ func (c *kubernetesVersionCheck) GetName() string {
 	return c.name
 }
 
-func (c *kubernetesVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	if c.isKubernetesVersionAutomatic() && len(dr.GetRequirements()["autoK8sVersion"]) > 0 {
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.GetRequirements()["autoK8sVersion"]); err != nil {
 			// invalid auto kubernetes version in deckhouse release
@@ -213,13 +219,15 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 
 type deckhouseRequirementsCheck struct {
 	name string
+	exts *extenders.ExtendersStack
 
 	enabledModules set.Set
 }
 
-func newDeckhouseRequirementsCheck(enabledModules []string) *deckhouseRequirementsCheck {
+func newDeckhouseRequirementsCheck(enabledModules []string, exts *extenders.ExtendersStack) *deckhouseRequirementsCheck {
 	return &deckhouseRequirementsCheck{
 		name:           "deckhouse requirements check",
+		exts:           exts,
 		enabledModules: set.New(enabledModules...),
 	}
 }
@@ -228,10 +236,10 @@ func (c *deckhouseRequirementsCheck) GetName() string {
 	return c.name
 }
 
-func (c *deckhouseRequirementsCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+func (c *deckhouseRequirementsCheck) Verify(_ context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	for key, value := range dr.GetRequirements() {
 		// these fields are checked by extenders in module release controller
-		if extenders.IsExtendersField(key) {
+		if c.exts.IsExtendersField(key) {
 			continue
 		}
 
@@ -275,7 +283,7 @@ func (c *disruptionCheck) GetName() string {
 	return c.name
 }
 
-func (c *disruptionCheck) Verify(pointer *v1alpha1.Release) error {
+func (c *disruptionCheck) Verify(_ context.Context, pointer *v1alpha1.Release) error {
 	release := *pointer
 
 	if !c.settings.InDisruptionApprovalMode() {
@@ -297,10 +305,10 @@ func (c *disruptionCheck) Verify(pointer *v1alpha1.Release) error {
 // 1) module release requirements check
 //
 // for more checks information - look at extenders
-func NewModuleReleaseRequirementsChecker(logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
+func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
 	return &Checker[v1alpha1.ModuleRelease]{
 		fns: []Check[v1alpha1.ModuleRelease]{
-			newModuleRequirementsCheck(),
+			newModuleRequirementsCheck(exts),
 		},
 		logger: logger,
 	}, nil
@@ -308,11 +316,13 @@ func NewModuleReleaseRequirementsChecker(logger *log.Logger) (*Checker[v1alpha1.
 
 type moduleRequirementsCheck struct {
 	name string
+	exts *extenders.ExtendersStack
 }
 
-func newModuleRequirementsCheck() *moduleRequirementsCheck {
+func newModuleRequirementsCheck(exts *extenders.ExtendersStack) *moduleRequirementsCheck {
 	return &moduleRequirementsCheck{
 		name: "deckhouse requirements check",
+		exts: exts,
 	}
 }
 
@@ -320,8 +330,8 @@ func (c *moduleRequirementsCheck) GetName() string {
 	return c.name
 }
 
-func (c *moduleRequirementsCheck) Verify(mr *v1alpha1.ModuleRelease) error {
-	err := extenders.CheckModuleReleaseRequirements(mr.GetModuleName(), mr.GetName(), mr.GetVersion(), mr.GetModuleReleaseRequirements())
+func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleRelease) error {
+	err := c.exts.CheckModuleReleaseRequirements(mr.GetModuleName(), mr.GetName(), mr.GetVersion(), mr.GetModuleReleaseRequirements())
 	if err != nil {
 		return err
 	}

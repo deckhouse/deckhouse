@@ -50,12 +50,18 @@ spec:
                 stage:
                   type: string
                   description: Current stage of the module lifecycle.
+                critical:
+                  type: boolean
+                  description: Indicates whether the module critical or not.
                 version:
                   type: string
                   description: Module version.
                 releaseChannel:
                   type: string
                   description: Module release channel.
+                exclusiveGroup:
+                  type: string
+                  description: Indicates the group where only one module can be active at a time.
                 updatePolicy:
                   type: string
                   description: Module update policy.
@@ -86,6 +92,26 @@ spec:
                       description: A list of other enabled modules required for the module.
                       additionalProperties:
                         type: string
+                accessibility:
+                  type: object
+                  description: Module accessibility settings.
+                  properties:
+                    editions:
+                      type: object
+                      description: Module availability in Deckhouse editions.
+                      additionalProperties:
+                        type: object
+                        properties:
+                          available:
+                            type: boolean
+                          enabledInBundles:
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - Default
+                                - Minimal
+                                - Managed
             status:
               type: object
               properties:
@@ -93,6 +119,7 @@ spec:
                   type: string
                   description: Module phase.
                   enum:
+                    - Unavailable
                     - Available
                     - Downloading
                     - DownloadingError

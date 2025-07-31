@@ -19,6 +19,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -32,6 +33,12 @@ var (
 const (
 	bashibleDir = "/var/lib/bashible"
 	stepsDir    = bashibleDir + "/bundle_steps"
+)
+
+const (
+	kubeadmV1Beta4MinKubeVersion = "1.31.0"
+	kubeadmV1Beta4               = "v1beta4"
+	kubeadmV1Beta3               = "v1beta3"
 )
 
 type saveFromTo struct {
@@ -85,7 +92,6 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
-
 	saveInfo := []saveFromTo{
 		{
 			from: candiBashibleDir,
@@ -132,16 +138,37 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
 
+func GetKubeadmVersion(kubernetesVersion string) (string, error) {
+	v, err := semver.NewVersion(kubernetesVersion)
+	if err != nil {
+		return "", err
+	}
+
+	minConstraint, _ := semver.NewConstraint(">=" + kubeadmV1Beta4MinKubeVersion)
+
+	if minConstraint.Check(v) {
+		return kubeadmV1Beta4, nil
+	}
+	return kubeadmV1Beta3, nil
+}
+
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
+	cc := templateData["clusterConfiguration"].(map[string]interface{})
+	k8sVer := cc["kubernetesVersion"].(string)
+	kubeadmVersion, err := GetKubeadmVersion(k8sVer)
+	if err != nil {
+		return err
+	}
+
 	saveInfo := []saveFromTo{
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm"),
-			to:   filepath.Join(bashibleDir, "kubeadm"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion),
 			data: templateData,
 		},
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", "patches"),
-			to:   filepath.Join(bashibleDir, "kubeadm", "patches"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion, "patches"),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion, "patches"),
 			data: templateData,
 		},
 	}

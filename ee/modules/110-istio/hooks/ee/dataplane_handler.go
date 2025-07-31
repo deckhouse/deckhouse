@@ -8,6 +8,7 @@ package ee
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -16,6 +17,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -419,8 +423,11 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 
 	// create istio namespace map to find out needed revisions and versions
 	istioNamespaceMap := make(map[string]IstioDrivenNamespaceFilterResult)
-	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
-		nsInfo := ns.(IstioDrivenNamespaceFilterResult)
+	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioDrivenNamespaceFilterResult](append(input.NewSnapshots.Get("namespaces_definite_revision"), input.NewSnapshots.Get("namespaces_global_revision")...)) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over namespaces: %w", err)
+		}
+
 		if nsInfo.RevisionRaw == "global" {
 			nsInfo.Revision = globalRevision
 		} else {
@@ -436,14 +443,16 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	// upgradeCandidatesMap[kind][namespace][name]*upgradeCandidate{}
 	upgradeCandidatesMap := make(map[string]map[string]map[string]*upgradeCandidate)
 
-	k8sControllers := make([]go_hook.FilterResult, 0)
-	k8sControllers = append(k8sControllers, input.Snapshots["deployment"]...)
-	k8sControllers = append(k8sControllers, input.Snapshots["statefulset"]...)
-	k8sControllers = append(k8sControllers, input.Snapshots["daemonset"]...)
+	k8sControllers := make([]sdkpkg.Snapshot, 0)
+	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("deployment")...)
+	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("statefulset")...)
+	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("daemonset")...)
 
 	// fill in upgradeCandidates and upgradeCandidatesMap
-	for _, k8sControllerRaw := range k8sControllers {
-		k8sController := k8sControllerRaw.(K8SControllerFilterResult)
+	for k8sController, err := range sdkobjectpatch.SnapshotIter[K8SControllerFilterResult](k8sControllers) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over k8s controllers: %w", err)
+		}
 
 		// check if AutoUpgrade Label Exists on namespace
 		var namespaceAutoUpgradeLabelExists bool
@@ -476,8 +485,11 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	replicaSets := make(map[string]map[string]upgradeCandidateRS)
 
 	// create a map of the replica sets depending on the deployments from upgradeCandidatesMap map
-	for _, rs := range input.Snapshots["replicaset"] {
-		rsInfo := rs.(K8SControllerFilterResult)
+	for rsInfo, err := range sdkobjectpatch.SnapshotIter[K8SControllerFilterResult](input.NewSnapshots.Get("replicaset")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over replica sets: %w", err)
+		}
+
 		if rsInfo.Owner.Kind == "Deployment" {
 			if _, ok := upgradeCandidatesMap["Deployment"][rsInfo.Namespace][rsInfo.Owner.Name]; ok {
 				if _, ok := replicaSets[rsInfo.Namespace]; !ok {
@@ -499,8 +511,10 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	// map of namespace, which will be ignored when selecting controllers to update
 	ignoredNamespace := make(map[string]struct{})
 
-	for _, pod := range input.Snapshots["istio_pod"] {
-		istioPod := pod.(IstioDrivenPodFilterResult)
+	for istioPod, err := range sdkobjectpatch.SnapshotIter[IstioDrivenPodFilterResult](input.NewSnapshots.Get("istio_pod")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over istio pods: %w", err)
+		}
 
 		// sidecar.istio.io/inject=false annotation set -> ignore
 		if !istioPod.InjectAnnotation {
@@ -609,8 +623,8 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			continue
 		}
 		if candidate.needUpgrade && candidate.isReady && versionMap.IsFullVersionReady(candidate.desiredFullVersion) {
-			input.Logger.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
-			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
+			input.Logger.Info("Patch info", slog.String("kind", candidate.kind), slog.String("name", candidate.name), slog.String("namespace", candidate.namespace), slog.String("version", candidate.desiredFullVersion))
+			input.PatchCollector.PatchWithMerge(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
 			// skip this namespace on next iteration
 			ignoredNamespace[candidate.namespace] = struct{}{}
 		}

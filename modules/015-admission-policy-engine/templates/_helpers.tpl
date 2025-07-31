@@ -71,6 +71,11 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: ["true"]
     namespaceSelector:
       matchExpressions:
       {{- if eq $standard "baseline" }}

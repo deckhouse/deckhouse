@@ -30,7 +30,7 @@ imageSpec:
     entrypoint: ["/usr/local/bin/pilot-discovery"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact

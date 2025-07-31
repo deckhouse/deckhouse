@@ -43,7 +43,7 @@ data "vsphere_resource_pool" "resource_pool" {
 }
 
 data "vsphere_network" "main" {
-  name          = local.master_instance_class.mainNetwork
+  name          = replace(replace(local.master_instance_class.mainNetwork, "[", "\\["), "]", "\\]")
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
 

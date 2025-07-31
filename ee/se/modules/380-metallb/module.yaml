@@ -1,7 +1,7 @@
 name: metallb
-weight: 380
+stage: "General Availability"
 subsystems:
   - networking
 namespace: d8-metallb
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"

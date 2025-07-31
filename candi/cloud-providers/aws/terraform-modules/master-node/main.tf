@@ -107,7 +107,8 @@ resource "aws_instance" "master" {
       user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
-      volume_tags
+      volume_tags,
+      root_block_device[0].tags_all
     ]
   }
 
@@ -120,8 +121,8 @@ resource "aws_instance" "master" {
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
-  network_border_group = data.aws_availability_zone.master_az.network_border_group 
-  vpc = true
+  network_border_group = data.aws_availability_zone.master_az.network_border_group
+  domain = "vpc"
   tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
   })

@@ -37,6 +37,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -121,14 +123,12 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
-	snap := input.Snapshots["csr"]
-	for _, s := range snap {
-		if s == nil {
-			continue
+	snaps := input.NewSnapshots.Get("csr")
+	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
+		if err != nil {
+			return fmt.Errorf("failted to iterate over 'csr' snapshots: %w", err)
 		}
 
-		csrInfo := s.(*CsrInfo)
 		if !csrInfo.Valid {
 			input.Logger.Warn("csr info not valid", slog.String(csrInfo.Name, csrInfo.ErrMsg))
 			continue
@@ -170,6 +170,11 @@ func hasExactUsages(csr *cv1.CertificateSigningRequest, usages []cv1.KeyUsage) b
 }
 
 func appendApprovalCondition(csr *cv1.CertificateSigningRequest) {
+	for _, cond := range csr.Status.Conditions {
+		if cond.Type == cv1.CertificateApproved {
+			return
+		}
+	}
 	csr.Status.Conditions = append(csr.Status.Conditions, cv1.CertificateSigningRequestCondition{
 		Type:    cv1.CertificateApproved,
 		Status:  corev1.ConditionTrue,

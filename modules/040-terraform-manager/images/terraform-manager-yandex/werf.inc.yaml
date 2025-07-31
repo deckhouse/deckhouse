@@ -30,7 +30,7 @@ shell:
 ---
 image: terraform-provider-yandex
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

@@ -62,7 +62,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -70,6 +70,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: cloud-data-discoverer
       containers:
       - name: cloud-data-discoverer
@@ -99,6 +100,21 @@ spec:
             secretKeyRef:
               name: cloud-data-discoverer
               key: insecure
+        - name: REGION
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: region
+        - name: REGION_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: regionTagCategory
+        - name: ZONE_TAG_CATEGORY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: zoneTagCategory
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG
@@ -127,6 +143,7 @@ spec:
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
         ports:
           - containerPort: 8080
             name: https-metrics
@@ -150,6 +167,16 @@ spec:
                     resource: deployments
                     subresource: prometheus-metrics
                     name: cloud-data-discoverer
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8080
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

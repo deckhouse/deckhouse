@@ -21,6 +21,8 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    - unused
+    - usestdlibvars
   settings:
     errcheck:
       exclude-functions:
@@ -57,7 +59,6 @@ linters:
     staticcheck:
       checks:
         - all
-        - '-SA1019' # waiting for logger to be fixed
         - '-ST1003' # waiting for package name will be fixed (underscores)
         - '-QF1008' # not need to fix; we understand how to call nested structs
   exclusions:
@@ -76,6 +77,14 @@ linters:
         text: don't use an underscore in package name
       - path: (.+)\.go$
         text: 'exported: .*'
+      - linters:
+          - staticcheck
+        path: hooks/purge_orphan_resources.go
+        text: 'is deprecated: use Warn instead'
+      - linters:
+          - staticcheck
+        path: hooks/purge_orphan_resources.go
+        text: 'is deprecated: use Info instead'
     paths:
       - go_lib/dependency/k8s/drain
       - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1

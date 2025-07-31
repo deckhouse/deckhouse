@@ -7,12 +7,11 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch v3.18.1 $(cat /run/secrets/SOURCE_REPO)/enix/x509-certificate-exporter.git /src
-    - cd /src
-    - rm -r .git
+    - git clone --depth 1 --branch v3.19.1 $(cat /run/secrets/SOURCE_REPO)/enix/x509-certificate-exporter.git /src
+    - rm -r /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

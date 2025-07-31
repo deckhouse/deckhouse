@@ -25,7 +25,7 @@ env:
   WERF_DRY_RUN: "false"
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.10"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -34,7 +34,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
 # Always run a single job at a time.
@@ -134,8 +137,8 @@ jobs:
 
   # </template: git_info_job>
   # <template: e2e_run_job_template>
-  run_aws_containerd_1_29:
-    name: "AWS, Containerd, Kubernetes 1.29"
+  run_aws_containerd_automatic:
+    name: "AWS, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -144,16 +147,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "aws;WithoutNAT;containerd;1.29"
+      ran_for: "aws;WithoutNAT;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: AWS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -282,15 +284,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: AWS/Containerd/1.29"
+      - name: "Run e2e test: AWS/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: AWS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -317,7 +318,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -330,12 +330,13 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -357,7 +358,7 @@ jobs:
           PROVIDER: AWS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -383,7 +384,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -396,12 +396,13 @@ jobs:
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -409,7 +410,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_aws_containerd_1_29
+          name: test_output_aws_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -430,8 +431,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_eks_containerd_1_29:
-    name: "EKS, Containerd, Kubernetes 1.29"
+  run_eks_containerd_automatic:
+    name: "EKS, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -440,16 +441,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "eks;WithoutNAT;containerd;1.29"
+      ran_for: "eks;WithoutNAT;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -654,15 +654,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: EKS/Containerd/1.29"
+      - name: "Run e2e test: EKS/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -691,7 +690,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -716,9 +714,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -732,6 +730,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -756,9 +755,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
@@ -787,7 +786,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -815,7 +814,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -840,9 +838,9 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
+          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -853,10 +851,10 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_eks_containerd_1_29
+          name: failed_cluster_state_eks_containerd_automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -866,7 +864,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_eks_containerd_1_29
+          name: test_output_eks_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -898,8 +896,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_azure_containerd_1_29:
-    name: "Azure, Containerd, Kubernetes 1.29"
+  run_azure_containerd_automatic:
+    name: "Azure, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -908,16 +906,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "azure;Standard;containerd;1.29"
+      ran_for: "azure;Standard;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Azure
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -938,61 +935,6 @@ jobs:
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
 
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -1026,16 +968,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -1098,15 +1030,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1116,18 +1043,16 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Azure/Containerd/1.29"
+      - name: "Run e2e test: Azure/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1141,10 +1066,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1153,43 +1079,27 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
+          export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
+          export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
+          export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
-            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
-            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
-            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -1211,10 +1121,9 @@ jobs:
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1227,10 +1136,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1239,62 +1149,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
+          export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
+          export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
+          export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
-            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
-            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
-            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_azure_containerd_1_29
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_azure_containerd_1_29
+          name: test_output_azure_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1312,22 +1195,11 @@ jobs:
           else
             echo Not a directory.
           fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
-          fi
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_gcp_containerd_1_29:
-    name: "GCP, Containerd, Kubernetes 1.29"
+  run_gcp_containerd_automatic:
+    name: "GCP, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -1336,16 +1208,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "gcp;WithoutNAT;containerd;1.29"
+      ran_for: "gcp;WithoutNAT;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: GCP
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1366,61 +1237,6 @@ jobs:
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
 
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -1454,16 +1270,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -1526,15 +1332,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1544,18 +1345,16 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: GCP/Containerd/1.29"
+      - name: "Run e2e test: GCP/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: GCP
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1563,14 +1362,15 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1579,41 +1379,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -1635,24 +1419,24 @@ jobs:
           PROVIDER: GCP
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          TEST_AUTOSCALER_ENABLED: "true"
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1661,60 +1445,33 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_gcp_containerd_1_29
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_gcp_containerd_1_29
+          name: test_output_gcp_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1732,22 +1489,11 @@ jobs:
           else
             echo Not a directory.
           fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
-          fi
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_yandex_cloud_containerd_1_29:
-    name: "Yandex.Cloud, Containerd, Kubernetes 1.29"
+  run_yandex_cloud_containerd_automatic:
+    name: "Yandex.Cloud, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -1756,16 +1502,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "yandex-cloud;WithoutNAT;containerd;1.29"
+      ran_for: "yandex-cloud;WithoutNAT;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Yandex.Cloud
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1894,15 +1639,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Yandex.Cloud/Containerd/1.29"
+      - name: "Run e2e test: Yandex.Cloud/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -1930,7 +1674,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1944,12 +1687,13 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -1971,7 +1715,7 @@ jobs:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -1998,7 +1742,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2012,12 +1755,13 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-
-          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2025,7 +1769,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_yandex-cloud_containerd_1_29
+          name: test_output_yandex-cloud_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2046,8 +1790,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_openstack_containerd_1_29:
-    name: "OpenStack, Containerd, Kubernetes 1.29"
+  run_openstack_containerd_automatic:
+    name: "OpenStack, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -2056,16 +1800,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "openstack;Standard;containerd;1.29"
+      ran_for: "openstack;Standard;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -2264,15 +2007,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: OpenStack/Containerd/1.29"
+      - name: "Run e2e test: OpenStack/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2298,7 +2040,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2320,12 +2061,12 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2353,7 +2094,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2378,7 +2119,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2400,12 +2140,12 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2417,10 +2157,10 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_openstack_containerd_1_29
+          name: failed_cluster_state_openstack_containerd_automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2430,7 +2170,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_openstack_containerd_1_29
+          name: test_output_openstack_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2462,8 +2202,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_vsphere_containerd_1_29:
-    name: "vSphere, Containerd, Kubernetes 1.29"
+  run_vsphere_containerd_automatic:
+    name: "vSphere, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -2472,16 +2212,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vsphere;Standard;containerd;1.29"
+      ran_for: "vsphere;Standard;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: vSphere
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-vsphere]
     steps:
@@ -2680,15 +2419,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vSphere/Containerd/1.29"
+      - name: "Run e2e test: vSphere/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: vSphere
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2715,7 +2453,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2737,13 +2474,13 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2771,7 +2508,7 @@ jobs:
           PROVIDER: vSphere
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2797,7 +2534,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -2819,13 +2555,13 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2837,10 +2573,10 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_vsphere_containerd_1_29
+          name: failed_cluster_state_vsphere_containerd_automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2850,7 +2586,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_vsphere_containerd_1_29
+          name: test_output_vsphere_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2882,8 +2618,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_vcd_containerd_1_29:
-    name: "VCD, Containerd, Kubernetes 1.29"
+  run_vcd_containerd_automatic:
+    name: "VCD, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -2892,16 +2628,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vcd;Standard;containerd;1.29"
+      ran_for: "vcd;Standard;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -3100,15 +2835,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: VCD/Containerd/1.29"
+      - name: "Run e2e test: VCD/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3138,7 +2872,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3160,7 +2893,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3170,6 +2902,7 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3197,7 +2930,7 @@ jobs:
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3226,7 +2959,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3248,7 +2980,6 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3258,6 +2989,7 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3269,10 +3001,10 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_vcd_containerd_1_29
+          name: failed_cluster_state_vcd_containerd_automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -3282,7 +3014,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_vcd_containerd_1_29
+          name: test_output_vcd_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -3314,8 +3046,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_static_containerd_1_29:
-    name: "Static, Containerd, Kubernetes 1.29"
+  run_static_containerd_automatic:
+    name: "Static, Containerd, Kubernetes Automatic"
     needs:
       - git_info
     outputs:
@@ -3324,16 +3056,15 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "static;Static;containerd;1.29"
+      ran_for: "static;Static;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Static
       CRI: Containerd
       LAYOUT: Static
-      KUBERNETES_VERSION: "1.29"
+      KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -3532,15 +3263,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Static/Containerd/1.29"
+      - name: "Run e2e test: Static/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 120
         env:
-          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Static
           CRI: Containerd
           LAYOUT: Static
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3566,7 +3296,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3588,12 +3317,12 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3621,7 +3350,7 @@ jobs:
           PROVIDER: Static
           CRI: Containerd
           LAYOUT: Static
-          KUBERNETES_VERSION: "1.29"
+          KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3646,7 +3375,6 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -3668,12 +3396,12 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3685,10 +3413,10 @@ jobs:
 
       - name: Save dhctl state
         id: save_failed_cluster_state
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_static_containerd_1_29
+          name: failed_cluster_state_static_containerd_automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -3698,7 +3426,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_static_containerd_1_29
+          name: test_output_static_containerd_automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -3733,8 +3461,8 @@ jobs:
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
     runs-on: ubuntu-latest
-    needs: ["skip_tests_repos","git_info","run_aws_containerd_1_29","run_eks_containerd_1_29","run_azure_containerd_1_29","run_gcp_containerd_1_29","run_yandex_cloud_containerd_1_29","run_openstack_containerd_1_29","run_vsphere_containerd_1_29","run_vcd_containerd_1_29","run_static_containerd_1_29"]
-    if: ${{ failure() }}
+    needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic"]
+    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:
     # <template: send_alert_loop_template>
     - name: Check loop alerting credentials

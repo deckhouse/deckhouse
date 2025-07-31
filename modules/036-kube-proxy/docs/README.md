@@ -1,5 +1,6 @@
 ---
 title: "The kube-proxy module"
+description: "Managing kube-proxy components on a Deckhouse Kubernetes Platform cluster node."
 ---
 
 The module deletes the entire `kubeadm` kube-proxy set  (`DaemonSet`, `ConfigMap`, `RBAC`) and installs its own.

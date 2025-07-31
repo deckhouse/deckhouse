@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -34,6 +38,7 @@ var kindToVersion = map[string]string{
 	"zvirtinstanceclass":       "deckhouse.io/v1",
 	"dynamixinstanceclass":     "deckhouse.io/v1",
 	"huaweicloudinstanceclass": "deckhouse.io/v1",
+	"dvpinstanceclass":         "deckhouse.io/v1alpha1",
 }
 
 var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
@@ -104,7 +109,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 		// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 		if kindInUse != kindFromSecret {
 			if kindFromSecret == "" {
-				input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+				input.Logger.Info("InstanceClassKind has changed to '': disable binding 'ics'", slog.String("from", kindInUse))
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "Disable",
@@ -112,7 +117,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 					ApiVersion: "",
 				})
 			} else {
-				input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+				input.Logger.Info("InstanceClassKind has changed: update kind for binding 'ics'", slog.String("from", kindInUse), slog.String("to", kindFromSecret))
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "UpdateKind",
@@ -129,22 +134,21 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 	icNodeConsumers := make(map[usedInstanceClass][]string)
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		if sn == nil {
-			// not ephemeral
-			continue
+	snaps := input.NewSnapshots.Get("ngs")
+	for usedIC, err := range sdkobjectpatch.SnapshotIter[ngUsedInstanceClass](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
-
-		usedIC := sn.(ngUsedInstanceClass)
 
 		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
-	snap = input.Snapshots["ics"]
-	for _, sn := range snap {
-		icm := sn.(usedInstanceClassWithConsumers)
+	snaps = input.NewSnapshots.Get("ics")
+	for icm, err := range sdkobjectpatch.SnapshotIter[usedInstanceClassWithConsumers](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+		}
 
 		// if not found in NGs - remove consumers
 		if _, ok := icNodeConsumers[icm.UsedInstanceClass]; !ok {
@@ -165,7 +169,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 			apiVersion = v
 		}
 
-		input.PatchCollector.MergePatch(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
+		input.PatchCollector.PatchWithMerge(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil

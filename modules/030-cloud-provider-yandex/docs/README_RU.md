@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Yandex Cloud"
+description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Yandex Cloud."
 ---
 
 Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).

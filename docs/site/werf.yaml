@@ -30,19 +30,11 @@ cleanup:
 gitWorktree:
   forceShallowClone: true
 ---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
-      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
-        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
-      {{- end }}
-    {{- end }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
-    {{- end }}
-  {{- end }}
+{{- include "parse_base_images_map" . }}
 ---
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
@@ -85,7 +77,6 @@ shell:
         bash _tools/prepare_resources.sh
 
         # "Building static files"
-        cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
@@ -102,6 +93,7 @@ git:
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
+  - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb
@@ -151,7 +143,6 @@ git:
   - "**/*-operator-prometheus/crds/*.yaml"
   - "**/*-prometheus-metrics-adapter/crds/*.yaml"
   - "**/*-prometheus/crds/*.yaml"
-  - "**/*-snapshot-controller/crds/*.yaml"
   - "**/*-upmeter/crds/*.yaml"
   - "**/*-user-authn/crds/*.yaml"
   - "**/*-user-authz/crds/*.yaml"
@@ -272,7 +263,6 @@ git:
   - "**/*-operator-prometheus/openapi/*"
   - "**/*-prometheus-metrics-adapter/openapi/*"
   - "**/*-prometheus/openapi/*"
-  - "**/*-snapshot-controller/openapi/*"
   - "**/*-upmeter/openapi/*"
   - "**/*-user-authn/openapi/*"
   - "**/*-user-authz/openapi/*"
@@ -324,7 +314,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 shell:
   install:
@@ -396,7 +386,7 @@ import:
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 shell:
   install:
   - cd /go/src/app

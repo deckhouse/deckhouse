@@ -1,0 +1,129 @@
+{{/* Renders a JSON schema. Calls itself recursively. */}}
+
+{{ $name := .name  }} {{/* parameter name */}}
+{{ $data := .data }} {{/* A map, containing the JSON schema. */}}
+{{ $langData := .langData }} {{/* A map, containing the preferable language data. Optional. */}}
+{{ $parent := .parent }}
+{{ $ancestors := .ancestors }} {{/* A map, containing the parameter ancestors */}}
+{{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
+{{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
+{{ $required  := .required }} {{/* Array of the required parameters. */}}
+{{ $type := .type }}  {{/* A string. "module_configuration" for ModuleConfig schema or nil */}}
+
+{{- $description :=  "" }}
+
+{{- if reflect.IsMap $data }}
+  {{- if $langData.description }}
+    {{- $description = $langData.description | markdownify }}
+  {{- else }}
+    {{- $description =  $data.description | markdownify }}
+  {{- end }}
+{{- end }}
+
+{{- $fullPath := $ancestors }}
+{{- $parameterTitle := $name }}
+{{- $ancestorsPathString := "" }}
+{{- $linkAnchor := "" }}
+{{- if $apiVersion }}
+  {{- $linkAnchor = printf "%s-%s" $resourceName $apiVersion }}
+{{- else }}
+  {{- $linkAnchor = $resourceName }}
+{{- end }}
+
+{{- if gt ($name | len ) 0 }}
+  {{- $fullPath = $fullPath | append $name }}
+{{- else }} {{/* empty parameter name is an array element */}}
+  {{- $fullPath = $fullPath | append "element" }}
+  {{- $parameterTitle = lang.Translate "element_of_array" | strings.FirstUpper }}
+{{- end }}
+
+{{- if $ancestors }}
+  {{- $ancestorsPathString = printf "%s." (delimit $ancestors ".") }}
+{{- end }}
+
+{{- if $fullPath }}
+  {{- $linkAnchor = printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower) }}
+{{- end }}
+
+{{- if gt ($parameterTitle | len ) 0 }}
+  <li>
+    <div class="resources__prop_wrap">
+  {{- if and (reflect.IsMap $data) (or (index $data "x-doc-deprecated") (index $data "deprecated")) }}
+    <div class="resources__prop_name anchored" data-anchor-id="{{ $linkAnchor }}"  id="{{ $linkAnchor }}">
+      <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      {{ if eq .type "module_configuration" }}
+        <div><span class="ancestors">settings.{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div><span title="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span>
+      {{ else }}
+        <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div><span title="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span>
+      {{ end }}
+    </div>
+  {{- else }}
+    <div class="resources__prop_name anchored" data-anchor-id="{{ $linkAnchor }}"  id="{{ $linkAnchor }}">
+      <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      {{ if eq .type "module_configuration" }}
+        <div><span class="ancestors">settings.{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div>
+      {{ else }}
+        <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div>
+      {{ end }}
+    </div>
+  {{- end }}
+
+  {{ if reflect.IsMap $data }}
+    {{ if $data.items.type }}
+       {{ partial "openapi/format-type" ( dict "type" $data.type "itemsType" $data.items.type ) }}
+    {{ else if $data.type }}
+       {{  partial "openapi/format-type" ( dict "type" $data.type ) }}
+    {{ else if index $data "x-kubernetes-int-or-string" }}
+       {{  partial "openapi/format-type" ( dict "type" "x-kubernetes-int-or-string" ) }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+{{- if or (in $required $name) ( index $data "x-doc-required" ) }}
+<p class="resources__attrs required"><span class="resources__attrs_name required">{{ T "required_value_sentence" }}</span></p>
+{{- end }}
+
+{{- if reflect.IsMap $data }}
+  {{- partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData "linkAnchor" $linkAnchor) }}
+{{- end }}
+
+</div>
+
+{{ if and (reflect.IsMap $data) $data.properties }}
+  {{- $requiredParameters := $data.required }}
+  <ul>
+  {{- range $subParameterName, $subParameterAttributes := $data.properties }}
+    {{- $subParameterLangData := index $langData.properties $subParameterName }}
+
+    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters "type" $type) }}
+  {{ end }}
+  </ul>
+{{- else if and (reflect.IsMap $data) $data.items }}
+  {{- if and (reflect.IsMap $data.items) $data.items.properties }}
+    {{/* Array of objects */}}
+    <ul>
+    {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
+      {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
+      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
+    {{- end }}
+    </ul>
+  {{- else }}{{/* Array of non-objects (string, integer, etc.) */}}
+    {{- $keysToShow := slice "description" "example" "x-examples" "x-doc-example" "x-doc-examples" "enum" "default" "x-doc-default" "minimum" "maximum" "pattern" "minLength" "maxLength" }}
+
+    {{- $keysToShowIsExist := false }}
+
+    {{- range $key, $val := $data.items }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
+
+    {{- if $keysToShowIsExist }}
+      <ul>
+      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
+      </ul>
+    {{- end }}
+
+  {{- end }}
+{{- end }}
+
+{{- if gt ($parameterTitle | len ) 0 }}
+</li>
+{{- end }}

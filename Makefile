@@ -105,7 +105,7 @@ help:
 
 
 GOLANGCI_VERSION = 2.1.2
-TRIVY_VERSION= 0.60.0
+TRIVY_VERSION= 0.63.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -146,7 +146,7 @@ bin/yq: bin ## Install yq deps for update-patchversion script.
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -158,7 +158,7 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
@@ -230,7 +230,7 @@ cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/d8_images_cve_scan.sh
 
-cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
+cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/check-non-root.sh
 
@@ -325,7 +325,7 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 .PHONY: update-lib-helm
 update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	cd helm_lib/ && yq -i -y '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
 .PHONY: update-base-images-versions
 update-base-images-versions:
@@ -429,6 +429,25 @@ build: set-build-envs ## Build Deckhouse images.
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
+GO=$(shell which go)
+GIT=$(shell which git)
+GOLANGCI_LINT=$(shell which golangci-lint)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
+
 .PHONY: go-module-version
-go-module-version:
+go-module-version: go-check
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
+.PHONY: all-mod
+all-mod: go-check
+	@for dir in $$(find . -mindepth 2 -name go.mod | sed -r 's/(.*)(go.mod)/\1/g'); do \
+		echo "Running go mod tidy in $${dir}"; \
+		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
+	done
+
+define error-if-empty
+@if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi
+endef

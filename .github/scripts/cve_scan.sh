@@ -16,62 +16,65 @@
 
 set -e
 
-usage() {
-cat << EOF
-usage: $0 [-p] [-r] [-h]
+#SCAN_TARGET description:
+#  only_main - Scan only main branch. executes on push to main.
+#  pr - Scan image from PR tag. executes on PRs.
+#  regular - Scan main and latest 3 minor releases. executes on schedule and manual run.
 
-This script does foo.
 
-OPTIONS:
-   -p        Scan image from PR tag.
-   -r        Regular scan - main and latest 3 minor releases
-   -h        Show help
-EOF
-}
+case ${SCAN_TARGET} in
+  only_main | pr | regular )
+    echo "SCAN_TARGET: ${SCAN_TARGET}"
+    ;;
+  *)
+    echo "SCAN_TARGET is not valid"
+    exit 1
+esac
 
-SCAN_TARGET=""
 PROD_REGISTRY_DECKHOUSE_IMAGE="${PROD_REGISTRY}/deckhouse/fe"
 DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
 
-while getopts “:hpr” OPTION
-do
-  case $OPTION in
-    h)
-      usage
-      exit 1
-      ;;
-    p)
-      SCAN_TARGET="pr"
-      ;;
-    r)
-      SCAN_TARGET="regular"
-      ;;
-    ?)
-      usage
-      exit 1
-      ;;
-  esac
-done
-
-
 login_prod_registry() {
   echo "Log in to PROD registry"
-  echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+  docker login "${PROD_REGISTRY}"
 }
 login_dev_registry() {
   echo "Log in to DEV registry"
-  echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+  docker login "${DEV_REGISTRY}"
 }
+
+# Create docker config file to use during this CI Job
+echo "----------------------------------------------"
+echo ""
+echo "Preparing DOCKER_CONFIG"
+mkdir -p "${WORKDIR}/docker"
+cat > "${WORKDIR}/docker/config.json" << EOL
+{
+        "auths": {
+                "${PROD_REGISTRY}": {
+                        "auth": "$(echo -n "${PROD_REGISTRY_USER}:${PROD_REGISTRY_PASSWORD}" | base64)"
+                },
+                "${DEV_REGISTRY}": {
+                        "auth": "$(echo -n "${DEV_REGISTRY_USER}:${DEV_REGISTRY_PASSWORD}" | base64)"
+                }
+        }
+}
+EOL
+export DOCKER_CONFIG="${WORKDIR}/docker"
 
 echo "----------------------------------------------"
 echo ""
 echo "Getting Trivy"
 mkdir -p "${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}"
-curl --fail-with-body "https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-${TRIVY_BIN_VERSION}/${TRIVY_BIN_VERSION}/trivy" -o ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
+curl -L --fail-with-body "https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-${TRIVY_BIN_VERSION}/${TRIVY_BIN_VERSION}/trivy" -o ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
 chmod u+x ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
 rm -rf ${WORKDIR}/bin/trivy
 ln -s ${PWD}/${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy ${WORKDIR}/bin/trivy
 
+echo "Updating Trivy Data Bases"
+mkdir -p "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-db-only --db-repository "${TRIVY_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-java-db-only --java-db-repository "${TRIVY_JAVA_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
 
 echo "----------------------------------------------"
 echo ""
@@ -95,12 +98,14 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
       d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
     done
   fi
+# else - this is push to main or PR, so scan only them.
 fi
 echo "CVE Scan will be applied to the following tags of Deckhouse"
 echo "${d8_tags[@]}"
 
 # Scan in loop for provided list of tags
 for d8_tag in "${d8_tags[@]}"; do
+  dd_default_branch_tag=""
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
@@ -118,6 +123,10 @@ for d8_tag in "${d8_tags[@]}"; do
     login_prod_registry
   fi
 
+  # set cpecial tag for DD if images from main
+  if [ "${d8_tag}" == "main" ]; then
+    dd_default_branch_tag="default_branch"
+  fi
   # if d8_tag is for release - we need to take it from prod registry
   if echo "${d8_tag}"|grep -q "^v[0-9]\.[0-9]*\.[0-9]*$"; then
     d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
@@ -204,9 +213,9 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       fi
 
       echo ""
@@ -236,7 +245,7 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag}" \
+        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag}" \
         -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
         -F "version=${dd_image_version}" \
         -F "build_id=${IMAGE_HASH}" \

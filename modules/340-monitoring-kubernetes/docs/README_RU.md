@@ -1,5 +1,6 @@
 ---
 title: "Модуль monitoring-kubernetes"
+description: "Базовый мониторинг узлов кластера Deckhouse Kubernetes Platform."
 ---
 
 Модуль предназначен для базового мониторинга узлов кластера.

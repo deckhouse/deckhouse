@@ -40,7 +40,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.10"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -49,7 +49,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -87,6 +90,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -254,15 +258,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -281,14 +276,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -297,41 +292,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -545,15 +524,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -572,14 +542,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -588,41 +558,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -836,15 +790,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -863,14 +808,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -879,41 +824,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1127,15 +1056,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -1154,14 +1074,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1170,41 +1090,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1418,15 +1322,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -1445,14 +1340,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1461,41 +1356,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1709,15 +1588,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -1736,14 +1606,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1752,41 +1622,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2000,15 +1854,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -2027,14 +1872,14 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2043,41 +1888,25 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 

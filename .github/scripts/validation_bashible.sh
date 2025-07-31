@@ -126,7 +126,7 @@ clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.28"
+kubernetesVersion: "1.29"
 cri: "Containerd"
 nodeGroup:
   cloudInstances:
@@ -172,6 +172,7 @@ config=config.yaml
 volumesRoot=$(pwd)
 printf "%s\n" "$CONFIG_YAML" > "$volumesRoot/$config"
 dockerExit=0
+docker pull ${REGISTRY}/deckhouse/ee/install:stable
 cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/candi/bashible:/deckhouse/candi/bashible \
   -v ${volumesRoot}/candi/cloud-providers:/deckhouse/candi/cloud-providers \
@@ -179,6 +180,6 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -e config=config.yaml \
   --entrypoint=bash \
   ${REGISTRY}/deckhouse/ee/install:stable - || dockerExit=1
-dhctl config render bashible-bundle --bundle-name ubuntu-lts --config $config
+dhctl config render bashible-bundle --config $config
 SCRIPT_END
 exit $dockerExit

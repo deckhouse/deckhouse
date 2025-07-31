@@ -13,3 +13,7 @@ variable "enabled" {
 variable "ssh_allow_list" {
   type = list(string)
 }
+
+variable "enterprise_project_id" {
+  type = string
+}

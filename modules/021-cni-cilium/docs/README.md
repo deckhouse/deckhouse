@@ -10,7 +10,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
 2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
 3. Kernel requirements:
-   * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
+   * Linux kernel version not lower than `5.8` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
 4. OS compatibility:
     * Ubuntu:
       * incompatible with version 18.04;
@@ -41,7 +41,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
    ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
 
 {% alert level="warning" %}
-In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
+In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.
 Network equipment must be ready for asymmetric traffic flow: IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
 {% endalert %}
 
@@ -49,11 +49,16 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 ## Using CiliumClusterwideNetworkPolicies
 
-To use CiliumClusterwideNetworkPolicies, apply:
+{% alert level="danger" %}
+Using CiliumClusterwideNetworkPolicies if the `policyAuditMode` option is absent in the cni-cilium module settings may lead to incorrect operation of Control plane or loss of SSH access to all cluster nodes.
+{% endalert %}
 
-1. The primary set of `CiliumClusterwideNetworkPolicy` objects with the configuration option `policyAuditMode` set to `true`.
-   The absence of this option may lead to incorrect operation of the control plane or loss of SSH access to all cluster nodes . The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
-2. Network security policy rule:
+Follow these steps to use CiliumClusterwideNetworkPolicies:
+
+1. Apply the primary set of `CiliumClusterwideNetworkPolicy` objects. To do this, in the settings of the cni-cilium module add the configuration option [`policyAuditMode`](../cni-cilium/configuration.html#parameters-policyauditmode) with the value `true`.
+The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
+
+1. Apply network security policy rule:
 
    ```yaml
    apiVersion: "cilium.io/v2"
@@ -78,6 +83,23 @@ When changing Cilium's operation mode (the [tunnelMode](configuration.html#param
 ## Disabling the kube-proxy Module
 
 Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-proxy` is automatically disabled when the `cni-cilium` module is enabled.
+
+## Using selective load balancing algorithm for services
+
+In Deckhouse Kubernetes Platform, you can apply the following algorithms to load balance service traffic:
+
+* `Random`: Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
+* `Maglev`: Uses consistent hashing to distribute traffic evenly, suitable for large-scale services.
+* `Least Connections`: Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long-lived connections.
+
+By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
+
+* Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLoadBalancerAlgorithmsEnabled`](configuration.html#parameters-extralbalgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
+* In the service manifest, specify the `cilium.io/bpf-lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
+
+{% alert level="warning" %}
+This mechanism requires Linux kernel version 5.15 or higher to work correctly.
+{% endalert %}
 
 ## Using Egress Gateway
 

@@ -34,6 +34,8 @@ func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
 
+	basic.SetCritical(def.Critical)
+
 	return &Module{
 		def:   def,
 		basic: basic,
@@ -42,6 +44,17 @@ func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 
 func (m *Module) GetBasicModule() *modules.BasicModule {
 	return m.basic
+}
+
+func (m *Module) GetModuleDefinition() *Definition {
+	return m.def
+}
+
+func (m *Module) GetModuleExclusiveGroup() *string {
+	if m.def.ExclusiveGroup == "" {
+		return nil
+	}
+	return &m.def.ExclusiveGroup
 }
 
 func (m *Module) GetConfirmationDisableReason() (string, bool) {

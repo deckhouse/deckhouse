@@ -226,6 +226,44 @@ entries:
                     ru: FAQ
                   url: /modules/cloud-provider-aws/faq.html
             - title:
+                en: DVP
+                ru: DVP
+              moduleName: cloud-provider-dvp
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-dvp/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-dvp/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-dvp/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-dvp/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-dvp/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/cloud-provider-dvp/cr.html
+            - title:
                 en: Google Cloud Platform
                 ru: Google Cloud Platform
               moduleName: cloud-provider-gcp
@@ -668,6 +706,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
+            en: Container Registry
+            ru: Container Registry
+          moduleName: registry
+          featureStatus: preview
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/registry/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/registry/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/registry/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/registry/faq.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
@@ -912,7 +972,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/metallb/cr.html
-
         - title:
             en: Other modules
             ru: Другие модули
@@ -958,6 +1017,23 @@ entries:
                     ru: Настройки
                   url: /modules/network-gateway/configuration.html
             - title:
+                en: network-policy-engine
+                ru: network-policy-engine
+              moduleName: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/network-policy-engine/configuration.html
+            - title:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
               featureStatus: experimental
@@ -983,30 +1059,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/service-with-healthchecks/examples.html
-            - title:
-                en: static-routing-manager
-                ru: static-routing-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/static-routing-manager/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/static-routing-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/static-routing-manager/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/static-routing-manager/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -1181,7 +1233,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/operator-prometheus/configuration.html
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/operator-prometheus/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/operator-prometheus/cr.html
             - title:
                 en: okmeter
                 ru: okmeter
@@ -1250,19 +1310,6 @@ entries:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами
       folders:
-        - title:
-            en: Priority classes
-            ru: Priority classes
-          moduleName: priority-class
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/priority-class/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/priority-class/configuration.html
         - title:
             en: Scaling by any metric
             ru: Масштабирование по метрикам
@@ -1565,23 +1612,6 @@ entries:
                     ru: FAQ
                   url: /modules/cert-manager/faq.html
             - title:
-                en: network-policy-engine
-                ru: network-policy-engine
-              moduleName: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-policy-engine/configuration.html
-            - title:
                 en: operator-trivy
                 ru: operator-trivy
               moduleName: operator-trivy
@@ -1846,9 +1876,17 @@ entries:
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
     - title:
-        en: Deckhouse CLI
-        ru: Deckhouse CLI
-      url: /deckhouse-cli/
+        en: Deckhouse CLI (d8)
+        ru: Deckhouse CLI (d8)
+      folders:
+      - title:
+          en: Overview and installation
+          ru: Описание и установка
+        url: /deckhouse-cli/
+      - title:
+          en: Reference
+          ru: Справка
+        url: /deckhouse-cli/reference/
     - title:
         en: Used software
         ru: Используемое ПО

@@ -81,6 +81,36 @@ kubernetes:
     nameSelector:
       matchNames: ["global"]
     jqFilter: '.spec.settings // ""'
+  - name: nodes_with_containerd_custom_conf
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd-config: custom
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
+  - name: nodes_without_containerd_support
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd-v2-unsupported: ""
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main
@@ -242,6 +272,44 @@ EOF
 EOF
     return 0
   fi
+
+  # Forbid change CRI type if ng has nodes with custom containerd config
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    oldCriType="$(context::jq -r '.review.request.oldObject.spec.cri.type')"
+
+    if [[ "${oldCriType}" != "${newCriType}" ]]; then
+      nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+      if [[ $nodesForbidingChanges != "" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
+
+  # Forbid setting CRI type to ContainerdV2 if any node in the NodeGroup has containerd-v2-not-supported
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    if [[ "${newCriType}" == "ContainerdV2" ]]; then
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
+      unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
+        .snapshots.nodes_without_containerd_support[]
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | .filterResult.nodeName
+      ')"
+      if [[ -n "${unsupportedNodes}" ]]; then
+         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"It is forbidden for NodeGroup \"${nodeGroupName}\" to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}

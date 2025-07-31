@@ -28,6 +28,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -36,6 +37,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
 	"github.com/spaolacci/murmur3"
+	"go.opentelemetry.io/otel"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -52,16 +55,19 @@ import (
 )
 
 const (
-	metricUpdatingFailedGroup = "d8_updating_failed"
+	metricUpdatingFailedGroup   = "d8_updating_is_failed"
+	serviceName                 = "check-release"
+	ltsChannelName              = "lts"
+	checkDeckhouseReleasePeriod = 3 * time.Minute
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
-			r.logger.Error("check Deckhouse release", log.Err(err))
+			r.logger.Warn("check Deckhouse release", log.Err(err))
 		}
-	}, 3*time.Minute)
+	}, checkDeckhouseReleasePeriod)
 }
 
 type DeckhouseReleaseFetcherConfig struct {
@@ -82,6 +88,9 @@ type DeckhouseReleaseFetcherConfig struct {
 
 // checkDeckhouseRelease create fetcher and start
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkDeckhouseRelease")
+	defer span.End()
+
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("Release channel isn't set.")
 		return nil
@@ -181,6 +190,9 @@ func (f *DeckhouseReleaseFetcher) GetReleaseChannel() string {
 
 // fetchDeckhouseRelease is a complete flow for loop
 func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) error {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "fetchDeckhouseRelease")
+	defer span.End()
+
 	releases, err := f.listDeckhouseReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("list deckhouse releases: %w", err)
@@ -225,7 +237,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	}
 
 	// get image info from release channel
-	imageInfo, err := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
+	imageInfo, err := f.GetReleaseImageInfo(ctx, f.releaseVersionImageHash)
 	if err != nil && !errors.Is(err, ErrImageNotChanged) {
 		return fmt.Errorf("get new image: %w", err)
 	}
@@ -246,7 +258,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
 
-	lastCreatedMeta, err := f.createReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
+	lastCreatedMeta, err := f.ensureReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -346,6 +358,9 @@ func (f *DeckhouseReleaseFetcher) listDeckhouseReleases(ctx context.Context) ([]
 // restoreCurrentDeployedRelease restores release in cluster by given tag,
 // if not found any data about release - creating it without them
 func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Context, tag string) (*v1alpha1.DeckhouseRelease, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "restoreCurrentDeployedRelease")
+	defer span.End()
+
 	var releaseMetadata *ReleaseMetadata
 
 	image, err := f.registryClient.Image(ctx, tag)
@@ -353,7 +368,7 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 		f.logger.Warn("couldn't get current deployed release's image from registry", slog.String("image", tag), log.Err(err))
 	}
 
-	releaseMetadata, err = f.fetchReleaseMetadata(image)
+	releaseMetadata, err = f.fetchReleaseMetadata(ctx, image)
 	if err != nil {
 		f.logger.Warn("couldn't fetch current deployed release's image metadata", slog.String("image", tag), log.Err(err))
 	}
@@ -403,7 +418,7 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 	return release, nil
 }
 
-// createReleases create releases and return metadata of last created release.
+// ensureReleases create releases and return metadata of last created release.
 // flow:
 //  1. if no releases in cluster - create from channel
 //  2. if deployed release patch version is lower than channel (with same minor and major) - create from channel
@@ -414,18 +429,32 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 //     4.2.1 if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
 //     4.2.2 if update sequence between last release in cluster and version in channel not broken - create from channel
 //     4.3 if update sequences not broken - create from channel
-func (f *DeckhouseReleaseFetcher) createReleases(
+func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) (*ReleaseMetadata, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "ensureReleases")
+	defer span.End()
+
 	var (
 		notificationShiftTime *metav1.Time
 	)
 
+	// if no releases in cluster - create from channel
 	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+		}
+
+		return releaseMetadata, nil
+	}
+
+	// if release channel is LTS - create release from channel
+	if strings.EqualFold(f.releaseChannel, ltsChannelName) {
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -483,12 +512,12 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta
@@ -512,6 +541,9 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	notificationShiftTime *metav1.Time,
 	createProcess string,
 ) error {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "createRelease")
+	defer span.End()
+
 	var applyAfter *metav1.Time
 
 	ts := metav1.Time{Time: f.clock.Now()}
@@ -593,13 +625,19 @@ func (f *DeckhouseReleaseFetcher) patchSetSuspendAnnotation(ctx context.Context,
 
 var ErrImageNotChanged = errors.New("image not changed")
 
-type ImageInfo struct {
+type ReleaseImageInfo struct {
 	Metadata *ReleaseMetadata
 	Image    registryv1.Image
 	Digest   registryv1.Hash
 }
 
-func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousImageHash string) (*ImageInfo, error) {
+// GetReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
+// return error if version.json not found in metadata
+// return ErrImageNotChanged with ReleaseImageInfo if image hash matches with previousImageHash
+func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previousImageHash string) (*ReleaseImageInfo, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
+	defer span.End()
+
 	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
@@ -611,13 +649,13 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 	}
 
 	if previousImageHash == imageDigest.String() {
-		return &ImageInfo{
+		return &ReleaseImageInfo{
 			Image:  image,
 			Digest: imageDigest,
 		}, ErrImageNotChanged
 	}
 
-	releaseMeta, err := f.fetchReleaseMetadata(image)
+	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image metadata: %w", err)
 	}
@@ -626,7 +664,7 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 		return nil, fmt.Errorf("version not found, probably image is broken or layer does not exist")
 	}
 
-	return &ImageInfo{
+	return &ReleaseImageInfo{
 		Image:    image,
 		Digest:   imageDigest,
 		Metadata: releaseMeta,
@@ -636,6 +674,7 @@ func (f *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousI
 type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
+	moduleReader    *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.Reader) error {
@@ -661,6 +700,11 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 			if err != nil {
 				return err
 			}
+		case "module.yaml":
+			_, err := io.Copy(rr.moduleReader, tr)
+			if err != nil {
+				return err
+			}
 
 		default:
 			continue
@@ -671,7 +715,10 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 var ErrImageIsNil = errors.New("image is nil")
 
 // TODO: make registry service with this method
-func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(img registryv1.Image) (*ReleaseMetadata, error) {
+func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img registryv1.Image) (*ReleaseMetadata, error) {
+	_, span := otel.Tracer(serviceName).Start(ctx, "fetchReleaseMetadata")
+	defer span.End()
+
 	if img == nil {
 		return nil, ErrImageIsNil
 	}
@@ -687,6 +734,7 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(img registryv1.Image) (*R
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -715,6 +763,26 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(img registryv1.Image) (*R
 		}
 
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var moduleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
+		if err != nil {
+			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
+
+			meta.ModuleDefinition = nil
+
+			return meta, nil
+		}
+
+		meta.ModuleDefinition = &moduleDefinition
+		if moduleDefinition.Requirements != nil {
+			if meta.Requirements == nil {
+				meta.Requirements = make(map[string]string, 1)
+			}
+			meta.Requirements["kubernetes"] = moduleDefinition.Requirements.Kubernetes
+		}
 	}
 
 	cooldown := f.fetchCooldown(img)
@@ -770,9 +838,12 @@ func parseTime(s string) (time.Time, error) {
 
 // FetchReleasesMetadata realize step by step update
 func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewReleasesMetadata")
+	defer span.End()
+
 	vers, err := f.getNewVersions(ctx, actual, target)
 	if err != nil {
-		return nil, fmt.Errorf("get next version: %w", err)
+		return nil, fmt.Errorf("get next versions: %w", err)
 	}
 
 	result := make([]ReleaseMetadata, 0, len(vers))
@@ -795,7 +866,7 @@ func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, ac
 			return nil, fmt.Errorf("get image: %w", err)
 		}
 
-		releaseMeta, err := f.fetchReleaseMetadata(image)
+		releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
 		if err != nil {
 			return nil, fmt.Errorf("fetch release metadata: %w", err)
 		}
@@ -964,15 +1035,16 @@ func getLatestDeployedRelease(releases []*v1alpha1.DeckhouseRelease) (int, *v1al
 }
 
 type ReleaseMetadata struct {
-	Version      string                    `json:"version"`
+	Version          string                  `json:"version"`
+	Changelog        map[string]interface{}  `json:"-"`
+	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
+
+	// TODO: review fields below. it can be useless now
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
-
-	Changelog map[string]interface{} `json:"-"`
-
-	Cooldown *metav1.Time `json:"-"`
+	Cooldown     *metav1.Time              `json:"-"`
 }
 
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {

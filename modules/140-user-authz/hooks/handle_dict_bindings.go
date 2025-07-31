@@ -26,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -76,33 +78,35 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	return &filteredUseBinding{
-		Subjects: binding.Subjects,
+		Namespace: binding.Namespace,
+		Subjects:  binding.Subjects,
 	}, nil
 }
 
 func ensureDictBindings(input *go_hook.HookInput) error {
 	subjects := make(map[string]rbacv1.Subject)
-	for _, binding := range input.Snapshots["useBindings"] {
-		if binding == nil {
-			continue
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.NewSnapshots.Get("useBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
 		}
 
-		parsed := binding.(*filteredUseBinding)
 		if len(parsed.Subjects) == 0 {
 			continue
 		}
 
 		for _, subject := range parsed.Subjects {
+			if subject.Kind == "ServiceAccount" && subject.Namespace == "" {
+				subject.Namespace = parsed.Namespace
+			}
 			subjects[stringBySubject(subject)] = subject
 		}
 	}
 
-	for _, binding := range input.Snapshots["dictBindings"] {
-		if binding == nil {
-			continue
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.NewSnapshots.Get("dictBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'dictBindings' snapshot: %w", err)
 		}
 
-		parsed := binding.(*filteredManageBinding)
 		if parsed.Subjects == nil {
 			continue
 		}

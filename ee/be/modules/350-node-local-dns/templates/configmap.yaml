@@ -13,8 +13,8 @@ data:
         consolidate 10s ".* write: operation not permitted$"
       }
       cache {
-        success 39936
-        denial 9984
+        success 39936 30 5 # <cache size> <TTL max> <TTL min>
+        denial 9984 5 5    # <cache size> <TTL max> <TTL min>
         prefetch 10 1m 25%
         serve_stale 1h immediate
       }
@@ -23,7 +23,7 @@ data:
         service_name d8-kube-dns
         port_name dns
         expire 10s
-        health_check 100ms
+        health_check 300ms
         prefer_udp
       }
       reload 2s

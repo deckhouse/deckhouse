@@ -412,7 +412,7 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
     core.endGroup();
   }
 };
-
+exports.removeLabel = removeLabel;
 /**
  * Set outputs to enable e2e jobs from workflow_dispatch inputs.
  *
@@ -481,6 +481,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   let multimaster = e2eDefaults.multimaster;
   let edition = '';
   let cis = e2eDefaults.cis;
+  let autoscaler = false
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -507,6 +508,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use operator-trivy to get CIS Benchmark report`);
       cis = true;
     }
+    if (info.autoscaler) {
+      core.info(`Detect '${label.name}': enable autoscaler tests`);
+      autoscaler = true;
+    };
   }
 
   if (ver.length === 0) {
@@ -526,6 +531,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
   core.setOutput(`cis`, `${cis}`);
+  core.setOutput(`autoscaler`, `${autoscaler}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -1016,35 +1022,19 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
       command.rerunWorkflow = true;
     }
-    // Rerun build workflow if edition label is added or all edition labels are removed.
-    if (labelType === 'edition') {
-      // Gather other edition labels on PR.
-      let removeEditions = [];
-      prLabels.map((l) => {
-        const info = knownLabels[l.name];
-        if (info && info.type === 'edition' && l.name !== label) {
-          removeEditions.push(l.name);
-        }
-      });
-
-      if (event.action === 'labeled' && removeEditions.length > 0) {
-        // If edition/ce label is set, edition/ee label should be removed and vice versa.
-        for (const edition of removeEditions) {
-          core.notice(`Remove label '${edition}' from PR#${prNumber}`);
-          await removeLabel({ github, context, core, issue_number, label: edition });
-        }
-      }
-
-      // Re-run workflow if labeled with edition label or no edition labels left on PR.
-      if (event.action === 'labeled' || (event.action === 'unlabeled' && removeEditions.length === 0)) {
-        command.workflows = ['build-and-test_dev.yml'];
-        command.rerunWorkflow = true;
-      }
+    // Rerun build workflow if edition label is added, ignore 'unlabeled' action.
+    if (labelType === 'edition' && event.action === 'labeled') {
+      command.workflows = ['build-and-test_dev.yml'];
+      command.rerunWorkflow = true;
     }
     if (labelType === 'security') {
       if (labelInfo.security === 'rootless' && event.action === 'labeled') {
         command.workflows = ['build-and-test_dev.yml'];
         command.rerunWorkflow = true;
+      }
+      if (labelInfo.security == 'cve' && event.action === 'labeled') {
+        command.workflows = ['cve-pr.yml'];
+        command.triggerWorkflowDispatch = true;
       }
     }
   } finally {
@@ -1488,7 +1478,7 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
     return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref });
   }
 
-  if (gitRefInfo.isMain || gitRefInfo.tagVersion) {
+  if (gitRefInfo.tagVersion) {
     // Add a comment on the release issue for main branch
     // and tags with specified version:
     // - find milestone
@@ -1521,6 +1511,6 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
   }
 
   return core.setFailed(
-    `Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`
+    `Git ref '${context.ref}' is not an auto-build tag. Ignore running build-and-test_release workflow.`
   );
 };

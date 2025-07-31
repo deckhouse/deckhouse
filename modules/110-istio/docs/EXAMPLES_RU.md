@@ -664,8 +664,77 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
+{% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
+
 ### Автоматическое обновление data plane Istio
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
+
+## Настройка ресурсов istio-proxy sidecar
+
+Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
+
+### Поддерживаемые аннотации
+
+| Аннотация                          | Описание                     | Пример значения |
+|-------------------------------------|-----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | Запрос CPU для sidecar      | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | Лимит CPU для sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Запрос памяти для sidecar   | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Лимит памяти для sidecar    | `512Mi`       |
+
+### Примеры конфигурации
+
+Для Deployment:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для ReplicaSet:
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+{% alert level="warning" %}Все четыре параметра должны быть указаны вместе — `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory` и `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}

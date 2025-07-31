@@ -23,14 +23,14 @@ lang: ru
 
 ## Создание пользователя
 
-Для создания статического пользователя используется ресурс [User](../../../../reference/cr/user.html).
+Для создания статического пользователя используется ресурс User.
 
 Перед этим необходимо сгенерировать хэш пароля с помощью следующей команды:
 
 ```shell
 # В начале команды используйте пробел, чтобы пароль не сохранился в истории команд.
 # Замените example_password на свой пароль. 
- echo example_password | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+ echo -n 'example_password' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
 Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/).
@@ -44,13 +44,13 @@ metadata:
   name: joe
 spec:
   email: joe@example.com # Используется в RoleBinding, ClusterRoleBinding для назначения прав пользователю.
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  password: 'JDJ5JDEwJG5qNFZUWW9vVHBQZUsxV1ZaNWtOcnVzTXhDb3ZHcWNFLnhxSHhoMUM0aG9zVVJubUJkZjJ5'
   ttl: 24h # (Опционально) задает срок жизни учетной записи.
 ```
 
 ## Создание группы пользователей
 
-Для создания группы пользователей используется ресурс [Group](../../../../reference/cr/group.html).
+Для создания группы пользователей используется ресурс Group.
 
 Пример манифеста для создания группы:
 
@@ -88,7 +88,7 @@ spec:
 
 ## Настройка внешних провайдеров
 
-Для настройки внешниx провайдеров используется ресурс [DexProvider](../../../../reference/cr/dexprovider.html).
+Для настройки внешниx провайдеров используется ресурс DexProvider.
 
 ### GitHub
 
@@ -144,6 +144,8 @@ spec:
     - users
 ```
 
+> `groups` в приведенном выше примере — список фильтров по допустимым группам из GitLab, указаных по их пути (path), а не по имени. Токен пользователя будет содержать пересечение множеств групп из GitLab и групп из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной. Если параметр не указан, токен пользователя будет содержать все группы из GitLab.
+
 Для того чтобы создать приложение в GitLab, выполните следующие шаги:
 
 Для GitLab, размещённого на собственном сервере:
@@ -196,7 +198,7 @@ spec:
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
-1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](../../../../reference/cr/dexprovider.html).
+1. Полученные `Application Name` и `Password` укажите в ресурсе DexProvider.
 1. Группы CROWD укажите в lowercase-формате для ресурса `DexProvider`.
 
 ### Bitbucket Cloud
@@ -207,7 +209,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket
@@ -302,7 +304,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](../../../../reference/cr/publicdomaintemplate.html) – указанный в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – указанный в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 

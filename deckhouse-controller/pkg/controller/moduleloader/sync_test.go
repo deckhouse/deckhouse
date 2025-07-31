@@ -15,7 +15,6 @@
 package moduleloader
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -86,7 +85,6 @@ type ModuleLoaderTestSuite struct {
 	loader *Loader
 
 	testDataFileName string
-	testMPOName      string
 
 	tmpDir string
 }
@@ -209,7 +207,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			name:     "NoWeightNoDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,
@@ -219,7 +217,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			name:     "NoWeightWithDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,
@@ -633,40 +631,6 @@ func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.Mo
 	require.NoError(suite.T(), err)
 
 	return mpo
-}
-
-func (suite *ModuleLoaderTestSuite) moduleRelease(name string) *v1alpha1.ModuleRelease {
-	release := new(v1alpha1.ModuleRelease)
-	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
-	require.NoError(suite.T(), err)
-
-	return release
-}
-
-func (suite *ModuleLoaderTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	sources := new(v1alpha1.ModuleSourceList)
-	err := suite.client.List(context.TODO(), sources)
-	require.NoError(suite.T(), err)
-
-	for _, item := range sources.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	mpos := new(v1alpha2.ModulePullOverrideList)
-	err = suite.client.List(context.TODO(), mpos)
-	require.NoError(suite.T(), err)
-
-	for _, item := range mpos.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
 }
 
 func (suite *ModuleLoaderTestSuite) parseTestdata(scope, filename string) []byte {

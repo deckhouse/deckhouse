@@ -1,4 +1,4 @@
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
+{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

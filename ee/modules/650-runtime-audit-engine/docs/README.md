@@ -1,6 +1,6 @@
 ---
 title: "The runtime-audit-engine module"
-description: Overview of the runtime-audit-engine Deckhouse module, which implements a runtime threats detection engine in the Kubernetes cluster.
+description: Runtime threats detection engine in a Deckhouse Kubernetes Platform cluster.
 ---
 
 ## Overview
@@ -106,7 +106,18 @@ There is also an additional set of built-in rules:
 
 - a rule placed in the custom resource format [FalcoAuditRules](cr.html#falcoauditrules).
 
-You can customize the list of built-in rules with [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
+To list all `falco` audit rules, run:
+
+```shell
+kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+```
+
+{% alert level="info" %}
+- With the [current role-based model](../user-authz/#current-role-based-model), executing this command requires the `PrivilegedUser` role (or higher) in the `d8-runtime-audit-engine` namespace.
+- With the [experimental role-based model](../user-authz/#experimental-role-based-model), executing this command requires the `d8:manage:security:manager` role.
+{% endalert %}
+
+You can customize the list of built-in rules with [settings.builtInRulesList](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
 ### Custom audit rules
 
