@@ -146,13 +146,8 @@ func (c *Etcd) newEtcdCli() (*clientv3.Client, error) {
 		Endpoints:          endpoints,
 		DialTimeout:        5 * time.Second,
 		TLS:                tlsConfig,
-		MaxUnaryRetries:    0,
+		MaxUnaryRetries:    1,
 		BackoffWaitBetween: 1 * time.Second,
-		DialOptions: []grpc.DialOption{
-			grpc.WithChainUnaryInterceptor(
-				noOpUnaryInterceptor,
-			),
-		},
 	}
 
 	client, err := clientv3.New(cfg)
