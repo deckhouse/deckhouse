@@ -182,6 +182,16 @@ DKP не создаёт группы безопасности автоматич
 
 Во всех случаях параметр `additionalSecurityGroups` принимает массив строк — имен (ID) групп безопасности в AWS.
 
+Если установлено значение `disableDefaultSecurityGroup: true`, то группы по умолчанию создаваться не будут.
+
+При использовании `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы безопасности для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
+
+- `additionalSecurityGroups` в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
+- `additionalSecurityGroups` в ресурсе AWSInstanceClass;
+- `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
+
+Для настройки групп, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+
 ## Настройка пирингового соединения между VPC
 
 Для примера рассмотрим настройку пирингового соединения между двумя условными VPC — `vpc-a` и `vpc-b`.
