@@ -101,13 +101,13 @@ func main() {
 	// Connect to registry
 	clients := make([]registryscanner.Client, 0)
 	for _, registry := range strings.Split(*registries, ",") {
-		logger.Info("watch modules", slog.String("source", registry))
+		logger.Info("watch modules", slog.String("registry", registry))
 
 		client, err := registryclient.NewClient(registry, metricStorage,
 			registryclient.WithAuth(regsecretRaw),
 		)
 		if err != nil {
-			logger.Warn("no dockercfg auth set, skipping", slog.String("source", registry))
+			logger.Warn("no dockercfg auth set, skipping", slog.String("registry", registry))
 			continue
 		}
 

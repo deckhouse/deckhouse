@@ -41,7 +41,7 @@ var (
 
 const versionFileName = "version.json"
 
-func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
+func (s *Registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
 	versions := make([]internal.VersionData, 0, len(s.registryClients))
@@ -66,7 +66,7 @@ func (s *registryscanner) processRegistries(ctx context.Context) []backends.Docu
 	return s.cache.SyncWithRegistryVersions(versions)
 }
 
-func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
+func (s *Registryscanner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(modules))
 
 	for _, module := range modules {
@@ -89,7 +89,7 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 	return versions
 }
 
-func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
+func (s *Registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(releaseChannels))
 
 	for _, releaseChannel := range releaseChannels {
@@ -113,7 +113,7 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 	return versions
 }
 
-func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
+func (s *Registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
 	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get release image: %w", err)
@@ -163,7 +163,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	return versionData, nil
 }
 
-func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
+func (s *Registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
@@ -177,7 +177,7 @@ func (s *registryscanner) extractTar(ctx context.Context, version *internal.Vers
 	return tarFile, nil
 }
 
-func (s *registryscanner) extractDocumentation(image crv1.Image) ([]byte, error) {
+func (s *Registryscanner) extractDocumentation(image crv1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
@@ -214,7 +214,7 @@ func createDocumentationDirectoryStructure(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
+func (s *Registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 	tarReader := tar.NewReader(source)
 
 	for {

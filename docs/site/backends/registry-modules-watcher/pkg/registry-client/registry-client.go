@@ -113,9 +113,9 @@ func (c *client) Modules(ctx context.Context) ([]string, error) {
 }
 
 func (c *client) ListTags(ctx context.Context, moduleName string) ([]string, error) {
-	listTagsUrl := c.registryURL + "/" + moduleName + "/release"
+	listTagsURL := c.registryURL + "/" + moduleName + "/release"
 
-	return c.list(ctx, listTagsUrl)
+	return c.list(ctx, listTagsURL)
 }
 
 func (c *client) list(ctx context.Context, url string) ([]string, error) {
