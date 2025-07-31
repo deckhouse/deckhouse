@@ -32,6 +32,11 @@ spec:
             - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default }}
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
           {{- include "resources" . | nindent 10 }}
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: http-metrics
           env:
             - name: LOG_LEVEL
               value: {{ pluck .Values.werf.env .Values.moduleWatcher.logLevel | first | default .Values.moduleWatcher.logLevel._default }}
