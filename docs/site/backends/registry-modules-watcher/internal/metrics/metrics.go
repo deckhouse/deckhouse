@@ -68,43 +68,43 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", RegistryWatcherBackendsTotalMetric))
-	_, err = ms.RegisterGauge(RegistryWatcherBackendsTotalMetric, []string{}, options.WithHelp("Count of watcher backends "))
+	_, err = ms.RegisterGauge(RegistryWatcherBackendsTotalMetric, []string{}, options.WithHelp("Count of watcher backends"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryWatcherBackendsTotalMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderUploadRequestsCountMetric))
-	_, err = ms.RegisterCounter(SenderUploadRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderUploadRequestsCountMetric, []string{"status_code"}, options.WithHelp("Number of the sender requests for uploading"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsCountMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderUploadRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderUploadRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterHistogram(SenderUploadRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender upload request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsSecondsMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderBuildRequestsCountMetric))
-	_, err = ms.RegisterCounter(SenderBuildRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderBuildRequestsCountMetric, []string{"status_code"}, options.WithHelp("Number of the sender requests for build"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsCountMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderBuildRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderBuildRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterHistogram(SenderBuildRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender build request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsSecondsMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsCountMetric))
-	_, err = ms.RegisterCounter(SenderDeleteRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderDeleteRequestsCountMetric, []string{"status_code"}, options.WithHelp("Number of the sender requests for delete"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsCountMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender delete request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsSecondsMetric, err)
 	}
