@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -141,7 +142,7 @@ func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	// After request
 	requestTime := time.Since(timeBeforeRequest).Seconds()
-	labels := map[string]string{"status_code": resp.Status}
+	labels := map[string]string{"status_code": strconv.Itoa(resp.StatusCode)}
 	l.MetricStorage.HistogramObserve(RegistryRequestSecondsMetric, requestTime, labels, nil)
 	l.MetricStorage.CounterAdd(RegistryRequestsCountMetric, 1.0, labels)
 
