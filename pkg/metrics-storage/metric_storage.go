@@ -50,7 +50,8 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	groupedVault *storage.GroupedVault
+	groupedVault   *storage.GroupedVault
+	collectorFuncs []CollectorFunc
 
 	registry   *prometheus.Registry
 	gatherer   prometheus.Gatherer
@@ -107,8 +108,9 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
 		Prefix: prefix,
 
-		gatherer:   prometheus.DefaultGatherer,
-		registerer: prometheus.DefaultRegisterer,
+		gatherer:       prometheus.DefaultGatherer,
+		registerer:     prometheus.DefaultRegisterer,
+		collectorFuncs: make([]CollectorFunc, 0, 1),
 
 		logger: log.NewLogger().Named("metrics-storage"),
 	}
@@ -373,6 +375,12 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 
 // Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
+func (m *MetricStorage) AddCollectorFunc(fn CollectorFunc) {
+	m.collectorFuncs = append(m.collectorFuncs, fn)
+}
+
+// Collector returns collector of MetricStorage
+// it can be useful to collect metrics in external registerer
 func (m *MetricStorage) Collector() prometheus.Collector {
 	if m.registry != nil {
 		return m.registry
@@ -420,6 +428,10 @@ func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
 // prepared for gather
 func (m *MetricStorage) Gather() ([]*promdto.MetricFamily, error) {
 	var gatherer = prometheus.DefaultGatherer
+
+	for _, fn := range m.collectorFuncs {
+		fn(m)
+	}
 
 	if m.registry != nil {
 		gatherer = m.gatherer
