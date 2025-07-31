@@ -2,7 +2,7 @@ module registry-modules-watcher
 
 go 1.23.8
 
-toolchain go1.24.3
+toolchain go1.23.2
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
