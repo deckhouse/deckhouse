@@ -270,11 +270,13 @@ apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
   name: proper1
+spec: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
   name: proper2
+spec: {}
 `
 		stateICImproper = `
 ---
