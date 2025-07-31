@@ -131,16 +131,6 @@ apiServer:
     - name: oidc-ca-file
       value: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
     {{- end }}
-    {{- if .apiserver.oidcIssuerURL }}
-    - name: oidc-client-id
-      value: kubernetes
-    - name: oidc-groups-claim
-      value: groups
-    - name: oidc-username-claim
-      value: email
-    - name: oidc-issuer-url
-      value: {{ .apiserver.oidcIssuerURL }}
-    {{- end }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
@@ -164,7 +154,9 @@ apiServer:
     - name: request-timeout
       value: 60s
     - name: tls-cipher-suites
-      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
+      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256    
+    - name: authentication-config
+      value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml      
     {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}
