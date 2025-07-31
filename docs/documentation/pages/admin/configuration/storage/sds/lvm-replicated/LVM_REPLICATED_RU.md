@@ -66,8 +66,8 @@ d8 k get modules sds-replicated-volume -w
 В результате будет выведена информация о модуле `sds-replicated-volume`:
 
 ```console
-NAME                    STAGE   STATE     SOURCE     STAGE   STATUS
-sds-replicated-volume           Enabled   Embedded           Ready
+NAME                    STAGE   STATE     SOURCE     STATUS
+sds-replicated-volume           Enabled   Embedded   Ready
 ```
 
 Чтобы проверить, что в пространстве имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:

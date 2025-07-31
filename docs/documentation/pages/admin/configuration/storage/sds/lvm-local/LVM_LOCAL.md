@@ -59,8 +59,8 @@ d8 k get modules sds-local-volume -w
 In the output, you should see information about the state of the `sds-local-volume` module:
 
 ```console
-NAME               STAGE   STATE     SOURCE     STAGE   STATUS
-sds-local-volume           Enabled   Embedded           Ready
+NAME               STAGE   STATE     SOURCE     STATUS
+sds-local-volume           Enabled   Embedded   Ready
 ```
 
 To verify that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are deployed on all nodes where LVM resources are planned to be used, use the following commands:
