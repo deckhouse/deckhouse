@@ -192,6 +192,16 @@ You can assign additional security groups in the following cases:
 
 In all cases, the `additionalSecurityGroups` parameter must be an array of strings (AWS security group IDs or names).
 
+If `disableDefaultSecurityGroup: true` is set, the default security groups will not be created.
+
+When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
+
+- `additionalSecurityGroups` in the `masterNodeGroup` section of the AWSClusterConfiguration resource;
+- `additionalSecurityGroups` in the AWSInstanceClass resource;
+- `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
+
+To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+
 ## Setting up VPC peering
 
 The following example shows how to set up VPC peering between two sample VPCs: `vpc-a` and `vpc-b`.
