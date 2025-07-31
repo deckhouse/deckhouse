@@ -34,8 +34,8 @@ d8 k get modules sds-node-configurator -w
 In the output, you should see information about the `sds-node-configurator` module:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator   900      Enabled   deckhouse           Ready
+NAME                    STAGE   STATE     SOURCE      STAGE   STATUS
+sds-node-configurator           Enabled   deckhouse           Ready
 ```
 
 ### DRBD connection
@@ -65,8 +65,8 @@ d8 k get modules sds-replicated-volume -w
 In the output, you should see information about the `sds-replicated-volume` module:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
-sds-replicated-volume   915      Enabled   Embedded           Ready
+NAME                    STAGE   STATE     SOURCE     STAGE   STATUS
+sds-replicated-volume           Enabled   Embedded           Ready
 ```
 
 To check that all pods in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and have been started on all nodes where DRBD resources are planned to be used, use the following commands:

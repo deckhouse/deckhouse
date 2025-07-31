@@ -33,8 +33,8 @@ d8 k get module csi-nfs -w
 В результате будет выведена информация о модуле `csi-nfs`:
 
 ```console
-NAME      WEIGHT   STATE     SOURCE     STAGE   STATUS
-csi-nfs   910      Enabled   Embedded           Ready
+NAME      STAGE   STATE     SOURCE     STAGE   STATUS
+csi-nfs           Enabled   Embedded           Ready
 ```
 
 ## Создание StorageClass

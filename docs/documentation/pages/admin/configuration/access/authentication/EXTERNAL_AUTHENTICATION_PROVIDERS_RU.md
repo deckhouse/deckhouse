@@ -53,8 +53,8 @@ DKP поддерживает подключение следующих внеш�
    Пример вывода:
 
    ```console
-   NAME         WEIGHT   SOURCE     PHASE   ENABLED   READY
-   user-authn   150      Embedded   Ready   True      True
+   NAME         STAGE   SOURCE     PHASE   ENABLED   READY
+   user-authn           Embedded   Ready   True      True
    ```
 
    Включите модуль через CLI:
