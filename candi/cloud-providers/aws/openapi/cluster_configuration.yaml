@@ -393,9 +393,15 @@ apiVersions:
       disableDefaultSecurityGroup:
         type: boolean
         description: |
-          If `true`, the default security group will not be created.
+          If set to `true`, the default security group will not be created.
 
-          * **Caution!** When using disableDefaultSecurityGroup: true, you must manually create security groups to allow access to your cluster nodes. You then need to specify these in the `additionalSecurityGroups` field of the `masterNodeGroup` section in `AWSClusterConfiguration` and in your `AWSInstanceClass`, as well as in the `nodeGroups.instanceClass.additionalSecurityGroups` section. To assign security groups to load balancers, use the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation
+          **Warning.** When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
+
+          - `additionalSecurityGroups` in the `masterNodeGroup` section of the `AWSClusterConfiguration` resource;
+          - `additionalSecurityGroups` in the `AWSInstanceClass` resource;
+          - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
+
+          To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
       sshAllowList:
         type: array
         items:
