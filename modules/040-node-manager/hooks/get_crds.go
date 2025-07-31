@@ -446,7 +446,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 						cloudVariables := raw.Value()
 						if cloudVariablesMap, ok := cloudVariables.(map[string]interface{}); ok {
 							if fillFn, ok := fillCloudSpecificDefaults[providerName]; ok {
-								fillFn(cloudVariablesMap, specMap)
+								if err := fillFn(cloudVariablesMap, specMap); err != nil {
+									return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
+								}
 							}
 						}
 					}

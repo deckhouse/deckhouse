@@ -404,19 +404,6 @@ properties:
             type: array
             items:
               type: string
-      vsphereDiscoveryData:
-        type: object
-        additionalProperties: false
-        required: [datacenter]
-        x-examples:
-          - datacenter: test
-        properties:
-          instances:
-            type: object
-            additionalProperties: false
-            properties:
-              mainNetwork:
-                type: string
           datacenter:
             type: string
           zones:
