@@ -250,17 +250,17 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
+
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() && len(connectionConfig.SSHHosts) > 0 {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		return &pb.AbortResult{Err: err.Error()}
-	}
-
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.AbortResult{Err: fmt.Errorf("cannot start sshClient: %w", err).Error()}
-		}
 	}
 
 	var commanderUUID uuid.UUID
