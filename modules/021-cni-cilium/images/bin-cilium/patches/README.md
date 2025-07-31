@@ -56,3 +56,7 @@ Changing the hardcoded wireguard port from `51871` to `4287` (a port within our 
 When the `bpf-lb-algorithm-annotation` option is enabled, the `CiliumLocalRedirectPolicy` in Cilium version 1.17.4 stops working. This patch solves the problem with the way the LoadBalancerAlgorithm processes.
 
 Upstream PR <https://github.com/cilium/cilium/pull/40246>.
+
+## 011-bpf-lb-use-random-lb-algo-for-hostport-serives-fixed.patch
+
+For HostPort serivces always use random LB algo. When bpf-lb-algorithm-annotation feature activated - use default LB algo if it incorrectly choosed in service map.
