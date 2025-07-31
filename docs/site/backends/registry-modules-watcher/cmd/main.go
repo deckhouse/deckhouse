@@ -65,7 +65,6 @@ func main() {
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-	// metricStorage.HistogramObserve()
 
 	// * * * * * * * * *
 	// New handlers

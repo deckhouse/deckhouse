@@ -24,6 +24,7 @@ import (
 	neturl "net/url"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -137,14 +138,7 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 
 	operation := func() error {
 		//before request
-		timeBeforeRequest := time.Now().UnixMilli()
-		// after request
-		defer func() {
-			timeAfterRequest := time.Now().UnixMilli()
-			requestTime := timeAfterRequest - timeBeforeRequest
-			s.ms.HistogramObserve(metrics.SenderDeleteRequestsMillisecondsMetric, float64(requestTime), map[string]string{}, []float64{0.5, 0.95, 0.99})
-			s.ms.HistogramObserve(metrics.SenderDeleteRequestsCountMetric, 1.0, map[string]string{}, []float64{0.5, 0.95, 0.99})
-		}()
+		timeBeforeRequest := time.Now()
 
 		// request
 		resp, err := s.client.Do(req)
@@ -152,6 +146,13 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
+		// after request - calculate metrics
+		defer func() {
+			requestTime := time.Since(timeBeforeRequest).Seconds()
+			labels := map[string]string{"status_code": strconv.Itoa(resp.StatusCode)}
+			s.ms.HistogramObserve(metrics.SenderDeleteRequestsSecondsMetric, requestTime, labels, nil)
+			s.ms.CounterAdd(metrics.SenderDeleteRequestsCountMetric, 1.0, labels)
+		}()
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusNoContent {

@@ -27,27 +27,36 @@ import (
 )
 
 const (
-	RegistryRequestMillisecondsMetric      = "registry_request_milliseconds"
-	RegistryRequestsCountMetric            = "registry_requests_count"
-	RegistryScannerCacheLengthMetric       = "registry_scanner_cache_length"
-	RegistryWatcherBackendsCountMetric     = "registry_watcher_backends_count"
-	SenderUploadRequestsCountMetric        = "sender_upload_requests_count"
-	SenderUploadRequestsMillisecondsMetric = "sender_upload_requests_milliseconds"
-	SenderBuildRequestsCountMetric         = "sender_build_requests_count"
-	SenderBuildRequestsMillisecondsMetric  = "sender_build_requests_milliseconds"
-	SenderDeleteRequestsCountMetric        = "sender_delete_requests_count"
-	SenderDeleteRequestsMillisecondsMetric = "sender_delete_requests_milliseconds"
+	RegistryRequestSecondsMetric       = "registry_request_seconds"
+	RegistryRequestsCountMetric        = "registry_requests_count"
+	RegistryScannerCacheLengthMetric   = "registry_scanner_cache_length"
+	RegistryWatcherBackendsTotalMetric = "registry_watcher_backends_total"
+	SenderUploadRequestsCountMetric    = "sender_upload_requests_count"
+	SenderUploadRequestsSecondsMetric  = "sender_upload_requests_seconds"
+	SenderBuildRequestsCountMetric     = "sender_build_requests_count"
+	SenderBuildRequestsSecondsMetric   = "sender_build_requests_seconds"
+	SenderDeleteRequestsCountMetric    = "sender_delete_requests_count"
+	SenderDeleteRequestsSecondsMetric  = "sender_delete_requests_seconds"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
-	logger.Info("register metric", slog.String("metric", RegistryRequestMillisecondsMetric))
-	_, err := ms.RegisterHistogram(RegistryRequestMillisecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Checks request time in milliseconds to registry"))
+	defaultSecondsBuckets := []float64{
+		0.0,
+		0.02, 0.05, // 20,50 milliseconds
+		0.1, 0.2, 0.5, // 100,200,500 milliseconds
+		1, 2, 5, // 1,2,5 seconds
+		10, 20, 50, // 10,20,50 seconds
+		100, 200, 500, // 100,200,500 seconds
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryRequestSecondsMetric))
+	_, err := ms.RegisterHistogram(RegistryRequestSecondsMetric, []string{"status_code"}, defaultSecondsBuckets, options.WithHelp("Request time to the registry in seconds"))
 	if err != nil {
-		return fmt.Errorf("can not register %s: %w", RegistryRequestMillisecondsMetric, err)
+		return fmt.Errorf("can not register %s: %w", RegistryRequestSecondsMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", RegistryRequestsCountMetric))
-	_, err = ms.RegisterGauge(RegistryRequestsCountMetric, []string{}, options.WithHelp("Checks count of requests to registry"))
+	_, err = ms.RegisterCounter(RegistryRequestsCountMetric, []string{"status_code"}, options.WithHelp("Number of requests to the registry"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryRequestsCountMetric, err)
 	}
@@ -58,46 +67,46 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 		return fmt.Errorf("can not register %s: %w", RegistryScannerCacheLengthMetric, err)
 	}
 
-	logger.Info("register metric", slog.String("metric", RegistryWatcherBackendsCountMetric))
-	_, err = ms.RegisterGauge(RegistryWatcherBackendsCountMetric, []string{}, options.WithHelp("Checks watcher backends count"))
+	logger.Info("register metric", slog.String("metric", RegistryWatcherBackendsTotalMetric))
+	_, err = ms.RegisterGauge(RegistryWatcherBackendsTotalMetric, []string{}, options.WithHelp("Count of watcher backends "))
 	if err != nil {
-		return fmt.Errorf("can not register %s: %w", RegistryWatcherBackendsCountMetric, err)
+		return fmt.Errorf("can not register %s: %w", RegistryWatcherBackendsTotalMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderUploadRequestsCountMetric))
-	_, err = ms.RegisterHistogram(SenderUploadRequestsCountMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderUploadRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsCountMetric, err)
 	}
 
-	logger.Info("register metric", slog.String("metric", SenderUploadRequestsMillisecondsMetric))
-	_, err = ms.RegisterHistogram(SenderUploadRequestsMillisecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	logger.Info("register metric", slog.String("metric", SenderUploadRequestsSecondsMetric))
+	_, err = ms.RegisterHistogram(SenderUploadRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
 	if err != nil {
-		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsMillisecondsMetric, err)
+		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsSecondsMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderBuildRequestsCountMetric))
-	_, err = ms.RegisterHistogram(SenderBuildRequestsCountMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderBuildRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsCountMetric, err)
 	}
 
-	logger.Info("register metric", slog.String("metric", SenderBuildRequestsMillisecondsMetric))
-	_, err = ms.RegisterHistogram(SenderBuildRequestsMillisecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	logger.Info("register metric", slog.String("metric", SenderBuildRequestsSecondsMetric))
+	_, err = ms.RegisterHistogram(SenderBuildRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
 	if err != nil {
-		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsMillisecondsMetric, err)
+		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsSecondsMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsCountMetric))
-	_, err = ms.RegisterHistogram(SenderDeleteRequestsCountMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	_, err = ms.RegisterCounter(SenderDeleteRequestsCountMetric, []string{"status_code"}, options.WithHelp(""))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsCountMetric, err)
 	}
 
-	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsMillisecondsMetric))
-	_, err = ms.RegisterHistogram(SenderDeleteRequestsMillisecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
+	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsSecondsMetric))
+	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp(""))
 	if err != nil {
-		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsMillisecondsMetric, err)
+		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsSecondsMetric, err)
 	}
 
 	return nil
@@ -117,15 +126,16 @@ type MetricRoundTripper struct {
 
 func (l MetricRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	// Before request
-	timeBeforeRequest := time.Now().UnixMilli()
+	timeBeforeRequest := time.Now()
 
 	// Request
 	resp, err := l.Next.RoundTrip(r)
 
 	// After request
-	requestTime := time.Now().UnixMilli() - timeBeforeRequest
-	l.MetricStorage.HistogramObserve(RegistryRequestMillisecondsMetric, float64(requestTime), map[string]string{"status_code": resp.Status}, []float64{0.5, 0.95, 0.99})
-	l.MetricStorage.GaugeAdd(RegistryRequestsCountMetric, 1.0, map[string]string{})
+	requestTime := time.Since(timeBeforeRequest).Seconds()
+	labels := map[string]string{"status_code": resp.Status}
+	l.MetricStorage.HistogramObserve(RegistryRequestSecondsMetric, requestTime, labels, nil)
+	l.MetricStorage.CounterAdd(RegistryRequestsCountMetric, 1.0, labels)
 
 	return resp, err
 }

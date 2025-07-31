@@ -86,7 +86,7 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 
 	bm.backendAddrs[backend] = struct{}{}
 
-	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsCountMetric, float64(len(bm.backendAddrs)), map[string]string{})
+	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsTotalMetric, float64(len(bm.backendAddrs)), nil)
 
 	state := bm.scanner.GetState()
 	bm.logger.Info("Sending documentation to new backend",
@@ -105,7 +105,7 @@ func (bm *BackendManager) Delete(_ context.Context, backend string) {
 
 	delete(bm.backendAddrs, backend)
 
-	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsCountMetric, float64(len(bm.backendAddrs)), map[string]string{})
+	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsTotalMetric, float64(len(bm.backendAddrs)), nil)
 }
 
 // handleUpdate sends documentation updates to all registered backends
