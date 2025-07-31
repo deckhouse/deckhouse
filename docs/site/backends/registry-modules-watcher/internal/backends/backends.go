@@ -17,11 +17,12 @@ package backends
 import (
 	"context"
 	"log/slog"
-	"registry-modules-watcher/internal/metrics"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/metrics"
 )
 
 type Sender interface {

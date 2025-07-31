@@ -22,16 +22,18 @@ import (
 	"log/slog"
 	"net/http"
 	neturl "net/url"
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/metrics"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 var (
@@ -137,7 +139,7 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 	}
 
 	operation := func() error {
-		//before request
+		// before request
 		timeBeforeRequest := time.Now()
 
 		// request

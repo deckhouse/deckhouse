@@ -17,14 +17,16 @@ package registryclient
 import (
 	"context"
 	"fmt"
-	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
-	"registry-modules-watcher/internal/metrics"
 
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
+	"registry-modules-watcher/internal/metrics"
 )
 
 type registryOptions struct {

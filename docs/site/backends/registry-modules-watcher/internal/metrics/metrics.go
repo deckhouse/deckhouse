@@ -20,10 +20,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 const (

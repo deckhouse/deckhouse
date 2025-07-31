@@ -21,10 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/stretchr/testify/assert"
+
+	"registry-modules-watcher/internal/backends"
 )
 
 func TestSender(t *testing.T) {

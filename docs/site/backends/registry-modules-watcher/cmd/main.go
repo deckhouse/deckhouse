@@ -21,6 +21,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"registry-modules-watcher/internal/backends"
 	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
@@ -29,16 +39,6 @@ import (
 	"registry-modules-watcher/internal/metrics"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
-	"strings"
-	"syscall"
-	"time"
-
-	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"k8s.io/client-go/rest"
 )
 
 func main() {

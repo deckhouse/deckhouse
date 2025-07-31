@@ -20,18 +20,20 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 )
 
 func Test_RegistryScannerProcess(t *testing.T) {
