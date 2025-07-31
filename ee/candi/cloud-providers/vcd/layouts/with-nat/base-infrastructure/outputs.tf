@@ -12,5 +12,5 @@ output "cloud_discovery_data" {
 }
 
 output "bastion_ip_address_for_ssh" {
-  value = module.bastion.bastion_ip_address_for_ssh
+  value = var.providerClusterConfiguration.edgeGateway.externalIP
 }
