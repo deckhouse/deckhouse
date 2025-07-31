@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/storage"
+	promdto "github.com/prometheus/client_model/go"
 )
 
 var _ Storage = (*MetricStorage)(nil)
@@ -384,10 +385,13 @@ func (m *MetricStorage) Collector() prometheus.Collector {
 // returns default prometheus handler if MetricStorage created without Registry options
 func (m *MetricStorage) Handler() http.Handler {
 	if m.registry == nil {
-		return promhttp.Handler()
+		// use default handler from promhttp with custom gatherer and registerer
+		return promhttp.InstrumentMetricHandler(
+			m.registerer, promhttp.HandlerFor(m.gatherer, promhttp.HandlerOpts{}),
+		)
 	}
 
-	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
+	return promhttp.HandlerFor(m, promhttp.HandlerOpts{
 		Registry: m.registry,
 	})
 }
@@ -410,4 +414,16 @@ func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Collect(ch)
 	}
+}
+
+// Gather returns result of default registry gather
+// prepared for gather
+func (m *MetricStorage) Gather() ([]*promdto.MetricFamily, error) {
+	var gatherer = prometheus.DefaultGatherer
+
+	if m.registry != nil {
+		gatherer = m.gatherer
+	}
+
+	return gatherer.Gather()
 }
