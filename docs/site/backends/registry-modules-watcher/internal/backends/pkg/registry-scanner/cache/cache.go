@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"log/slog"
 	"slices"
 	"sort"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
@@ -54,8 +56,19 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 		val: make(map[registryName]map[moduleName]moduleData),
 		ms:  ms,
 	}
+
 	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
+		log.Info(
+			"collector func triggered",
+			slog.Int("registry_len", len(c.val)),
+		)
+
 		for registry, modules := range c.val {
+			log.Info(
+				"collector func registry triggered",
+				slog.Int("registry_len", len(modules)),
+			)
+
 			s.GaugeSet(
 				metrics.RegistryScannerCacheLengthMetric,
 				float64(len(modules)),
@@ -65,6 +78,7 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 			)
 		}
 	})
+
 	return c
 }
 
@@ -73,10 +87,6 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	defer c.m.RUnlock()
 
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
-}
-
-func (c *Cache) GetCache() map[registryName]map[moduleName]moduleData {
-	return c.val
 }
 
 func (c *Cache) GetReleaseChecksum(version *internal.VersionData) (string, bool) {
