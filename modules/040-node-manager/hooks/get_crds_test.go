@@ -1557,9 +1557,10 @@ spec:
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.vsphere", []byte(`
-					instances:
-						mainNetwork: mynet
-				`))
+---
+      instances:
+        mainNetwork: mynet
+`))
 				f.RunHook()
 			})
 
