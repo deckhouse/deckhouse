@@ -44,6 +44,21 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 </div>
 </div>
 
+{% if page.platform_code != 'kind' %}
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🏭 <span class="cards-item__title-text">Going to production</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Prepare your cluster to receive productive traffic.
+
+Use our [checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
+</div>
+</div>
+
+<div style="width: 30%">&nbsp;</div>
+{%- endif %}
+
 {% if page.platform_code == 'kind' %}
 <div style="width: 30%">&nbsp;</div>
 {%- endif %}

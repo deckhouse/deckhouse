@@ -5,11 +5,11 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Congratulations, your Deckhouse Kubernetes Platform is up and running!
+## Everything is installed, configured, and working!
 
-Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
+Let's take a look at the additional features of Deckhouse that become available immediately after installation.
 
-Use the static user created in the cluster during the installation to access the web interface of the Deckhouse components.
+Access to web interfaces is possible using a static user created in the cluster during installation.
 </div>
 
-{% include getting_started/global/partials/FINISH_CARDS.md %}
+{% include getting_started/dvp/global/partials/FINISH_CARDS.md %}
