@@ -37,12 +37,12 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
 {% alert level="danger" %}
-- After deleting [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
+- After deleting [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
 - New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
 
@@ -97,7 +97,7 @@ If such configurations exist:
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
 - When switching to the legacy `Containerd V1` auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.
-- [Custom auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
+- [Custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
 {% endalert %}
 
 1. Switch the registry mode to `Unmanaged`.
