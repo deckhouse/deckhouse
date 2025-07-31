@@ -57,6 +57,7 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 		ms:  ms,
 	}
 
+	// function that will be triggered on metrics handler
 	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
 		log.Debug(
 			"collector func triggered",
@@ -64,11 +65,6 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 		)
 
 		for registry, modules := range c.val {
-			log.Debug(
-				"collector func registry triggered",
-				slog.Int("registry_len", len(modules)),
-			)
-
 			s.GaugeSet(
 				metrics.RegistryScannerCacheLengthMetric,
 				float64(len(modules)),

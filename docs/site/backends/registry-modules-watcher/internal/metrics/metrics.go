@@ -28,16 +28,17 @@ import (
 )
 
 const (
-	RegistryRequestSecondsMetric       = "{PREFIX}_registry_request_seconds"
-	RegistryRequestsCountMetric        = "{PREFIX}_registry_requests_count"
-	RegistryScannerCacheLengthMetric   = "{PREFIX}_registry_scanner_cache_length"
-	RegistryWatcherBackendsTotalMetric = "{PREFIX}_registry_watcher_backends_total"
-	SenderUploadRequestsCountMetric    = "{PREFIX}_sender_upload_requests_count"
-	SenderUploadRequestsSecondsMetric  = "{PREFIX}_sender_upload_requests_seconds"
-	SenderBuildRequestsCountMetric     = "{PREFIX}_sender_build_requests_count"
-	SenderBuildRequestsSecondsMetric   = "{PREFIX}_sender_build_requests_seconds"
-	SenderDeleteRequestsCountMetric    = "{PREFIX}_sender_delete_requests_count"
-	SenderDeleteRequestsSecondsMetric  = "{PREFIX}_sender_delete_requests_seconds"
+	RegistryRequestSecondsMetric          = "{PREFIX}_registry_request_seconds"
+	RegistryRequestsCountMetric           = "{PREFIX}_registry_requests_count"
+	RegistryScannerCacheLengthMetric      = "{PREFIX}_registry_scanner_cache_length"
+	RegistryWatcherBackendsTotalMetric    = "{PREFIX}_registry_watcher_backends_total"
+	RegistryWatcherNewBackendsTotalMetric = "{PREFIX}_registry_watcher_new_backends_total"
+	SenderUploadRequestsCountMetric       = "{PREFIX}_sender_upload_requests_count"
+	SenderUploadRequestsSecondsMetric     = "{PREFIX}_sender_upload_requests_seconds"
+	SenderBuildRequestsCountMetric        = "{PREFIX}_sender_build_requests_count"
+	SenderBuildRequestsSecondsMetric      = "{PREFIX}_sender_build_requests_seconds"
+	SenderDeleteRequestsCountMetric       = "{PREFIX}_sender_delete_requests_count"
+	SenderDeleteRequestsSecondsMetric     = "{PREFIX}_sender_delete_requests_seconds"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -72,6 +73,12 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	_, err = ms.RegisterGauge(RegistryWatcherBackendsTotalMetric, []string{}, options.WithHelp("Count of watcher backends"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryWatcherBackendsTotalMetric, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryWatcherNewBackendsTotalMetric))
+	_, err = ms.RegisterGauge(RegistryWatcherNewBackendsTotalMetric, []string{}, options.WithHelp("Count of new watcher backends"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryWatcherNewBackendsTotalMetric, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderUploadRequestsCountMetric))
