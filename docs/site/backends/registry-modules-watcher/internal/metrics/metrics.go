@@ -27,16 +27,16 @@ import (
 )
 
 const (
-	RegistryRequestSecondsMetric       = "registry_request_seconds"
-	RegistryRequestsCountMetric        = "registry_requests_count"
-	RegistryScannerCacheLengthMetric   = "registry_scanner_cache_length"
-	RegistryWatcherBackendsTotalMetric = "registry_watcher_backends_total"
-	SenderUploadRequestsCountMetric    = "sender_upload_requests_count"
-	SenderUploadRequestsSecondsMetric  = "sender_upload_requests_seconds"
-	SenderBuildRequestsCountMetric     = "sender_build_requests_count"
-	SenderBuildRequestsSecondsMetric   = "sender_build_requests_seconds"
-	SenderDeleteRequestsCountMetric    = "sender_delete_requests_count"
-	SenderDeleteRequestsSecondsMetric  = "sender_delete_requests_seconds"
+	RegistryRequestSecondsMetric       = "{PREFIX}_registry_request_seconds"
+	RegistryRequestsCountMetric        = "{PREFIX}_registry_requests_count"
+	RegistryScannerCacheLengthMetric   = "{PREFIX}_registry_scanner_cache_length"
+	RegistryWatcherBackendsTotalMetric = "{PREFIX}_registry_watcher_backends_total"
+	SenderUploadRequestsCountMetric    = "{PREFIX}_sender_upload_requests_count"
+	SenderUploadRequestsSecondsMetric  = "{PREFIX}_sender_upload_requests_seconds"
+	SenderBuildRequestsCountMetric     = "{PREFIX}_sender_build_requests_count"
+	SenderBuildRequestsSecondsMetric   = "{PREFIX}_sender_build_requests_seconds"
+	SenderDeleteRequestsCountMetric    = "{PREFIX}_sender_delete_requests_count"
+	SenderDeleteRequestsSecondsMetric  = "{PREFIX}_sender_delete_requests_seconds"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {

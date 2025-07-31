@@ -60,7 +60,7 @@ func main() {
 
 	// * * * * * * * * *
 	// Metric storage
-	metricStorage := metricstorage.NewMetricStorage("watcher")
+	metricStorage := metricstorage.NewMetricStorage("registry_modules_watcher")
 	err := metrics.RegisterMetrics(metricStorage, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
