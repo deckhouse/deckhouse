@@ -37,6 +37,7 @@ func TestSender(t *testing.T) {
 	t.Run("Send", func(t *testing.T) {
 		t.Run("successful responses", func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// nolint: gocritic
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
 					w.WriteHeader(http.StatusCreated)
 				} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
