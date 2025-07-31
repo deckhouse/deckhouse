@@ -261,52 +261,59 @@ apiVersions:
             Parameters for the bastion host, which is used to access the cluster's nodes.
           required: [template, storageProfile, sizingPolicy]
           properties:
-            rootDiskSizeGb:
+            instanceClass:
+              type: object
+              additionalProperties: false
+              required: [template, storageProfile, sizingPolicy]
               description: |
-                Root disk size in gigabytes.
-              example: 50
-              default: 50
-              type: integer
-              minimum: 0
-            placementPolicy:
-              description: |
-                Placement policy to be used on this machine.
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Root disk size in gigabytes.
+                  example: 50
+                  default: 50
+                  type: integer
+                  minimum: 0
+                placementPolicy:
+                  description: |
+                    Placement policy to be used on this machine.
 
-                If no placement policy is specified, the default placement policy will be used to create the bastion host.
-              type: string
-              minLength: 1
-              maxLength: 128
-            sizingPolicy:
-              description: |
-                Sizing policy to be used on this machine.
+                    If no placement policy is specified, the default placement policy will be used to create the bastion host.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                sizingPolicy:
+                  description: |
+                    Sizing policy to be used on this machine.
 
-                If no sizing policy is specified, the default sizing policy will be used to create the bastion host.
-              type: string
-              minLength: 1
-              maxLength: 128
-            storageProfile:
-              description: |
-                Storage profile to be used on this machine.
-              type: string
-              minLength: 1
-              maxLength: 128
-            template:
-              description: |
-                Path of the template OVA that is to be used.
+                    If no sizing policy is specified, the default sizing policy will be used to create the bastion host.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                storageProfile:
+                  description: |
+                    Storage profile to be used on this machine.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                template:
+                  description: |
+                    Path of the template OVA that is to be used.
 
-                Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
 
-                If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+                    If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
-                You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
-              minLength: 1
-              maxLength: 128
-            mainNetworkIPAddress:
-              type: string
-              description: |
-                The IP address of the bastion host in the `mainNetwork`.
-                If not set, the DHCP client will be enabled.
-              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                    You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                  minLength: 1
+                  maxLength: 128
+                mainNetworkIPAddress:
+                  type: string
+                  description: |
+                    The IP address of the bastion host in the `mainNetwork`.
+                    If not set, the DHCP client will be enabled.
+                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
         sshPublicKey:
           type: string
           description: |
@@ -328,7 +335,7 @@ apiVersions:
             VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
         edgeGateway:
           type: object
-          required: [name, type, externalIP, externalPort]
+          required: [name, type, externalIP]
           additionalProperties: false
           description: |
             VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
@@ -358,7 +365,8 @@ apiVersions:
                 connections to the master node.
               minimum: 1
               maximum: 65535
-              example: 10022
+              example: 22
+              default: 22
             NSX-V:
               type: object
               additionalProperties: false
@@ -486,14 +494,14 @@ apiVersions:
                   type:
                     type: string
                     enum: [NSX-V]
-                required: [type, name, externalIP, externalPort, NSX-V]
+                required: [type, name, externalIP, NSX-V]
               - properties:
                   type:
                     type: string
                     enum: [NSX-T]
                   NSXV:
                     not: {}
-                required: [type, name, externalIP, externalPort]
+                required: [type, name, externalIP]
       - oneOf:
         - properties:
             provider:

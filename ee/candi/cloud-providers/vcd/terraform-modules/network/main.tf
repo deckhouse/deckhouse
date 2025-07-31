@@ -3,7 +3,7 @@
 
 locals {
   edge_gateway_id = local.use_nsxv ? data.vcd_edgegateway.gateway[0].id : data.vcd_nsxt_edgegateway.gateway[0].id
-  use_nsxv    = var.edge_gateway_type == "NSX-V"
+  use_nsxv        = var.edge_gateway_type == "NSX-V"
 }
 
 data "vcd_nsxt_edgegateway" "gateway" {

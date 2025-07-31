@@ -11,9 +11,3 @@ module "master_node" {
   cloudConfig                  = var.cloudConfig
   resourceManagementTimeout    = var.resourceManagementTimeout
 }
-
-locals {
-  use_nsxv              = var.providerClusterConfiguration.edgeGateway.type == "NSX-V"
-  external_network_name = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
-  external_network_type = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
-}

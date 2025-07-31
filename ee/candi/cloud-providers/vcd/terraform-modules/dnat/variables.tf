@@ -6,12 +6,12 @@ variable "organization" {
 }
 
 variable "rule_name_prefix" {
-  type = string
-  description = "The name of the DNAT rule. Effective only for NSX-T."
+  type        = string
+  description = "The prefix to the name of the DNAT rule. Effective only for NSX-T."
 }
 
 variable "rule_description" {
-  type = string
+  type    = string
   default = ""
 }
 
