@@ -81,12 +81,18 @@ func discoverClusterIssuerEmail(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	snapshots := input.Snapshots["ClusterIssuers"]
+	snapshots := input.NewSnapshots.Get("ClusterIssuers")
 	if len(snapshots) == 0 {
 		return nil
 	}
 
-	if issuerEmail := snapshots[0].(*clusterIssuer).Email; len(issuerEmail) > 0 {
+	var clustIssuer clusterIssuer
+	err := snapshots[0].UnmarshalTo(&clustIssuer)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal ClusterIssuer snapshot: %w", err)
+	}
+
+	if issuerEmail := clustIssuer.Email; len(issuerEmail) > 0 {
 		input.Values.Set("certManager.internal.email", issuerEmail)
 	}
 	return nil
