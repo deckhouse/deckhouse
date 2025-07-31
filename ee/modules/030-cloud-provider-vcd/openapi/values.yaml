@@ -239,14 +239,14 @@ properties:
             additionalProperties: false
             description: |
               Parameters for the bastion host, which is used to access the cluster's nodes.
-            required: [template, storageProfile, sizingPolicy]
+            required: [instanceClass]
             properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [template, storageProfile, sizingPolicy]
                 description: |
                   Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+                required: [template, storageProfile, sizingPolicy]
                 properties:
                   rootDiskSizeGb:
                     description: |
