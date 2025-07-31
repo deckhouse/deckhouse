@@ -160,7 +160,7 @@ func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTas
 			assert.Equal(t, expectedTask.Module, actualTask.Module, "Module mismatch for %s", key)
 			assert.Equal(t, expectedTask.Version, actualTask.Version, "Version mismatch for %s", key)
 			assert.Equal(t, expectedTask.ReleaseChannels, actualTask.ReleaseChannels, "ReleaseChannels mismatch for %s", key)
-			assert.Equal(t, 1536, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
+			assert.Equal(t, 2048, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
 			assert.Equal(t, expectedTask.Task, actualTask.Task, "Task mismatch for %s", key)
 			assert.Greater(t, len(actualTask.TarFile), 0, "TarFile should not be empty for %s", key)
 		}
