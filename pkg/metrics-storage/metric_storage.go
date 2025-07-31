@@ -173,7 +173,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 		return
 	}
 
-	m.groupedVault.GaugeAdd(emptyUniqueGroup, metric, value, labels)
+	m.groupedVault.CounterAdd(emptyUniqueGroup, metric, value, labels)
 }
 
 func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string]string) {
