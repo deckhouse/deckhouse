@@ -35,8 +35,8 @@ d8 k get modules sds-node-configurator -w
 В результате будет выведена информация о модуле `sds-node-configurator`:
 
 ```console
-NAME                    STAGE   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator           Enabled   deckhouse           Ready
+NAME                    STAGE   STATE     SOURCE      STATUS
+sds-node-configurator           Enabled   deckhouse   Ready
 ```
 
 ### Подключение DRBD

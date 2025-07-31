@@ -32,8 +32,8 @@ d8 k get modules sds-node-configurator -w
 In the output, you should see information about the `sds-node-configurator` module:
 
 ```console
-NAME                    STAGE   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator           Enabled   deckhouse           Ready
+NAME                    STAGE   STATE     SOURCE      STATUS
+sds-node-configurator           Enabled   deckhouse   Ready
 ```
 
 Then, to enable the `sds-local-volume` module with default settings, run the following command:
