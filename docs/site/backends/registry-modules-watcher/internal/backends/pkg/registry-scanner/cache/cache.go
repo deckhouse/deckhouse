@@ -21,6 +21,9 @@ import (
 
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type (
@@ -43,12 +46,26 @@ type versionData struct {
 type Cache struct {
 	m   sync.RWMutex
 	val map[registryName]map[moduleName]moduleData
+	ms  *metricsstorage.MetricStorage
 }
 
-func New() *Cache {
-	return &Cache{
+func New(ms *metricsstorage.MetricStorage) *Cache {
+	c := &Cache{
 		val: make(map[registryName]map[moduleName]moduleData),
+		ms:  ms,
 	}
+	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
+		for registry, modules := range c.val {
+			s.GaugeSet(
+				metrics.RegistryScannerCacheLengthMetric,
+				float64(len(modules)),
+				map[string]string{
+					"registry": string(registry),
+				},
+			)
+		}
+	})
+	return c
 }
 
 func (c *Cache) GetState() []backends.DocumentationTask {

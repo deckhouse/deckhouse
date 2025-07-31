@@ -23,6 +23,7 @@ import (
 	"log/slog"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -51,10 +52,10 @@ var releaseChannelsTags = map[string]string{
 }
 
 // New
-func New(logger *log.Logger, registryClients ...Client) *registryscanner {
+func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients ...Client) *registryscanner {
 	registryscanner := registryscanner{
 		registryClients: make(map[string]Client),
-		cache:           cache.New(),
+		cache:           cache.New(ms),
 		logger:          logger,
 	}
 

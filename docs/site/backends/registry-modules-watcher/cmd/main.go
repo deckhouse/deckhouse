@@ -119,7 +119,7 @@ func main() {
 		logger.Fatal("no registries to watch")
 	}
 
-	registryscanner := registryscanner.New(logger.Named("registry-scanner"), clients...)
+	registryscanner := registryscanner.New(logger.Named("registry-scanner"), metricStorage, clients...)
 	registryscanner.Subscribe(ctx, *scanInterval)
 
 	// * * * * * * * * *
@@ -129,35 +129,6 @@ func main() {
 	// * * * * * * * * *
 	// New backends service
 	backends := backends.New(registryscanner, sender, logger, metricStorage)
-
-	// * * * * * * * * *
-	// New metric ticker
-	go func() {
-		// 30 second ticker
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				cache := registryscanner.GetCache().GetCache()
-				for registry, module := range cache {
-					cacheLength := 0
-					for range module {
-						cacheLength++
-					}
-					metricStorage.GaugeSet(
-						metrics.RegistryScannerCacheLengthMetric,
-						float64(len(module)),
-						map[string]string{
-							"registry": string(registry),
-						},
-					)
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
 
 	// * * * * * * * * *
 	// Init kube client
