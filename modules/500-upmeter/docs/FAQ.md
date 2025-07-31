@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: FAQ"
+title: "Cluster SLA Monitoring: FAQ"
 type:
   - instruction
 ---

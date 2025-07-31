@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: configuration"
+title: "Cluster SLA Monitoring: configuration"
 ---
 
 <!-- SCHEMA -->

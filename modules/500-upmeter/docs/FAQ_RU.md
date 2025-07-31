@@ -1,5 +1,5 @@
 ---
-title: "Модуль upmeter: FAQ"
+title: "Мониторинг SLA кластера: FAQ"
 type:
   - instruction
 ---
