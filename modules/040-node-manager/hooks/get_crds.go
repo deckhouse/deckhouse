@@ -57,11 +57,27 @@ const (
 // cloud providers names in lower case
 var fillCloudSpecificDefaults = map[string]func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error{
 	"vsphere": func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
-		if _, ok := instanceClass["mainNetwork"]; !ok {
-			if val, ok := cloudVariables["instances"].(map[string]interface{})["mainNetwork"]; ok {
-				instanceClass["mainNetwork"] = val
-			}
+		if _, ok := instanceClass["mainNetwork"]; ok {
+			return nil
 		}
+		instancesRaw, ok := cloudVariables["instances"]
+		if !ok {
+			return nil
+		}
+		instancesMap, ok := instancesRaw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("cloudVariables.instances: expected map[string]interface{}, got %T", instancesRaw)
+		}
+
+		val, ok := instancesMap["mainNetwork"]
+		if !ok {
+			return nil
+		}
+		mn, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("instances.mainNetwork: expected string, got %T", val)
+		}
+		instanceClass["mainNetwork"] = mn
 		return nil
 	},
 }
