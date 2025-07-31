@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module"
+title: "Cluster SLA Monitoring"
 description: "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components."
 webIfaces:
 - name: status
