@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250722110301-96e9c3372a9a
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250731132309-60e6e5b71224
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250731134809-b4a1740bb436
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
 	github.com/google/go-containerregistry v0.20.2
