@@ -148,7 +148,7 @@ spec:
                                     type: array
                                     items:
                                       type: string
-                                      pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                                       minLength: 1
                                       maxLength: 63
                     labelSelector:
@@ -211,7 +211,7 @@ spec:
                                 description: A label value.
                                 items:
                                   type: string
-                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                                   minLength: 1
                                   maxLength: 63
                 file:
@@ -570,6 +570,9 @@ spec:
                                     type: array
                                     items:
                                       type: string
+                                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                                      minLength: 1
+                                      maxLength: 63
                     labelSelector:
                       type: object
                       description: |
@@ -630,7 +633,7 @@ spec:
                                 description: A label value.
                                 items:
                                   type: string
-                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                                   minLength: 1
                                   maxLength: 63
                 file:
