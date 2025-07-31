@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
-      ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
+      ENABLE_DEPENDABOT_IN_FORKS: ${{ vars.ENABLE_DEPENDABOT_IN_FORKS }}
     steps:
       - name: Close PR
         uses: {!{ index (ds "actions") "actions/github-script" }!}
