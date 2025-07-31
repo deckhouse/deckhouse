@@ -69,7 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -1103,21 +1103,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeFalse())
 			})
 		})
@@ -1156,21 +1155,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeFalse())
 			})
 		})
@@ -1209,21 +1207,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeTrue())
 			})
 		})
