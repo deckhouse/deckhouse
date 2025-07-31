@@ -41,6 +41,7 @@
  - **[prometheus]** Deckhouse Prom++ is now the default metrics-collecting software in the Deckhouse Kubernetes Platform [#14330](https://github.com/deckhouse/deckhouse/pull/14330)
     Prometheus is replaced by the Deckhouse Prom++ by default in all editions of the Deckhouse Kubernetes Platform
  - **[upmeter]** Added automatic detection of frozen or growing deckhouse queue in upmeter-agent. [#13179](https://github.com/deckhouse/deckhouse/pull/13179)
+ - **[user-authn]** Add allowedGroup in dexProvider OIDC [#14570](https://github.com/deckhouse/deckhouse/pull/14570)
 
 ## Fixes
 
@@ -50,9 +51,11 @@
  - **[candi]** Added audit rules for containerd. [#13560](https://github.com/deckhouse/deckhouse/pull/13560)
  - **[candi]** Removed influence of root user settings on execution of bashible scripts. [#13559](https://github.com/deckhouse/deckhouse/pull/13559)
  - **[cilium-hubble]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
+ - **[cloud-provider-aws]** Fix root_block_device converge. [#14764](https://github.com/deckhouse/deckhouse/pull/14764)
  - **[cloud-provider-dynamix]** Fixed `sshPublicKey` absence on CloudEphemeral nodes. [#13907](https://github.com/deckhouse/deckhouse/pull/13907)
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
  - **[cni-cilium]** EgressGateway controller optimized for large setups with lot's of EgressGateways. [#14288](https://github.com/deckhouse/deckhouse/pull/14288)
  - **[cni-cilium]** Fixed CiliumLocalRedirectPolicy working if bpf-lb-algorithm-annotation parameter is enabled. [#14179](https://github.com/deckhouse/deckhouse/pull/14179)
@@ -64,7 +67,10 @@
  - **[deckhouse-controller]** Introduced a new mechanism for handling module readiness probes in Deckhouse. [#14226](https://github.com/deckhouse/deckhouse/pull/14226)
  - **[deckhouse-controller]** Added handling required module empty version for module dependency. [#14157](https://github.com/deckhouse/deckhouse/pull/14157)
  - **[deckhouse-controller]** Prevented module configuration errors from blocking the entire Deckhouse queue. [#13730](https://github.com/deckhouse/deckhouse/pull/13730)
+ - **[dhctl]** Fix false-positive staticinstance ip duplication preflight checks fails. [#14163](https://github.com/deckhouse/deckhouse/pull/14163)
  - **[dhctl]** Added local registry configuration check to installation process. [#13645](https://github.com/deckhouse/deckhouse/pull/13645)
+ - **[docs]** Correction of KeyCloak documentation in d8-user-authn [#14755](https://github.com/deckhouse/deckhouse/pull/14755)
+    Users will know how to configure KeyCloak and dexProvider to get user rights in dashboard and console.
  - **[extended-monitoring]** Fixed CVEs vulnerabilities x509-certificate-exporter. [#13804](https://github.com/deckhouse/deckhouse/pull/13804)
  - **[extended-monitoring]** Fixed CVEs vulnerabilities image-availability-exporter. [#13802](https://github.com/deckhouse/deckhouse/pull/13802)
  - **[extended-monitoring]** Fixed CVEs vulnerabilities events-exporter. [#13801](https://github.com/deckhouse/deckhouse/pull/13801)
@@ -75,15 +81,22 @@
  - **[loki]** Refactor file size evaluator using st_blocks in disk-based retention. [#14112](https://github.com/deckhouse/deckhouse/pull/14112)
     Avoid force-expiration checker reaching size threshold too lately.
  - **[loki]** Fixed CVEs vulnerabilities loki. [#13796](https://github.com/deckhouse/deckhouse/pull/13796)
+ - **[metallb]** Fixed overwriting of Service `status` field by module components. [#14664](https://github.com/deckhouse/deckhouse/pull/14664)
+ - **[metallb]** avoid double prefixes in the dashboard names. [#14608](https://github.com/deckhouse/deckhouse/pull/14608)
+    default
  - **[metallb]** Fixed import logic of MetalLB dashboards. [#13478](https://github.com/deckhouse/deckhouse/pull/13478)
  - **[monitoring-ping]** Reducing PROCESSOR time consumption by changing the method of waiting for incoming packets. [#14502](https://github.com/deckhouse/deckhouse/pull/14502)
  - **[node-local-dns]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
+ - **[node-manager]** Changed draining logic in update_approval [#14646](https://github.com/deckhouse/deckhouse/pull/14646)
+ - **[node-manager]** fixed render nvidia-mig-manager [#14560](https://github.com/deckhouse/deckhouse/pull/14560)
  - **[node-manager]** Added support scaling from zero to CAPI node groups. [#13744](https://github.com/deckhouse/deckhouse/pull/13744)
  - **[openvpn]** Resolved false-positive OpenVPNServerCertificateExpired alert triggered when certificate Secret lacks expected label. [#14440](https://github.com/deckhouse/deckhouse/pull/14440)
  - **[openvpn]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[operator-prometheus]** Fixed CVEs vulnerabilities operator-prometheus. [#13792](https://github.com/deckhouse/deckhouse/pull/13792)
  - **[operator-trivy]** Added startup probe to trivy-server. [#13731](https://github.com/deckhouse/deckhouse/pull/13731)
  - **[pod-reloader]** Added probes for `kube-rbac-proxy` in pod-reloader components. [#13874](https://github.com/deckhouse/deckhouse/pull/13874)
+ - **[prometheus]** use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig [#14612](https://github.com/deckhouse/deckhouse/pull/14612)
+    if there are several ModuleSources with the prompp module available, the "deckhouse" ModuleSource will be used.
  - **[prometheus]** Fixed CVEs vulnerabilities mimir. [#14287](https://github.com/deckhouse/deckhouse/pull/14287)
  - **[prometheus]** Fixed CVEs vulnerabilities grafana. [#13947](https://github.com/deckhouse/deckhouse/pull/13947)
  - **[prometheus]** Fixed CVEs vulnerabilities prometheus. [#13751](https://github.com/deckhouse/deckhouse/pull/13751)
@@ -94,6 +107,7 @@
  - **[prometheus]** Fixed CVEs vulnerabilities  alerts receiver. [#13740](https://github.com/deckhouse/deckhouse/pull/13740)
  - **[prometheus]** Fixed CVEs vulnerabilities alertmanager. [#13739](https://github.com/deckhouse/deckhouse/pull/13739)
  - **[prometheus-metrics-adapter]** Fixed CVEs vulnerabilities prometheus-metrics-adapter. [#13794](https://github.com/deckhouse/deckhouse/pull/13794)
+ - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14673](https://github.com/deckhouse/deckhouse/pull/14673)
  - **[runtime-audit-engine]** Added falco build fixes for CSE. [#14160](https://github.com/deckhouse/deckhouse/pull/14160)
  - **[service-with-healthchecks]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[service-with-healthchecks]** Fixed handling of pods without IP addresses and corrected initial readiness threshold evaluation. [#12390](https://github.com/deckhouse/deckhouse/pull/12390)
@@ -140,6 +154,7 @@
  - **[istio]** The .enableHTTP10 and .proxyConfig fields have been moved to the .dataPlane section in the ModuleConfig. [#13435](https://github.com/deckhouse/deckhouse/pull/13435)
  - **[log-shipper]** Added extralabels to log and CEF device info into CRD. [#13997](https://github.com/deckhouse/deckhouse/pull/13997)
  - **[monitoring-ping]** Garbage collecting legacy metrics from node-exporter was moved to init-container. [#13542](https://github.com/deckhouse/deckhouse/pull/13542)
+ - **[node-manager]** Set status value to false for GracefulShutdownPostpone condition on start. [#14636](https://github.com/deckhouse/deckhouse/pull/14636)
  - **[node-manager]** Add profiling for bashible-apiserver [#14465](https://github.com/deckhouse/deckhouse/pull/14465)
  - **[node-manager]** Allowed creating NodeUser CR without passwordHash field. [#13623](https://github.com/deckhouse/deckhouse/pull/13623)
  - **[prometheus]** Made Deckhouse Prom++ available in all editions Deckhouse. [#14223](https://github.com/deckhouse/deckhouse/pull/14223)
