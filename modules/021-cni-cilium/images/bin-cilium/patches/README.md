@@ -60,3 +60,7 @@ Upstream PR <https://github.com/cilium/cilium/pull/40246>.
 ## 011-bpf-lb-use-random-lb-algo-for-hostport-serives-fixed.patch
 
 For HostPort serivces always use random LB algo. When bpf-lb-algorithm-annotation feature activated - use default LB algo if it incorrectly choosed in service map.
+
+## 012-add-least-conn-lb-algorithm.patch
+
+Added an implementation of the Least Connections load balancing algorithm.
