@@ -364,6 +364,10 @@ apiVersions:
         x-examples:
           - "dev/test"
         x-unsafe: true
+      storagePolicyID:
+        type: string
+        description: |
+          ID of the VM Storage Policy (optional)
       vmFolderExists:
         type: boolean
         default: false
