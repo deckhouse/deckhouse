@@ -207,7 +207,10 @@ func (lo *LogOutput) Text() ([]byte, error) {
 		render.buf = append(render.buf, ' ')
 	}
 
-	render.FieldsToString(lo.Fields, "")
+	if len(lo.Fields) > 0 {
+		render.FieldsToString(lo.Fields, "")
+		render.buf = append(render.buf, ' ')
+	}
 
 	if lo.Stacktrace != "" {
 		render.TextKeyValue(StacktraceKey, lo.Stacktrace)
@@ -236,21 +239,26 @@ func (r *Render) FieldsToString(m any, keyPrefix string) {
 	case map[string]any:
 		keys := slices.Collect(maps.Keys(val))
 		slices.Sort(keys)
-		for _, k := range keys {
+		for i, k := range keys {
+			if i > 0 {
+				r.buf = append(r.buf, ' ')
+			}
+
 			v := val[k]
 			if keyPrefix != "" {
 				k = keyPrefix + "." + k
 			}
-			r.FieldsToString(v, k)
 
-			r.buf = append(r.buf, ' ')
+			r.FieldsToString(v, k)
 		}
 	case []any:
 		for i, item := range val {
+			if i > 0 {
+				r.buf = append(r.buf, ' ')
+			}
+
 			key := keyPrefix + "[" + strconv.Itoa(i) + "]"
 			r.FieldsToString(item, key)
-
-			r.buf = append(r.buf, ' ')
 		}
 	case string:
 		r.TextQuotedKeyValue(keyPrefix, val)
