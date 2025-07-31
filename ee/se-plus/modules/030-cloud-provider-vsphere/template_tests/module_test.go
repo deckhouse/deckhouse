@@ -111,6 +111,8 @@ const moduleValuesB = `
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
         zones: ["aaa", "bbb"]
+        instances:
+          mainNetwork: k8s-msk
         datacenter: X1
       providerClusterConfiguration:
         provider:
@@ -125,12 +127,6 @@ const moduleValuesB = `
         vmFolderPath: dev/test
         externalNetworkNames: ["aaa", "bbb"]
         internalNetworkNames: ["ccc", "ddd"]
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
-        instances:
-          mainNetwork: k8s-msk
-        zones:
-        - default
 `
 
 const moduleValuesC = `
@@ -150,6 +146,8 @@ const moduleValuesC = `
       providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        instances:
+          mainNetwork: k8s-msk
         resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
@@ -173,10 +171,6 @@ const moduleValuesC = `
           user: user
           password: password
           host: 1.2.3.4
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
-        instances:
-          mainNetwork: k8s-msk
 `
 
 const moduleValuesD = `
