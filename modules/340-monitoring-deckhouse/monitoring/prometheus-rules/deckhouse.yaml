@@ -569,7 +569,6 @@
         Provided error: {{ $labels.error }}
   - alert: DeckhouseMigratedModuleNotFound
     expr: d8_migrated_module_not_found == 1
-    for: 30m
     labels:
       severity_level: "6"
       tier: cluster
