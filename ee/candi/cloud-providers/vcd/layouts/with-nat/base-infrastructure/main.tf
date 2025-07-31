@@ -7,6 +7,7 @@ locals {
   external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
   bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion), "placementPolicy") ? var.providerClusterConfiguration.bastion.placementPolicy : ""
+  dnat_bastion_external_port               = contains(keys(var.providerClusterConfiguration.edgeGateway), "externalPort") ? var.providerClusterConfiguration.edgeGateway.externalPort : 22
 }
 
 module "network" {
@@ -53,6 +54,8 @@ module "bastion" {
 module "snat" {
   source                = "../../../terraform-modules/snat"
   organization          = var.providerClusterConfiguration.organization
+  rule_name_prefix      = var.clusterConfiguration.cloud.prefix
+  rule_description      = format("SNAT rule for %s", var.providerClusterConfiguration.virtualApplicationName)
   edge_gateway_name     = var.providerClusterConfiguration.edgeGateway.name
   edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
   internal_network_name = var.providerClusterConfiguration.mainNetwork
@@ -73,7 +76,7 @@ module "dnat_bastion" {
   internal_network_name = var.providerClusterConfiguration.mainNetwork
   internal_address      = module.bastion.bastion_ip_address_for_ssh
   external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
-  external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
+  external_port         = local.dnat_bastion_external_port
   external_network_name = local.external_network_name
   external_network_type = local.external_network_type
 }

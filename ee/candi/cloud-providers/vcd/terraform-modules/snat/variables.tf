@@ -5,6 +5,16 @@ variable "organization" {
   type = string
 }
 
+variable "rule_name_prefix" {
+  type        = string
+  description = "The prefix to the name of the SNAT rule. Effective only for NSX-T."
+}
+
+variable "rule_description" {
+  type    = string
+  default = ""
+}
+
 variable "edge_gateway_name" {
   type = string
 }

@@ -10,3 +10,7 @@ output "cloud_discovery_data" {
     "zones" = ["default"]
   }
 }
+
+output "bastion_ip_address_for_ssh" {
+  value = module.bastion.bastion_ip_address_for_ssh
+}

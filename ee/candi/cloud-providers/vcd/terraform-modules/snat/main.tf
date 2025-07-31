@@ -2,7 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  use_nsxv    = var.edge_gateway_type == "NSX-V"
+  use_nsxv = var.edge_gateway_type == "NSX-V"
 }
 
 # NSX-T resources
@@ -19,9 +19,9 @@ resource "vcd_nsxt_nat_rule" "snat" {
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.gateway[0].id
 
-  name        = format("%s-snat", var.internal_network_name)
+  name        = format("%s-snat", var.rule_name_prefix)
   rule_type   = "SNAT"
-  description = format("SNAT rule for %s", var.internal_network_name)
+  description = var.rule_description
 
   external_address = var.external_address
   internal_address = var.internal_network_cidr

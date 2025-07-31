@@ -41,15 +41,15 @@ variable "placement_policy" {
 }
 
 variable "storage_profile" {
-  type    = string
+  type = string
 }
 
 variable "sizing_policy" {
-  type    = string
+  type = string
 }
 
 variable "root_disk_size_gb" {
-  type    = number
+  type = number
 }
 
 locals {
