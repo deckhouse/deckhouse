@@ -395,7 +395,7 @@ func (m *MetricStorage) Handler() http.Handler {
 	if m.registry == nil {
 		// use default handler from promhttp with custom gatherer and registerer
 		return promhttp.InstrumentMetricHandler(
-			m.registerer, promhttp.HandlerFor(m.gatherer, promhttp.HandlerOpts{}),
+			m.registerer, promhttp.HandlerFor(m, promhttp.HandlerOpts{}),
 		)
 	}
 
