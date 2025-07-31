@@ -43,7 +43,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
-		scanner := &Registryscanner{
+		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
 			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
@@ -82,7 +82,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
-		scanner := &Registryscanner{
+		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
 			cache:           cache.New(metricsstorage.NewMetricStorage("test")),

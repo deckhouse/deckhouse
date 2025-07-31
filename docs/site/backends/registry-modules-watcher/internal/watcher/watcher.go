@@ -30,21 +30,22 @@ import (
 const leaseLabel = "deckhouse.io/documentation-builder-sync"
 const resyncTimeout = time.Minute
 
-type Watcher struct {
+type watcher struct {
 	kClient   *kubernetes.Clientset
 	namespace string
 	logger    *log.Logger
 }
 
-func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *Watcher {
-	return &Watcher{
+// nolint: revive
+func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *watcher {
+	return &watcher{
 		kClient:   kClient,
 		namespace: namespace,
 		logger:    logger,
 	}
 }
 
-func (w *Watcher) Watch(ctx context.Context, addHandler, deleteHandler func(ctx context.Context, backend string)) {
+func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(ctx context.Context, backend string)) {
 	tweakListOptions := func(options *metav1.ListOptions) {
 		options.LabelSelector = leaseLabel
 	}

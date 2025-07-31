@@ -36,7 +36,7 @@ type Client interface {
 	Modules(ctx context.Context) ([]string, error)
 }
 
-type Registryscanner struct {
+type registryscanner struct {
 	registryClients map[string]Client
 	updateHandler   func([]backends.DocumentationTask) error
 	cache           *cache.Cache
@@ -53,8 +53,9 @@ var releaseChannelsTags = map[string]string{
 }
 
 // New
-func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients ...Client) *Registryscanner {
-	registryscanner := Registryscanner{
+// nolint: revive
+func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients ...Client) *registryscanner {
+	registryscanner := registryscanner{
 		registryClients: make(map[string]Client),
 		cache:           cache.New(ms),
 		logger:          logger,
@@ -67,19 +68,19 @@ func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients .
 	return &registryscanner
 }
 
-func (s *Registryscanner) GetState() []backends.DocumentationTask {
+func (s *registryscanner) GetState() []backends.DocumentationTask {
 	return s.cache.GetState()
 }
 
-func (s *Registryscanner) GetCache() *cache.Cache {
+func (s *registryscanner) GetCache() *cache.Cache {
 	return s.cache
 }
 
-func (s *Registryscanner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
+func (s *registryscanner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
 	s.updateHandler = updateHandler
 }
 
-func (s *Registryscanner) Subscribe(ctx context.Context, scanInterval time.Duration) {
+func (s *registryscanner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
 	ticker := time.NewTicker(scanInterval)
 
