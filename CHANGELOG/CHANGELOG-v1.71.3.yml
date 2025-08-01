@@ -1,0 +1,17 @@
+candi:
+  features:
+    - summary: Add rosa 12.6.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14631
+cni-cilium:
+  fixes:
+    - summary: fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14766
+deckhouse-controller:
+  features:
+    - summary: add validation for module source changes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14585
+node-manager:
+  fixes:
+    - summary: Hide Nvidia GPU dashboards if there is no GPU nodes in a cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14779
+

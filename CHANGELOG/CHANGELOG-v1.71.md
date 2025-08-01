@@ -14,6 +14,7 @@
 
 
  - **[admission-policy-engine]** Added SecurityPolicy with ability to check images, signed with cosign (for SE+). [#13699](https://github.com/deckhouse/deckhouse/pull/13699)
+ - **[candi]** Add rosa 12.6. [#14631](https://github.com/deckhouse/deckhouse/pull/14631)
  - **[candi]** Add bashible step to check for upgrade k8s to 1.31 and ask for approval. [#14390](https://github.com/deckhouse/deckhouse/pull/14390)
     Upgrade process on the node will be stopped  until it's not approved.
  - **[candi]** contained configuration && new registry bashible context model [#14147](https://github.com/deckhouse/deckhouse/pull/14147)
@@ -23,6 +24,7 @@
  - **[cni-cilium]** Added optional least-conn load-balancing algorithm for Services. [#13867](https://github.com/deckhouse/deckhouse/pull/13867)
  - **[cni-cilium]** Added a traffic encryption mode using WireGuard (`pod-to-pod` and `node-to-node`). [#13749](https://github.com/deckhouse/deckhouse/pull/13749)
  - **[cni-cilium]** Cni-cilium is updated to consider Virtualization Nesting Level when discovering tunnel-port value. [#9996](https://github.com/deckhouse/deckhouse/pull/9996)
+ - **[deckhouse-controller]** add validation for module source changes [#14585](https://github.com/deckhouse/deckhouse/pull/14585)
  - **[deckhouse-controller]** Added user notify when module config has conflict. [#14296](https://github.com/deckhouse/deckhouse/pull/14296)
  - **[deckhouse-controller]** Optimized ModuleRelease update flow. [#14144](https://github.com/deckhouse/deckhouse/pull/14144)
  - **[deckhouse-controller]** Added readiness probe hook support. [#13748](https://github.com/deckhouse/deckhouse/pull/13748)
@@ -55,6 +57,7 @@
  - **[cloud-provider-dynamix]** Fixed `sshPublicKey` absence on CloudEphemeral nodes. [#13907](https://github.com/deckhouse/deckhouse/pull/13907)
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled. [#14766](https://github.com/deckhouse/deckhouse/pull/14766)
  - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
  - **[cni-cilium]** EgressGateway controller optimized for large setups with lot's of EgressGateways. [#14288](https://github.com/deckhouse/deckhouse/pull/14288)
