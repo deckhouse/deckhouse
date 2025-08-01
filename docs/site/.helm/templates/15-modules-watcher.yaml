@@ -63,25 +63,35 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.namespace
 ---
-apiVersion: v1
-kind: Service
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
 metadata:
-  name: registry-modules-watcher-http
+  name: registry-modules-watcher
+  namespace: d8-monitoring
   labels:
-    prometheus.deckhouse.io/custom-target: registry-modules-watcher
-spec:
-  clusterIP: None
-  selector:
     app: registry-modules-watcher
-  ports:
-  - name: http
-    port: 8080
-    protocol: TCP
-    targetPort: 8080
-  - name: http-metrics
-    port: 9090
-    protocol: TCP
-    targetPort: 9090
+    prometheus: main
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: "registry-modules-watcher"
+  selector:
+    matchLabels:
+      app: registry-modules-watcher
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret
