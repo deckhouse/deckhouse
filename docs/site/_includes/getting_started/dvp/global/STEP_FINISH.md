@@ -7,9 +7,9 @@
 <div markdown="1">
 ## Everything is installed, configured, and working!
 
-Let's take a look at the additional features of Deckhouse that become available immediately after installation.
+Now that you have installed and properly configured Deckhouse Virtualization Platform, let's look at what you can do with it.
 
-Access to web interfaces is possible using a static user created in the cluster during installation.
+Use the static user created in the cluster during the installation to access the web interface of the platform components.
 </div>
 
 {% include getting_started/dvp/global/partials/FINISH_CARDS.md %}

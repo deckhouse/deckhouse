@@ -50,7 +50,7 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 🏭 <span class="cards-item__title-text">Going to production</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Prepare your cluster to receive production traffic.
+Prepare your cluster to receive traffic.
 
 Use our [checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
 </div>
@@ -69,7 +69,7 @@ Use our [checklist](/products/virtualization-platform/guides/production.html) to
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
+Detailed information about the system and components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
 
 Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
 </div>
