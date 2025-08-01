@@ -972,10 +972,8 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 # Пример результата:
 # [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
 #   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-#     endpoint = ["https://<REGISTRY_URL>"]
 # [plugins."io.containerd.grpc.v1.cri".registry.configs]
 #   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
-#     auth = "<REGISTRY_AUTH>"
 ```
 
 Пример добавления авторизации в пользовательский registry (**старый** способ конфигурации):
@@ -1019,7 +1017,10 @@ spec:
               endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+              username = "username"
+              password = "password"
+              # OR
+              auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
 
@@ -1212,7 +1213,10 @@ spec:
       [host."https://${REGISTRY_URL}"]
         capabilities = ["pull", "resolve"]
         [host."https://${REGISTRY_URL}".auth]
-          auth = "AAAABBBCCCDDD=="
+          username = "username"
+          password = "password"
+          # OR
+          auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
 
