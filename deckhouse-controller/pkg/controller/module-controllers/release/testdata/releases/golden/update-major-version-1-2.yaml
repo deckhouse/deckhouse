@@ -76,7 +76,7 @@ spec:
   weight: 900
 status:
   approved: true
-  message: major version update from 1 to 2 is not allowed, only 0->1 is permitted
+  message: major version is greater than deployed 1.26.2
   phase: Pending
   pullDuration: 0s
   size: 0

@@ -214,16 +214,34 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				}, nil
 			}
 
-			// here we have only Deployed phase releases in prevRelease
-			ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
+			// logic for equal major versions
+			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
+				// here we have only Deployed phase releases in prevRelease
+				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 
-			// it must await if trying to update major version other than 0->1
-			if release.GetModuleName() != "deckhouse" && release.GetVersion().Major() > prevRelease.GetVersion().Major() {
-				if prevRelease.GetVersion().Major() != 0 || release.GetVersion().Major() != 1 {
+				// it must await if deployed release has minor version more than one
+				if !ltsRelease &&
+					release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 					msg := fmt.Sprintf(
-						"major version update from %d to %d is not allowed, only 0->1 is permitted",
-						prevRelease.GetVersion().Major(),
-						release.GetVersion().Major(),
+						"minor version is greater than deployed %s by one",
+						prevRelease.GetVersion().Original(),
+					)
+
+					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+
+					return &Task{
+						TaskType:            Await,
+						Message:             msg,
+						DeployedReleaseInfo: deployedReleaseInfo,
+					}, nil
+				}
+
+				// it must await if deployed release has minor version more than acceptable LTS channel limitation
+				if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+					msg := fmt.Sprintf(
+						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+						prevRelease.GetVersion().Original(),
+						release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
 					)
 
 					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
@@ -236,39 +254,23 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				}
 			}
 
-			// it must await if deployed release has minor version more than one
-			if !ltsRelease &&
-				release.GetVersion().Major() == prevRelease.GetVersion().Major() &&
-				release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
-				msg := fmt.Sprintf(
-					"minor version is greater than deployed %s by one",
-					prevRelease.GetVersion().Original(),
-				)
+			// logic for greater major versions
+			if release.GetVersion().Major() > prevRelease.GetVersion().Major() {
+				// it must await if trying to update major version other than 0->1
+				if prevRelease.GetVersion().Major() != 0 || release.GetVersion().Major() != 1 {
+					msg := fmt.Sprintf(
+						"major version is greater than deployed %s",
+						prevRelease.GetVersion().Original(),
+					)
 
-				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
-				return &Task{
-					TaskType:            Await,
-					Message:             msg,
-					DeployedReleaseInfo: deployedReleaseInfo,
-				}, nil
-			}
-
-			// it must await if deployed release has minor version more than acceptable LTS channel limitation
-			if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
-				msg := fmt.Sprintf(
-					"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
-					prevRelease.GetVersion().Original(),
-					release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
-				)
-
-				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
-
-				return &Task{
-					TaskType:            Await,
-					Message:             msg,
-					DeployedReleaseInfo: deployedReleaseInfo,
-				}, nil
+					return &Task{
+						TaskType:            Await,
+						Message:             msg,
+						DeployedReleaseInfo: deployedReleaseInfo,
+					}, nil
+				}
 			}
 		}
 	}

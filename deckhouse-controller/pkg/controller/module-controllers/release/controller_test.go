@@ -525,7 +525,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process major releases", func() {
-		suite.Run("major release 0 -> 1", func() {
+		suite.Run("major release from 0 to 1 must be allowed", func() {
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
 
@@ -541,7 +541,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			})
 		})
 
-		suite.Run("major release 1 -> 2", func() {
+		suite.Run("major release from 1 to 2 must be not allowed", func() {
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-1-2.yaml"))
 
