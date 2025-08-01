@@ -297,17 +297,56 @@ func TestCache(t *testing.T) {
 		cache := New()
 		cache.SyncWithRegistryVersions(testVersions)
 
-		t.Run("GetReleaseChecksum", func(t *testing.T) {
-			checksum, found := cache.GetReleaseChecksum(&testVersions[0])
-			assert.True(t, found, "Checksum should be found")
-			assert.Equal(t, "checksum", checksum, "Checksum should match")
-		})
-
 		t.Run("GetReleaseVersionData", func(t *testing.T) {
 			version, tarFile, found := cache.GetReleaseVersionData(&testVersions[0])
 			assert.True(t, found, "Version data should be found")
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
+		})
+
+		t.Run("GetVersionDataByChecksum", func(t *testing.T) {
+			// Test finding version data by checksum from a different channel
+			newChannelVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "TestModule",
+				ReleaseChannel: "stable",   // Different channel
+				Checksum:       "checksum", // Same checksum as alpha/beta
+			}
+
+			version, tarFile, found := cache.GetVersionDataByChecksum(&newChannelVersion)
+			assert.True(t, found, "Version data should be found by checksum")
+			assert.Equal(t, "1.0.0", version, "Version should match")
+			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
+		})
+
+		t.Run("GetVersionDataByChecksum_NotFound", func(t *testing.T) {
+			// Test with non-existent checksum
+			notFoundVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "TestModule",
+				ReleaseChannel: "stable",
+				Checksum:       "nonexistent",
+			}
+
+			version, tarFile, found := cache.GetVersionDataByChecksum(&notFoundVersion)
+			assert.False(t, found, "Version data should not be found")
+			assert.Empty(t, version, "Version should be empty")
+			assert.Nil(t, tarFile, "TarFile should be nil")
+		})
+
+		t.Run("GetVersionDataByChecksum_DifferentModule", func(t *testing.T) {
+			// Test with different module - should not find
+			differentModuleVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "DifferentModule",
+				ReleaseChannel: "alpha",
+				Checksum:       "checksum",
+			}
+
+			version, tarFile, found := cache.GetVersionDataByChecksum(&differentModuleVersion)
+			assert.False(t, found, "Version data should not be found for different module")
+			assert.Empty(t, version, "Version should be empty")
+			assert.Nil(t, tarFile, "TarFile should be nil")
 		})
 	})
 }

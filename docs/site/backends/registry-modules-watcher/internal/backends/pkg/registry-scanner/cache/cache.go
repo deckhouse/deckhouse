@@ -58,28 +58,6 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-func (c *Cache) GetReleaseChecksum(version *internal.VersionData) (string, bool) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	r, ok := c.val[registryName(version.Registry)]
-	if !ok {
-		return "", false
-	}
-
-	m, ok := r[moduleName(version.ModuleName)]
-	if !ok {
-		return "", false
-	}
-
-	rc, ok := m.releaseChecksum[releaseChannelName(version.ReleaseChannel)]
-	if !ok {
-		return "", false
-	}
-
-	return rc, true
-}
-
 func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte, bool) {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -98,6 +76,38 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 		_, ok := verData.releaseChannels[version.ReleaseChannel]
 		if ok {
 			return string(ver), verData.tarFile, true
+		}
+	}
+
+	return "", nil, false
+}
+
+// GetVersionDataByChecksum searches for cached version data by checksum across all release channels
+// Returns version, tarFile and true if found, empty values and false otherwise
+func (c *Cache) GetVersionDataByChecksum(version *internal.VersionData) (string, []byte, bool) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	r, ok := c.val[registryName(version.Registry)]
+	if !ok {
+		return "", nil, false
+	}
+
+	m, ok := r[moduleName(version.ModuleName)]
+	if !ok {
+		return "", nil, false
+	}
+
+	// Search across all release channels for matching checksum
+	for channelName, checksum := range m.releaseChecksum {
+		if checksum == version.Checksum {
+			// Found matching checksum, now find the version that contains this channel
+			for ver, verData := range m.versions {
+				// Check if this version contains the channel with matching checksum
+				if _, hasChannel := verData.releaseChannels[string(channelName)]; hasChannel {
+					return string(ver), verData.tarFile, true
+				}
+			}
 		}
 	}
 
@@ -173,13 +183,13 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 	createTasks := RemapFromMapToVersions(RemapFromVersionData(versionsToCreate), backends.TaskCreate)
 
 	// Combine and sort all tasks
-	result := append(createTasks, versionsToDelete...)
-	sortDocumentationTasks(result)
+	createTasks = append(createTasks, versionsToDelete...)
+	sortDocumentationTasks(createTasks)
 
 	// Update cache with registry versions
 	c.val = RemapFromVersionData(registryVersions)
 
-	return result
+	return createTasks
 }
 
 // Helper function to clean up empty maps
@@ -202,10 +212,10 @@ func cleanupEmptyMaps(cache map[registryName]map[moduleName]moduleData, reg regi
 
 // Helper function to deep copy the cache map
 func copyCache(original map[registryName]map[moduleName]moduleData) map[registryName]map[moduleName]moduleData {
-	copy := make(map[registryName]map[moduleName]moduleData)
+	cacheCopy := make(map[registryName]map[moduleName]moduleData)
 
 	for reg, moduleMap := range original {
-		copy[reg] = make(map[moduleName]moduleData)
+		cacheCopy[reg] = make(map[moduleName]moduleData)
 
 		for mod, data := range moduleMap {
 			newData := moduleData{
@@ -230,11 +240,11 @@ func copyCache(original map[registryName]map[moduleName]moduleData) map[registry
 				newData.versions[ver] = newVersionData
 			}
 
-			copy[reg][mod] = newData
+			cacheCopy[reg][mod] = newData
 		}
 	}
 
-	return copy
+	return cacheCopy
 }
 
 func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task backends.Task) []backends.DocumentationTask {
