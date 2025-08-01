@@ -45,13 +45,13 @@ func NewHandler(logger *log.Logger) *RegistryModulesWatcherHandler {
 func (h *RegistryModulesWatcherHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	n, _ := w.Write([]byte("ok"))
-	h.logger.Info("handleReadyZ", slog.Int("n", n))
+	h.logger.Debug("handleReadyZ", slog.Int("n", n))
 }
 
 func (h *RegistryModulesWatcherHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	n, _ := w.Write([]byte("ok"))
-	h.logger.Info("handleHealthZ", slog.Int("n", n))
+	h.logger.Debug("handleHealthZ", slog.Int("n", n))
 }
 
 func NewMetricHandler(logger *log.Logger, metricStorage *metricsstorage.MetricStorage) *RegistryModulesWatcherHandler {
