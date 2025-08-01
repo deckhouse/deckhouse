@@ -35,3 +35,4 @@ upmeterEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true
+registryEnabled: true

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -38,14 +39,15 @@ type deckhouseReleaseModuleManager interface {
 	GetEnabledModuleNames() []string
 }
 
-// deckhouseReleaseValidationHandler creates a webhook handler for DeckhouseRelease validation
-func deckhouseReleaseValidationHandler(
+// DeckhouseReleaseValidationHandler creates a webhook handler for DeckhouseRelease validation
+func DeckhouseReleaseValidationHandler(
 	client client.Client,
+	metricStorage metric.Storage,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		return validateDeckhouseReleaseApproval(ctx, review, obj, client, moduleManager, exts)
+		return validateDeckhouseReleaseApproval(ctx, review, obj, client, metricStorage, moduleManager, exts)
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
@@ -66,6 +68,7 @@ func validateDeckhouseReleaseApproval(
 	review *model.AdmissionReview,
 	obj metav1.Object,
 	client client.Client,
+	metricStorage metric.Storage,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
 ) (*kwhvalidating.ValidatorResult, error) {
@@ -97,6 +100,7 @@ func validateDeckhouseReleaseApproval(
 		client,
 		moduleManager.GetEnabledModuleNames(),
 		exts,
+		metricStorage,
 	)
 
 	if err != nil {

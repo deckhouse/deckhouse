@@ -111,17 +111,29 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ports := input.Snapshots["port"]
+	ports := input.NewSnapshots.Get("port")
 	if len(ports) == 0 {
 		return fmt.Errorf("kubernetes service pod was not discovered")
 	}
 
-	endpoints := input.Snapshots["endpoints"]
+	endpoints := input.NewSnapshots.Get("endpoints")
 	if len(endpoints) == 0 {
 		return fmt.Errorf("kubernetes service endpoints was not discovered")
 	}
 
-	input.Values.Set(targetPortPath, ports[0])
-	input.Values.Set(addressesPath, endpoints[0])
+	var portData int32
+	err := ports[0].UnmarshalTo(&portData)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'port' snapshot: %w", err)
+	}
+
+	var endPortData kubernetesEndpoints
+	err = endpoints[0].UnmarshalTo(&endPortData)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'endpoints' snapshot: %w", err)
+	}
+
+	input.Values.Set(targetPortPath, portData)
+	input.Values.Set(addressesPath, endPortData)
 	return nil
 }

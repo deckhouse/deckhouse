@@ -55,5 +55,5 @@ func RegisterAdmissionHandlers(
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
-	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", deckhouseReleaseValidationHandler(cli, mm, exts))
+	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
 }

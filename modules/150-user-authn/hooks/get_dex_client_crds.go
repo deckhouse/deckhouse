@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
@@ -151,25 +153,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getDexClient)
 
 func getDexClient(input *go_hook.HookInput) error {
-	clients := input.Snapshots["clients"]
-	credentials := input.Snapshots["credentials"]
+	clients := input.NewSnapshots.Get("clients")
+	credentials := input.NewSnapshots.Get("credentials")
 
 	credentialsByID := make(map[string]string, len(credentials))
 
-	for _, secret := range credentials {
-		dexSecret, ok := secret.(DexClientSecret)
-		if !ok {
-			return fmt.Errorf("cannot convert dex client secret")
+	for dexSecret, err := range sdkobjectpatch.SnapshotIter[DexClientSecret](credentials) {
+		if err != nil {
+			return fmt.Errorf("cannot convert dex client secret: failed to iterate over 'credentials' snapshot: %w", err)
 		}
 
 		credentialsByID[dexSecret.ID] = string(dexSecret.Secret)
 	}
 
 	dexClients := make([]DexClient, 0, len(clients))
-	for _, client := range clients {
-		dexClient, ok := client.(DexClient)
-		if !ok {
-			return fmt.Errorf("cannot convert dex client")
+	for dexClient, err := range sdkobjectpatch.SnapshotIter[DexClient](clients) {
+		if err != nil {
+			return fmt.Errorf("cannot convert dex client: failed to iterate over 'clients' snapshot: %w", err)
 		}
 
 		existedSecret, ok := credentialsByID[dexClient.ID]
