@@ -1,0 +1,93 @@
+<div class="feedback-container">
+    <div class="feedback-container__separantor"></div>
+    <div class="feedback-container__choice">
+        {%- if page.lang == "ru" %}
+            <p class="feedback-container__choice--descr">Была&nbsp;ли страница полезна?</p>
+        {%- else %}
+            <p class="feedback-container__choice--descr">Was the page useful?</p>
+        {%- endif %}
+        <div class="feedback-container__choice--icon">
+            <svg class="icon icon__like" width="36" height="32" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="36" height="32" rx="6" fill="#F5F5FB"/>
+                <g clip-path="url(#clip0_11876_47240)">
+                    <path d="M13 15V23C13 23.2652 12.8946 23.5196 12.7071 23.7071C12.5196 23.8946 12.2652 24 12 24H10C9.73478 24 9.48043 23.8946 9.29289 23.7071C9.10536 23.5196 9 23.2652 9 23V16C9 15.7348 9.10536 15.4804 9.29289 15.2929C9.48043 15.1054 9.73478 15 10 15H13ZM13 15C14.0609 15 15.0783 14.5786 15.8284 13.8284C16.5786 13.0783 17 12.0609 17 11V10C17 9.46957 17.2107 8.96086 17.5858 8.58579C17.9609 8.21071 18.4696 8 19 8C19.5304 8 20.0391 8.21071 20.4142 8.58579C20.7893 8.96086 21 9.46957 21 10V15H24C24.5304 15 25.0391 15.2107 25.4142 15.5858C25.7893 15.9609 26 16.4696 26 17L25 22C24.8562 22.6135 24.5834 23.1402 24.2227 23.501C23.8619 23.8617 23.4328 24.0368 23 24H16C15.2044 24 14.4413 23.6839 13.8787 23.1213C13.3161 22.5587 13 21.7956 13 21" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <defs>
+                    <clipPath id="clip0_11876_47240">
+                        <rect width="24" height="24" fill="white" transform="translate(6 4)"/>
+                    </clipPath>
+                </defs>
+            </svg>
+
+
+            <svg class="icon icon__dislike" width="36" height="32" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="36" height="32" rx="6" fill="#F5F5FB"/>
+                <g clip-path="url(#clip0_11876_47244)">
+                    <path d="M13 17.9999V9.99993C13 9.73472 12.8946 9.48036 12.7071 9.29283C12.5196 9.10529 12.2652 8.99993 12 8.99993H10C9.73478 8.99993 9.48043 9.10529 9.29289 9.29283C9.10536 9.48036 9 9.73472 9 9.99993V16.9999C9 17.2651 9.10536 17.5195 9.29289 17.707C9.48043 17.8946 9.73478 17.9999 10 17.9999H13ZM13 17.9999C14.0609 17.9999 15.0783 18.4214 15.8284 19.1715C16.5786 19.9217 17 20.9391 17 21.9999V22.9999C17 23.5304 17.2107 24.0391 17.5858 24.4141C17.9609 24.7892 18.4696 24.9999 19 24.9999C19.5304 24.9999 20.0391 24.7892 20.4142 24.4141C20.7893 24.0391 21 23.5304 21 22.9999V17.9999H24C24.5304 17.9999 25.0391 17.7892 25.4142 17.4141C25.7893 17.0391 26 16.5304 26 15.9999L25 10.9999C24.8562 10.3865 24.5834 9.85969 24.2227 9.49897C23.8619 9.13825 23.4328 8.96311 23 8.99993H16C15.2044 8.99993 14.4413 9.316 13.8787 9.87861C13.3161 10.4412 13 11.2043 13 11.9999" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <defs>
+                    <clipPath id="clip0_11876_47244">
+                        <rect width="24" height="24" fill="white" transform="translate(6 4)"/>
+                    </clipPath>
+                </defs>
+            </svg>
+        </div>
+    </div>
+
+    <div class="window__feedback window__feedback--access">
+        <a href="" class="modal-window__close-btn">✕</a>
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.8604 31.6275L29.7673 43.1624L50.6045 22.6973" stroke="#B0DA8F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="32" cy="32" r="30" stroke="#E7F4DD" stroke-width="4"/>
+        </svg>
+        {%- if page.lang == "ru" %}
+            <h3 class="window__feedback--title">Спасибо за&nbsp;оценку!</h3>
+            <p class="window__feedback--descr">Мы&nbsp;рады, что смогли вам помочь.</p>
+        {%- else %}
+            <h3 class="window__feedback--title">Thanks for the review!</h3>
+            <p class="window__feedback--descr">We&nbsp;are glad that we&nbsp;could help you..</p>
+        {%- endif %}
+    </div>
+
+    <div class="window__feedback window__feedback--form">
+        <a href="" class="modal-window__close-btn">✕</a>
+            {%- if page.lang == "ru" %}
+            <h3 class="window__feedback--title">Расскажите, что не&nbsp;понравилось</h3>
+            <div class="checkboxes">
+                <input type="checkbox" id="fbFew" value="few">
+                <label for="fbFew">Мало полезного</label>
+                <input type="checkbox" id="fbMistakes" value="mistakes">
+                <label for="fbMistakes">Есть ошибки</label>
+                <input type="checkbox" id="fbUnclear" value="unclear">
+                <label for="fbUnclear">Непонятно написано</label>
+                <input type="checkbox" id="fbOutdated" value="outdated">
+                <label for="fbOutdated">Устаревшая информация</label>
+                <input type="checkbox" id="fbOther" value="other">
+                <label for="fbOther">Другое</label>
+            </div>
+            <div class="window__feedback--form-textfield">
+                <input class="more-detailed" type="text" name="detailed" placeholder="Опишите подробнее, что не понравилось" aria-label="Опишите подробнее, что не понравилось" >
+            </div>
+            <button class="button button_alt button-request" type="submit">Отправить</button>
+        {%- else %}
+            <h3 class="window__feedback--title">Tell&nbsp;us what you didn&rsquo;t like.</h3>
+            <div class="checkboxes">
+                <input type="checkbox" id="fbFew" value="few">
+                <label for="fbFew">Little useful</label>
+                <input type="checkbox" id="fbMistakes" value="mistakes">
+                <label for="fbMistakes">There are errors</label>
+                <input type="checkbox" id="fbUnclear" value="unclear">
+                <label for="fbUnclear">It&rsquo;s written incomprehensibly</label>
+                <input type="checkbox" id="fbOutdated" value="outdated">
+                <label for="fbOutdated">Outdated information</label>
+                <input type="checkbox" id="fbOther" value="other">
+                <label for="fbOther">Other</label>
+            </div>
+            <div class="window__feedback--form-textfield">
+                <input class="more-detailed" type="text" name="detailed" placeholder="Describe in more detail what you didn't like." aria-label="Describe in more detail what you didn't like." >
+            </div>
+            <button class="button button_alt button-request" type="submit">Send</button>
+        {%- endif %}
+    </div>
+
+</div>
