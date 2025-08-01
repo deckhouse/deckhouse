@@ -31,6 +31,7 @@ import (
 const (
 	RegistryRequestSecondsMetric          = "{PREFIX}_registry_request_seconds"
 	RegistryRequestsCountMetric           = "{PREFIX}_registry_requests_count"
+	RegistryPullSecondsMetric             = "{PREFIX}_registry_pull_seconds"
 	RegistryScannerCacheLengthMetric      = "{PREFIX}_registry_scanner_cache_length"
 	RegistryWatcherBackendsTotalMetric    = "{PREFIX}_registry_watcher_backends_total"
 	RegistryWatcherNewBackendsTotalMetric = "{PREFIX}_registry_watcher_new_backends_total"
@@ -64,6 +65,12 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 		return fmt.Errorf("can not register %s: %w", RegistryRequestsCountMetric, err)
 	}
 
+	logger.Info("register metric", slog.String("metric", RegistryPullSecondsMetric))
+	_, err = ms.RegisterHistogram(RegistryPullSecondsMetric, []string{}, defaultSecondsBuckets, options.WithHelp("Image pull time from registry registry in seconds"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryPullSecondsMetric, err)
+	}
+
 	logger.Info("register metric", slog.String("metric", RegistryScannerCacheLengthMetric))
 	_, err = ms.RegisterGauge(RegistryScannerCacheLengthMetric, []string{"registry"}, options.WithHelp("Checks length of cache by registry"))
 	if err != nil {
@@ -89,7 +96,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderUploadRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderUploadRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender upload request time in seconds"))
+	_, err = ms.RegisterHistogram(SenderUploadRequestsSecondsMetric, []string{"status_code"}, defaultSecondsBuckets, options.WithHelp("Sender upload request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderUploadRequestsSecondsMetric, err)
 	}
@@ -101,7 +108,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderBuildRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderBuildRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender build request time in seconds"))
+	_, err = ms.RegisterHistogram(SenderBuildRequestsSecondsMetric, []string{"status_code"}, defaultSecondsBuckets, options.WithHelp("Sender build request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderBuildRequestsSecondsMetric, err)
 	}
@@ -113,7 +120,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderDeleteRequestsSecondsMetric))
-	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, []float64{0.5, 0.95, 0.99}, options.WithHelp("Sender delete request time in seconds"))
+	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, defaultSecondsBuckets, options.WithHelp("Sender delete request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsSecondsMetric, err)
 	}

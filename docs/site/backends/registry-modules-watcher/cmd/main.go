@@ -74,11 +74,11 @@ func main() {
 		Handler: h,
 	}
 	go func() {
+		logger.Info("listen", slog.String("address", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("listen: %w", err)
 		}
 	}()
-	logger.Info("listen", slog.String("address", srv.Addr))
 
 	metricHandler := handler.NewMetricHandler(logger.Named("http-metrics"), metricStorage)
 	metricServer := &http.Server{
@@ -86,11 +86,11 @@ func main() {
 		Handler: metricHandler,
 	}
 	go func() {
+		logger.Info("listen", slog.String("address", metricServer.Addr))
 		if err := metricServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("listen: %w", err)
 		}
 	}()
-	logger.Info("listen", slog.String("address", metricServer.Addr))
 
 	// * * * * * * * * *
 	// dockerconfigjson

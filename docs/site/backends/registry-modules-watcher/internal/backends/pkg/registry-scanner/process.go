@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
+	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -32,6 +33,7 @@ import (
 
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 // Constants for directory structure
@@ -164,16 +166,22 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
+	// Before pull
+	timeBeforePull := time.Now()
 	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
 
-	// do a metric
+	// Pull and untar
 	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract documentation: %w", err)
 	}
+
+	// Calculate pull time metrics
+	pullTime := time.Since(timeBeforePull).Seconds()
+	s.ms.HistogramObserve(metrics.RegistryPullSecondsMetric, pullTime, nil, nil)
 
 	return tarFile, nil
 }

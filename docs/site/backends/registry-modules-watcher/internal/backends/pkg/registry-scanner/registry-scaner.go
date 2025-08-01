@@ -42,6 +42,7 @@ type registryscanner struct {
 	cache           *cache.Cache
 
 	logger *log.Logger
+	ms     *metricsstorage.MetricStorage
 }
 
 var releaseChannelsTags = map[string]string{
@@ -59,6 +60,7 @@ func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients .
 		registryClients: make(map[string]Client),
 		cache:           cache.New(ms),
 		logger:          logger,
+		ms:              ms,
 	}
 
 	for _, client := range registryClients {
