@@ -41,6 +41,6 @@ user = User.find_by_username('root')
 Users::CreateService.new(user, user_args).execute
 ```
 
-## Personall access token
+## Personal access token
 
-For create personall access token you can use [API](https://docs.gitlab.com/api/personal_access_tokens/)
+For create personal access token you can use [API](https://docs.gitlab.com/api/personal_access_tokens/)
