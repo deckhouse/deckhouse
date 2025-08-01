@@ -1,3 +1,4 @@
+
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -9,41 +10,41 @@
 ---
 # #####################################################################
 # List of binary files used by agent
-# from base install script
-## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-{{ $binariesFromALT := "/etc/localtime" }}
+{{ $binariesFromBaseImages := "" }}
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
-# kmod and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
-# iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/ctstat /usr/sbin/rtstat" }}
-# ipset and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep /usr/bin/sed" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/nsenter /bin/mount" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/head" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/wc" }}
+# groups
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/groups" }}
+# for prepull
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/tar /usr/bin/stat /usr/bin/tail /usr/bin/timeout" }}
+# for debug and usability
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/curl /usr/bin/env /usr/bin/ls /usr/bin/sleep" }}
+#####################################################################
+{{ $binariesFromALT := "" }}
+# from base install script
+{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
+# shell-scripts dependencies
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
 # clang dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
-{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
-# groups
-{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
-# for prepull
-{{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
-# for cilium-cli sysdump
-{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
+{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
+{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
 # for debug
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }} #### problem with dynamic link
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -63,8 +64,28 @@
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
+# ipset and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ipset" }} ### test
+# kmod and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }} ### test
+# iproute2 and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ctstat /usr/sbin/rtstat" }} ### test
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+from: dev-registry.deckhouse.io/base_images@sha256:21954c21efadd332e4eebeff0598071db052a73c76214c64e5adb7a416d8b4cc
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
+final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -241,10 +262,163 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
+fromCacheVersion: "2025-07-29.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
+  before: install
+  owner: root
+  group: root
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  owner: root
+  group: root
+  includePaths:
+  - usr/bin/env
+  - usr/bin/ls
+  - usr/bin/sleep
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: install
+  owner: root
+  group: root
+- image: tools/bash
+  before: install
+  add: /usr/bin/bash
+  owner: root
+  group: root
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  owner: root
+  group: root
+  includePaths:
+  - usr/bin/basename
+  - usr/bin/cat
+  - usr/bin/cp
+  - usr/bin/coreutils
+  - usr/bin/cut
+  - usr/bin/echo
+  - usr/bin/groups
+  - usr/bin/head
+  - usr/bin/ln
+  - usr/bin/mkdir
+  - usr/bin/mv
+  - usr/bin/od
+  - usr/bin/printf
+  - usr/bin/rm
+  - usr/bin/stat
+  - usr/bin/tail
+  - usr/bin/timeout
+  - usr/bin/true
+  - usr/bin/wc
+- image: tools/findutils
+  before: install
+  add: /usr/bin/find
+  owner: root
+  group: root
+- image: tools/gawk
+  before: install
+  add: /
+  to: /
+  owner: root
+  group: root
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+- image: tools/grep
+  before: install
+  add: /usr/bin/grep
+  owner: root
+  group: root
+- image: tools/sed
+  before: install
+  add: /usr/bin/sed
+  owner: root
+  group: root
+- image: tools/tar
+  before: install
+  add: /usr/bin/tar
+  owner: root
+  group: root
+- image: tools/util-linux
+  before: install
+  add: /usr/bin/nsenter
+  owner: root
+  group: root
+- image: tools/util-linux
+  before: install
+  add: /bin/mount
+  to: /usr/bin/mount
+  owner: root
+  group: root
+- image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+  before: install
+  add: /usr/sbin/ipset
+  to: /usr/sbin/ipset
+  owner: root
+  group: root
+- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+  before: install
+  add: /bin/
+  to: /usr/bin/
+  owner: root
+  group: root
+  includePaths:
+  - kmod
+  - lsmod
+- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+  before: install
+  add: /bin/
+  to: /usr/sbin/
+  owner: root
+  group: root
+  includePaths:
+  - depmod
+  - insmod
+  - lsmod
+  - modinfo
+  - modprobe
+  - rmmod
+- image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+  before: install
+  add: /sbin/
+  to: /usr/sbin/
+  owner: root
+  group: root
+  includePaths:
+  - dcb
+  - devlink
+  - ip
+  - rdma
+  - rtmon
+  - tc
+  - vdpa
+  - bridge
+  - genl
+  - lnstat
+  - nstat
+  - rtacct
+  - ss
+  - tipc
+  - ctstat
+  - rtstat
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
   before: install
 imageSpec:
   config:

@@ -34,8 +34,16 @@ image: {{ .ModuleName }}/golang-artifact
 fromImage: builder/golang-alpine
 final: false
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-zstd-dev
+from: dev-registry.deckhouse.io/base_images@sha256:14a97086e5d77537cc3a5252c7bc64206fc02f520530fc3b9430dbfd4317cb5b
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
+from: dev-registry.deckhouse.io/base_images@sha256:f69c711420769fd390569d1286ca7a6af9eb283ffc69ae244b1406344588398f
+final: false
+---
 image: {{ .ModuleName }}/base-cilium-dev
-fromImage: common/alt-p11-artifact
+fromImage: builder/alt
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -46,6 +54,39 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+- image: libs/zlib
+  add: /
+  to: /libs/zlib
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
+  add: /
+  to: /tools/elfutils
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
+- image: {{ .ModuleName }}/{{ .ImageName }}-zstd-dev
+  add: /
+  to: /libs/zstd
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -64,12 +105,12 @@ shell:
     iptables iptables-ipv6 iptables-nft \
     coreutils binutils git git-lfs zip unzip wget mount patch patchelf \
     make automake autoconf cmake ccache bison flex ninja-build pkg-config \
-    gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
+    gcc gcc-c++ \
     glibc glibc-devel glibc-devel-static \
     python python3 python3-module-pip python3-module-virtualenv \
     build-essential libtool \
     libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
-    libmnl-devel libnftnl-devel elfutils-devel zlib-devel
+    libmnl-devel libnftnl-devel
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
@@ -84,7 +125,7 @@ shell:
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
     libcxxabi-devel \
-    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+    gcc11 gcc11-c++
   - apt-get autoclean && apt-get clean
   install:
   # Install Go
