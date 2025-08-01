@@ -73,7 +73,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "nodeExporter") }}
         name: node-exporter
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "caps" (list "SYS_TIME" )) | nindent 8 }}
         args:
         - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
@@ -151,7 +151,7 @@ spec:
             {{- include "kubelet_eviction_thresholds_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4206"
