@@ -12,7 +12,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: vsphere-csi :: hooks :: handle_compatibility_flag ::", func() {
+var _ = Describe("Modules :: csi-vsphere :: hooks :: handle_compatibility_flag ::", func() {
 	const (
 		initValues = `
 global:
