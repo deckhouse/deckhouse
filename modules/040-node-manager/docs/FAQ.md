@@ -944,6 +944,10 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 
 #### Old Method
 
+{% alert level="warning" %}
+This Containerd configuration format is deprecated.
+{% endalert %}
+
 {% alert level="info" %}
 Used in Containerd V1 when Deckhouse is not managed by the Registry module ([Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}

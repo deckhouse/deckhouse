@@ -94,6 +94,10 @@ If such configurations exist:
 
 ## How to switch back to the previous Containerd V1 auth configuration?
 
+{% alert level="warning" %}
+This Containerd configuration format is deprecated.
+{% endalert %}
+
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
 - When switching to the legacy `Containerd V1` auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.

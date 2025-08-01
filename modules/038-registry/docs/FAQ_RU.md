@@ -95,6 +95,10 @@ tree /etc/containerd/registry.d
 
 ## Как переключиться на предыдущую конфигурацию авторизации Containerd V1?
 
+{% alert level="warning" %}
+Данный формат конфигурации Containerd является устаревшим (deprecated).
+{% endalert %}
+
 {% alert level="danger" %}
 - Переключение возможно только в режиме `Unmanaged`.
 - При переключении на старую конфигурацию авторизации `Containerd V1` пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
