@@ -96,6 +96,6 @@ shell:
     fi
   - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
-  - make EXTRA_CFLAGS="--static -I/usr/include" LDFLAGS="-Wl,--start-group /usr/lib/libzstd.a /usr/lib/libelf.a /usr/lib/libz.a -Wl,--end-group" -j "$(getconf _NPROCESSORS_ONLN)"
+  - make EXTRA_CFLAGS="--static -Wl,-u,ZSTD_createCCtx -Wl,-u,ZSTD_freeCCtx" LDFLAGS="/usr/lib/libzstd.a /usr/lib/libelf.a /usr/lib/libz.a" -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   - cp -a bpftool /usr/local/bin
