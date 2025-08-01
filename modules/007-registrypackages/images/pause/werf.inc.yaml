@@ -50,5 +50,5 @@ shell:
   - cd /tmp/pause
   - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
   - rm /pause.tar
-  - tar -cvf /pause ./
+  - tar -cvf /pause.tar ./
   - rm -rf /tmp/pause    
