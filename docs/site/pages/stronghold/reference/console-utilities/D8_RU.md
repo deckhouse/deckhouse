@@ -12,7 +12,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 В командной строке к утилите можно обратиться как `d8`. Все команды сгруппированы по функциям:
 
 {% alert level="info" %}
-Группы команд `d8 d` и `d8 mirror` недоступны для Community Edition (CE) и Basic Edition (BE).
+Группы команд `d8 dk` и `d8 mirror` недоступны для Community Edition (CE) и Basic Edition (BE).
 {% endalert %}
 
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
