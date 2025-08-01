@@ -14,3 +14,22 @@ To re-enable scanning for the `default` namespace, use the following command to 
 ```shell
 kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 ```
+
+## Where to view scan results
+
+In Grafana:
+
+- `Security/Trivy Image Vulnerability Overview` — a summary of vulnerabilities found in container images and cluster resources.
+- `Security/CIS Kubernetes Benchmark` — results of cluster compliance with the CIS Kubernetes Benchmark.
+
+In cluster resources:
+
+- Cluster-wide security reports:
+  - [`ClusterComplianceReport`](trivy-cr.html#clustercompliancereport)
+  - [`RbacAssessmentReport`](trivy-cr.html#rbacassessmentreport)
+
+- Resource-level security reports:
+  - [`VulnerabilityReport`](trivy-cr.html#vulnerabilityreport) — vulnerabilities found in container images;
+  - [`SbomReport`](trivy-cr.html#sbomreport) — software composition in container images (SBOM);
+  - [`ConfigAuditReport`](trivy-cr.html#configauditreport) — misconfiguration issues in Kubernetes objects;
+  - [`ExposedSecretReport`](trivy-cr.html#exposedsecretreport) — secrets exposed in containers.
