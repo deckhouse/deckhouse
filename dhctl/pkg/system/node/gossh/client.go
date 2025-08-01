@@ -82,6 +82,7 @@ func (s *Client) Start() error {
 	var agentClient agent.ExtendedAgent
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if socket != "" {
+		log.DebugLn("Dialing SSH agent unix socket...")
 		socketConn, err := net.Dial("unix", socket)
 		if err != nil {
 			return fmt.Errorf("Failed to open SSH_AUTH_SOCK: %v", err)
@@ -144,13 +145,14 @@ func (s *Client) Start() error {
 
 	AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
 
+	if socket != "" {
+		log.DebugF("Adding agent socket to auth methods\n")
+		AuthMethods = []ssh.AuthMethod{ssh.PublicKeysCallback(agentClient.Signers)}
+	}
+
 	if len(becomePass) > 0 {
 		log.DebugF("Initial password auth to master host\n")
 		AuthMethods = append(AuthMethods, ssh.Password(becomePass))
-	}
-
-	if socket != "" {
-		AuthMethods = append(AuthMethods, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
 	config := &ssh.ClientConfig{
