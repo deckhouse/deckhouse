@@ -63,7 +63,6 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.namespace
 ---
-{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -93,7 +92,6 @@ spec:
       app: registry-modules-watcher
   namespaceSelector:
     any: true
-{{- end }}
 ---
 apiVersion: v1
 kind: Secret
