@@ -33,9 +33,9 @@ func TestModuleNameFromErrorPathRegexp(t *testing.T) {
 func TestModuleNameFromErrorPathWithColorRegexp(t *testing.T) {
 	input := "error building site: assemble: \x1b[1;36m\"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\"\x1b[0m: EOF looking for end YAML front matter delimiter"
 
-	path, ok := getModuleNameFromErrorPath(input)
-	if !ok || path != "moduleName" {
-		t.Fatalf("unexpected module name %q", path)
+	moduleName, ok := getModuleNameFromErrorPath(input)
+	if !ok || moduleName != "moduleName" {
+		t.Fatalf("unexpected module name %q", moduleName)
 	}
 }
 
