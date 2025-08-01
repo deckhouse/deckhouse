@@ -8,11 +8,12 @@ Deckhouse Kubernetes Platform предоставляет возможность 
 
 ## Принцип работы
 
-Для каждого ресурса [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении подов.
+Для каждого ресурса [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении подов.
 
 При запросе диска подом происходит следующее:
-- Cоздаётся PersistentVolume с типом `HostPath`;
-- На нужном узле создается директория, путь к которой формируется из параметра `path`, имени PV и PVC.
+
+- создаётся PersistentVolume с типом `HostPath`;
+- на нужном узле создается директория, путь к которой формируется из параметра `path`, имени PV и PVC.
 
 Пример пути:
 
@@ -55,7 +56,7 @@ spec:
 
 ## Настройка Prometheus с использованием локального хранилища
 
-1. Примените ресурс [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/):
+1. Примените ресурс [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

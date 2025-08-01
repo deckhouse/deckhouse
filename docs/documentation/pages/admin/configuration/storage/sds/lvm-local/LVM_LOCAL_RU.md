@@ -4,298 +4,302 @@ permalink: ru/admin/configuration/storage/sds/lvm-local.html
 lang: ru
 ---
 
-Локальное хранилище снижает сетевые задержки и обеспечивает более высокую производительность по сравнению с удалёнными хранилищами, доступ к которым осуществляется по сети. Такой подход особенно эффективен в тестовых средах и EDGE-кластерах.
+Локальное хранилище снижает сетевые задержки и обеспечивает более высокую производительность по сравнению с удалёнными хранилищами, доступ к которым осуществляется по сети. Такой подход особенно эффективен в тестовых средах и EDGE-кластерах. Данная функциональность обеспечивается модулем `sds-local-volume`.
 
-## Включение модуля
+## Настройка локального хранилища
 
-Настройка локального блочного хранилища происходит на основе логического менеджера томов LVM (Logical Volume Manager). Управление LVM осуществляется модулем `sds-node-configurator`, который необходимо включить перед активацией модуля `sds-local-volume`.
+Для корректной работы модуля `sds-local-volume` выполните следующие шаги:
 
-Чтобы включить модуль, примените ресурс ModuleConfig:
+1. Настройте LVMVolumeGroup. Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
+1. Включите модуль `sds-node-configurator`. Убедитесь, что модуль включен **до** включения модуля `sds-local-volume`.
+1. Создайте соответствующие StorageClass'ы. Создание StorageClass для CSI-драйвера `local.csi.storage.deckhouse.io` пользователем **запрещено**.
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  enabled: true
-  version: 1
-EOF
-```
+Модуль поддерживает два режима работы: LVM и LVMThin.
 
-Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
+## Быстрый старт
 
-```shell
-d8 k get modules sds-node-configurator -w
-```
+Все команды выполняются на машине с доступом к API Kubernetes и правами администратора.
 
-В результате будет выведена информация о модуле `sds-node-configurator`:
+### Включение модулей
 
-```console
-NAME                    STAGE   SOURCE    PHASE       ENABLED    READY
-sds-node-configurator           Embedded  Available   True       True
-```
+Включение модуля `sds-node-configurator`:
 
-Затем, чтобы включить модуль `sds-local-volume` с настройками по умолчанию, выполните команду:
+1. Создайте ресурс ModuleConfig для включения модуля:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-local-volume
-spec:
-  enabled: true
-  version: 1
-EOF
-```
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-node-configurator
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-Это приведет к тому, что на всех узлах кластера будут запущены служебные поды компонентов `sds-local-volume`. Чтобы проверить состояние модуля, выполните следующую команду:
+1. Дождитесь состояния модуля `Ready`. На этом этапе не требуется проверять поды в пространстве имен `d8-sds-node-configurator`.
 
-```shell
-d8 k get modules sds-local-volume -w
-```
+   ```shell
+   d8 k get modules sds-node-configurator -w
+   ```
 
-В результате будет выведена информация о модуле `sds-local-volume`:
+Включение модуля `sds-local-volume`:
 
-```console
-NAME               STAGE   SOURCE    PHASE       ENABLED    READY
-sds-local-volume           Embedded  Available   True       True
-```
+1. Активируйте модуль `sds-local-volume`. Пример ниже запускает модуль с настройками по умолчанию, что приведет к созданию служебных подов компонента `sds-local-volume` на всех узлах кластера:
 
-Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM, используйте команды:
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-local-volume
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-```shell
-d8 k -n d8-sds-local-volume get pod -w
-d8 k -n d8-sds-node-configurator get pod -w
-```
+1. Дождитесь состояния модуля `Ready`.
 
-## Преднастройка узлов
+   ```shell
+   d8 k get modules sds-local-volume -w
+   ```
 
-### Создание групп томов LVM
+1. Убедитесь, что в пространствах имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды находятся в статусе `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM.
 
-Убедитесь, что на всех узлах, предназначенных для использования ресурсов LVM, запущены сервисные поды `sds-local-volume-csi-node`, обеспечивающие взаимодействие с узлами, содержащими компоненты LVM. Сделать это можно с помощью команды:
+   ```shell
+   d8 k -n d8-sds-local-volume get pod -owide -w
+   d8 k -n d8-sds-node-configurator get pod -o wide -w
+   ```
 
-```shell
-d8 k -n d8-sds-local-volume get pod -l app=sds-local-volume-csi-node -owide
-```
+### Подготовка узлов к созданию хранилищ
 
-Размещение данных подов по узлам определяется на основе специальных меток (`nodeSelector`), которые указываются в поле `spec.settings.dataNodes.nodeSelector` в настройках модуля.
+Для корректной работы хранилищ на узлах необходимо, чтобы поды `sds-local-volume-csi-node` были запущены на выбранных узлах.
 
-Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения ресурсов PersistentVolume.
-
-Чтобы получить доступные блочные устройства, используйте ресурс BlockDevices который отражает их актуальное состояние:
+По умолчанию эти поды запускаются на всех узлах кластера. Проверить их наличие можно с помощью команды:
 
 ```shell
-d8 k get bd
+d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-В результате будет выведен список доступных блочных устройств:
+Размещение подов `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
 
-```console
-NAME                                           NODE       CONSUMABLE   SIZE           PATH
-dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
-```
+### Настройка хранилища на узлах
 
-В примере выше на трёх узлах доступно шесть блочных устройств. Для того чтобы использовать эти устройства для создания хранилища, их необходимо объединить в группы томов LVM. Таким образом можно управлять несколькими устройствами как единым хранилищем на каждом узле. Для этого нужно создать ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), который определяет состав группы томов LVM на конкретном узле.
-
-Для создания ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LVMVolumeGroup
-metadata:
-  name: "vg-on-worker-0"
-spec:
-  type: Local
-  local:
-    # Замените на имя своего узла, для которого создаете группу томов. 
-    nodeName: "worker-0"
-  blockDeviceSelector:
-    matchExpressions:
-      - key: kubernetes.io/metadata.name
-        operator: In
-        values:
-          # Замените на имена своих блочных устройств узла, для которого создаете группу томов. 
-          - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
-          - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
-  # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
-  actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возможность создавать thin-хранилища, детали будут раскрыты далее.
-  # thinPools:
-  #   - name: thin-pool-0
-  #     size: 70% 
-EOF
-```
-
-Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
-
-```shell
-d8 k get lvg vg-on-worker-0 -w
-```
-
-В результате будет выведена информация о состоянии ресурса:
-
-```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-```
-
-Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
-
-Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker‑1 и worker‑2). Для этого:
-- Измените в примере выше имя ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих выбранному узлу.
-- Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
-
-  ```shell
-  d8 k get lvg -w
-  ```
-
-  В результате будет выведен список созданных групп томов:
-
-  ```console
-  NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-  vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-  vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-  vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
-  ```
-
-### Создание StorageClass с типом thick
-
-Создание объектов StorageClass осуществляется через ресурс [LocalStorageClass](../../../reference/cr/localstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [LocalStorageClass](../../../reference/cr/localstorageclass/) может привести к ошибкам.
-
-При создании [LocalStorageClass](../../../reference/cr/localstorageclass/) важно выбрать тип хранения, который может иметь значение thick, либо thin.
-
-Thick-пул обеспечивает высокую производительность, сопоставимую с производительностью накопителя, но не поддерживает создание снапшотов.
-
-Пример создания ресурса [LocalStorageClass](../../../reference/cr/localstorageclass/) с типом thick:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LocalStorageClass
-metadata:
-  name: local-storage-class-thick
-spec:
-  lvm:
-    lvmVolumeGroups:
-      - name: vg-on-worker-0
-      - name: vg-on-worker-1
-      - name: vg-on-worker-2
-    type: Thick
-  reclaimPolicy: Delete
-  volumeBindingMode: WaitForFirstConsumer
-EOF
-```
-
-Проверьте, что созданный [LocalStorageClass](../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
-
-```shell
-d8 k get lsc local-storage-class -w
-```
-
-В результате будет выведена информация о созданном [LocalStorageClass](../../../reference/cr/localstorageclass/):
-
-```console
-NAME                        PHASE     AGE
-local-storage-class-thick   Created   1h
-```
-
-Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
-
-```shell
-d8 k get sc local-storage-class
-```
-
-В результате будет выведена информация о созданном StorageClass:
-
-```console
-NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
-```
-
-### Создание StorageClass с типом thin
-
-В отличие от thick-пула, thin-пул позволяет использовать снапшоты и overprovisioning (сверхвыделение ресурсов), но имеет меньшую производительность.
+Для настройки хранилища на узлах необходимо создать группы томов LVM с использованием ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). В данном примере создается хранилище Thick.
 
 {% alert level="warning" %}
-Overprovisioning следует использовать с осторожностью, контролируя доступное пространство в пуле. В системе мониторинга кластера предусмотрены события при снижении свободного места до 20%, 10%, 5% и 1%. Полное заполнение пула может привести к деградации работы модуля и риску потери данных.
+Перед созданием ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) убедитесь, что на данном узле запущен под `sds-local-volume-csi-node`. Это можно сделать командой:
+
+```shell
+d8 k -n d8-sds-local-volume get pod -owide
+```
+
 {% endalert %}
 
-Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick-хранилищ. Если вам важно иметь возможность создавать хранилища с типом thin, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
+1. Получите все ресурсы [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice), которые доступны в вашем кластере:
 
-```yaml
-d8 k patch lvg vg-on-worker-0 --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/thinPools",
-    "value": [
-      {
-        "name": "thin-pool-0",
-        "size": "70%"
-      }
-    ]
-  }
-]'
-```
+   ```shell
+   d8 k get bd
+   ```
 
-В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-хранилищ. Оставшиеся 30% могут быть использованы для thick-хранилищ.
+   Пример вывода:
 
-Повторите добавление thin-пулов для оставшихся узлов (worker-1 и worker-2). Пример создания ресурса [LocalStorageClass](../../../reference/cr/localstorageclass/) с типом thin:
+   ```console
+   NAME                                           NODE       CONSUMABLE   SIZE           PATH
+   dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+   dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+   dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+   dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+   dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+   dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+   ```
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LocalStorageClass
-metadata:
-  name: local-storage-class-thin
-spec:
-  lvm:
-    lvmVolumeGroups:
-      - name: vg-on-worker-0
-        thin:
-          - name: thin-pool-0
-      - name: vg-on-worker-1
-        thin:
-          - name: thin-pool-0
-      - name: vg-on-worker-2
-        thin:
-          - name: thin-pool-0
-    type: Thin
-  reclaimPolicy: Delete
-  volumeBindingMode: WaitForFirstConsumer
-EOF
-```
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-0`:
 
-Проверьте, что созданный [LocalStorageClass](../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-0" # Подходит любое допустимое имя ресурса в Kubernetes. Это имя ресурса LVMVolumeGroup будет использоваться для создания LocalStorageClass в будущем.
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-0"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
+             - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
+     actualVGNameOnTheNode: "vg-1" # Имя LVM VG, который будет создан из указанных блочных устройств на узле.
+   EOF
+   ```
 
-```shell
-d8 k get lsc local-storage-class -w
-```
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
-В результате будет выведена информация о созданном [LocalStorageClass](../../../reference/cr/localstorageclass/):
+   ```shell
+   d8 k get lvg vg-1-on-worker-0 -w
+   ```
 
-```console
-NAME                       PHASE     AGE
-local-storage-class-thin   Created   1h
-```
+   Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-1`:
 
-```shell
-d8 k get sc local-storage-class
-```
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-1"
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-1"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0
+             - dev-b103062f879a2349a9c5f054e0366594568de68d
+     actualVGNameOnTheNode: "vg-1"
+   EOF
+   ```
 
-В результате будет выведена информация о созданном StorageClass:
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
-```console
-NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
-```
+   ```shell
+   d8 k get lvg vg-1-on-worker-1 -w
+   ```
+
+   Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-1` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
+
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-2`:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-2"
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-2"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-53d904f18b912187ac82de29af06a34d9ae23199
+             - dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1
+     actualVGNameOnTheNode: "vg-1"
+   EOF
+   ```
+
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
+
+   ```shell
+   d8 k get lvg vg-1-on-worker-2 -w
+   ```
+
+   Если ресурс перешел в состояние `Ready`, то это значит, что на узле `worker-2` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
+
+1. Создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass):
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LocalStorageClass
+   metadata:
+     name: local-storage-class
+   spec:
+     lvm:
+       lvmVolumeGroups:
+         - name: vg-1-on-worker-0
+         - name: vg-1-on-worker-1
+         - name: vg-1-on-worker-2
+       type: Thick
+     reclaimPolicy: Delete
+     volumeBindingMode: WaitForFirstConsumer
+   EOF
+   ```
+
+   Для thin volume:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LocalStorageClass
+   metadata:
+     name: local-storage-class
+   spec:
+     lvm:
+       lvmVolumeGroups:
+        - name: vg-1-on-worker-0
+        - name: vg-1-on-worker-1
+        - name: vg-1-on-worker-2
+           thin:
+             poolName: thin-1
+       type: Thin
+     reclaimPolicy: Delete
+     volumeBindingMode: WaitForFirstConsumer
+   EOF
+   ```
+
+   > **Важно.** В [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
+
+1. Дождитесь, когда созданный ресурс LocalStorageClass перейдет в состояние `Created`:
+
+   ```shell
+   d8 k get lsc local-storage-class -w
+   ```
+
+1. Проверьте, что был создан соответствующий StorageClass:
+
+   ```shell
+   d8 k get sc local-storage-class
+   ```
+
+Если StorageClass с именем `local-storage-class` появился, значит настройка модуля `sds-local-volume` завершена. Теперь пользователи могут создавать PVC, указывая StorageClass с именем `local-storage-class`.
+
+### Выбор метода очистки тома после удаления PV
+
+При удалении файлов операционная система не удаляет содержимое физически, а лишь помечает соответствующие блоки как «свободные». Если новый том получает физические блоки, ранее использовавшиеся другим томом, в них могут остаться данные предыдущего пользователя.
+
+Это возможно, например, в таком случае:
+
+- пользователь №1 разместил файлы в томе, запрошенном из StorageClass 1 и на узле 1 (неважно, в режиме «Block» или «Filesystem»);
+- пользователь №1 удалил файлы и том;
+- физические блоки, которые он занимал, становятся «свободными», но не затертыми;
+- пользователь №2 запросил новый том из StorageClass 1 и на узле 1 в режиме «Block»;
+- есть риск, что часть или все блоки, ранее занимаемые пользователем №1, будут снова выделены пользователю №2;
+- в этом случае пользователь №2 имеет возможность восстановить данные пользователя №1.
+
+### Thick-тома
+
+Для предотвращения утечек через thick-тома предусмотрен параметр `volumeCleanup`. Он позволяет выбрать метод очистки тома перед удалением PV.
+
+Возможные значения:
+
+- Параметр не задан — не выполнять никаких дополнительных действий при удалении тома. Данные могут оказаться доступными следующему пользователю;
+- `RandomFillSinglePass` — том будет перезаписан случайными данными один раз перед удалением. Использовать эту опцию не рекомендуется для твердотельных накопителей, так как она уменьшает ресурс накопителя;
+- `RandomFillThreePass` — том будет перезаписан случайными данными три раза перед удалением. Использовать эту опцию не рекомендуется для твердотельных накопителей, так как она уменьшает ресурс накопителя;
+- `Discard` — все блоки тома будут отмечены как свободные с использованием системного вызова `discard` перед удалением. Эта опция имеет смысл только для твердотельных накопителей.
+
+  Большинство современных твердотельных накопителей гарантирует, что помеченный `discard` блок при чтении не вернет предыдущие данные. Это делает опцию `Discard` самым эффективным способом предотвращения утечек при использовании твердотельных накопителей.
+
+  Однако очистка ячейки — относительно долгая операция, поэтому выполняется устройством в фоне. К тому же, многие диски не могут очищать индивидуальные ячейки, а только группы (страницы). Из-за этого не все накопители гарантируют немедленную недоступность освобожденных данных. Кроме того, не все накопители, гарантирующие это, держат обещание. Если устройство не гарантирует Deterministic TRIM (DRAT), Deterministic Read Zero after TRIM (RZAT) и не является проверенным, то использовать его не рекомендуется.
+
+### Thin-тома
+
+В момент освобождения блока thin-тома через `discard` гостевой операционной системы эта команда пересылается на устройство. В случае использования жесткого диска или при отсутствии поддержки `discard` со стороны твердотельного накопителя данные могут остаться на thin pool до нового использования такого блока. Однако, пользователям предоставляется доступ только к thin-томам, а не к самому thin pool. Они могут получить только том из пула, а для thin-томов производится обнуление блока thin pool при новом использовании, что предотвращает утечки между клиентами. Это гарантируется настройкой `thin_pool_zero=1` в LVM.
+
+## Системные требования и рекомендации
+
+- Используйте стоковые ядра, поставляемые вместе с [поддерживаемыми дистрибутивами](https://deckhouse.ru/documentation/v1/supported_versions.html#linux).
+- Не используйте другой SDS (Software defined storage) для предоставления дисков SDS Deckhouse.

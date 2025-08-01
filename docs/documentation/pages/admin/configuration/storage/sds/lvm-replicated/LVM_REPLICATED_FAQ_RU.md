@@ -11,7 +11,7 @@ lang: ru
 ## Системные требования
 
 {% alert level="info" %}
-Применительно как к однозональным кластерам, так и к кластерам с использованием нескольких зон доступности.
+Применимо как к однозональным кластерам, так и к кластерам с использованием нескольких зон доступности.
 {% endalert %}
 
 - Используйте стоковые ядра, поставляемые вместе с поддерживаемыми дистрибутивами.
@@ -27,7 +27,7 @@ lang: ru
 
 ## Получение информации об использовании пространства
 
-Доступно два способа:
+Доступно два способа получения информации:
 
 1. Через дашборд Grafana:
 
@@ -45,9 +45,9 @@ lang: ru
 
 ## Назначение StorageClass по умолчанию
 
-Для назначения StorageClass по умолчанию необходимо в пользовательском ресурсе [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) в поле `spec.isDefault` указать значение `true`.
+Для назначения StorageClass по умолчанию необходимо в кастомном ресурсе [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) в поле `spec.isDefault` указать значение `true`.
 
-## Добавление существующей LVMVolumeGroup или LVMThin‑пула
+## Добавление существующей LVMVolumeGroup
 
 1. Присвойте Volume Group LVM-тег `storage.deckhouse.io/enabled=true`:
 
@@ -55,13 +55,13 @@ lang: ru
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/).
+   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
-1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) в поле `spec.lvmVolumeGroups[].name` Если используется LVMThin‑пул, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
+1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) в поле `spec.lvmVolumeGroups[].name`. Если используется пул LVMThin, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
 
 ## Изменение ограничений DRBD‑томов и портов кластера
 
-Портовой диапазон по умолчанию для DRBD-ресурсов — TCP 7000–7999. Переопределить его можно с помощью настройки `drbdPortRange`, указав нужные значения `minPort` и `maxPort`.
+Портовой диапазон по умолчанию для DRBD-ресурсов — TCP `7000`–`7999`. Переопределить его можно с помощью настройки `drbdPortRange`, указав нужные значения `minPort` и `maxPort`.
 
 {% alert level="warning" %}
 После изменения параметров `drbdPortRange` перезапустите контроллер LINSTOR, чтобы новые настройки вступили в силу. При этом существующие DRBD-ресурсы сохранят назначенные им порты.
@@ -70,7 +70,7 @@ lang: ru
 ## Корректная перезагрузка узла с DRBD‑ресурсами
 
 {% alert level="info" %}
-Чтобы обеспечить стабильную работу модуля, избегайте перезагрузки нескольких узлов одновременно:
+Чтобы обеспечить стабильную работу модуля, не перезагружайте несколько узлов одновременно.
 {% endalert %}
 
 1. Выполните drain нужного узла:
@@ -85,7 +85,9 @@ lang: ru
    d8 k -n d8-sds-replicated-volume exec -t deploy/linstor-controller -- linstor r l --faulty
    ```
 
-   Если ресурсы в состоянии SyncTarget присутствуют — дождитесь завершения синхронизации или выполните корректирующие действия. Пример вывода:
+   Если ресурсы в состоянии `SyncTarget` присутствуют, дождитесь завершения синхронизации или выполните корректирующие действия.
+
+   Пример вывода:
 
    ```console
    Defaulted container "linstor-controller" out of: linstor-controller, kube-rbac-proxy
@@ -102,7 +104,7 @@ lang: ru
    node/test-node-1 uncordoned
    ```
 
-При необходимости перезагрузки еще одного узла — повторите алгоритм.
+При необходимости перезагрузки еще одного узла повторите алгоритм.
 
 ## Перемещение ресурсов для освобождения места в Storage Pool
 
@@ -142,12 +144,42 @@ lang: ru
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
    ```
 
+## Автоматизированное управление репликами и мониторинг состояния LINSTOR
+
+Управление репликами и мониторинг состояния автоматизированы в скрипте `replicas_manager.sh`.
+Он проверяет доступность контроллера LINSTOR, выявляет неисправные или поврежденные ресурсы, создает резервные копии базы данных и управляет дисковыми репликами, включая настройку `TieBreaker` для кворума.
+
+Чтобы проверить существование скрипта `replicas_manager.sh`, выполните команду на любом из master-узлов:
+
+   ```shell
+   ls -l /opt/deckhouse/sbin/replicas_manager.sh
+   ```
+
+После запуска скрипт выполняет следующие действия:
+
+- проверяет доступность контроллера и соединение с сателлитами;
+- выявляет неисправные или поврежденные ресурсы;
+- создает резервную копию базы данных;
+- управляет количеством дисковых реплик, добавляя новые при необходимости;
+- настраивает TieBreaker для ресурсов с двумя репликами;
+- логирует все действия в файл `linstor_replicas_manager_<дата_и_время>.log`;
+- предоставляет рекомендации по устранению проблем, таких как застрявшие реплики.
+
+Переменные для настройки `replicas_manager.sh`:
+
+- `NON_INTERACTIVE` — включает неинтерактивный режим;
+- `TIMEOUT_SEC` — таймаут между попытками, в секундах (по умолчанию: 10);
+- `EXCLUDED_RESOURCES_FROM_CHECK` — регулярное выражение для исключения ресурсов из проверок;
+- `CHUNK_SIZE` — размер чанка для обработки ресурсов (по умолчанию: 10);
+- `NODE_FOR_EVICT` — имя узла, исключаемого из создания реплик;
+- `LINSTOR_NAMESPACE` — пространство имен Kubernetes (по умолчанию: `d8-sds-replicated-volume`);
+- `DISKLESS_STORAGE_POOL` — пул для diskless-реплик (по умолчанию: `DfltDisklessStorPool`).
+
 ## Вытеснение DRBD‑ресурсов с узла
 
-Вытеснение DRBD-ресурсов с узла выполняется скриптом `evict.sh`. Он может работать в двух режимах:
+Вытеснение DRBD-ресурсов с узла выполняется скриптом `evict.sh`. Он может работать в одном из двух режимов:
 
 - Удаление узла — создаются дополнительные реплики для каждого ресурса, после чего узел удаляется из LINSTOR и Kubernetes.
-
 - Удаление ресурсов — создаются реплики для ресурсов, затем сами ресурсы удаляются из LINSTOR (узел остаётся в кластере).
 
 ### Подготовка и запуск скрипта
@@ -219,21 +251,21 @@ alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controll
 linstor node list -s AutoplaceTarget
 ```
 
-### Параметры скрипта `evict.sh`
+### Параметры скрипта evict.sh
 
-- `--delete-node` — удаление узла из LINSTOR и Kubernetes с предварительным созданием дополнительных реплик для всех ресурсов, размещенных на узле;
-- `--delete-resources-only` — удаление ресурсов с узла без удаления узла из LINSTOR и Kubernetes с предварительным созданием дополнительных реплик для всех ресурсов, размещенных на узле;
-- `--non-interactive` — запуск скрипта в неинтерактивном режиме;
-- `--node-name` — имя узла, с которого необходимо вытеснить ресурсы. Параметр обязателен для использования в режиме `--non-interactive`;
-- `--skip-db-backup` — пропустить создание резервной копии БД LINSTOR перед выполнением операций;
-- `--ignore-advise` — выполнить операции, несмотря на предупреждения команды `linstor advise resource`;
-- `--exclude-resources-from-check` — исключить из проверки ресурсы, перечисленные через символ `|`;
+- `--delete-node` — удаление узла из LINSTOR и Kubernetes с предварительным созданием дополнительных реплик для всех ресурсов, размещенных на узле.
+- `--delete-resources-only` — удаление ресурсов с узла без удаления узла из LINSTOR и Kubernetes с предварительным созданием дополнительных реплик для всех ресурсов, размещенных на узле.
+- `--non-interactive` — запуск скрипта в неинтерактивном режиме.
+- `--node-name` — имя узла, с которого необходимо вытеснить ресурсы. Параметр обязателен для использования в режиме `--non-interactive`.
+- `--skip-db-backup` — пропустить создание резервной копии БД LINSTOR перед выполнением операций.
+- `--ignore-advise` — выполнить операции, несмотря на предупреждения команды `linstor advise resource`. Следует использовать, если скрипт был прерван и количество реплик у части ресурсов не соответствует указанному в `ReplicatedStorageClass`.
+- `--exclude-resources-from-check` — исключить из проверки ресурсы, перечисленные через символ `|`.
 
 ## Диагностика проблем
 
 Проблемы могут возникнуть на разных уровнях работы компонентов. Ниже приведена шпаргалка для диагностики неисправностей томов в LINSTOR.
 
-![шпаргалка](../../../images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
+![Диагностика неисправностей томов в LINSTOR](../../../../images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
 
 ### Ошибка запуска linstor-node при загрузке DRBD‑модуля
@@ -253,13 +285,13 @@ linstor node list -s AutoplaceTarget
 
 Наиболее вероятные причины:
 
-- Загружена версия DRBDv8 вместо требуемой DRBDv9. Проверьте версию (если файл /proc/drbd отсутствует, модуль не загружен):
+- Загружена версия DRBDv8 вместо требуемой DRBDv9. Проверьте версию:
   
   ```shell
   cat /proc/drbd
   ```
   
-  Если файл отсутствует, значит модуль не загружен и проблема не в этом.
+  Если файл `/proc/drbd` отсутствует, значит модуль не загружен и проблема не в этом.
 
 - Включён Secure Boot. Поскольку DRBD компилируется динамически (аналог dkms) без цифровой подписи, модуль не поддерживается при включённом Secure Boot.
 
@@ -267,7 +299,7 @@ linstor node list -s AutoplaceTarget
 
 #### При зависании пода на стадии ContainerCreating
 
-Если под завис на стадии `ContainerCreating`, а в выводе команды `d8 k describe pod` присутствуют ошибки вроде той, что представлена ниже, значит устройство смонтировано на одном из других узлов:
+Если под завис на стадии `ContainerCreating`, а в выводе команды `d8 k describe pod` присутствуют ошибки аналогичные той, что представлена ниже, значит устройство смонтировано на одном из других узлов:
 
 ```console
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
@@ -281,7 +313,7 @@ alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controll
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
-Флаг `InUse` покажет, на каком узле используется устройство; на этом узле потребуется вручную отмонтировать диск.
+Флаг `InUse` покажет, на каком узле используется устройство. На этом узле потребуется вручную отмонтировать диск.
 
 #### Ошибки Input/output error
 
@@ -291,11 +323,11 @@ linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 dmesg | grep 'Remote failed to finish a request within'
 ```
 
-Если вывод содержит сообщения вида *Remote failed to finish a request within …*, возможно, дисковая подсистема недостаточно быстрая для корректной работы DRBD.
+Если вывод содержит сообщения вида `Remote failed to finish a request within …`, возможно, скорость дисковой подсистемы недостаточна для корректной работы DRBD.
 
 ## После удаления ресурса ReplicatedStoragePool остаётся соответствующий ему Storage Pool
 
-Это ожидаемое поведение. Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/).
+Это ожидаемое поведение. Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
 
 ## Ограничения на изменение spec ReplicatedStorageClass
 
@@ -307,7 +339,7 @@ dmesg | grep 'Remote failed to finish a request within'
 
 ## Ошибки при создании Storage Pool или StorageClass
 
-При временных внешних проблемах (например, недоступность kube-apiserver) модуль автоматически повторит выполнение неудачной операции.
+При временных внешних проблемах (например, при недоступности `kube-apiserver`) модуль автоматически повторит выполнение неудачной операции.
 
 ## Ошибка "You're not allowed to change state of linstor cluster manually"
 
@@ -324,14 +356,14 @@ linstor --help
 
 Пример корректно сформированной резервной копии выглядит следующим образом:
 
-```shell
+```console
 linstor-20240425074718-backup-0              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
 linstor-20240425074718-backup-1              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
 linstor-20240425074718-backup-2              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
 linstor-20240425074718-backup-completed      Opaque                           0      28s     <none>
 ```
 
-Резервная копия хранится закодированными сегментами в секретах вида `linstor-%date_time%-backup-{0..2}`, секрет вида `linstor-%date_time%-backup-completed` не содержит данных, и служит маркером корректно отработавшего процесса резервного копирования.
+Резервная копия хранится закодированными сегментами в секретах вида `linstor-%date_time%-backup-{0..2}`. Секрет вида `linstor-%date_time%-backup-completed` не содержит данных, и служит маркером корректно отработавшего процесса резервного копирования.
 
 ### Процесс восстановления резервной копии
 
@@ -373,7 +405,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    linstor-20240425074718-backup-completed      Opaque                           0      10m     <none>
    ```
 
-1. Каждая резервная копия имеет свою метку с временем создания. Выберите нужную и скопируйте метку в переменную окружения. В качестве примера используем метку самой актуальной копии из вывода выше:
+1. Каждая резервная копия имеет свой лейбл с временем создания. Выберите нужный и скопируйте лейбл в переменную окружения. В качестве примера используется лейбл самой актуальной копии из вывода выше:
 
    ```shell
    LABEL_SELECTOR="sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718"
@@ -393,7 +425,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    > "$COMBINED"
    ```
 
-1. Получите список секретов по метке, дешифруйте данные и поместите данные резервной копии в архив:
+1. Получите список секретов по лейблу, дешифруйте данные и поместите данные резервной копии в архив:
 
    ```shell
    MOBJECTS=$(d8 k get rsmb -l "$LABEL_SELECTOR" --sort-by=.metadata.name -o jsonpath="{.items[*].metadata.name}")
@@ -445,9 +477,9 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ## Отсутствие служебных подов sds-replicated-volume на выбранном узле
 
-С высокой вероятностью проблемы связаны с метками на узлах.
+С высокой вероятностью проблемы связаны с лейблами на узлах.
 
-- Проверьте [dataNodes.nodeSelector](./configuration.html#parameters-datanodes-nodeselector) в настройках модуля:
+- Проверьте [`dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля:
 
   ```shell
   d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -459,17 +491,17 @@ linstor-20240425074718-backup-completed      Opaque                           0 
   d8 k -n d8-sds-replicated-volume get secret d8-sds-replicated-volume-controller-config  -o jsonpath='{.data.config}' | base64 --decode
   ```
 
-- В секрете `d8-sds-replicated-volume-controller-config` должны быть селекторы, которые указаны в настройках модуля, а так же дополнительно селектор `kubernetes.io/os: linux`.
+- В секрете `d8-sds-replicated-volume-controller-config` должны быть селекторы, которые указаны в настройках модуля, а также дополнительно селектор `kubernetes.io/os: linux`.
 
-- Проверьте, что на нужном узле есть все указанные в секрете `d8-sds-replicated-volume-controller-config` метки:
+- Проверьте, что на нужном узле есть все указанные в секрете `d8-sds-replicated-volume-controller-config` лейблы:
 
   ```shell
   d8 k get node worker-0 --show-labels
   ```
 
-- Если меток нет, то необходимо добавить метки через шаблоны в NodeGroup или на узел.
+- Если лейблов нет, их необходимо добавить через шаблоны в NodeGroup или на узел.
 
-- Если метки есть, то необходимо проверить, есть ли на нужном узле метка `storage.deckhouse.io/sds-replicated-volume-node=`. Если метки нет, то необходимо проверить, запущен ли `sds-replicated-volume-controller` и если запущен, то проверить его логи:
+- Если лейблы есть, необходимо проверить, есть ли на нужном узле лейбл `storage.deckhouse.io/sds-replicated-volume-node=`. Если его нет, проверьте, запущен ли `sds-replicated-volume-controller` и если запущен, то проверьте его логи:
 
   ```shell
   d8 k -n d8-sds-replicated-volume get po -l app=sds-replicated-volume-controller
@@ -478,14 +510,14 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ## Дополнительная поддержка
 
-Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) и [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
+Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
 
 ## Миграция с модуля linstor на sds-replicated-volume
 
 При миграции временно недоступны control plane LINSTOR и его CSI, что может повлиять на операции с PV (создание, расширение или удаление).
 
 {% alert level="warning" %}
-Миграция не затрагивает пользовательские данные, поскольку происходит перенос в новое пространство имён с добавлением компонентов для управления томами.
+Миграция не затрагивает пользовательские данные, поскольку происходит перенос в новое пространство имён с добавлением компонентов управления томами.
 {% endalert %}
 
 ### Порядок действий для миграции
@@ -513,7 +545,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 1. Создайте ресурс ModuleConfig для `sds-node-configurator`:
 
-   ```yaml
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
@@ -535,7 +567,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `linstor`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
@@ -577,30 +609,30 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ### Миграция на ReplicatedStorageClass
 
-StorageClass в данном модуле управляются через ресурс `ReplicatedStorageClass`. Вручную StorageClass создаваться не должны.
+StorageClass в данном модуле управляются через ресурс ReplicatedStorageClass. Вручную StorageClass создаваться не должны.
 
-При миграции с модуля LINSTOR удалите старые StorageClass и создайте новые через ресурс `ReplicatedStorageClass` в соответствии с таблицей, представленной ниже.
+При миграции с модуля LINSTOR удалите старые StorageClass и создайте новые через ресурс ReplicatedStorageClass в соответствии с таблицей, представленной ниже.
 
-Обратите внимание, что в старых StorageClass нужно смотреть опцию из секции `parameter` самого StorageClass, а указывать соответствующую опцию при создании нового необходимо в `ReplicatedStorageClass`.
+Обратите внимание, что в старых StorageClass нужно смотреть опцию из секции `parameter` самого StorageClass, а указывать соответствующую опцию при создании нового необходимо в ReplicatedStorageClass.
 
-| параметр StorageClass                     | ReplicatedStorageClass      | Параметр по умолчанию | Примечания                                                     |
+| Параметр StorageClass                     | ReplicatedStorageClass      | Параметр по умолчанию | Примечания                                                     |
 |-------------------------------------------|-----------------------|-|----------------------------------------------------------------|
 | linstor.csi.linbit.com/placementCount: "1" | replication: "None"   | | Будет создаваться одна реплика тома с данными                  |
-| linstor.csi.linbit.com/placementCount: "2" | replication: "Availability" | | Будет создаваться две реплики тома с данными.                  |
-| linstor.csi.linbit.com/placementCount: "3" | replication: "ConsistencyAndAvailability" | да | Будет создаваться три реплики тома с данными                   |
+| linstor.csi.linbit.com/placementCount: "2" | replication: "Availability" | | Будут создаваться две реплики тома с данными                  |
+| linstor.csi.linbit.com/placementCount: "3" | replication: "ConsistencyAndAvailability" | Да | Будут создаваться три реплики тома с данными                   |
 | linstor.csi.linbit.com/storagePool: "name" | storagePool: "name"   | | Название используемого storage pool для хранения               |
 | linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" | | Запрещен удаленный доступ пода к томам с данными (только локальный доступ к диску в пределах узла) |
 
 Дополнительно можно задавать параметры:
 
-- `reclaimPolicy` (Delete, Retain) — соответствует параметру `reclaimPolicy` у старого StorageClass.
-- `zones` — перечисление зон, которые нужно использовать для размещения ресурсов (прямое указание названия зон в облаке). Обратите внимание, что удаленный доступ пода к тому с данными возможен только в пределах одной зоны.
-- `volumeAccess` может принимать значения `Local` (доступ строго в пределах узла), `EventuallyLocal` (реплика данных будет синхронизироваться на узле с запущенным подом спустя некоторое время после запуска), `PreferablyLocal` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: WaitForFirstConsumer`), `Any` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: Immediate`).
-- При необходимости использовать `volumeBindingMode: Immediate`, нужно выставлять параметр ReplicatedStorageClass volumeAccess равным `Any`.
+- `reclaimPolicy` (Delete, Retain) — соответствует параметру `reclaimPolicy` у старого StorageClass;
+- `zones` — перечисление зон, которые нужно использовать для размещения ресурсов (прямое указание названия зон в облаке). Обратите внимание, что удаленный доступ пода к тому с данными возможен только в пределах одной зоны;
+- `volumeAccess` может принимать значения `Local` (доступ строго в пределах узла), `EventuallyLocal` (реплика данных будет синхронизироваться на узле с запущенным подом спустя некоторое время после запуска), `PreferablyLocal` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: WaitForFirstConsumer`), `Any` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: Immediate`);
+- при необходимости использовать `volumeBindingMode: Immediate` нужно выставлять параметр ReplicatedStorageClass `volumeAccess` равным `Any`.
 
 ### Миграция на ReplicatedStoragePool
 
-Ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) предназначен для создания `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
+Ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) предназначен для создания `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
 
 ## Миграция с модуля sds-drbd на sds-replicated-volume
 
@@ -637,7 +669,7 @@ StorageClass в данном модуле управляются через ре
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `sds-drbd`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
@@ -676,18 +708,55 @@ StorageClass в данном модуле управляются через ре
 
 Если неисправные ресурсы не обнаружены, значит миграция была успешной.
 
-> **Внимание.** Ресурсы DRBDStoragePool и DRBDStorageClass в процессе будут автоматически мигрированы на ReplicatedStoragePool и ReplicatedStorageClass, вмешательства пользователя для этого не требуется.
+> **Внимание.** Ресурсы DRBDStoragePool и DRBDStorageClass в процессе будут автоматически мигрированы на ReplicatedStoragePool и ReplicatedStorageClass. Ручное вмешательство при этом не требуется.
 
-Логика работы этих ресурсов не изменится. Однако, стоит проверить, не осталось ли в кластере ресурсов DRBDStoragePool или DRBDStorageClass, если после миграции они существуют — сообщите, пожалуйста, в нашу техническую поддержку.
+Логика работы этих ресурсов не изменится. Однако, стоит проверить, не осталось ли в кластере ресурсов DRBDStoragePool или DRBDStorageClass. Если после миграции они существуют, обратитесь [в техническую поддержку Deckhouse](https://deckhouse.ru/tech-support/).
 
 ## Причины отказа от RAID с sds-replicated-volume
 
 Использование DRBD с более чем одной репликой уже обеспечивает функциональность сетевого RAID. Применение RAID локально может привести к следующим проблемам:
 
-- В несколько раз увеличивает дополнительное потребление используемого пространства в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 Гб данных потребуется суммарно 6 Гб места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
+- В несколько раз увеличивает дополнительное потребление используемого пространства в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 ГБ данных потребуется суммарно 6 ГБ места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
 
 - В случае RAID0 прирост производительности будет незаметен, т. к. репликация данных будет осуществляться по сети и узким местом с высокой вероятностью будет именно сеть. Кроме того, уменьшение надежности хранилища на хосте потенциально будет приводить к недоступности данных, тк в DRBD переключение со сломавшейся реплики на здоровую происходит не мгновенно.
 
 ## Рекомендации по использованию локальных дисков
 
 DRBD использует сеть для репликации данных. При использовании NAS нагрузка на сеть будет расти кратно, так как узлы будут синхронизировать данные не только с NAS, но и между собой. Аналогично будет расти задержка на чтение или запись. NAS обычно предполагает использование RAID на своей стороны, что также увеличивает дополнительную нагрузку.
+
+## Ручной запуск процесса перевыпуска сертификатов
+
+Несмотря на то, что процесс перевыпуска сертификатов автоматизирован, ручной перевыпуск всё ещё может понадобиться, так как его можно произвести в удобное временное окно, когда допустимо перезапустить объекты модуля. Автоматизированный перевыпуск не перезапускает объекты.
+
+Чтобы вручную инициировать процесс продления сертификатов, создайте `ConfigMap` с именем `manualcertrenewal-trigger`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manualcertrenewal-trigger
+  namespace: d8-sds-replicated-volume
+```
+
+Система остановит все необходимые объекты модуля, обновит сертификаты и затем снова их запустит.
+
+Статус операции можно определить с помощью команды:
+
+```shell
+d8 k -n d8-sds-replicated-volume get cm manualcertrenewal-trigger -ojsonpath='{.data.step}'
+```
+
+Возможные статусы:
+
+- `Prepared` — проверки состояния успешно пройдены, начато время простоя;
+- `TurnedOffAndRenewedCerts` — система остановлена, сертификаты обновлены;
+- `TurnedOn` — система снова запущена;
+- `Done` — операция завершена и готова к повторению.
+
+Сертификаты выдаются сроком на один год и помечаются как устаревающие за 30 дней до истечения срока действия. Система мониторинга оповещает о наличии устаревающих сертификатов с помощью алерта `D8LinstorCertificateExpiringIn30d`.
+
+Чтобы повторить операцию, достаточно удалить лейбл с триггера с помощью команды:
+
+```shell
+d8 k -n d8-sds-replicated-volume label cm manualcertrenewal-trigger storage.deckhouse.io/sds-replicated-volume-manualcertrenewal-completed-
+```

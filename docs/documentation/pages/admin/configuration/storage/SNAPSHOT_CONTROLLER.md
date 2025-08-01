@@ -7,28 +7,28 @@ Deckhouse Kubernetes Platform supports volume snapshot creation for CSI drivers 
 
 Snapshots capture the state of a volume at a specific point in time and can be used for data recovery or volume cloning. The ability to create snapshots depends on the capabilities of the CSI driver in use.
 
-## Supported CSI Drivers
+## Supported CSI drivers
 
 The following CSI drivers support snapshot creation:
 
-- [OpenStack Cloud Provider](#TODO);
-- [VMware vSphere Cloud Provider](#TODO);
-- [Distributed storage based on Ceph](../storage/external/ceph.html);
-- [Amazon Web Services Cloud Provider](#TODO);
-- [Microsoft Azure Cloud Provider](#TODO);
-- [Google Cloud Platform Cloud Provider](#TODO);
-- [Replicated storage based on DRBD](../storage/sds/lvm-replicated.html);
-- [NFS-based storage](../storage/external/nfs.html).
+- [OpenStack cloud provider](/modules/cloud-provider-openstack/)
+- [VMware vSphere cloud provider](/modules/cloud-provider-vsphere/)
+- [Distributed storage based on Ceph](../storage/external/ceph.html)
+- [Amazon Web Services cloud provider](/modules/cloud-provider-aws/)
+- [Microsoft Azure cloud provider](/modules/cloud-provider-azure/)
+- [Google Cloud Platform cloud provider](/modules/cloud-provider-gcp/)
+- [Replicated storage based on DRBD](../storage/sds/lvm-replicated.html)
+- [NFS-based storage](../storage/external/nfs.html)
 
-## Creating Snapshots
+## Creating snapshots
 
-Before creating snapshots, make sure that [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/) resources are configured in the cluster. You can list available classes with the following command:
+Before creating snapshots, make sure that VolumeSnapshotClass resources are configured in the cluster. You can list available classes with the following command:
 
 ```shell
 d8 k get volumesnapshotclasses.snapshot.storage.k8s.io
 ```
 
-To create a snapshot for a volume, specify the required [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/) in the manifest:
+To create a snapshot for a volume, specify the required VolumeSnapshotClass in the manifest:
 
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1
@@ -41,9 +41,9 @@ spec:
     persistentVolumeClaimName: <pvc-name>
 ```
 
-## Restoring from a Snapshot
+## Restoring from a snapshot
 
-To restore data from a snapshot, create a PVC that references the existing [VolumeSnapshot](../../reference/cr/volumesnapshot/):
+To restore data from a snapshot, create a PVC that references the existing VolumeSnapshot:
 
 ```yaml
 apiVersion: v1
@@ -63,6 +63,6 @@ spec:
       storage: 10Gi
 ```
 
-{% alert level=“warning” %}
+{% alert level="warning" %}
 Not all CSI drivers support restoring volumes from snapshots. Ensure that your driver provides the required capabilities.
 {% endalert %}

@@ -3,298 +3,302 @@ title: "Setting up local storage based on LVM"
 permalink: en/admin/configuration/storage/sds/lvm-local.html
 ---
 
-Local storage reduces network latency and provides higher performance compared to remote storage accessed over the network. This approach is especially effective in test environments and EDGE clusters.
+Local storage reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the `sds-local-volume` module.
 
-## Enabling the module
+## Configuring local storage
 
-Configuring local block storage is based on the Logical Volume Manager (LVM). LVM is managed by the `sds-node-configurator` module, which must be enabled before activating the `sds-local-volume` module.
+To ensure the correct operation of the `sds-local-volume` module, follow these steps:
 
-To enable the module, apply the following `ModuleConfig` resource:
+1. Configure LVMVolumeGroup. Before creating a StorageClass, you must create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `sds-node-configurator` module on the cluster nodes.
+1. Enable the `sds-node-configurator` module. Ensure that the module is enabled **before** enabling the `sds-local-volume` module.
+1. Create the corresponding StorageClasses. Creating a StorageClass for the CSI driver `local.csi.storage.deckhouse.io` by a user is **prohibited**.
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  enabled: true
-  version: 1
-EOF
-```
+The module supports two operating modes: LVM and LVMThin.
 
-Wait until the `sds-node-configurator` module transitions to the `Ready` state. To check its status, execute the following command:
+## Quick start
 
-```shell
-d8 k get modules sds-node-configurator -w
-```
+All commands are executed on a machine with access to the Kubernetes API and administrator privileges.
 
-In the output, you should see information about the `sds-node-configurator` module:
+### Enabling modules
 
-```console
-NAME                    STAGE   SOURCE    PHASE       ENABLED    READY
-sds-node-configurator           Embedded  Available   True       True
-```
+Enabling the `sds-node-configurator` module:
 
-Then, to enable the `sds-local-volume` module with default settings, run the following command:
+1. Create a ModuleConfig resource to enable the module:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-local-volume
-spec:
-  enabled: true
-  version: 1
-EOF
-```
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-node-configurator
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-This will launch service pods of the `sds-local-volume` components on all cluster nodes. To check the module status, run the following command:
+1. Wait for the module to reach the `Ready` state. At this stage, it is not necessary to check the pods in the `d8-sds-node-configurator` namespace.
 
-```shell
-d8 k get modules sds-local-volume -w
-```
+   ```shell
+   d8 k get modules sds-node-configurator -w
+   ```
 
-In the output, you should see information about the state of the `sds-local-volume` module:
+Enabling the `sds-local-volume` module:
 
-```console
-NAME                  STAGE   SOURCE    PHASE       ENABLED    READY
-sds-local-volume              Embedded  Available   True       True
-```
+1. Activate the `sds-local-volume` module. The example below starts the module with default settings, which will create service pods for the `sds-local-volume` component on all cluster nodes:
 
-To verify that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are deployed on all nodes where LVM resources are planned to be used, use the following commands:
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-local-volume
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-```shell
-d8 k -n d8-sds-local-volume get pod -w
-d8 k -n d8-sds-node-configurator get pod -w
-```
+1. Wait for the module to reach the `Ready` state.
 
-## Node preconfiguration
+   ```shell
+   d8 k get modules sds-local-volume -w
+   ```
 
-### Creating LVM volume groups
+1. Ensure that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are running on all nodes where LVM resources are planned to be used.
 
-Ensure that on all nodes where LVM resources are intended to be used, service pods `sds-local-volume-csi-node` are running. These pods provide interaction with nodes where LVM components are located. This can be verified using the following command:
+   ```shell
+   d8 k -n d8-sds-local-volume get pod -owide -w
+   d8 k -n d8-sds-node-configurator get pod -o wide -w
+   ```
 
-```shell
-d8 k -n d8-sds-local-volume get pod -l app=sds-local-volume-csi-node -owide
-```
+### Preparing nodes for storage creation
 
-The placement of these pods on nodes is determined based on specific labels (nodeSelector) defined in the `spec.settings.dataNodes.nodeSelector` field in the module settings. For more details on configuration, refer to the documentation.
+For storage to function correctly on nodes, the `sds-local-volume-csi-node` pods must be running on the selected nodes.
 
-Before setting up the creation of StorageClass objects, available block devices on nodes need to be combined into LVM volume groups. These volume groups will subsequently be used to host PersistentVolume resources.
-
-To list available block devices, you can use the BlockDevices resource, which reflects their current state:
+By default, these pods are launched on all cluster nodes. You can verify their presence using the command:
 
 ```shell
-d8 k get bd
+d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-In the output, you should see a list of available block devices:
+The placement of `sds-local-volume-csi-node` pods is managed by specific labels (`nodeSelector`). These labels are set in the [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) parameter of the module.
 
-```console
-NAME                                           NODE       CONSUMABLE   SIZE           PATH
-dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
-```
+### Configuring storage on nodes
 
-In the example above, six block devices are available across three nodes. To use these devices for storage, they must be combined into LVM volume groups. This approach allows managing multiple devices as a single storage unit on each node. To achieve this, you need to create an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource that defines the composition of the LVM volume group on a specific node.
-
-To create an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LVMVolumeGroup
-metadata:
-  name: "vg-on-worker-0"
-spec:
-  type: Local
-  local:
-    # Replace with the name of your node for which the volume group is being created.
-    nodeName: "worker-0"
-  blockDeviceSelector:
-    matchExpressions:
-      - key: kubernetes.io/metadata.name
-        operator: In
-        values:
-          # Replace with the names of your node's block devices for which the volume group is being created.
-          - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
-          - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
-  # Name of the LVM volume group that will be created from the specified block devices on the selected node.
-  actualVGNameOnTheNode: "vg"
-  # Uncomment if thin provisioning is required. Details will be discussed later.
-  # thinPools:
-  #   - name: thin-pool-0
-  #     size: 70%
-EOF
-```
-
-Wait until the created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource transitions to the `Ready` phase. To check the resource phase, run the following command:
-
-```shell
-d8 k get lvg vg-on-worker-0 -w
-```
-
-In the output, you should see information about the resource phase:
-
-```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-```
-
-If the resource transitions to the `Ready` phase, this indicates that an LVM volume group named `vg` has been created on node worker-0 using the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
-
-Next, you need to repeat the creation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker‑1 and worker‑2). To do this:
-- Modify the example above by updating the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource name, the node name, and the block device names corresponding to the selected node.
-- Make sure that LVM volume groups are created on all nodes where they are intended to be used by running the following command:
-
-  ```shell
-  d8 k get lvg -w
-  ```
-
-  In the output, you should see a list of created volume groups:
-
-  ```console
-  NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-  vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-  vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-  vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
-  ```
-
-### Creating a thick type StorageClass
-
-The creation of StorageClass objects is done through the [LocalStorageClass](../../../reference/cr/localstorageclass/) resource, which defines the configuration for the desired storage class. Manually creating a StorageClass without a [LocalStorageClass](../../../reference/cr/localstorageclass/) can result in errors.
-
-When creating a [LocalStorageClass](../../../reference/cr/localstorageclass/), it's crucial to select the storage type, which can be either thick or thin.
-
-Thick pools offer high performance comparable to the storage device itself but do not support snapshot.
-
-Example of creating a [LocalStorageClass](../../../reference/cr/localstorageclass/) resource with a thick type:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LocalStorageClass
-metadata:
-  name: local-storage-class-thick
-spec:
-  lvm:
-    lvmVolumeGroups:
-      - name: vg-on-worker-0
-      - name: vg-on-worker-1
-      - name: vg-on-worker-2
-    type: Thick
-  reclaimPolicy: Delete
-  volumeBindingMode: WaitForFirstConsumer
-EOF
-```
-
-Check that the created [LocalStorageClass](../../../reference/cr/localstorageclass/) has transitioned to the `Created` phase by running the following command:
-
-```shell
-d8 k get lsc local-storage-class -w
-```
-
-In the output, you should see information about the created [LocalStorageClass](../../../reference/cr/localstorageclass/):
-
-```console
-NAME                        PHASE     AGE
-local-storage-class-thick   Created   1h
-```
-
-Check that the corresponding StorageClass has been generated by running the following command:
-
-```shell
-d8 k get sc local-storage-class
-```
-
-In the output, you should see information about the generated StorageClass:
-
-```console
-NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
-```
-
-### Creating a thin type StorageClass
-
-Thin pools allow using snapshots and overprovisioning (resource over-allocation) at the cost of reduced performance.
+To configure storage on nodes, you need to create LVM volume groups using [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources. This example creates a Thick storage.
 
 {% alert level="warning" %}
-Overprovisioning should be used with caution, ensuring free space in the pool is carefully monitored (the cluster monitoring system generates events when free space falls to 20%, 10%, 5%, and 1%). A lack of free space in the pool can lead to degradation of the module's operation and poses a real risk of data loss.
+Before creating an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource, ensure that the `sds-local-volume-csi-node` pod is running on the respective node. This can be checked with the command:
+
+```shell
+d8 k -n d8-sds-local-volume get pod -owide
+```
+
 {% endalert %}
 
-The previously created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources are suitable for creating thick storage. If you require the ability to create thin storage, update the configuration of the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources by adding a definition for a thin pool:
+1. Retrieve all [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) resources available in your cluster:
 
-```yaml
-d8 k patch lvg vg-on-worker-0 --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/thinPools",
-    "value": [
-      {
-        "name": "thin-pool-0",
-        "size": "70%"
-      }
-    ]
-  }
-]'
-```
+   ```shell
+   d8 k get bd
+   ```
 
-In the updated version of the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), 70% of the available space will be allocated for creating thin storage. The remaining 30% can be used for thick storage.
+   Example output:
 
-Repeat the addition of thin pools for the remaining nodes (worker-1 and worker-2). Example of creating a [LocalStorageClass](../../../reference/cr/localstorageclass/) resource with a thin type:
+   ```console
+   NAME                                           NODE       CONSUMABLE   SIZE           PATH
+   dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+   dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+   dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+   dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+   dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+   dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+   ```
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LocalStorageClass
-metadata:
-  name: local-storage-class-thin
-spec:
-  lvm:
-    lvmVolumeGroups:
-      - name: vg-on-worker-0
-        thin:
-          - name: thin-pool-0
-      - name: vg-on-worker-1
-        thin:
-          - name: thin-pool-0
-      - name: vg-on-worker-2
-        thin:
-          - name: thin-pool-0
-    type: Thin
-  reclaimPolicy: Delete
-  volumeBindingMode: WaitForFirstConsumer
-EOF
-```
+1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-0` node:
 
-Check that the created [LocalStorageClass](../../../reference/cr/localstorageclass/) has transitioned to the `Created` phase by running the following command:
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-0" # The name can be any fully qualified resource name in Kubernetes. This LVMVolumeGroup resource name will be used to create LocalStorageClass in the future.
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-0"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
+             - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
+     actualVGNameOnTheNode: "vg-1" # The name of the LVM VG that will be created from the specified block devices on the node.
+   EOF
+   ```
 
-```shell
-d8 k get lsc local-storage-class -w
-```
+1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
-In the output, you should see information about the created [LocalStorageClass](../../../reference/cr/localstorageclass/):
+   ```shell
+   d8 k get lvg vg-1-on-worker-0 -w
+   ```
 
-```console
-NAME                       PHASE     AGE
-local-storage-class-thin   Created   1h
-```
+   If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-0` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-Check that the corresponding StorageClass has been generated by running the following command:
+1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-1` node:
 
-```shell
-d8 k get sc local-storage-class
-```
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-1"
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-1"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0
+             - dev-b103062f879a2349a9c5f054e0366594568de68d
+     actualVGNameOnTheNode: "vg-1"
+   EOF
+   ```
 
-In the output, you should see information about the generated StorageClass:
+1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
-```console
-NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
-```
+   ```shell
+   d8 k get lvg vg-1-on-worker-1 -w
+   ```
+
+   If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-1` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
+
+1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-2` node:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LVMVolumeGroup
+   metadata:
+     name: "vg-1-on-worker-2"
+   spec:
+     type: Local
+     local:
+       nodeName: "worker-2"
+     blockDeviceSelector:
+       matchExpressions:
+         - key: kubernetes.io/metadata.name
+           operator: In
+           values:
+             - dev-53d904f18b912187ac82de29af06a34d9ae23199
+             - dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1
+     actualVGNameOnTheNode: "vg-1"
+   EOF
+   ```
+
+1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
+
+   ```shell
+   d8 k get lvg vg-1-on-worker-2 -w
+   ```
+
+   If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-2` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
+
+1. Create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LocalStorageClass
+   metadata:
+     name: local-storage-class
+   spec:
+     lvm:
+       lvmVolumeGroups:
+         - name: vg-1-on-worker-0
+         - name: vg-1-on-worker-1
+         - name: vg-1-on-worker-2
+       type: Thick
+     reclaimPolicy: Delete
+     volumeBindingMode: WaitForFirstConsumer
+   EOF
+   ```
+
+   For a thin volume:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: LocalStorageClass
+   metadata:
+     name: local-storage-class
+   spec:
+     lvm:
+       lvmVolumeGroups:
+         - name: vg-1-on-worker-0
+         - name: vg-1-on-worker-1
+         - name: vg-1-on-worker-2
+           thin:
+             poolName: thin-1
+       type: Thin
+     reclaimPolicy: Delete
+     volumeBindingMode: WaitForFirstConsumer
+   EOF
+   ```
+
+   > **Important.** In a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
+
+1. Wait for the created LocalStorageClass resource to transition to the `Created` state:
+
+   ```shell
+   d8 k get lsc local-storage-class -w
+   ```
+
+1. Verify that the corresponding StorageClass has been created:
+
+   ```shell
+   d8 k get sc local-storage-class
+   ```
+
+If a StorageClass named `local-storage-class` appears, the configuration of the `sds-local-volume` module is complete. Users can now create PVCs by specifying the StorageClass named `local-storage-class`.
+
+### Selecting a volume cleanup method after PV deletion
+
+When files are deleted, the operating system does not physically erase the content but only marks the corresponding blocks as "free." If a new volume receives physical blocks previously used by another volume, those blocks may still contain the previous user's data.
+
+This is possible, for example, in the following scenario:
+
+- User #1 places files in a volume requested from StorageClass 1 on node 1 (in either "Block" or "Filesystem" mode).
+- User #1 deletes the files and the volume.
+- The physical blocks that were occupied become "free" but are not wiped.
+- User #2 requests a new volume from StorageClass 1 on node 1 in "Block" mode.
+- There is a risk that some or all of the blocks previously used by User #1 will be reallocated to User #2.
+- In this case, User #2 may be able to recover User #1's data.
+
+### Thick volumes
+
+To prevent data leaks through thick volumes, the `volumeCleanup` parameter is provided. It allows you to select the volume cleanup method before deleting a PV.
+
+Possible values:
+
+- Parameter not set: No additional actions are performed when deleting the volume. Data may remain accessible to the next user.
+- `RandomFillSinglePass`: The volume is overwritten with random data once before deletion. This option is not recommended for solid-state drives, as it reduces the drive's lifespan.
+- `RandomFillThreePass`: The volume is overwritten with random data three times before deletion. This option is not recommended for solid-state drives, as it reduces the drive's lifespan.
+- `Discard`: All volume blocks are marked as free using the `discard` system call before deletion. This option is only meaningful for solid-state drives.
+
+  Most modern solid-state drives guarantee that a block marked with `discard` will not return previous data when read. This makes the `Discard` option the most effective way to prevent data leaks when using solid-state drives.
+
+  However, erasing a cell is a relatively slow operation, so it is performed by the device in the background. Additionally, many drives cannot erase individual cells but only groups (pages). As a result, not all drives guarantee the immediate unavailability of freed data. Furthermore, not all drives that claim to guarantee this keep their promise. If a device does not guarantee Deterministic TRIM (DRAT), Deterministic Read Zero after TRIM (RZAT), and is not verified, it is not recommended for use.
+
+### Thin volumes
+
+When a block in a thin volume is freed via `discard` by the guest operating system, this command is forwarded to the device. If a hard disk is used or if the solid-state drive does not support `discard`, the data may remain in the thin pool until the block is reused. However, users are only granted access to thin volumes, not the thin pool itself. They can only obtain a volume from the pool, and for thin volumes, the thin pool block is zeroed upon reuse, preventing data leaks between clients. This is ensured by the `thin_pool_zero=1` setting in LVM.
+
+## System requirements and recommendations
+
+- Use stock kernels provided with [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
+- Do not use another SDS (Software Defined Storage) to provide disks for SDS Deckhouse.

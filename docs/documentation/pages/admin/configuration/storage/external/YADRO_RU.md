@@ -11,9 +11,9 @@ Deckhouse поддерживает интеграцию с системой хр
 
 ## Включение модуля
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в Deckhouse используется модуль `csi-yadro-tatlin-unified`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroTatlinUnifiedStorageClass](../../../reference/cr/yadrotatlinunifiedstorageclass/). Чтобы включить модуль, выполните команду:
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в Deckhouse используется модуль `csi-yadro-tatlin-unified`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Чтобы включить модуль, выполните команду:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -40,9 +40,9 @@ si-yadro-tatlin-unified            Embedded  Available   True       True
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroTatlinUnifiedStorageConnection](../../../reference/cr/yadrotatlinunifiedstorageconnection/):
+Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroTatlinUnifiedStorageConnection](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection):
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: YadroTatlinUnifiedStorageConnection
@@ -52,7 +52,7 @@ spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64
+    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64.
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
@@ -64,11 +64,11 @@ EOF
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](../../../reference/cr/yadrotatlinunifiedstorageclass/). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](../../../reference/cr/yadrotatlinunifiedstorageclass/) может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass) может привести к ошибкам.
 
 Пример команды для создания класса хранения на основе системы хранения данных `TATLIN.UNIFIED`:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: YadroTatlinUnifiedStorageClass
