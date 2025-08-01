@@ -19,4 +19,4 @@ Here are credentials **generated** in the previous steps:
 Use them to access the web interface of the components.
 </div>
 
-{% include getting_started/global/partials/FINISH_CARDS.md %}
+{% include getting_started/stronghold/global/partials/FINISH_CARDS.md %}

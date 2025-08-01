@@ -19,4 +19,4 @@
 Используйте их для доступа к веб-интерфейсу компонентов.
 </div>
 
-{% include getting_started/global/partials/FINISH_CARDS_RU.md %}
+{% include getting_started/stronghold/global/partials/FINISH_CARDS_RU.md %}

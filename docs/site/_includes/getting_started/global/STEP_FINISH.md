@@ -7,7 +7,7 @@
 <div markdown="1">
 ## Everything is installed, configured, and working!
 
-Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
+Now that you have installed and properly configured Deckhouse Kubernetes Platform, let's look at what you can do with it.
 
 By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
 

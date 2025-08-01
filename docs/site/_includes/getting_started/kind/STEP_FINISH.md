@@ -7,7 +7,7 @@
 <div markdown="1">
 ## Congratulations, your Deckhouse Kubernetes platform is up and running!
 
-Deckhouse, deployed in the kind cluster, is suitable for getting acquainted with other features that might need for production environments.
-Read further about such Deckhouse features.
+Deckhouse Kubernetes Platform, deployed in the kind cluster, is suitable for getting acquainted with other features that might need for production environments.
+Read further about such features.
 
 {% include getting_started/global/partials/FINISH_CARDS.md %}
