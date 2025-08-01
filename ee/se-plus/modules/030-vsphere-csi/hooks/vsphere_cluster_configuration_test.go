@@ -14,18 +14,18 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
+var _ = Describe("Modules :: csi-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
 	const (
 		emptyValues = `
 global:
   discovery: {}
-cloudProviderVsphere:
+vsphereCsi:
   internal: {}
 `
 		filledValues = `
 global:
   discovery: {}
-cloudProviderVsphere:
+vsphereCsi:
   internal: {}
   host: override
   username: override
@@ -41,7 +41,7 @@ cloudProviderVsphere:
 		filledValuesWithoutSomeFields = `
 global:
   discovery: {}
-cloudProviderVsphere:
+vsphereCsi:
   internal: {}
   host: override
   username: override
@@ -69,7 +69,7 @@ zones:
 - override2
 `
 
-	emptyProviderClusterConfigurationState = `
+		emptyProviderClusterConfigurationState = `
 apiVersion: v1
 kind: Secret
 metadata:
@@ -77,7 +77,7 @@ metadata:
  namespace: kube-system
 data: {}
 `
-  )
+	)
 	// todo(31337Ghost) eliminate the following dirty hack after `ee` subdirectory will be merged to the root
 	// Used to make dhctl config function able to validate `VsphereClusterConfiguration`.
 	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/se-plus/candi")
@@ -90,8 +90,8 @@ data: {}
 
 		It("Should fill values from module configuration", func() {
 			Expect(a).To(ExecuteSuccessfully())
-			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration))
-			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
+			Expect(a.ValuesGet("vsphereCsi.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration))
+			Expect(a.ValuesGet("vsphereCsi.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
 		})
 	})
 	d := HookExecutionConfigInit(filledValuesWithoutSomeFields, `{}`)
