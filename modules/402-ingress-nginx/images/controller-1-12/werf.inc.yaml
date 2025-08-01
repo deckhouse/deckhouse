@@ -120,8 +120,8 @@ shell:
     make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-08-01.03"
+fromImage: builder/alpine
+fromCacheVersion: "2025-08-01.05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -132,10 +132,10 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/etc
-  to: /src/rootfs/etc
-  before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+#   add: /src/rootfs/etc
+#   to: /src/rootfs/etc
+#   before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -199,7 +199,6 @@ shell:
   # - export GIT_TRACE=1
   - /build.sh
   setup:
-  # Prepare chroot directory
   - |
     bash -eu -c '
     writeDirs=(
@@ -227,15 +226,16 @@ shell:
       mkdir -p ${dir};
       chown -R www-data:www-data ${dir};
     done'
+  # Create opentelemetry.toml file as it doesn't present in controller_image
+  - mkdir -p /etc/nginx && touch /etc/nginx/opentelemetry.toml
+  - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
+  - chown -R www-data:www-data /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
 
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
-  - cp -a /etc/* /chroot/etc/ # FIXME Why?
-  # - cp -a /etc/nginx/* /chroot/etc/nginx/
-  - cp -a /src/rootfs/etc/* /chroot/etc
-  - chown -R www-data:www-data /chroot/etc # FIXME Danger?
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /usr/* /chroot/usr/
-  # - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
+  - cp -a /etc/nginx/* /chroot/etc/nginx/
+  - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
   - cp /lib/ld-musl-* /chroot/lib/
   - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/
 # ---
@@ -275,20 +275,77 @@ shell:
 # from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
 # final: false
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/alpine-3.21
-# fromImage: common/distroless
-fromCacheVersion: "2025-08-01.04"
-# mount:
-# - from: build_dir
-#   to: /tmp/apps
+image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+fromImage: builder/alpine
+fromCacheVersion: "2025-08-01.05"
+final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /
   includePaths:
-  # - etc/passwd
-  # - etc/group
+  - etc/passwd
+  - etc/group
+  - chroot
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+  add: /usr/lib64/lua/5.1/iconv.so
+  to: /chroot/usr/local/lib/lua/5.1/iconv.so
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+  add: /usr/lib64/lua/5.1/pb.so
+  to: /chroot/usr/local/lib/lua/5.1/pb.so
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+  add: /usr/share/lua/5.1/protoc.lua
+  to: /chroot/usr/local/share/lua/5.1/protoc.lua
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/etc
+  to: /src/rootfs/etc
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  setup:
+  - cp -a /src/rootfs/etc/* /chroot/etc
+
+  # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
+  # - adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
+
+  - mkdir -p /var/log
+  - chown -R www-data:www-data /var/log
+  # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
+  # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
+  # Could get complicated arch specific paths become a need
+  - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
+  - touch /chroot/var/log/nginx/access.log
+  - chown www-data:www-data /chroot/var/log/nginx/access.log
+  - echo "" > /chroot/etc/resolv.conf
+  - chown -R www-data:www-data /chroot/var/log/nginx /chroot/etc/resolv.conf
+  - mknod -m 0666 /chroot/dev/null c 1 3
+  - mknod -m 0666 /chroot/dev/random c 1 8
+  - mknod -m 0666 /chroot/dev/urandom c 1 9
+  - mknod -m 0666 /chroot/dev/full c 1 7
+  - mknod -m 0666 /chroot/dev/ptmx c 5 2
+  - mknod -m 0666 /chroot/dev/zero c 1 5
+  - mknod -m 0666 /chroot/dev/tty c 5 0
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/alpine
+# fromImage: common/distroless
+fromCacheVersion: "2025-08-01.05"
+# mount:
+# - from: build_dir
+#   to: /tmp/apps
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+  add: /
+  to: /
+  includePaths:
+  - etc/passwd
+  - etc/group
   - chroot
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
@@ -336,33 +393,14 @@ import:
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk update && apk upgrade && apk add -U --no-cache bash openssl ca-certificates dumb-init tzdata diffutils util-linux
+  - apk update && apk upgrade && apk add -U --no-cache bash openssl ca-certificates tzdata diffutils util-linux
   setup:
-  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
 
-  - mkdir -p /var/log
-  - chown -R www-data:www-data /var/log
-  # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
-  # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
-  # Could get complicated arch specific paths become a need
-  - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
 
   - ln -sf /chroot/etc/nginx /etc/nginx
   - ln -sf /chroot/tmp/nginx /tmp/nginx
   - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - touch /chroot/var/log/nginx/access.log
-  - chown www-data:www-data /chroot/var/log/nginx/access.log
-  - echo "" > /chroot/etc/resolv.conf
-  - chown -R www-data:www-data /chroot/var/log/nginx /chroot/etc/resolv.conf
-  - mknod -m 0666 /chroot/dev/null c 1 3
-  - mknod -m 0666 /chroot/dev/random c 1 8
-  - mknod -m 0666 /chroot/dev/urandom c 1 9
-  - mknod -m 0666 /chroot/dev/full c 1 7
-  - mknod -m 0666 /chroot/dev/ptmx c 5 2
-  - mknod -m 0666 /chroot/dev/zero c 1 5
-  - mknod -m 0666 /chroot/dev/tty c 5 0
 
   - mkdir -p /chroot/modules_mount
   - mkdir -p modules_mount
