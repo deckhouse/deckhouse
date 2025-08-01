@@ -69,7 +69,7 @@ Use our [checklist](/products/virtualization-platform/guides/production.html) to
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
+Detailed information about the system and components is available in the [documentation](/products/virtualization-platform/documentation/admin/overview.html).
 
 Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
 </div>

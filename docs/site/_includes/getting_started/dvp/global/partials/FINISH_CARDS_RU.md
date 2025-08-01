@@ -70,7 +70,7 @@
 ## Что дальше?
 
 Подробная информация о системе в целом и по каждому компоненту платформы расположена в
-[документации](/products/kubernetes-platform/documentation/v1/).
+[документации](/products/virtualization-platform/documentation/admin/overview.html).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).
 </div>
