@@ -60,7 +60,7 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 🏭 <span class="cards-item__title-text">Going to production</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Prepare your cluster to receive productive traffic.
+Prepare your cluster to receive production traffic.
 
 Use our [checklist](/products/kubernetes-platform/guides/production.html) to make sure you haven't forgotten anything.
 </div>
