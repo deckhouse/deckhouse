@@ -52,6 +52,7 @@ func (m *moduleManager) GetEnabledModuleNames() []string {
 }
 
 // Helper functions for creating test objects
+// nolint:unparam
 func createDeckhouseRelease(name string, approved bool, requirements map[string]string) *v1alpha1.DeckhouseRelease {
 	dr := &v1alpha1.DeckhouseRelease{
 		ObjectMeta: metav1.ObjectMeta{
@@ -70,6 +71,7 @@ func createDeckhouseRelease(name string, approved bool, requirements map[string]
 	return dr
 }
 
+// nolint:unparam
 func createClusterConfigSecret(kubernetesVersion string) *corev1.Secret {
 	clusterConfig := fmt.Sprintf(`kubernetesVersion: "%s"`, kubernetesVersion)
 
@@ -266,7 +268,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create HTTP request
-			req := httptest.NewRequest("POST", "/validate", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/validate", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			recorder := httptest.NewRecorder()
@@ -386,7 +388,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create HTTP request
-			req := httptest.NewRequest("POST", "/validate", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/validate", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			recorder := httptest.NewRecorder()
