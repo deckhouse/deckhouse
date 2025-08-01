@@ -1,0 +1,18 @@
+positive:
+  configValues:
+    - storageClass:
+        compatibilityFlag: Legacy
+    - storageClass:
+        compatibilityFlag: Migration
+  values:
+    - { internal: {} }
+negative:
+  configValues:
+    - storageClass:
+        compatibilityFlag: legacy
+    - storageClass:
+        compatibilityFlag: migration
+    - storageClass:
+        compatibilityFlag: qwerty
+  values:
+    - { somethingInConfig: yes }
