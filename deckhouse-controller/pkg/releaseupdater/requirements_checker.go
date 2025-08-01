@@ -62,6 +62,30 @@ type NotMetReason struct {
 	Message string
 }
 
+// CheckerOption represents an option for configuring a Checker
+type CheckerOption func(*CheckerConfig)
+
+// CheckerConfig holds configuration for a Checker
+type CheckerConfig struct {
+	logger *log.Logger
+}
+
+// WithLogger sets the logger for the checker
+func WithLogger(logger *log.Logger) CheckerOption {
+	return func(config *CheckerConfig) {
+		config.logger = logger
+	}
+}
+
+// applyOptions applies the given options to the config
+func applyOptions(options []CheckerOption) *CheckerConfig {
+	config := &CheckerConfig{}
+	for _, option := range options {
+		option(config)
+	}
+	return config
+}
+
 var _ RequirementsChecker[v1alpha1.DeckhouseRelease] = (*Checker[v1alpha1.DeckhouseRelease])(nil)
 
 type Checker[T any] struct {
@@ -97,7 +121,13 @@ func (c *Checker[T]) MetRequirements(ctx context.Context, v *T) []NotMetReason {
 // 4) migrated modules check
 //
 // for more checks information - look at extenders
-func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, metricStorage metric.Storage, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, metricStorage metric.Storage, options ...CheckerOption) (*Checker[v1alpha1.DeckhouseRelease], error) {
+	config := applyOptions(options)
+
+	if config.logger == nil {
+		config.logger = log.NewLogger().Named("deckhouse-release-requirements-checker")
+	}
+
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err
@@ -108,9 +138,9 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
-			newMigratedModulesCheck(k8sclient, metricStorage, logger),
+			newMigratedModulesCheck(k8sclient, metricStorage, config.logger),
 		},
-		logger: logger,
+		logger: config.logger,
 	}, nil
 }
 
@@ -313,12 +343,18 @@ func (c *disruptionCheck) Verify(_ context.Context, pointer *v1alpha1.Release) e
 // 1) module release requirements check
 //
 // for more checks information - look at extenders
-func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
+func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, options ...CheckerOption) (*Checker[v1alpha1.ModuleRelease], error) {
+	config := applyOptions(options)
+
+	if config.logger == nil {
+		config.logger = log.NewLogger().Named("module-release-requirements-checker")
+	}
+
 	return &Checker[v1alpha1.ModuleRelease]{
 		fns: []Check[v1alpha1.ModuleRelease]{
 			newModuleRequirementsCheck(exts),
 		},
-		logger: logger,
+		logger: config.logger,
 	}, nil
 }
 
