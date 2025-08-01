@@ -22,11 +22,29 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		if svc.metrics != nil {
+			svc.metrics.CounterAdd("docs_builder_upload_total", 1, map[string]string{"status": status})
+			svc.metrics.HistogramObserve("docs_builder_upload_duration_seconds", dur, map[string]string{"status": status}, nil)
+
+			if status == "ok" {
+				svc.updateCachedModulesGauge()
+			}
+		}
+	}()
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
+		status = "fail"
 		return fmt.Errorf("clean module files: %w", err)
 	}
 
@@ -161,4 +179,24 @@ func (svc *Service) cleanModulesFiles(moduleName string, channels []string) erro
 	}
 
 	return nil
+}
+
+func (svc *Service) updateCachedModulesGauge() {
+	if svc.metrics == nil {
+		return
+	}
+
+	modulesDir := filepath.Join(svc.baseDir, "data/modules")
+	dirs, err := os.ReadDir(modulesDir)
+	if err != nil {
+		svc.logger.Error("updateCachedModulesGauge", log.Err(err))
+		return
+	}
+	count := 0
+	for _, d := range dirs {
+		if d.IsDir() {
+			count++
+		}
+	}
+	svc.metrics.GaugeSet("docs_builder_cached_modules", float64(count), nil)
 }
