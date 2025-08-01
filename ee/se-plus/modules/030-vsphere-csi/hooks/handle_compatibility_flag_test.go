@@ -17,7 +17,7 @@ var _ = Describe("Modules :: vsphere-csi :: hooks :: handle_compatibility_flag :
 		initValues = `
 global:
   discovery: {}
-cloudProviderVsphere:
+vsphereCsi:
   internal: {}
 `
 		initConfigValues = `
