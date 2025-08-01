@@ -2248,7 +2248,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
