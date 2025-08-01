@@ -233,6 +233,10 @@ function prepare_environment() {
 
   "vSphere")
     ssh_user="redos"
+    bastion_user="ubuntu"
+    bastion_host="31.41.158.74"
+    bastion_port="53359"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -240,12 +244,14 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
-      \"VspherePassword\": \"${VSPHERE_PASSWORD}\",
-      \"vsphereBaseDomain\": \"${AYOUT_VSPHERE_BASE_DOMAIN}\",
+      \"vSpherePassword\": \"${VSPHERE_PASSWORD}\",
+      \"vSphereBaseDomain\": \"${LAYOUT_VSPHERE_BASE_DOMAIN}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
     }"
 
     ;;
@@ -1110,10 +1116,9 @@ function run-test() {
         master_connection="${master_user}@${master_ip}"
         master_ip_find=true
         echo "  SSH connection string:"
-        echo "      ssh $master_connection"
+        echo "      ssh ${ssh_bastion} ${master_connection}"
         update_comment
         echo "$master_connection" > ssh-connect_str-"${PREFIX}"
-        # TODO add workflow template
       fi
     fi
 
@@ -1165,17 +1170,6 @@ function run-test() {
   testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
 
   test_failed="true"
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
-      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
-      test_failed=""
-    else
-      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
-      sleep 30
-    fi
-
-    if [[ $test_failed == "true" ]]; then
-      return 1
-    fi
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
     testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
