@@ -159,7 +159,7 @@ nodegroups`. Подробнее об этом в [документации](/pro
 <div markdown="1">
 ## Что дальше?
 
-Подробная информация о системе в целом и по каждому компоненту расположена в [документации](/products/kubernetes-platform/documentation/v1/).
+Подробная информация о системе в целом и по каждому компоненту расположена в [документации](/products/stronghold/documentation/admin/overview.html).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).
 </div>
