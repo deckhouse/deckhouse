@@ -17,6 +17,7 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
+        prometheus.deckhouse.io/custom-target: registry-modules-watcher
       annotations:
         checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
     spec:
@@ -70,6 +71,7 @@ metadata:
   labels:
     prometheus.deckhouse.io/custom-target: registry-modules-watcher
 spec:
+  clusterIP: None
   selector:
     app: registry-modules-watcher
   ports:
