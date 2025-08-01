@@ -44,7 +44,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.42.0"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -53,8 +53,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -414,7 +416,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -508,14 +509,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -568,6 +581,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -751,7 +766,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -845,14 +859,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -905,6 +931,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1088,7 +1116,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1182,14 +1209,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1242,6 +1281,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1413,7 +1454,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1507,14 +1547,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1567,6 +1619,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1738,7 +1792,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1832,14 +1885,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1892,6 +1957,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -2063,7 +2130,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2157,14 +2223,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
+            --dev \
+            --config werf-rendered.yaml \
             --parallel=true --parallel-tasks-limit=10 \
-            --log-time=true\
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2217,6 +2295,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -2228,7 +2308,7 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: ${{ github.event.repository.name }}
           ci_commit_ref_name: ${{ github.ref_name }}

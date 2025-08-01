@@ -14,10 +14,6 @@ import:
   - usr/share/falco/plugins/libcontainer.so
   - lib64
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
-  add: /out/falcoctl
-  to: /usr/bin/falcoctl
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
   add: /out/usr/share/falco/plugins
   to: /usr/share/falco/plugins
@@ -105,11 +101,11 @@ shell:
   - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/jemalloc.cmake
   - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/openssl.cmake
   - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/cares.cmake
-  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" cmake/modules/rules.cmake  
+  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" cmake/modules/rules.cmake
   {{- end }}
   - mkdir -p /src/build
   - cd /src/build
-  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src
+  - cmake -DUSE_JEMALLOC=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src
   # fix build tbb lib on altlinux (redefine FORTIFY_SOURCE)
   - sed -i 's|cd /src/build/tbb-prefix/src/tbb && /usr/bin/cmake -E touch /src/build/tbb-prefix/src/tbb-stamp/tbb-configure|&\n\tsed -i "s\|-D_FORTIFY_SOURCE=2\|-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2\|g" /src/build/tbb-prefix/src/tbb/src/tbb/CMakeFiles/tbb.dir/flags.make|' CMakeFiles/tbb.dir/build.make
   {{- if $.DistroPackagesProxy }}
@@ -118,9 +114,9 @@ shell:
     for f in `grep -lari 'URL "https://github.com'`; do
       sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" $f
     done
-  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" falcosecurity-libs-repo/falcosecurity-libs-prefix/src/falcosecurity-libs/cmake/modules/container_plugin.cmake 
+  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" falcosecurity-libs-repo/falcosecurity-libs-prefix/src/falcosecurity-libs/cmake/modules/container_plugin.cmake
   - find . -maxdepth 1 -type d ! -name "falcosecurity-libs-repo" ! -name "." -print0 | xargs -0 rm -rf
-  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON -DFORCE_UPDATE_DEPS=ON /src
+  - cmake -DUSE_JEMALLOC=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON -DFORCE_UPDATE_DEPS=ON /src
   - sed -i 's|cd /src/build/tbb-prefix/src/tbb && /usr/bin/cmake -E touch /src/build/tbb-prefix/src/tbb-stamp/tbb-configure|&\n\tsed -i "s\|-D_FORTIFY_SOURCE=2\|-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2\|g" /src/build/tbb-prefix/src/tbb/src/tbb/CMakeFiles/tbb.dir/flags.make|' CMakeFiles/tbb.dir/build.make
   {{- end }}
   - make falco -j ${BUILD_THREADS}

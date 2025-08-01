@@ -59,13 +59,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoverDexClusterIP(input *go_hook.HookInput) error {
 	const dexClusterIPPath = "userAuthn.internal.discoveredDexClusterIP"
 
-	services := input.Snapshots["service"]
+	services := input.NewSnapshots.Get("service")
 	if len(services) == 0 {
 		input.Logger.Debug("no dex services found in cluster")
 		return nil
 	}
+	var clusterIP string
+	err := services[0].UnmarshalTo(&clusterIP)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal dex service clusterIP from start snapshot: %w", err)
+	}
 
-	clusterIP := services[0].(string)
 	if clusterIP == v1.ClusterIPNone {
 		// Migration, delete after rolling it on all clusters
 		input.PatchCollector.Delete("v1", "Service", "d8-user-authn", "dex")

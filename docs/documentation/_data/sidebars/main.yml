@@ -706,6 +706,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
+            en: Container Registry
+            ru: Container Registry
+          moduleName: registry
+          featureStatus: preview
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/registry/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/registry/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/registry/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/registry/faq.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
@@ -950,7 +972,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/metallb/cr.html
-
         - title:
             en: Other modules
             ru: Другие модули
@@ -995,6 +1016,23 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/network-gateway/configuration.html
+            - title:
+                en: network-policy-engine
+                ru: network-policy-engine
+              moduleName: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/network-policy-engine/configuration.html
             - title:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
@@ -1573,23 +1611,6 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/cert-manager/faq.html
-            - title:
-                en: network-policy-engine
-                ru: network-policy-engine
-              moduleName: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-policy-engine/configuration.html
             - title:
                 en: operator-trivy
                 ru: operator-trivy

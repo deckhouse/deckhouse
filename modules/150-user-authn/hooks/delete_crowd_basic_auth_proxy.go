@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // TODO(ipaqsa): can be deleted after 1.65
@@ -58,11 +62,11 @@ func filterIngressName(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func deleteCrowdIngress(input *go_hook.HookInput) error {
-	for _, snap := range input.Snapshots["crowd-proxy-ingress"] {
-		if snap == nil {
-			continue
+	for snap, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("crowd-proxy-ingress")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'crowd-proxy-ingress' snapshot: %w", err)
 		}
-		input.PatchCollector.Delete("networking.k8s.io/v1", "Ingress", "d8-user-authn", snap.(string))
+		input.PatchCollector.Delete("networking.k8s.io/v1", "Ingress", "d8-user-authn", snap)
 	}
 
 	return nil
