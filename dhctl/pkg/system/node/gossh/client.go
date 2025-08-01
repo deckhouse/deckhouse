@@ -136,7 +136,7 @@ func (s *Client) Start() error {
 		becomePass = app.BecomePass
 	}
 
-	if len(s.privateKeys) == 0 && len(becomePass) == 0 && socket != "" {
+	if len(s.privateKeys) == 0 && len(becomePass) == 0 && socket == "" {
 		return fmt.Errorf("one of SSH keys, SSH_AUTH_SOCK environment variable or become password should be not empty")
 	}
 
