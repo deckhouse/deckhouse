@@ -20,7 +20,7 @@ data "vcd_nsxt_app_port_profile" "ssh" {
   scope = "SYSTEM"
 }
 
-resource "vcd_nsxt_nat_rule" "master-dnat" {
+resource "vcd_nsxt_nat_rule" "ssh_dnat" {
   count = local.use_nsxv ? 0 : 1
   org   = var.organization
 
@@ -39,7 +39,7 @@ resource "vcd_nsxt_nat_rule" "master-dnat" {
 
 # NSX-V DNAT rule
 
-resource "vcd_nsxv_dnat" "master-dnat" {
+resource "vcd_nsxv_dnat" "ssh_dnat" {
   count = local.use_nsxv ? 1 : 0
 
   enabled     = true
