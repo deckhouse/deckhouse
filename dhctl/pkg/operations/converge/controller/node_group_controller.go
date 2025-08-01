@@ -16,7 +16,6 @@ package controller
 
 import (
 	"cmp"
-	ct "context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,15 +28,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -88,33 +84,6 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	}
 
 	log.DebugF("nodes to delete %v\n", len(nodesToDeleteInfo))
-
-	availableHosts := ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts()
-
-	for _, host := range availableHosts {
-		for _, dhost := range nodesToDeleteInfo {
-			if host.Name == dhost.name {
-				ctx.KubeClient().NodeInterfaceAsSSHClient().Session().RemoveAvailableHosts(host)
-			}
-		}
-	}
-
-	err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
-		ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
-		err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
-		return err
-	})
-	if err != nil {
-		return err
-	}
-
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ct.Background(), ssh.NewNodeInterfaceWrapper(ctx.KubeClient().NodeInterfaceAsSSHClient()))
-	if err != nil {
-		return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
-	}
-
-	newCtx := context.NewContext(ct.Background(), kubeCl, ctx.StateCache(), ctx.ChangesSettings())
-	ctx = newCtx
 
 	log.DebugF("starting update nodes\n")
 
