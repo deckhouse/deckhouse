@@ -121,7 +121,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-08-01.02"
+fromCacheVersion: "2025-08-01.03"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -229,12 +229,12 @@ shell:
     done'
 
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
-  - cp -R /etc/* /chroot/etc/
-  - cp -R /src/rootfs/etc/* /chroot/etc
+  - cp -a /etc/* /chroot/etc/ # FIXME Why?
+  # - cp -a /etc/nginx/* /chroot/etc/nginx/
+  - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R www-data:www-data /chroot/etc # FIXME Danger?
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /usr/* /chroot/usr/
-  - cp -a /etc/nginx/* /chroot/etc/nginx/
   # - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
   - cp /lib/ld-musl-* /chroot/lib/
   - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/
@@ -278,7 +278,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/alpine-3.21
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-01.03"
+fromCacheVersion: "2025-08-01.04"
 # mount:
 # - from: build_dir
 #   to: /tmp/apps
