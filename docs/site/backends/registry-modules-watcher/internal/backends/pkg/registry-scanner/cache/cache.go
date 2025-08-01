@@ -15,12 +15,17 @@
 package cache
 
 import (
+	"log/slog"
 	"slices"
 	"sort"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 type (
@@ -43,12 +48,34 @@ type versionData struct {
 type Cache struct {
 	m   sync.RWMutex
 	val map[registryName]map[moduleName]moduleData
+	ms  *metricsstorage.MetricStorage
 }
 
-func New() *Cache {
-	return &Cache{
+func New(ms *metricsstorage.MetricStorage) *Cache {
+	c := &Cache{
 		val: make(map[registryName]map[moduleName]moduleData),
+		ms:  ms,
 	}
+
+	// function that will be triggered on metrics handler
+	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
+		log.Debug(
+			"collector func triggered",
+			slog.Int("registry_len", len(c.val)),
+		)
+
+		for registry, modules := range c.val {
+			s.GaugeSet(
+				metrics.RegistryScannerCacheLengthMetric,
+				float64(len(modules)),
+				map[string]string{
+					"registry": string(registry),
+				},
+			)
+		}
+	})
+
+	return c
 }
 
 func (c *Cache) GetState() []backends.DocumentationTask {
@@ -173,13 +200,13 @@ func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData
 	createTasks := RemapFromMapToVersions(RemapFromVersionData(versionsToCreate), backends.TaskCreate)
 
 	// Combine and sort all tasks
-	result := append(createTasks, versionsToDelete...)
-	sortDocumentationTasks(result)
+	createTasks = append(createTasks, versionsToDelete...)
+	sortDocumentationTasks(createTasks)
 
 	// Update cache with registry versions
 	c.val = RemapFromVersionData(registryVersions)
 
-	return result
+	return createTasks
 }
 
 // Helper function to clean up empty maps
@@ -202,10 +229,10 @@ func cleanupEmptyMaps(cache map[registryName]map[moduleName]moduleData, reg regi
 
 // Helper function to deep copy the cache map
 func copyCache(original map[registryName]map[moduleName]moduleData) map[registryName]map[moduleName]moduleData {
-	copy := make(map[registryName]map[moduleName]moduleData)
+	cacheCopy := make(map[registryName]map[moduleName]moduleData)
 
 	for reg, moduleMap := range original {
-		copy[reg] = make(map[moduleName]moduleData)
+		cacheCopy[reg] = make(map[moduleName]moduleData)
 
 		for mod, data := range moduleMap {
 			newData := moduleData{
@@ -230,11 +257,11 @@ func copyCache(original map[registryName]map[moduleName]moduleData) map[registry
 				newData.versions[ver] = newVersionData
 			}
 
-			copy[reg][mod] = newData
+			cacheCopy[reg][mod] = newData
 		}
 	}
 
-	return copy
+	return cacheCopy
 }
 
 func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task backends.Task) []backends.DocumentationTask {
@@ -264,6 +291,7 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 	return versions
 }
 
+// nolint: revive
 func RemapFromVersionData(input []internal.VersionData) map[registryName]map[moduleName]moduleData {
 	sort.Slice(input, func(i, j int) bool {
 		if input[i].Registry != input[j].Registry {
