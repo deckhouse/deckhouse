@@ -962,10 +962,8 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 # Example output:
 # [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
 #   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-#     endpoint = ["https://<REGISTRY_URL>"]
 # [plugins."io.containerd.grpc.v1.cri".registry.configs]
 #   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
-#     auth = "<REGISTRY_AUTH>"
 ```
 
 Example of adding authorization to a custom registry (**old** configuration method):  
@@ -1009,7 +1007,10 @@ spec:
               endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+              username = "username"
+              password = "password"
+              # OR
+              auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
 
@@ -1203,7 +1204,10 @@ spec:
       [host."https://${REGISTRY_URL}"]
         capabilities = ["pull", "resolve"]
         [host."https://${REGISTRY_URL}".auth]
-          auth = "AAAABBBCCCDDD=="
+          username = "username"
+          password = "password"
+          # OR
+          auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
 
