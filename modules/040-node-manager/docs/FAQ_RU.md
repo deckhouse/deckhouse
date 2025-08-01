@@ -928,21 +928,39 @@ spec:
 
 ### Как добавить конфигурацию для дополнительного registry?
 
-В Containerd существует два способа описания конфигурации registry: **старый** и **новый**. В зависимости от версии Containerd и включения модуля registry применяется один из них.
+В Containerd существует два способа описания конфигурации registry: **старый** и **новый**.
+
+Для проверки наличия **старого** способа конфигурации выполните на узлах кластера следующие команды:
+
+```bash
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+
+# Пример вывода:
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+# [plugins."io.containerd.grpc.v1.cri".registry.configs]
+#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+```
+
+Для проверки наличия **нового** способа конфигурации выполните на узлах кластера следующую команду:
+
+```bash
+cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+
+# Пример вывода:
+# config_path = "/etc/containerd/registry.d"
+```
 
 #### Старый способ
 
 {% alert level="info" %}
-Используется в Containerd V1 при условии, что модуль registry не используется.
+Используется в Containerd V1, если Deckhouse не управляется модулем Registry (режим [Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Описание конфигурации выполняется в основном конфигурационном файле Containerd `/etc/containerd/config.toml`.
 
 Добавление пользовательской конфигурации осуществляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
-
-{% alert level="danger" %}
-Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса `containerd`.
-{% endalert %}
 
 Пример конфигурационного файла для директории `/etc/containerd/conf.d/`:
 
@@ -963,18 +981,9 @@ spec:
           insecure_skip_verify = true
 ```
 
-Для проверки наличия **старого** способа конфигурации выполните на узлах кластера следующие команды:
-
-```bash
-cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
-cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
-
-# Пример результата:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
-```
+{% alert level="danger" %}
+Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса `containerd`.
+{% endalert %}
 
 Пример добавления авторизации в пользовательский registry (**старый** способ конфигурации):
 
@@ -1128,11 +1137,9 @@ crictl pull private.registry.example/image/repo:tag
 #### Новый способ
 
 {% alert level="info" %}
-Изменения конфигураций не приводят к перезапуску сервиса `containerd`.
-{% endalert %}
+Используется в Containerd V2.  
 
-{% alert level="info" %}
-Используется в Containerd V2, а также в Containerd V1 при использовании модуля registry.
+Используется в Containerd V1, если управление осуществляется через модуль Registry (например, в режиме [Direct](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Описание конфигурации выполняется в каталоге `/etc/containerd/registry.d`. Конфигурация задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1167,14 +1174,9 @@ crictl pull private.registry.example/image/repo:tag
     skip_verify = true
 ```
 
-Для проверки наличия **нового** способа конфигурации выполните на узлах кластера следующую команду:
-
-```bash
-cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
-
-# Пример результата:
-# config_path = "/etc/containerd/registry.d"
-```
+{% alert level="info" %}
+Изменения конфигураций не приводят к перезапуску сервиса `containerd`.
+{% endalert %}
 
 Пример добавления авторизации в пользовательский registry (**новый** способ конфигурации):
 

@@ -918,21 +918,39 @@ spec:
 
 ### How to add configuration for an additional registry?
 
-Containerd supports two methods for registry configuration: the **old** method and the **new** method. Depending on the Containerd version and whether the registry module is enabled, one of them is used.
+Containerd supports two methods for registry configuration: the **old** method and the **new** method.
+
+To check for the presence of the **old** configuration method, run the following commands on the cluster nodes:  
+
+```bash
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+
+# Example output:
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+# [plugins."io.containerd.grpc.v1.cri".registry.configs]
+#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+```
+
+To check for the presence of the **new** configuration method, run the following command on the cluster nodes:
+
+```bash
+cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+
+# Example output:
+# config_path = "/etc/containerd/registry.d"
+```
 
 #### Old Method
 
 {% alert level="info" %}
-Used in Containerd V1 provided that the registry module is not in use.
+Used in Containerd V1 when Deckhouse is not managed by the Registry module ([Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is described in the main Containerd configuration file `/etc/containerd/config.toml`.
 
 Adding custom configuration is carried out through the `toml merge` mechanism. Configuration files from the `/etc/containerd/conf.d` directory are merged with the main file `/etc/containerd/config.toml`. The merge takes place during the execution of the `032_configure_containerd.sh` script, so the corresponding files must be added in advance.
-
-{% alert level="danger" %}
-Adding custom settings through the `toml merge` mechanism causes the `containerd` service to restart.
-{% endalert %}
 
 Example configuration file for the `/etc/containerd/conf.d/` directory:
 
@@ -953,18 +971,9 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
           insecure_skip_verify = true
 ```
 
-To check for the presence of the **old** configuration method, run the following commands on the cluster nodes:  
-
-```bash
-cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
-cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
-
-# Example output:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
-```
+{% alert level="danger" %}
+Adding custom settings through the `toml merge` mechanism causes the `containerd` service to restart.
+{% endalert %}
 
 Example of adding authorization to a custom registry (**old** configuration method):  
 
@@ -1118,11 +1127,9 @@ crictl pull private.registry.example/image/repo:tag
 #### New Method
 
 {% alert level="info" %}
-Configuration changes do not cause the `containerd` service to restart.
-{% endalert %}
+Used in Containerd V2.
 
-{% alert level="info" %}
-Used in Containerd V2, as well as in Containerd V1 when using the registry module.
+Used in Containerd V1 when managed through the Registry module (for example, in [Direct](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -1158,14 +1165,9 @@ Example contents of the `hosts.toml` file:
     skip_verify = true
 ```
 
-To check for the presence of the **new** configuration method, run the following command on the cluster nodes:
-
-```bash
-cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
-
-# Example output:
-# config_path = "/etc/containerd/registry.d"
-```
+{% alert level="info" %}
+Configuration changes do not cause the `containerd` service to restart.
+{% endalert %}
 
 Example of adding authentication to a custom registry (**new** configuration method):
 
