@@ -121,7 +121,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-08-01.01"
+fromCacheVersion: "2025-08-01.02"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -131,6 +131,10 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/rootfs/etc
   to: /src/etc
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/etc
+  to: /src/rootfs/etc
   before: install
 secrets:
 - id: SOURCE_REPO
@@ -225,7 +229,9 @@ shell:
     done'
 
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
-  - cp -R /etc/* /chroot/etc/ && chown -R www-data:www-data /chroot/etc # FIXME Danger?
+  - cp -R /etc/* /chroot/etc/
+  - cp -R /src/rootfs/etc/* /chroot/etc
+  - chown -R www-data:www-data /chroot/etc # FIXME Danger?
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /usr/* /chroot/usr/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
@@ -272,7 +278,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/alpine-3.21
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-01.02"
+fromCacheVersion: "2025-08-01.03"
 # mount:
 # - from: build_dir
 #   to: /tmp/apps
