@@ -54,7 +54,6 @@ spec:
 # [<ru>] Включение модуля cni-cilium.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/
 apiVersion: deckhouse.io/v1alpha1
-apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: cni-cilium
