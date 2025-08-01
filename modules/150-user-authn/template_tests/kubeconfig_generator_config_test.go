@@ -186,7 +186,7 @@ Multiline
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.masterURI", i), a.masterURI)
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.description", i), a.desc)
 
-					name := encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-generator-%d", i))
+					name := encoding.ToSha256Like(fmt.Sprintf("kubeconfig-generator-%d", i))
 					encodedNames = append(encodedNames, name)
 				}
 
