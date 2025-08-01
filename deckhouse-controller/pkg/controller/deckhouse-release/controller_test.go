@@ -482,6 +482,24 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Process major releases", func() {
+		suite.Run("major release from 1 to 2 must be not allowed", func() {
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
+			suite.setupController("major-release-from-1-to-2.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v2.10.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.31.0")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
 	suite.Run("Pending Manual release on cluster bootstrap", func() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
