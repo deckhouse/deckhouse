@@ -277,7 +277,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-01.05"
+fromCacheVersion: "2025-08-01.06"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -310,6 +310,7 @@ secrets:
 shell:
   setup:
   - cp -a /src/rootfs/etc/* /chroot/etc
+  - chown -R www-data:www-data /chroot/etc # FIXME Danger
 
   # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   # - adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
@@ -335,7 +336,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/alpine
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-01.05"
+fromCacheVersion: "2025-08-01.06"
 # mount:
 # - from: build_dir
 #   to: /tmp/apps
