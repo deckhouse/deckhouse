@@ -406,10 +406,6 @@ properties:
               type: string
           datacenter:
             type: string
-          zones:
-            type: array
-            items:
-              type: string
           datastores:
             type: array
             items:
