@@ -21,8 +21,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -67,7 +65,7 @@ func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
 	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
 	sdnCniDaemonSets := input.NewSnapshots.Get("sdn-cni-daemonset")
-	isEnabled := len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets)
+	isEnabled := len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets) != 0
 	input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", isEnabled)
 	return nil
 }
