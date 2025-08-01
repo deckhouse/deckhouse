@@ -169,6 +169,7 @@ func (s *registryscanner) extractTar(ctx context.Context, version *internal.Vers
 		return nil, fmt.Errorf("get image: %w", err)
 	}
 
+	// do a metric
 	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract documentation: %w", err)

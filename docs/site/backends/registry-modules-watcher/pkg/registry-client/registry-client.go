@@ -99,7 +99,7 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
-	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage)) // calculace metrics
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	return remote.Image(

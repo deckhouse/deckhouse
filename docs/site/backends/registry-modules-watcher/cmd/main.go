@@ -70,7 +70,7 @@ func main() {
 	// New handlers
 	h := handler.NewHandler(logger.Named("http"))
 	srv := &http.Server{
-		Addr:    "localhost:8080",
+		Addr:    ":8080",
 		Handler: h,
 	}
 	go func() {
@@ -78,10 +78,11 @@ func main() {
 			logger.Fatal("listen: %w", err)
 		}
 	}()
+	logger.Info("listen", slog.String("address", srv.Addr))
 
 	metricHandler := handler.NewMetricHandler(logger.Named("http-metrics"), metricStorage)
 	metricServer := &http.Server{
-		Addr:    "localhost:9090",
+		Addr:    ":9090",
 		Handler: metricHandler,
 	}
 	go func() {
@@ -89,6 +90,7 @@ func main() {
 			logger.Fatal("listen: %w", err)
 		}
 	}()
+	logger.Info("listen", slog.String("address", metricServer.Addr))
 
 	// * * * * * * * * *
 	// dockerconfigjson

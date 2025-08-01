@@ -40,17 +40,9 @@ spec:
           readinessProbe:
             httpGet:
               path: /readyz
-              port: http
-            initialDelaySeconds: 15
+              port: 8080
             periodSeconds: 5
             failureThreshold: 3
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 5
-            failureThreshold: 30
           env:
             - name: LOG_LEVEL
               value: {{ pluck .Values.werf.env .Values.moduleWatcher.logLevel | first | default .Values.moduleWatcher.logLevel._default }}
@@ -70,7 +62,6 @@ kind: Service
 metadata:
   name: registry-modules-watcher-http
 spec:
-  clusterIP: None
   selector:
     app: registry-modules-watcher
   ports:
