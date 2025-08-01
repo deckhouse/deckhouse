@@ -97,6 +97,6 @@ shell:
   - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
   - ls -la /usr/lib
-  - make V=5 SHELL="/bin/bash -x" EXTRA_CFLAGS="--static" LDFLAGS="-L/usr/lib" -j "$(getconf _NPROCESSORS_ONLN)"
+  - make V=1 EXTRA_CFLAGS="--static" EXTRA_LDFLAGS="-L/usr/lib" -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   - cp -a bpftool /usr/local/bin
