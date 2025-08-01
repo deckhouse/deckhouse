@@ -21,7 +21,7 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/nvidia-dcgm-build-artifact
-  add: /out/
+  add: /out
   to: /
   includePaths:
   - usr/*
@@ -58,20 +58,20 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /ldconf/
-  to: /etc/
+  add: /ldconf
+  to: /etc
   includePaths:
   - ld.so.conf
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /ldconf/ld.so.conf.d/
-  to: /etc/ld.so.conf.d/
+  add: /ldconf/ld.so.conf.d
+  to: /etc/ld.so.conf.d
   includePaths:
   - x86_64-linux-gnu.conf
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /
-  to: /usr/bin/
+  to: /usr/bin
   includePaths:
   - dcgm-exporter
   - dcgm-exporter-entrypoint.sh
@@ -85,7 +85,7 @@ import:
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/etc/*
-  to: /etc/dcgm-exporter/
+  to: /etc/dcgm-exporter
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /
