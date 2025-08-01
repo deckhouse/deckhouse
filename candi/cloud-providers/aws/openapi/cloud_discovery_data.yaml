@@ -35,7 +35,7 @@ apiVersions:
         minLength: 1
       loadBalancerSecurityGroup:
         type: string
-        pattern: '^sg-[a-z0-9]+$'
+        pattern: '^$|^sg-[a-z0-9]+$'
       zoneToSubnetIdMap:
         type: object
         minProperties: 1

@@ -13,17 +13,17 @@
 # limitations under the License.
 
 output "additional_security_groups" {
-  value = [aws_security_group.node.id]
+  value = length(aws_security_group.node) > 0 ? [aws_security_group.node[0].id] : []
 }
 
 output "load_balancer_security_group" {
-  value = aws_security_group.loadbalancer.id
+  value = length(aws_security_group.loadbalancer) > 0 ? aws_security_group.loadbalancer[0].id : ""
 }
 
 output "security_group_id_node" {
-  value = aws_security_group.node.id
+  value = length(aws_security_group.loadbalancer) > 0 ? aws_security_group.node[0].id : ""
 }
 
 output "security_group_id_ssh_accessible" {
-  value = aws_security_group.ssh-accessible.id
+  value = length(aws_security_group.ssh-accessible) > 0 ? aws_security_group.ssh-accessible[0].id : ""
 }
