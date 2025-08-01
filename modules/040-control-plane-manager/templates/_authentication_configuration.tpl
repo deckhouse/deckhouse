@@ -6,7 +6,8 @@ jwt:
     url: {{ .apiserver.oidcIssuerURL }} 
     discoveryURL: https://dex.d8-user-authn.svc.{{.clusterConfiguration.clusterDomain }}/.well-known/openid-configuration
     {{- if .apiserver.oidcCA }}
-    certificateAuthority: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
+    certificateAuthority: |
+      {{ .apiserver.oidcCA | indent 6 }} 
     audiences:
     - kubernetes
     {{- end }}    
