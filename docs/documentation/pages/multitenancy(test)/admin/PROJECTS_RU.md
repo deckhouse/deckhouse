@@ -4,7 +4,9 @@ permalink: ru/test/admin/projects.html
 lang: ru
 ---
 
-В данном разделе описаны процессы работы администратора с [проектами](../concepts/glossary.html#проекты) в Deckhouse Kubernetes Platform (DKP).
+В данном разделе описаны процессы работы **администратора [системы](../concepts/glossary.html#система)** с [проектами](../concepts/glossary.html#проекты) в Deckhouse Kubernetes Platform (DKP). Процессы работы **администратора [проекта](glossary.html#проекты)** описаны в разделе [Использование](../user/projects.html).
+
+> РЕМАРКА: администратора **системы**. Да?  (админ проекта читает раздел использование) 
 
 ## Шаблоны проектов
 
