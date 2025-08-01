@@ -1159,7 +1159,6 @@ Example contents of the `hosts.toml` file:
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
 
     [host."https://${REGISTRY_URL_1}".auth]
-      auth = "${BASE_64_AUTH}"
       username = "${USERNAME}"
       password = "${PASSWORD}"
 
@@ -1212,8 +1211,6 @@ spec:
         [host."https://${REGISTRY_URL}".auth]
           username = "username"
           password = "password"
-          # OR
-          auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
 
