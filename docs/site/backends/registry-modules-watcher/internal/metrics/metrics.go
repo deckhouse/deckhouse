@@ -66,7 +66,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", RegistryPullSecondsMetric))
-	_, err = ms.RegisterHistogram(RegistryPullSecondsMetric, []string{}, defaultSecondsBuckets, options.WithHelp("Image pull time from registry registry in seconds"))
+	_, err = ms.RegisterHistogram(RegistryPullSecondsMetric, []string{}, defaultSecondsBuckets, options.WithHelp("Image pull time from registry in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryPullSecondsMetric, err)
 	}
