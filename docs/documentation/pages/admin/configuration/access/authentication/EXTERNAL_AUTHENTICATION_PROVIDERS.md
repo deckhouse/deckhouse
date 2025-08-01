@@ -21,6 +21,12 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
 
 ## General integration workflow
 
+{% alert level="info" %}
+The `allowedGroups` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource allows you to restrict login access to users who belong to specific groups.  
+If the `allowedGroups` list is specified, the user **must** be a member of at least one of these groups — otherwise, authentication will be considered unsuccessful.  
+If the parameter is not specified, no group-based filtering will be applied.
+{% endalert %}
+
 1. Create an OAuth application in the authentication provider:
    - Set the redirect URI to `https://dex.<publicDomainTemplate>/callback`.
    - Obtain the `clientID` and `clientSecret`.
@@ -51,8 +57,8 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
    Example output:
 
    ```console
-   NAME         WEIGHT   SOURCE     PHASE   ENABLED   READY
-   user-authn   150      Embedded   Ready   True      True
+   NAME         STAGE   SOURCE     PHASE       ENABLED   READY
+   user-authn           Embedded   Available   True      True
    ```
 
    Enable the module via CL:
@@ -143,9 +149,30 @@ spec:
       - groups
 ```
 
-{% alert level="warning" %}
-If using Keycloak as an Identity Provider, remove the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers") on the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking). This is necessary for correct processing when [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) is set to `true` and correct permission granting to non-verified users.
-{% endalert %}
+If email verification is not enabled in Keycloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
+
+- Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
+  This is required for proper processing of the [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
+
+- If you can't modify or delete the `Email verified` mapping, create a new Client Scope named `email_dkp` (or any other name) and add two mappings:
+  - `email`: "Client Scopes" → `email_dkp` → "Add mapper" → "From predefined mappers" → `email`.
+  - `email verified`: "Client Scopes" → `email_dkp` → "Add mapper" → "By configuration" → "Hardcoded claim". Specify the following fields:
+    - "Name": `email verified`
+    - "Token Claim Name": `emailVerified`
+    - "Claim value": `true`
+    - "Claim JSON Type": `boolean`
+
+  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+
+  In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
+  
+  ```yaml
+  scopes:
+   - openid
+   - profile
+   - email_dkp
+   - groups
+  ```
 
 #### Blitz Identity Provider
 
@@ -380,7 +407,7 @@ Example configuration for integrating with Bitbucket:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket

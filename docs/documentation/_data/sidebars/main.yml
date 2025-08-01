@@ -86,6 +86,10 @@ entries:
                         en: Accessing the Kubernetes API via load balancer
                         ru: Доступ к Kubernetes API через балансировщик трафика
                       url: /admin/configuration/access/authentication/k8s-api-lb.html
+                    - title:
+                        en: Resource configuration
+                        ru: Настройка ресурсов
+                      url: /admin/configuration/access/authentication/resource-configuration.html
                 - title:
                     en: Authorization
                     ru: Авторизация
@@ -483,6 +487,10 @@ entries:
                         en: Custom node configuration
                         ru: Пользовательские настройки на узлах
                       url: /admin/configuration/platform-scaling/node/node-customization.html
+                    - title:
+                        en: Migrating container runtime to ContainerdV2
+                        ru: Миграция container runtime на ContainerdV2
+                      url: /admin/configuration/platform-scaling/node/migrating.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
@@ -552,17 +560,13 @@ entries:
                     ru: Балансировка входящего трафика
                   folders:
                     - title:
-                        en: Incoming traffic balancing
-                        ru: Балансировка входящего трафика
+                        en: Overview
+                        ru: Обзор
                       url: /admin/configuration/network/ingress/
                     - title:
                         en: NLB
                         ru: NLB
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/configuration/network/ingress/nlb/
                         - title:
                             en: Balancing by MetalLB means
                             ru: Балансировка средствами MetalLB
@@ -575,10 +579,6 @@ entries:
                         en: ALB
                         ru: ALB
                       folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/configuration/network/ingress/alb/
                         - title:
                             en: ALB by NGINX Ingress controller
                             ru: ALB средствами NGINX Ingress controller
@@ -596,24 +596,16 @@ entries:
                     ru: Балансировка исходящего трафика
                   folders:
                     - title:
-                        en: Overview
-                        ru: Обзор
-                      url: /admin/configuration/network/egress/
-                    - title:
                         en: Egress Gateway
                         ru: Egress Gateway
                       url: /admin/configuration/network/egress/gateway.html
-                    - title:
-                        en: Istio
-                        ru: Istio
-                      url: /admin/configuration/network/egress/istio.html
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
                   folders:
                     - title:
-                        en: Overview
-                        ru: Обзор
+                        en: Inter-cluster cooperation (alliance)
+                        ru: Межкластерное взаимодействие (альянс)
                       url: /admin/configuration/network/alliance/
                     - title:
                         en: Multicluster
@@ -628,8 +620,8 @@ entries:
                     ru: Сетевые политики
                   folders:
                     - title:
-                        en: Overview
-                        ru: Обзор
+                        en: Network infrastructure
+                        ru: Сетевая инфраструктура
                       url: /admin/configuration/network/policy/
                     - title:
                         en: Network policy configuration
@@ -639,10 +631,6 @@ entries:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
                   folders:
-                    - title:
-                        en: Overview
-                        ru: Обзор
-                      url: /admin/configuration/network/other/
                     - title:
                         en: Management of static routes and ip rules on cluster nodes
                         ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
@@ -867,10 +855,6 @@ entries:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
-        - title:
-            en: FAQ
-            ru: FAQ
-          url: /deckhouse-faq.html
 
 # ------------- Using -------------
     - title:

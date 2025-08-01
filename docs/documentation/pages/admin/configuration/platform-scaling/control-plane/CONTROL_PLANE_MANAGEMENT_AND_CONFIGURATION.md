@@ -159,11 +159,14 @@ DKP will automatically generate new certificates and update all required configu
 
 ### Kubelet certificate rotation
 
-In Deckhouse Kubernetes Platform, kubelet does not use the `--tls-cert-file` or `--tls-private-key-file` flags directly. Instead, it relies on dynamic certificates:
+In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
+The `--tls-cert-file` and `--tls-private-key-file` parameters for kubelet are not set directly. Instead, a dynamic TLS certificate mechanism is used: kubelet applies the client certificate located at `/var/lib/kubelet/pki/kubelet-client-current.pem`, which it uses to request a new client or server certificate (file `/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the `operator-trivy` module.
 
-- By default, kubelet generates its keys in `/var/lib/kubelet/pki/` and requests renewal from the kube-apiserver when needed.
-- Issued certificates are valid for 1 year, but kubelet starts renewing them early (around 5–10% of the remaining validity period).
-- If the certificate fails to renew in time, the node is marked as `NotReady` and is eventually replaced.
+Features of kubelet certificate rotation in Deckhouse Kubernetes Platform:
+
+- By default, kubelet generates its own keys in the `/var/lib/kubelet/pki/` directory and, if necessary, independently requests certificate renewal from kube-apiserver.
+- lifetime of certificates is 1 year (8760 hours). When there are between 5 and 10% of the time remaining before expiration (the exact value is randomly selected from this range), kubelet automatically initiates a request for a new certificate. For more details, see the [official documentation Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization). If necessary, lifetime of certificates can be changed using `--cluster-signing-duration` parameter in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. However, in order for kubelet to obtain and install a new certificate before the current one expires, it is recommended to set the validity period of certificates to at least 1 hour.
+- If the kubelet fails to renew the certificate before it expires, it will lose the ability to make requests to the kube-apiserver and, accordingly, renew certificates. As a result, the node will be marked as `NotReady` and automatically recreated.
 
 ### Manual renewal of control plane certificates
 

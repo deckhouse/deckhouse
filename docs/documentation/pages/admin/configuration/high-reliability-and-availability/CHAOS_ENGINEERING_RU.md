@@ -6,7 +6,7 @@ lang: ru
 ---
 
 {% alert level="warning" %}
-Режим хаос-инжиниринга включается только для групп узлов с [`nodeType: CloudEphemeral`](../../reference/cr/nodegroup/#nodegroup-v1-spec-nodetype).
+Режим хаос-инжиниринга включается только для групп узлов с [`nodeType: CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype).
 {% endalert %}
 
 Включите режим хаос-инжиниринга для конкретных групп узлов (NodeGroup) одним из следующих способов:

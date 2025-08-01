@@ -1,0 +1,34 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- if not (has "registry" .Values.global.enabledModules) }}
+{{- $policyName := "deckhouse-module-registry-disabled" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["v1alpha1"]
+      operations:  ["UPDATE"]
+      resources:   ["moduleconfigs"]
+  matchConditions:
+  - name: 'deckhouse-mc'
+    expression: 'object.metadata.name == "deckhouse"'
+  validations:
+  - expression: "(has(object.spec.settings.registry) == has(oldObject.spec.settings.registry)) && (!has(object.spec.settings.registry) || object.spec.settings.registry == oldObject.spec.settings.registry)"
+    message: "Changing, adding, or removing spec.settings.registry is forbidden when the registry module is disabled. Please enable the module to make changes."
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}
+{{- end }}

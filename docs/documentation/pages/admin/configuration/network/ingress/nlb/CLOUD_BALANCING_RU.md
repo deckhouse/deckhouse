@@ -6,22 +6,22 @@ lang: ru
 
 Перечень поддерживаемых провайдеров:
 
-* Amazon Web Services
-* Google Cloud Platform
-* Microsoft Azure
-* OpenStack
-* Huawei Cloud
-* VMware Cloud DirectorExperimental
-* VMware vSphere
-* Yandex Cloud
-* zVirtExperimental
-* Базис.DynamiX
+* [Amazon Web Services](https://aws.amazon.com/),
+* [Google Cloud Platform](https://cloud.google.com/),
+* [Microsoft Azure](https://azure.microsoft.com/),
+* [OpenStack](https://www.openstack.org/),
+* [Huawei Cloud](https://cloud.huawei.com/),
+* [VMware Cloud DirectorExperimental](https://www.vmware.com/products/cloud-infrastructure/cloud-director),
+* [VMware vSphere](https://www.vmware.com/products/cloud-infrastructure/vsphere),
+* [Yandex Cloud](https://yandex.cloud/),
+* [zVirtExperimental](https://www.orionsoft.ru/zvirt),
+* [Базис.DynamiX](https://basistech.ru/products/dynamix).
 
-Настройка балансировки входящего трафика в кластерах на облачных платформах включает создание Ingres-контроллера.
-Для него необходимо указать параметры LoadBalancer, который автоматически будет заказан у вашего облачного провайдера.
-При создании LoadBalancer создается Service, на который будет направляться трафик с заказанного у провайдера LoadBalancer.
+Настройка балансировки входящего трафика в кластерах на облачных платформах включает в себя создание Ingress-контроллера с указанием параметров LoadBalancer.
+На их основе облачный провайдер автоматически создаёт внешний балансировщик нагрузки.
+В кластере при этом создаётся ресурс Service, через который трафик от внешнего балансировщика будет направляться к приложениям.
 
-## Пример создания Ingres-контроллера для провайдера OpenStack
+## Пример создания Ingress-контроллера для провайдера OpenStack
 
 ```yaml
 apiVersion: deckhouse.io/v1

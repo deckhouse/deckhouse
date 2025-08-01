@@ -4,19 +4,21 @@ permalink: ru/admin/configuration/network/ingress/alb/nginx.html
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [ingress-nginx](../../../../../modules/ingress-nginx/).
+Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](../../../../../modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
 
-Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью Custom Resources. Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме и учитывает все особенности реализации инфраструктуры облаков и bare metal, а также кластеров Kubernetes различных типов.
+Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью Custom Resources (кастомных ресурсов).
+Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
 
-Поддерживает запуск и раздельное конфигурирование одновременно нескольких NGINX Ingress controller'ов — один **основной** и сколько угодно **дополнительных**. Например, это позволяет отделять внешние и intranet Ingress-ресурсы приложений.
+Поддерживается одновременный запуск нескольких экземпляров NGINX Ingress controller'ов с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
+Это, например, позволяет разделять внешние и внутренние (intranet) Ingress-ресурсы приложений.
 
-## Варианты терминирования трафика
+## Варианты терминации трафика
 
 Трафик к `nginx-ingress` может быть отправлен несколькими способами:
 
-* напрямую без внешнего балансировщика;
+* напрямую, без использования внешнего балансировщика;
 * через внешний LoadBalancer, в том числе поддерживаются:
   * Qrator,
   * Cloudflare,
@@ -28,16 +30,15 @@ lang: ru
 
 ## Терминация HTTPS
 
-Модуль позволяет управлять для каждого из NGINX Ingress controller'а политиками безопасности HTTPS, в частности:
+Для каждого экземпляра NGINX Ingress Controller можно настраивать политики безопасности HTTPS, включая:
+* параметры HSTS;
+* набор доступных версий SSL/TLS и протоколов шифрования.
 
-* параметрами HSTS;
-* набором доступных версий SSL/TLS и протоколов шифрования.
-
-Также модуль интегрирован с модулем [cert-manager](../../../../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование NGINX Ingress controller'ами.
+Также модуль интегрирован с модулем [`cert-manager`](../../../../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование NGINX Ingress controller'ами.
 
 ## Мониторинг и статистика
 
-В нашей реализации `ingress-nginx` добавлена система сбора статистики в Prometheus с множеством метрик:
+В этой реализации `ingress-nginx` добавлена система сбора статистики в Prometheus с множеством метрик:
 
 * по длительности времени всего ответа и апстрима отдельно;
 * кодам ответа;
@@ -47,50 +48,50 @@ lang: ru
 * типам `content-type`;
 * географии распределения запросов и т. д.
 
-Данные доступны в нескольких разрезах:
+Данные представлены в нескольких разрезах:
 
-* по `namespace`;
+* `namespace`;
 * `vhost`;
-* `ingress`-ресурсу;
+* `ingress`-ресурсы;
 * `location` (в nginx).
 
-Все графики собраны в виде удобных досок в Grafana, при этом есть возможность drill-down'а по графикам: при просмотре, например, статистики в разрезе namespace есть возможность, нажав на ссылку на dashboard в Grafana, углубиться в статистику по `vhosts` в этом `namespace` и т. д.
+Все графики сгруппированы в дашборды Grafana. Реализована возможность drill-down: например, при просмотре статистики по `namespace` можно перейти по ссылке на соответствующий дашборд и получить детализированные данные по `vhosts` в этом `namespace` — и далее по иерархии.
 
 ## Статистика
 
 ### Основные принципы сбора статистики
 
-1. На каждый запрос на стадии `log_by_lua_block` вызывается наш модуль, который рассчитывает необходимые данные и складывает их в буфер (у каждого nginx worker'а свой буфер).
-2. На стадии `init_by_lua_block` для каждого nginx worker'а запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через TCP socket в `protobuf_exporter` (наша собственная разработка).
-3. `protobuf_exporter` запущен sidecar-контейнером в поде с ingress-controller'ом, принимает сообщения в формате `protobuf`, разбирает, агрегирует их по установленным нами правилам и экспортирует в формате для Prometheus.
-4. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и protobuf_exporter, на основании этих данных все и работает!
+1. На стадии `log_by_lua_block` для каждого запроса вызывается модуль, который рассчитывает необходимые данные и складывает их в буфер (у каждого nginx worker свой буфер).
+2. На стадии `init_by_lua_block` для каждого nginx worker запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через TCP socket в `protobuf_exporter` (разработка Deckhouse Kubernetes Platform).
+3. `protobuf_exporter` запускается sidecar-контейнером в поде с ingress-controller, принимает сообщения в формате `protobuf`, разбирает, агрегирует их по установленным нами правилам и экспортирует в формате для Prometheus.
+4. Prometheus каждые 30 секунд собирает метрики как в ingress-controller (там есть небольшое количество нужных метрик), так и `protobuf_exporter`. На основе этих данных строится статистика.
 
-### Какая статистика собирается и как она представлена
+### Состав и представление метрик
 
-У всех собираемых метрик есть служебные лейблы, позволяющие идентифицировать экземпляр контроллера: `controller`, `app`, `instance` и `endpoint` (они видны в `/prometheus/targets`).
+У всех собираемых метрик есть служебные лейблы, идентифицирующие экземпляр контроллера: `controller`, `app`, `instance` и `endpoint` (они видны в `/prometheus/targets`).
 
 * Все метрики (кроме geo), экспортируемые protobuf_exporter'ом, представлены в трех уровнях детализации:
-  * `ingress_nginx_overall_*` — «вид с вертолета», у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`;
+  * `ingress_nginx_overall_*` — агрегированные метрики верхнего уровня (без детализации, у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`;
   * `ingress_nginx_detail_*` — кроме лейблов уровня overall, добавляются `ingress`, `service`, `service_port` и `location`;
   * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бэкендам. У этих метрик, кроме лейблов уровня detail, добавляется лейбл `pod_ip`.
 
 * Для уровней overall и detail собираются следующие метрики:
-  * `*_requests_total` — counter количества запросов (дополнительные лейблы — `scheme`, `method`);
-  * `*_responses_total` — counter количества ответов (дополнительный лейбл — `status`);
-  * `*_request_seconds_{sum,count,bucket}` — histogram времени ответа;
-  * `*_bytes_received_{sum,count,bucket}` — histogram размера запроса;
-  * `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа;
-  * `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream'а (используется сумма времен ответов всех upstream'ов, если их было несколько);
-  * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что и предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile);
-  * `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бэкендов, и сумма retry'ев.
+  * `*_requests_total` — общее количества запросов (дополнительные лейблы — `scheme`, `method`);
+  * `*_responses_total` — количество ответов (дополнительный лейбл — `status`);
+  * `*_request_seconds_{sum,count,bucket}` — гистограмма времени ответа;
+  * `*_bytes_received_{sum,count,bucket}` — гистограмма размера запроса;
+  * `*_bytes_sent_{sum,count,bucket}` — гистограмма размера ответа;
+  * `*_upstream_response_seconds_{sum,count,bucket}` — гистограмма времени ответа upstream-сервиса (при нескольких upstream'ах — суммарное время);
+  * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — упрощённая гистограмма (для визуализации; не подходит для расчета квантилей);
+  * `*_upstream_retries_{count,sum}` — количество и суммарное число повторных запросов (retry) к бэкенду.
 
 * Для уровня overall собираются следующие метрики:
-  * `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы — `geohash`, `place`).
+  * `*_geohash_total` — количество запросов по geohash (дополнительные лейблы — `geohash`, `place`).
 
 * Для уровня detail_backend собираются следующие метрики:
-  * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail;
-  * `*_responses_total` — counter количества ответов (дополнительный лейбл — `status_class`, а не просто `status`);
-  * `*_upstream_bytes_received_sum` — counter суммы размеров ответов бэкенда.
+  * `*_lowres_upstream_response_seconds` — упрощённая гистограмма времени ответа для overall и detail;
+  * `*_responses_total` — количество ответов (дополнительный лейбл — `status_class`, а не просто `status`);
+  * `*_upstream_bytes_received_sum` — суммарный объём данных, полученных от бэкендов.
 
 ## Примеры настройки балансировки
 
@@ -100,13 +101,13 @@ lang: ru
 
 ### Пример для AWS (Network Load Balancer)
 
-При создании балансировщика будут использованы все доступные в кластере зоны.
+При создании балансировщика используются все доступные в кластере зоны.
 
-В каждой зоне балансировщик получает публичный IP. Если в зоне есть инстанс с Ingress-контроллером, A-запись с IP-адресом балансировщика из этой зоны автоматически добавляется к доменному имени балансировщика.
+В каждой зоне балансировщик получает собственный публичный IP. Если в зоне есть инстанс с Ingress-контроллером, A-запись с IP-адресом балансировщика из этой зоны автоматически добавляется к доменному имени балансировщика.
 
 Если в зоне не остается инстансов с Ingress-контроллером, тогда IP автоматически убирается из DNS.
 
-В том случае, если в зоне всего один инстанс с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны будет временно исключен из DNS.
+В том случае, если в зоне всего один инстанс с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны временно исключается из DNS.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -133,7 +134,9 @@ spec:
   inlet: LoadBalancer
 ```
 
-> В GCP на узлах должна присутствовать аннотация, разрешающая принимать подключения на внешние адреса для сервисов с типом NodePort.
+{% alert level="info" %}
+В GCP на узлах необходимо указать аннотацию, которая разрешает принимать подключения на внешние адреса для сервисов с типом NodePort.
+{% endalert %}
 
 ### Пример для OpenStack
 
@@ -187,7 +190,9 @@ spec:
 
 ## Пример для bare metal (балансировщик MetalLB в режиме BGP LoadBalancer)
 
-> Доступно только в Enterprise Edition.
+{% alert level="info" %}
+Доступно только в Enterprise Edition.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -207,9 +212,9 @@ spec:
 
 В случае использования MetalLB его speaker-поды должны быть запущены на тех же узлах, что и поды Ingress–контроллера.
 
-Контроллер должен получать реальные IP-адреса клиентов — поэтому его Service создается с параметром `externalTrafficPolicy: Local` (запрещая межузловой SNAT), и для удовлетворения данного параметра MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
+Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его Service должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. Для соблюдения этого условия MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
 
-Таким образом, для данного примера [конфигурация модуля `metallb`](../../../../../modules/metallb/configuration.html) должна быть такой:
+Таким образом, для данного примера конфигурация модуля [`metallb`](../../../../../modules/metallb/configuration.html) должна быть такой:
 
 ```yaml
 metallb:
@@ -224,7 +229,7 @@ metallb:
 
 ### Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
-{% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
+{% alert level="info" %}Доступно только в Enterprise Edition.{% endalert %}
 
 1. Включите модуль `metallb`:
 
@@ -238,7 +243,7 @@ metallb:
      version: 2
    ```
 
-1. Создайте ресурс _MetalLoadBalancerClass_:
+1. Создайте ресурс MetalLoadBalancerClass:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -250,11 +255,11 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+       node-role.kubernetes.io/loadbalancer: "" # Cелектор узлов-балансировщиков.
      type: L2
    ```
 
-1. Создайте ресурс _IngressNginxController_:
+1. Создайте ресурс IngressNginxController:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -267,11 +272,11 @@ metallb:
      loadBalancer:
        loadBalancerClass: ingress
        annotations:
-         # Количество адресов, которые будут выделены из пула, описанного в _MetalLoadBalancerClass_.
+         # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
    ```
 
-1. Платформа создаст сервис с типом `LoadBalancer`, которому будет присвоено заданное количество адресов:
+Платформа создаст сервис с типом `LoadBalancer`, которому будет присвоено заданное количество адресов:
 
    ```shell
    $ d8 k -n d8-ingress-nginx get svc

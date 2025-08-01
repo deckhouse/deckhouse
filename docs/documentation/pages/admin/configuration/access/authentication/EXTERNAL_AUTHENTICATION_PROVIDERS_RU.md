@@ -21,6 +21,12 @@ DKP поддерживает подключение следующих внеш�
 
 ## Общая схема интеграции
 
+{% alert level="info" %}
+Параметр `allowedGroups` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) позволяет ограничить вход только пользователям, входящим в указанные группы.
+Если список `allowedGroups` задан, пользователь обязан состоять хотя бы в одной из этих групп — иначе аутентификация будет считаться неуспешной.
+Если параметр не указан, фильтрация по группам не применяется.
+{% endalert %}
+
 1. Создайте OAuth-приложение у провайдера аутентификации:
     - укажите Redirect URI вида `https://dex.<publicDomainTemplate>/callback`;
     - получите `clientID` и `clientSecret`.
@@ -47,8 +53,8 @@ DKP поддерживает подключение следующих внеш�
    Пример вывода:
 
    ```console
-   NAME         WEIGHT   SOURCE     PHASE   ENABLED   READY
-   user-authn   150      Embedded   Ready   True      True
+   NAME         STAGE   SOURCE     PHASE       ENABLED   READY
+   user-authn           Embedded   Available   True      True
    ```
 
    Включите модуль через CLI:
@@ -136,9 +142,30 @@ spec:
       - groups
 ```
 
-{% alert level="warning" %}
-При использовании Keycloak, как Identity Provider [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»). Это необходимо для корректной обработки значения `true` поля [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
-{% endalert %}
+Если в Keycloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
+
+* Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
+  Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
+
+* Если отредактировать или удалить маппинг `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два маппинга:
+  * `email`: «Client Scopes» → `email_dkp` → «Add mapper» → «From predefined mappers» → `email`;
+  * `email verified`: «Client Scopes» → `email_dkp` → «Add mapper» → «By configuration» → «Hardcoded claim». Укажите следующие поля:
+    * «Name»: `email verified`;
+    * «Token Claim Name»: `emailVerified`;
+    * «Claim value»: `true`;
+    * «Claim JSON Type»: `boolean`.
+  
+  После этого в клиенте, зарегистрированном для кластера DKP, в разделе «Clients» для `Client scopes` замените значение `email` на `email_dkp`.
+
+  В ресурсе DexProvider укажите параметр `insecureSkipEmailVerified: true` и в поле `.spec.oidc.scopes` замените название Client Scope на `email_dkp`, следуя примеру:
+
+  ```yaml
+  scopes:
+   - openid
+   - profile
+   - email_dkp
+   - groups
+  ```
 
 #### Blitz Identity Provider
 
@@ -366,7 +393,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket
