@@ -1,4 +1,4 @@
-# Copyright 2023 Flant JSC
+# Copyright 2025 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 output "cloud_discovery_data" {
@@ -9,4 +9,8 @@ output "cloud_discovery_data" {
     # but our machinery use them. we use default as one zone
     "zones" = ["default"]
   }
+}
+
+output "bastion_ip_address_for_ssh" {
+  value = var.providerClusterConfiguration.edgeGateway.externalIP
 }
