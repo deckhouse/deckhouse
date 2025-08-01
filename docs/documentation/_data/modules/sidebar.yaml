@@ -1,0 +1,30 @@
+weight:
+  configuration.html: 2
+  cr.html: 3
+  usage.html: 4
+  examples.html: 5
+  faq.html: 6
+
+titles:
+  overview:
+    en: Overview
+    ru: Описание
+  configuration.html:
+    en: Configuration
+    ru: Настройки
+  cr.html:
+    en: Custom Resources
+    ru: Ресурсы (CRD)
+  usage.html:
+    en: Usage
+    ru: Использование
+  advanced_usage.html:
+    en: Advanced usage
+    # Rephrase
+    ru: Расширенное использование
+  examples.html:
+    en: Examples
+    ru: Примеры
+  faq.html:
+    en: FAQ
+    ru: FAQ
