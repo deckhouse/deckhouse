@@ -15,10 +15,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-vsphere :: hooks :: discover_zones_and_datastores ::", func() {
+var _ = Describe("Modules :: csi-vsphere :: hooks :: discover_zones_and_datastores ::", func() {
 	const (
 		initValuesStringA = `
-cloudProviderVsphere:
+vsphereCsi:
   internal:
     providerClusterConfiguration:
       provider:
@@ -33,7 +33,7 @@ cloudProviderVsphere:
       vmFolderPath: test
 `
 		initValuesStringB = `
-cloudProviderVsphere:
+vsphereCsi:
   internal:
     providerClusterConfiguration:
       provider:
@@ -55,7 +55,7 @@ cloudProviderVsphere:
 		initValuesStringC = `
 global:
   defaultClusterStorageClass: default-cluster-sc
-cloudProviderVsphere:
+vsphereCsi:
   internal:
     providerClusterConfiguration:
       provider:
@@ -77,7 +77,7 @@ cloudProviderVsphere:
 		initValuesStringD = `
 global:
   defaultClusterStorageClass: ""
-cloudProviderVsphere:
+vsphereCsi:
   internal:
     providerClusterConfiguration:
       provider:
@@ -98,7 +98,7 @@ cloudProviderVsphere:
 `
 
 		initValuesStringE = `
-cloudProviderVsphere:
+vsphereCsi:
   internal:
     providerClusterConfiguration:
       provider:
@@ -179,9 +179,9 @@ data:
 
 		It("Should discover all volumeTypes and no default", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.datacenter").String()).To(Equal(`DCTEST`))
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["ZONE-TEST"]`))
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("vsphereCsi.internal.providerDiscoveryData.datacenter").String()).To(Equal(`DCTEST`))
+			Expect(f.ValuesGet("vsphereCsi.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["ZONE-TEST"]`))
+			Expect(f.ValuesGet("vsphereCsi.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
 	"datastoreType": "DatastoreCluster",
@@ -213,12 +213,11 @@ data:
 ]
 `))
 		})
-
 	})
 
 	b := HookExecutionConfigInit(initValuesStringB, `{}`)
 
-	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes", func() {
+	Context("Cluster has minimal vsphereCsi configuration with excluded storage classes", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(state))
 			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
@@ -227,7 +226,7 @@ data:
 
 		It("Should discover volumeTypes without excluded", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(b.ValuesGet("vsphereCsi.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
 	"datastoreType": "DatastoreCluster",
@@ -254,7 +253,7 @@ data:
 
 		It("Should result empty storageClasses list", func() {
 			Expect(e).To(ExecuteSuccessfully())
-			Expect(e.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+			Expect(e.ValuesGet("vsphereCsi.internal.storageClasses").String()).To(MatchJSON(`[]`))
 		})
 	})
 })
