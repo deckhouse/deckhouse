@@ -153,7 +153,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			logLevel = logLevelRaw.(string)
 		}
-
 		bundleRaw, ok := mc.Spec.Settings["bundle"]
 		if ok {
 			bundle = bundleRaw.(string)
@@ -166,7 +165,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 			"logLevel": logLevel,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("cannot create ModuleConfig deckhouse: %s", err)
+			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
 		}
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
 	}
