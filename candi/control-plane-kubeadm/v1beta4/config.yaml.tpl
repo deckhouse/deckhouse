@@ -127,10 +127,6 @@ apiServer:
     - name: runtime-config
       value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
     {{- end }}
-    {{- if .apiserver.oidcCA }}
-    - name: oidc-ca-file
-      value: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
-    {{- end }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
