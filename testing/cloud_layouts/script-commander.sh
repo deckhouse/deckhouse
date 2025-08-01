@@ -244,7 +244,7 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
-      \"vSpherePassword\": \"${VSPHERE_PASSWORD}\",
+      \"vSpherePassword\": \"${LAYOUT_VSPHERE_PASSWORD}\",
       \"vSphereBaseDomain\": \"${LAYOUT_VSPHERE_BASE_DOMAIN}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
