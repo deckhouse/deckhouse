@@ -106,6 +106,7 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 	shutdownSignalCh := make(chan struct{})
 	// Event to unlock all inhibitors when shutdown requirements are met.
 	unlockInhibitorsCh := make(chan struct{})
+	startCordonCh := make(chan struct{})
 
 	return []taskstarter.Task{
 		&tasks.ShutdownInhibitor{
@@ -123,6 +124,7 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			PodsCheckingInterval:  a.config.PodsCheckingInterval,
 			WallBroadcastInterval: a.config.WallBroadcastInterval,
 			ShutdownSignalCh:      shutdownSignalCh,
+			StartCordonCh:         startCordonCh,
 			StopInhibitorsCh:      unlockInhibitorsCh,
 			PodMatchers: []kubernetes.PodMatcher{
 				kubernetes.WithLabel(a.config.PodLabel),
@@ -130,8 +132,9 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			},
 		},
 		&tasks.NodeCordoner{
-			NodeName:         a.config.NodeName,
-			ShutdownSignalCh: shutdownSignalCh,
+			NodeName:           a.config.NodeName,
+			StartCordonCh:      startCordonCh,
+			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.NodeConditionSetter{
 			NodeName:           a.config.NodeName,
