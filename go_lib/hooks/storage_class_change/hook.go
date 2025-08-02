@@ -48,6 +48,7 @@ type Args struct {
 	ObjectName                    string `json:"objectName"`
 	InternalValuesSubPath         string `json:"internalValuesSubPath,omitempty"`
 	D8ConfigStorageClassParamName string `json:"d8ConfigStorageClassParamName,omitempty"`
+	AllowEmptyDir                 bool   `json:"allowEmptyDir,omitempty"`
 
 	// if return value is false - hook will stop its execution
 	// if return value is true - hook will continue
@@ -230,7 +231,9 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 	emptydirUsageMetricValue := 0.0
 	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
-		emptydirUsageMetricValue = 1.0
+		if !args.AllowEmptyDir {
+			emptydirUsageMetricValue = 1.0
+		}
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
