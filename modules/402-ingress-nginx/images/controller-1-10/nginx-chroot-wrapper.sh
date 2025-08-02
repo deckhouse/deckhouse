@@ -15,4 +15,21 @@
 # limitations under the License.
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
-unshare  -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+
+timestamp=$(date +%Y%m%d_%H%M%S)
+logfile="/tmp/valgrind/memcheck.${timestamp}.log"
+
+if [[ "$PROFILING" == "true" ]]; then
+  echo "Profiling enabled (valgrind running...)"
+
+  unshare -S 101 --fork --pid --mount-proc -R /chroot /usr/local/valgrind \
+    --trace-children=yes \
+    --log-file="$logfile" \
+    --tool=memcheck \
+    --leak-check=full \
+    --show-leak-kinds=all \
+    /usr/local/nginx/sbin/nginx "$@"
+else
+  echo "Profiling disabled"
+  unshare -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+fi
