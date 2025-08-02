@@ -68,7 +68,7 @@ func (svc *Service) buildHugo() error {
 			return nil
 		}
 
-		if moduleName, ok := getAssembleErrorPath(buildErr.Error()); ok {
+		if moduleName, ok := getModuleNameFromErrorPath(buildErr.Error()); ok {
 			paths := []string{
 				filepath.Join(svc.baseDir, contentDir, moduleName),
 				filepath.Join(svc.baseDir, modulesDir, moduleName),
@@ -100,7 +100,7 @@ func (svc *Service) removeModuleFromChannelMapping(moduleName string) error {
 	})
 }
 
-func getAssembleErrorPath(errorMessage string) (string, bool) {
+func getModuleNameFromErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
 	if len(match) == 6 {
 		// return only module name

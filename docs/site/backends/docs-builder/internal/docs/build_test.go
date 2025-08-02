@@ -21,21 +21,21 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func TestAssembleErrorRegexp(t *testing.T) {
+func TestModuleNameFromErrorPathRegexp(t *testing.T) {
 	input := "error building site: assemble: \"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\": EOF looking for end YAML front matter delimiter"
 
-	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName" {
-		t.Fatalf("unexpected path %q", path)
+	moduleName, ok := getModuleNameFromErrorPath(input)
+	if !ok || moduleName != "moduleName" {
+		t.Fatalf("unexpected module name %q", moduleName)
 	}
 }
 
-func TestAssembleErrorWithColorRegexp(t *testing.T) {
+func TestModuleNameFromErrorPathWithColorRegexp(t *testing.T) {
 	input := "error building site: assemble: \x1b[1;36m\"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\"\x1b[0m: EOF looking for end YAML front matter delimiter"
 
-	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName" {
-		t.Fatalf("unexpected path %q", path)
+	moduleName, ok := getModuleNameFromErrorPath(input)
+	if !ok || moduleName != "moduleName" {
+		t.Fatalf("unexpected module name %q", moduleName)
 	}
 }
 
