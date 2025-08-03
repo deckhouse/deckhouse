@@ -7,7 +7,7 @@ jwt:
     discoveryURL: https://dex.d8-user-authn.svc.{{.clusterConfiguration.clusterDomain }}/.well-known/openid-configuration
     {{- if .apiserver.oidcCA }}
     certificateAuthority: |
-      {{- .apiserver.oidcCA | indent 6 }} 
+      {{- .apiserver.oidcCA | nindent 6 }} 
     audiences:
     - kubernetes
     {{- end }}    
