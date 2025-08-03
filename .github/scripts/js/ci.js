@@ -41,7 +41,7 @@ const {
   renderJobStatusOneLine,
   renderJobStatusSeparate,
   renderWorkflowStatusFinal,
-  releaseIssueHeader
+  releaseIssueHeader, renderDocumentationComments
 } = require('./comments');
 
 const { buildFailedE2eTestAdditionalInfo } = require('./e2e/cleanup');
@@ -282,6 +282,10 @@ module.exports.updateCommentOnFinish = async ({
     }
   } else {
     comment = `${comment}\n${statusReport}`;
+  }
+
+  if (statusConfig.includes(',docs')) {
+    comment = `${comment}\n${renderDocumentationComments()}`;
   }
 
   const updateResponse = await github.rest.issues.updateComment({
