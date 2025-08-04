@@ -356,6 +356,7 @@ import:
 ---
 {{- $_ := set $context "ModuleName" "docs" }}
 {{- $_ := set $context "ImageName" "web" }}
+{{- $_ := set $context "BuildModules" true }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-static.inc.yaml" .ModulePath)) $context }}
 ---
 image: web-frontend

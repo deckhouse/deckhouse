@@ -12,11 +12,10 @@ shell:
         yq -V
         echo "jq: $(jq -V)"
 
-        echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
-{{ if ne .ModuleName "docs" }}
-        export MODULES_DIR=/comparison
-{{ end }}
+
+{{ if .BuildModules }}
+        echo '[] Creating modules.yml ...'
         _tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
@@ -78,6 +77,7 @@ shell:
         echo '[] Preparing OSS license info...'
         export MODULES_DIR=/src/modules
         bash _tools/modules_generate_ossinfo.sh
+{{ end }}{{/* .BuildModules */}}
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -177,47 +177,7 @@ git:
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
-{{ if ne .ModuleName "docs" }}
-- add: /{{ .ModulePath }}
-  to: /comparison
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-  - ee/modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/fe
-  to: /comparison/fe
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/be
-  to: /comparison/be
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/se
-  to: /comparison/se
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/se-plus
-  to: /comparison/se-plus
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-{{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
+{{ if .BuildModules }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}
+{{ end }}
