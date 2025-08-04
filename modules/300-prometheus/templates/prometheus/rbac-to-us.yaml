@@ -30,6 +30,7 @@ subjects:
 - kind: ServiceAccount
   name: aggregating-proxy
   namespace: d8-monitoring
+{{ /* This group is deprecated and will be removed in the future */ }}
 - kind: Group
   name: ingress-nginx:auth
 {{- if (.Values.global.enabledModules | has "upmeter") }}
