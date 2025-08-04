@@ -93,11 +93,11 @@ resource "vcd_vapp_vm" "node" {
     for_each = local.additional_metadata
 
     content {
-      type        = "MetadataStringValue"
+      type        = format("Metadata%sValue", metadata_entry.type)
+      is_system   = metadata_entry.isSystem
+      user_access = metadata_entry.userAccess
       key         = metadata_entry.key
       value       = metadata_entry.value
-      is_system   = false
-      user_access = "READWRITE"
     }
   }
 
