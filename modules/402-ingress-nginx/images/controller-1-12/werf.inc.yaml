@@ -65,8 +65,9 @@ shell:
   - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-07-28.01"
+# fromImage: common/alt-p11-artifact
+fromImage: builder/golang-alpine
+fromCacheVersion: "2025-08-04.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -79,9 +80,8 @@ import:
   before: install
 shell:
   install:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y gcc lua5.1-devel lua5.1 lua5.1-luarocks
-  - apt-get install -y liblua5.1-devel --download-only
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev
   setup:
   - cd /src/lua-protobuf
   - luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
@@ -289,17 +289,21 @@ import:
   - chroot
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/lib64/lua/5.1/iconv.so
-  to: /chroot/usr/local/lib/lua/5.1/iconv.so
+  add: /
+  to: /chroot
+  includePaths:
+  - usr/local/lib/lua/5.1/iconv.so
+  - usr/local/lib/lua/5.1/pb.so
+  - usr/local/share/lua/5.1/protoc.lua
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/lib64/lua/5.1/pb.so
-  to: /chroot/usr/local/lib/lua/5.1/pb.so
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/share/lua/5.1/protoc.lua
-  to: /chroot/usr/local/share/lua/5.1/protoc.lua
-  before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+#   add: /usr/lib64/lua/5.1/pb.so
+#   to: /chroot/usr/local/lib/lua/5.1/pb.so
+#   before: install
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+#   add: /usr/share/lua/5.1/protoc.lua
+#   to: /chroot/usr/local/share/lua/5.1/protoc.lua
+#   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
   to: /src/rootfs/etc
