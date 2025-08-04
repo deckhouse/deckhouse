@@ -36,7 +36,8 @@ shell:
   - rm -rf /src/linux/.git
 ---
 image: {{ .ModuleName }}/bpftool-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+# fromImage: {{ .ModuleName }}/base-cilium-dev
+fromImage: builder/alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -77,6 +78,8 @@ import:
     - usr/sbin
     - usr/share
 shell:
+  setup:
+  - apk add --no-cache rsync
   install:
   - |
     if [[ -d /libs ]]; then
