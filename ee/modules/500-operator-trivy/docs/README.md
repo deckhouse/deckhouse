@@ -25,11 +25,11 @@ In Grafana:
 In cluster resources:
 
 - Cluster-wide security reports:
-  - [`ClusterComplianceReport`](trivy-cr.html#clustercompliancereport)
-  - [`RbacAssessmentReport`](trivy-cr.html#rbacassessmentreport)
+  - [`ClusterComplianceReport`](cr.html#clustercompliancereport)
+  - [`RbacAssessmentReport`](cr.html#rbacassessmentreport)
 
 - Resource-level security reports:
-  - [`VulnerabilityReport`](trivy-cr.html#vulnerabilityreport) — vulnerabilities found in container images;
-  - [`SbomReport`](trivy-cr.html#sbomreport) — software composition in container images (SBOM);
-  - [`ConfigAuditReport`](trivy-cr.html#configauditreport) — misconfiguration issues in Kubernetes objects;
-  - [`ExposedSecretReport`](trivy-cr.html#exposedsecretreport) — secrets exposed in containers.
+  - [`VulnerabilityReport`](cr.html#vulnerabilityreport) — vulnerabilities found in container images;
+  - [`SbomReport`](cr.html#sbomreport) — software composition in container images (SBOM);
+  - [`ConfigAuditReport`](cr.html#configauditreport) — misconfiguration issues in Kubernetes objects;
+  - [`ExposedSecretReport`](cr.html#exposedsecretreport) — secrets exposed in containers.

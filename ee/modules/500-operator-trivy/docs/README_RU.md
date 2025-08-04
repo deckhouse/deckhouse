@@ -27,10 +27,10 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 В ресурсах кластера:
 
 - Отчеты о безопасности кластера:
-  - [`ClusterComplianceReport`](trivy-cr.html#clustercompliancereport)
-  - [`RbacAssessmentReport`](trivy-cr.html#rbacassessmentreport)
+  - [`ClusterComplianceReport`](cr.html#clustercompliancereport)
+  - [`RbacAssessmentReport`](cr.html#rbacassessmentreport)
 - Отчеты о безопасности ресурсов кластера:
-  - [`VulnerabilityReport`](trivy-cr.html#vulnerabilityreport) — уязвимости в образах контейнеров;
-  - [`SbomReport`](trivy-cr.html#sbomreport) — состав ПО в образах (SBOM);
-  - [`ConfigAuditReport`](trivy-cr.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
-  - [`ExposedSecretReport`](trivy-cr.html#exposedsecretreport) — утечки секретов в контейнерах.
+  - [`VulnerabilityReport`](cr.html#vulnerabilityreport) — уязвимости в образах контейнеров;
+  - [`SbomReport`](cr.html#sbomreport) — состав ПО в образах (SBOM);
+  - [`ConfigAuditReport`](cr.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
+  - [`ExposedSecretReport`](cr.html#exposedsecretreport) — утечки секретов в контейнерах.
