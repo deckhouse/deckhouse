@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/flant/shell-operator/pkg/metric"
 )
 
 const (
