@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: documentation-modules-watcher
+  namespace: d8-monitoring
+  labels:
+    app: registry-modules-watcher
+    prometheus: main
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: http-metrics
+    scheme: http
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: "registry-modules-watcher"
+  selector:
+    matchLabels:
+      app: registry-modules-watcher
