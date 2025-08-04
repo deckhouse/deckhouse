@@ -314,6 +314,21 @@ apiserver:
   authn:
     oidcIssuerURL: https://dex.example.com
 `
+
+	const apiServerWithOidcEmpty = `
+internal:
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn: {}
+`
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
@@ -761,7 +776,6 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
-				fmt.Println(string(authConfig))
 				Expect(err).ShouldNot(HaveOccurred())
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
@@ -769,6 +783,20 @@ resources:
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).Should(BeEmpty())
+			})
+		})
+		Context("apiserver oidc settings are empty", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcEmpty)
+				f.HelmRender()
+			})
+			It("extra-file-authentication-config.yaml should not be created", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(authConfig).Should(BeEmpty())
 			})
 		})
 	})

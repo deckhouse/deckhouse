@@ -151,8 +151,10 @@ apiServer:
       value: 60s
     - name: tls-cipher-suites
       value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256    
+    {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
-      value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml      
+      value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
+    {{- end }}
     {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}
