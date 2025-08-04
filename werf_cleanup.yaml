@@ -16,14 +16,14 @@ cleanup:
   - references:
       branch: /release-[0-9]\.[0-9]+/
       limit:
-        last: 4
+        last: 3
     imagesPerReference:
       last: 1
   # keep 6 release builds
   - references:
       tag: /.*/
       limit:
-        last: 6
+        last: 5
   # Keep  main
   - references:
       branch: main
