@@ -80,8 +80,6 @@ libs/zlib: "sha256:a463bc6c82e5a9e9fd5db402510ae591561e1b966f9623fa2e6d377919d30
 libs/zlib-v1.3.1: "sha256:a463bc6c82e5a9e9fd5db402510ae591561e1b966f9623fa2e6d377919d3087b" # fromImage: builder/scratch
 tools/bash: "sha256:f2d9e9b89e6bd0f8be8a4cb2bfadd3769c4ac9d2d7f22ab7f796af089df93946" # fromImage: builder/scratch
 tools/bash-v5.2.37: "sha256:f2d9e9b89e6bd0f8be8a4cb2bfadd3769c4ac9d2d7f22ab7f796af089df93946" # fromImage: builder/scratch
-tools/conntrack-tools: "sha256:4aff1946032928ccde77893190e7df9e713e94f038203976a1ebc7297dcd3b96" # fromImage: builder/scratch
-tools/conntrack-tools-conntrack-tools-1.4.8: "sha256:4aff1946032928ccde77893190e7df9e713e94f038203976a1ebc7297dcd3b96" # fromImage: builder/scratch
 tools/coreutils: "sha256:dc304b2b99f5197b40ab5204c87e9ef20fd17223e4f4c774b23e1e9180b14d69" # fromImage: builder/scratch
 tools/coreutils-v9.7: "sha256:dc304b2b99f5197b40ab5204c87e9ef20fd17223e4f4c774b23e1e9180b14d69" # fromImage: builder/scratch
 tools/cosign: "sha256:764beea2f92fc6a1ad53d4c82c5b57a67a4bb0941cf3cc57f0667b51f098454a" # fromImage: builder/scratch
