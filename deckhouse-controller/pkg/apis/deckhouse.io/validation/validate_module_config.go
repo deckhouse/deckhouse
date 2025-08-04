@@ -44,6 +44,11 @@ type AnnotationsOnly struct {
 	ObjectMeta `json:"metadata,omitempty"`
 }
 
+type EnabledOnly struct {
+	Spec struct {
+		Enabled *bool `json:"enabled,omitempty"`
+	} `json:"spec,omitempty"`
+}
 type ObjectMeta struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
@@ -118,17 +123,20 @@ func moduleConfigValidationHandler(
 			if err := json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
+			oldFlag := new(EnabledOnly)
+			if err := json.NewDecoder(buf).Decode(oldFlag); err != nil {
+				return nil, fmt.Errorf("can not parse old module config: %w", err)
+			}
 
 			cfg, ok = obj.(*v1alpha1.ModuleConfig)
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
-			// if no annotations and module is disabled, check confirmation restriction and confirmation message
-			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
-			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
+			oldEnabled := oldFlag.Spec.Enabled != nil && *oldFlag.Spec.Enabled
+			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
 
-			if !ok && !oldOk && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+			if !oldEnabled && !newEnabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -137,6 +145,10 @@ func moduleConfigValidationHandler(
 					}
 				}
 			}
+
+			// if no annotations and module is disabled, check confirmation restriction and confirmation message
+			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
+			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
 				// we can disable unknown module without any further check
