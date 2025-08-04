@@ -3463,7 +3463,7 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |-
+      description: |
         Module `{{ $labels.module_name }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
 
         This may indicate:
