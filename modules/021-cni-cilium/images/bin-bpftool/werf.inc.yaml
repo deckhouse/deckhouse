@@ -55,17 +55,17 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: tools/elfutils
-  add: /
-  to: /tools/elfutils
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
+# - image: tools/elfutils
+#   add: /
+#   to: /tools/elfutils
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
 - image: libs/zstd
   add: /
   to: /libs/zstd
@@ -101,7 +101,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev
+  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils
   install:
   - |
     if [[ -d /libs ]]; then
