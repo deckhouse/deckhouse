@@ -411,6 +411,7 @@ DoesNotExist
 DOMAINNAME
 DoNotNeed
 downcase
+downsampling
 drbd
 DRBD
 DRBDv
