@@ -995,7 +995,7 @@ function update_comment() {
     return 1
   fi
 
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_connection} ${master_connection}\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${ssh_bastion} ${master_connection}\`"
   local result_body
 
   if ! result_body="$(echo "$comment" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
@@ -1167,9 +1167,6 @@ function run-test() {
     return 1
   fi
 
-  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
-
-  test_failed="true"
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
     testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
