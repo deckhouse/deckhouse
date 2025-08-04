@@ -3,7 +3,6 @@ title: Overview
 permalink: en/admin/integrations/integrations-overview.html
 ---
 
-<<<<<<< HEAD
 Deckhouse Kubernetes Platform (DKP) provides built-in tools
 for integrating with various cloud providers and virtualization systems.
 These tools let you:
