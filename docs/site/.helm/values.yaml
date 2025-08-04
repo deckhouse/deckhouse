@@ -8,6 +8,14 @@ observability:
     # if it true - create podMonitor resource
     # if it false - create service with label "prometheus.deckhouse.io/custom-target"
     enable: true
+    namespaces:
+      - deckhouse-web-dev
+      - deckhouse-web-stage
+      - deckhouse-web-test
+      - deckhouse-web-test2
+      - deckhouse-web-test3
+      - deckhouse-web-test4
+      - deckhouse-web-production
 
 ingressClass:
   _default: nginx
