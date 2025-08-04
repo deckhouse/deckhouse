@@ -74,7 +74,7 @@ func ingressWithClientCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	for _, rule := range ing.Spec.Rules {
 		for _, path := range rule.HTTP.Paths {
-			if strings.HasPrefix(path.Path, "prometheus") {
+			if strings.HasPrefix(path.Backend.Service.Name, "prometheus") {
 				isPrometheusIngress = true
 				break
 			}
