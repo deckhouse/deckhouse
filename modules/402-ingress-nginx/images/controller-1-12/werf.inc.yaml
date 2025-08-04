@@ -354,8 +354,8 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine # FIXME replace
-fromImage: common/distroless
+fromImage: builder/alpine # FIXME replace
+# fromImage: common/distroless
 fromCacheVersion: "2025-08-04.07"
 mount:
 - from: build_dir
