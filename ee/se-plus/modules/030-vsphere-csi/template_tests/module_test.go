@@ -34,24 +34,23 @@ func Test(t *testing.T) {
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler", "vsphere-csi"]
 clusterConfiguration:
-	apiVersion: deckhouse.io/v1
-	clusterDomain: cluster.local
-	clusterType: Static
-	defaultCRI: Containerd
-	encryptionAlgorithm: RSA-2048
-	kind: ClusterConfiguration
-	kubernetesVersion: "%s"
-	podSubnetCIDR: 10.111.0.0/16
-	podSubnetNodeCIDRPrefix: "24"
-	serviceSubnetCIDR: 10.222.0.0/16
+  apiVersion: deckhouse.io/v1
+  clusterDomain: cluster.local
+  clusterType: Static
+  defaultCRI: Containerd
+  kind: ClusterConfiguration
+  kubernetesVersion: "%s"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
 modules:
-	placement: {}
+  placement: {}
 discovery:
-	d8SpecificNodeCountByRole:
-		worker: 1
-		master: 3
-	podSubnet: 10.0.1.0/16
-	kubernetesVersion: "%s.1"
+  d8SpecificNodeCountByRole:
+    worker: 1
+    master: 3
+  podSubnet: 10.0.1.0/16
+  kubernetesVersion: "%s.1"
 `
 
 const moduleValuesA = `
@@ -132,7 +131,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
