@@ -41,6 +41,18 @@ bb-flag-unset reboot
 
 # If it is first run bashible on bootstrap simple reboot node
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  local attempt=0
+  local max_attempts=10
+  bb-log-info "Remove bashible-uninitialized taint from node $node_name"
+  until kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$max_attempts" ]; then
+      bb-log-error "failed to delete taint from node $(bb-d8-node-name) after $max_attempts attempts"
+      exit 1
+    fi
+    bb-log-warning "Failed to remove taint (attempt $attempt/$max_attempts), retrying in 5 seconds..."
+    sleep 5
+  done
   bb-flag-unset disruption
   shutdown -r -t 5
   exit 0
