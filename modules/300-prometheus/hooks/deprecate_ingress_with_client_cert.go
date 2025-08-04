@@ -70,6 +70,21 @@ func ingressWithClientCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, nil
 	}
 
+	isPrometheusIngress := false
+
+	for _, rule := range ing.Spec.Rules {
+		for _, path := range rule.HTTP.Paths {
+			if strings.HasPrefix(path.Path, "prometheus") {
+				isPrometheusIngress = true
+				break
+			}
+		}
+	}
+
+	if !isPrometheusIngress {
+		return nil, nil
+	}
+
 	if strings.Contains(confSnippet, "/etc/nginx/ssl/client.crt") {
 		return Ingress{
 			Name: ing.Name,
