@@ -64,9 +64,9 @@ Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/u
 ExecStart=
 ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
-    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule,node.deckhouse.io/bashible-uninitialized=:NoSchedule \\
 {{- else }}
-    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule \\
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/bashible-uninitialized=:NoSchedule \\
 {{- end }}
     --node-labels=node.deckhouse.io/group={{ .nodeGroup.name }} \\
     --node-labels=node.deckhouse.io/type={{ .nodeGroup.nodeType }} \\
