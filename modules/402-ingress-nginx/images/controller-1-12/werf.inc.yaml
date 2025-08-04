@@ -117,10 +117,46 @@ shell:
     source /src/.env_pass && \
     echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
     make GO111MODULE=on USE_DOCKER=false build
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil
+# from: dev-registry.deckhouse.io/base_images@sha256:4639a3555de0fbd0855e417ad667d16b86b08fa5d21313144262682e8dd34a26
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli
+# from: dev-registry.deckhouse.io/base_images@sha256:5bd143b84d1dde8841b7cd1e2d621ea59fe6ef9938acc4b06922e1fe4928dc68
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-libffi
+# from: dev-registry.deckhouse.io/base_images@sha256:c0781182bd2b1218d235b1f5d7cc09ac20e4ff4954e840ac4862fbbdfb213173
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-gmp
+# from: dev-registry.deckhouse.io/base_images@sha256:6e3839c1ffdf3341bdf8e63f3c50f2920eff1dbdc76d6ad38d59b55779c1d511
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-libgcrypt
+# from: dev-registry.deckhouse.io/base_images@sha256:f9d3a8784767faa3dbe48330f3267eec0737cdadf3ebf99e2c3f26a101724d77
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-libgpg-error
+# from: dev-registry.deckhouse.io/base_images@sha256:27b93b6f2ca7fa88d39259e9adb8ad6c4d5561ff1e7e611196b9efe4c42d71c8
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-krb5
+# from: dev-registry.deckhouse.io/base_images@sha256:54f8cd1e23c46cb0342dc70cd10333bacb60ed142e681062ff6f46f7c26a2bb1
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
+# from: dev-registry.deckhouse.io/base_images@sha256:fad2fd8fe87db24253398c3a3e03464936fa34862e6bd1e5853bd0bfefb169cb
+# final: false
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd
+# from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
+# final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.01"
+fromCacheVersion: "2025-08-04.02"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -228,46 +264,10 @@ shell:
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
   - cp /lib/ld-musl-* /chroot/lib/
   - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil
-# from: dev-registry.deckhouse.io/base_images@sha256:4639a3555de0fbd0855e417ad667d16b86b08fa5d21313144262682e8dd34a26
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli
-# from: dev-registry.deckhouse.io/base_images@sha256:5bd143b84d1dde8841b7cd1e2d621ea59fe6ef9938acc4b06922e1fe4928dc68
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-libffi
-# from: dev-registry.deckhouse.io/base_images@sha256:c0781182bd2b1218d235b1f5d7cc09ac20e4ff4954e840ac4862fbbdfb213173
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-gmp
-# from: dev-registry.deckhouse.io/base_images@sha256:6e3839c1ffdf3341bdf8e63f3c50f2920eff1dbdc76d6ad38d59b55779c1d511
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-libgcrypt
-# from: dev-registry.deckhouse.io/base_images@sha256:f9d3a8784767faa3dbe48330f3267eec0737cdadf3ebf99e2c3f26a101724d77
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-libgpg-error
-# from: dev-registry.deckhouse.io/base_images@sha256:27b93b6f2ca7fa88d39259e9adb8ad6c4d5561ff1e7e611196b9efe4c42d71c8
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-krb5
-# from: dev-registry.deckhouse.io/base_images@sha256:54f8cd1e23c46cb0342dc70cd10333bacb60ed142e681062ff6f46f7c26a2bb1
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre2
-# from: dev-registry.deckhouse.io/base_images@sha256:fad2fd8fe87db24253398c3a3e03464936fa34862e6bd1e5853bd0bfefb169cb
-# final: false
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd
-# from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
-# final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.01"
+fromCacheVersion: "2025-08-04.02"
 final: false
 mount:
 - from: build_dir
@@ -347,7 +347,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/alpine # FIXME replace
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-04.03"
+fromCacheVersion: "2025-08-04.04"
 mount:
 - from: build_dir
   to: /tmp/apps
