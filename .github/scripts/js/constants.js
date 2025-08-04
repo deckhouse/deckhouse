@@ -72,6 +72,9 @@ const labels = {
 
   // Deploy documentation and site to test or stage.
   'deploy/web/test': { type: 'deploy-web', env: 'test' },
+  'deploy/web/test2': { type: 'deploy-web', env: 'test2' },
+  'deploy/web/test3': { type: 'deploy-web', env: 'test3' },
+  'deploy/web/test4': { type: 'deploy-web', env: 'test4' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow

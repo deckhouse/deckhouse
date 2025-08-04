@@ -131,7 +131,6 @@ run: |
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
-    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
     TMP_DIR_PATH=${TMP_DIR_PATH}
     MASTERS_COUNT=${MASTERS_COUNT}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
@@ -185,9 +184,9 @@ run: |
   -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-  -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -203,6 +202,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
@@ -227,9 +227,9 @@ run: |
   -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-  -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -e USER_RUNNER_ID=${user_runner_id} \
   {!{- if $run_from_issue_or_pr }!}
   -e CIS_ENABLED=${CIS_ENABLED} \
@@ -284,11 +284,11 @@ run: |
   export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
   export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
   export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-  export SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0}
   {!{- end }!}
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   export CIS_ENABLED=${CIS_ENABLED}
   {!{- end }!}
+  export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
   # for logs upload
   ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -307,7 +307,6 @@ run: |
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
     -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-    -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
     -e LAYOUT=${LAYOUT:-not_provided} \
     -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
     -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -347,6 +346,7 @@ run: |
 {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
     -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
 {!{- end }!}
+    -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -433,7 +433,6 @@ check_e2e_labels:
     issue_number: ${{ inputs.issue_number }}
     install_image_path: ${{ steps.setup.outputs.install-image-path }}
   env:
-    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
@@ -608,7 +607,6 @@ check_e2e_labels:
       id: e2e_test_run
       timeout-minutes: {!{ $ctx.e2eStepTimeoutMinutes }!}
       env:
-        SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}

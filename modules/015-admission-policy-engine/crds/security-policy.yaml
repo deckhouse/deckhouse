@@ -240,6 +240,20 @@ spec:
                       x-doc-examples: [["kernel.msg*", "net.core.somaxconn"]]
                       items:
                         type: string
+                    allowedServiceTypes:
+                      type: array
+                      description: The list of allowed [service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+                      x-doc-examples: [["LoadBalancer", "ClusterIP"]]
+                      items:
+                        type: string
+                        enum:
+                          - ClusterIP
+                          - NodePort
+                          - LoadBalancer
+                          - ExternalName
+                    blockWildcardDomains:
+                      type: boolean
+                      description: Block creation of Ingress objects with `*` in DNS domains.
                     forbiddenSysctls:
                       type: array
                       description: |

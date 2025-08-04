@@ -38,53 +38,53 @@ lang: ru
 В зависимости от стадии жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
 
 <table class="versioning-table">
-    <thead>
-        <tr class="header-row">
-            <th rowspan="2">Стадия жизненного цикла</th>
-            <th colspan="5">Каналы обновлений</th>
-        </tr>
-        <tr class="sub-header">
-            <th>Alpha</th>
-            <th>Beta</th>
-            <th class="middle">Early Access</th>
-            <th>Stable</th>
-            <th>Rock Solid</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><strong>Experimental</strong></td>
-            <td>Эксперименты</td>
-            <td>Эксперименты</td>
-            <td>Эксперименты</td>
-            <td>Опытная эксплуатация</td>
-            <td>Опытная эксплуатация</td>
-        </tr>
-        <tr>
-            <td><strong>Preview</strong></td>
-            <td>Эксперименты</td>
-            <td>Ограниченная эксплуатация</td>
-            <td>Ограниченная эксплуатация</td>
-            <td>Промышленная эксплуатация</td>
-            <td>Промышленная эксплуатация</td>
-        </tr>
-        <tr>
-            <td><strong>General Availability</strong></td>
-            <td>Эксперименты</td>
-            <td>Ограниченная эксплуатация</td>
-            <td>Ограниченная эксплуатация</td>
-            <td>Промышленная эксплуатация</td>
-            <td>Промышленная эксплуатация в ответственных системах</td>
-        </tr>
-        <tr>
-            <td><strong>Deprecated</strong></td>
-            <td>Отказ от использования</td>
-            <td>Отказ от использования</td>
-            <td>Отказ от использования</td>
-            <td>Отказ от использования</td>
-            <td>Отказ от использования</td>
-        </tr>
-    </tbody>
+  <thead>
+    <tr class="header-row">
+      <th rowspan="2">Стадия жизненного цикла</th>
+      <th colspan="5">Каналы обновлений</th>
+    </tr>
+    <tr class="sub-header">
+      <th>Alpha</th>
+      <th>Beta</th>
+      <th class="middle">Early Access</th>
+      <th>Stable</th>
+      <th>Rock Solid</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Experimental</strong></td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#FFE0B2">Опытная эксплуатация</td>
+      <td style="background-color:#FFE0B2">Опытная эксплуатация</td>
+    </tr>
+    <tr>
+      <td><strong>Preview</strong></td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
+    </tr>
+    <tr>
+      <td><strong>General Availability</strong></td>
+      <td style="background-color:#FFCDD2">Эксперименты</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#BBDEFB">Ограниченная эксплуатация</td>
+      <td style="background-color:#C8E6C9">Промышленная эксплуатация</td>
+      <td style="background-color:#A5D6A7">Промышленная эксплуатация в ответственных системах</td>
+    </tr>
+    <tr>
+      <td><strong>Deprecated</strong></td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+      <td style="background-color:#F5F5F5">Отказ от использования</td>
+    </tr>
+  </tbody>
 </table>
 
 - **Эксперименты** — Проверка функциональности, эксперименты и тестирование;

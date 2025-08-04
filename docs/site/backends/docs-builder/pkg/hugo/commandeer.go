@@ -15,6 +15,7 @@
 package hugo
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	stdlog "log"
@@ -105,6 +106,19 @@ type commonConfig struct {
 	configs *allconfig.Configs
 	cfg     config.Provider
 	fs      *hugofs.Fs
+}
+
+func (c *commonConfig) validate() error {
+	if c == nil {
+		return errors.New("commonConfig is nil")
+	}
+	if c.fs == nil {
+		return errors.New("commonConfig: no fs provided")
+	}
+	if c.configs == nil {
+		return errors.New("commonConfig: no config provided")
+	}
+	return nil
 }
 
 // This is the root command.
@@ -264,14 +278,20 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 }
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
-	// nolint: revive
+	if err := conf.validate(); err != nil {
+		return nil, err
+	}
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
 		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
+	if err != nil {
+		return nil, fmt.Errorf("HugFromConfig: %w", err)
+	}
+
 	h.Log = c.hugologger
 
-	return h, err
+	return h, nil
 }
 
 func duration(key string, d time.Duration) slog.Attr {

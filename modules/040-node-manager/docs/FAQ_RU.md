@@ -928,6 +928,10 @@ spec:
 
 ### Как добавить авторизацию в дополнительный registry?
 
+{% alert level="warning" %}
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+{% endalert %}
+
 Разверните скрипт `NodeGroupConfiguration`:
 
 ```yaml
@@ -975,6 +979,10 @@ spec:
 ```
 
 ### Как настроить сертификат для дополнительного registry?
+
+{% alert level="warning" %}
+Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+{% endalert %}
 
 {% alert level="info" %}
 Помимо containerd, сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в операционной системе.

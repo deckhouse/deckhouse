@@ -1,0 +1,5 @@
+control-plane-manager:
+  fixes:
+    - summary: correct indentation of the 'certSANs' in v1beta4 template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14559
+

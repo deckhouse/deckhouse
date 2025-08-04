@@ -24,6 +24,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
@@ -124,15 +127,21 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	operatorPodMap := make(map[string]string)
 
-	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
-		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
+	for operatorPod, err := range sdkobjectpatch.SnapshotIter[IstioOperatorPodSnapshot](input.NewSnapshots.Get("istio_operator_pods")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istio_operator_pods' snapshot: %w", err)
+		}
+
 		if time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.Phase == v1.PodRunning {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
 	}
 
-	for _, iopRaw := range input.Snapshots["istio_operators"] {
-		iop := iopRaw.(IstioOperatorCrdSnapshot)
+	for iop, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdSnapshot](input.NewSnapshots.Get("istio_operators")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istio_operators' snapshot: %w", err)
+		}
+
 		if iop.NeedPunch {
 			input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
 			if podName, ok := operatorPodMap[iop.Revision]; ok {

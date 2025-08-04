@@ -199,6 +199,15 @@ steps:
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
+{!{- else if eq $env "test2" }!}
+  {!{- $url = "deckhouse.2.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
+{!{- else if eq $env "test3" }!}
+  {!{- $url = "deckhouse.3.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.3.test.flant.com" -}!}
+{!{- else if eq $env "test4" }!}
+  {!{- $url = "deckhouse.4.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.4.test.flant.com" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -236,6 +245,15 @@ steps:
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
+{!{- else if eq $env "test2" }!}
+  {!{- $url = "deckhouse.2.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
+{!{- else if eq $env "test3" }!}
+  {!{- $url = "deckhouse.3.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.3.test.flant.com" -}!}
+{!{- else if eq $env "test4" }!}
+  {!{- $url = "deckhouse.4.test.flant.com" -}!}
+  {!{- $urlRu = "deckhouse.ru.4.test.flant.com" -}!}
 {!{- end -}!}
 
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
