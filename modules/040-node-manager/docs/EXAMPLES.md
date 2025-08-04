@@ -670,3 +670,5 @@ MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",
 
 echo "$MYRESULTSTRING"
 ```
+
+Content
