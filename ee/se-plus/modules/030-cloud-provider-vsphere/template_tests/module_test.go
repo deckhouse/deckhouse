@@ -111,6 +111,8 @@ const moduleValuesB = `
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
         zones: ["aaa", "bbb"]
+        instances:
+          mainNetwork: k8s-msk
         datacenter: X1
       providerClusterConfiguration:
         provider:
@@ -144,6 +146,8 @@ const moduleValuesC = `
       providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        instances:
+          mainNetwork: k8s-msk
         resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
@@ -287,6 +291,9 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
             "template": "dev/golden_image",
             "disableTimesync": true
           },
+          "instances": {
+            "mainNetwork": "k8s-msk/test_187"
+          },
           "sshKey": "mysshkey1",
           "username": "myuname",
           "vmFolderPath": "dev/test",
@@ -354,6 +361,9 @@ storageclass.kubernetes.io/is-default-class: "true"
           "instanceClassDefaults": {
             "disableTimesync": true,
             "resourcePoolPath": "kubernetes-dev"
+          },
+          "instances": {
+            "mainNetwork": "k8s-msk"
           },
           "sshKey": "mysshkey1",
           "username": "myuname",
