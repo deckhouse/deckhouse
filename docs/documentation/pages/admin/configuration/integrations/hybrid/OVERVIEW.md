@@ -27,6 +27,7 @@ removing nodes from Kubernetes that are not present in vSphere.
 In a hybrid cluster, this behavior is not always desirable.
 Therefore, any Kubernetes node not launched with the `--cloud-provider=external` flag will be automatically ignored.
 DKP automatically sets `static://` in the `.spec.providerID` field of such nodes, which `cloud-controller-manager` then ignores.
+{% endalert %}
 
 ## Hybrid cluster with OpenStack
 
