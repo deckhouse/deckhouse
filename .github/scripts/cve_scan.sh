@@ -267,3 +267,6 @@ for d8_tag in "${d8_tags[@]}"; do
 
       send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
       send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json"
+    done
+  done
+done
