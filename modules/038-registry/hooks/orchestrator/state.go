@@ -121,6 +121,9 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	case registry_const.ModeDirect:
 		return state.transitionToDirect(log, inputs)
 	case registry_const.ModeUnmanaged:
+		if inputs.Params.ImagesRepo != "" {
+			return state.transitionToConfigurableUnmanaged(log, inputs)
+		}
 		return state.transitionToUnmanaged(log, inputs)
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
@@ -266,8 +269,120 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	return nil
 }
 
+func (state *State) transitionToConfigurableUnmanaged(log go_hook.Logger, inputs Inputs) error {
+	_ = log
+
+	// check upstream registry
+	checkerRegistryParams := checker.RegistryParams{
+		Address:  inputs.Params.ImagesRepo,
+		Scheme:   strings.ToUpper(inputs.Params.Scheme),
+		CA:       string(encodeCertificateIfExist(inputs.Params.CA)),
+		Username: inputs.Params.UserName,
+		Password: inputs.Params.Password,
+	}
+
+	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
+	if err != nil {
+		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+	}
+
+	if !checkerReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Preflight Checks
+	if !state.bashiblePreflightCheck(inputs) {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	bashibleParam := bashible.Params{
+		RegistrySecret: inputs.RegistrySecret,
+		ModeParams: bashible.ModeParams{
+			Unmanaged: &bashible.UnmanagedModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			},
+		},
+	}
+	registrySecretParams := registryswitcher.Params{
+		RegistrySecret: inputs.RegistrySecret,
+		UnmanagedMode: &registryswitcher.UnmanagedModeParams{
+			ImagesRepo: inputs.Params.ImagesRepo,
+			Scheme:     inputs.Params.Scheme,
+			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+			Username:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
+		},
+	}
+
+	// Bashible with actual params
+	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Update Deckhouse-registry secret and wait
+	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedRegistrySwitcher {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Bashible only input params
+	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Cleanup
+	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
+
+	state.RegistryService = registryservice.ModeDisabled
+
+	state.IngressEnabled = false
+
+	if !inClusterProxyReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	state.PKI = pki.State{}
+	state.Secrets = secrets.State{}
+	state.Users = users.State{}
+
+	// All done
+	state.Mode = state.TargetMode
+	state.Bashible.UnmanagedParams = &bashible.UnmanagedModeParams{
+		ImagesRepo: inputs.Params.ImagesRepo,
+		Scheme:     inputs.Params.Scheme,
+		CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+		Username:   inputs.Params.UserName,
+		Password:   inputs.Params.Password,
+	}
+	state.setReadyCondition(true, inputs)
+
+	return nil
+}
+
 func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
 	_ = log
+
 	if state.Mode != registry_const.ModeUnmanaged &&
 		state.Mode != registry_const.ModeProxy &&
 		state.Mode != registry_const.ModeDirect {
