@@ -272,7 +272,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.03"
+fromCacheVersion: "2025-08-04.05"
 final: false
 mount:
 - from: build_dir
@@ -292,8 +292,6 @@ import:
   add: /
   to: /
   includePaths:
-  # - etc/passwd
-  # - etc/group
   - chroot
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
@@ -317,10 +315,11 @@ shell:
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
-  #
-  - cp -a /src/rootfs/etc/* /chroot/etc
-  - chown -R deckhouse:deckhouse /chroot/etc # FIXME Danger
   # Source: Dockerfile-chroot
+  - cp -a /src/rootfs/etc/* /chroot/etc
+  - chown -R deckhouse:deckhouse /chroot/etc
+  - chown root:root /chroot/etc/passwd /chroot/etc/group
+
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
 
   - mkdir -p /var/log
@@ -357,7 +356,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/alpine # FIXME replace
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-04.04"
+fromCacheVersion: "2025-08-04.06"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -367,8 +366,6 @@ import:
   to: /
   includePaths:
   - chroot
-  # - etc/passwd
-  # - etc/group
   - modules_mount
   - var/log
   - etc/nginx
