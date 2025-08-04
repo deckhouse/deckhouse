@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -94,6 +95,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		logger:          log.NewNop(),
 		handler:         newMockHandler(),
 		moduleManager:   newMockModuleManager(),
+		edition:         &d8edition.Edition{Name: "fe", Bundle: "Default"},
 		metricStorage:   metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 		configValidator: nil, // Disable validation in tests to avoid schema issues
 		exts:            nil, // Extenders not needed for these tests
