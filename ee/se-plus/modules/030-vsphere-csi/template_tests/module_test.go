@@ -40,10 +40,10 @@ const globalValues = `
 	defaultCRI: Containerd
 	encryptionAlgorithm: RSA-2048
 	kind: ClusterConfiguration
-    kubernetesVersion: "%s"
-    podSubnetCIDR: 10.111.0.0/16
-    podSubnetNodeCIDRPrefix: "24"
-    serviceSubnetCIDR: 10.222.0.0/16
+	kubernetesVersion: "%s"
+	podSubnetCIDR: 10.111.0.0/16
+	podSubnetNodeCIDRPrefix: "24"
+	serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
   discovery:
