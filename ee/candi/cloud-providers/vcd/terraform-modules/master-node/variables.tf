@@ -45,5 +45,5 @@ locals {
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   main_ip_addresses     = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
   main_network_name     = var.providerClusterConfiguration.mainNetwork
-  additional_metadata   = contains(keys(local.master_instance_class), "additionalMetadata") ? local.master_instance_class.additionalMetadata : {}
+  additional_metadata   = contains(keys(local.master_instance_class), "additionalMetadata") ? local.master_instance_class.additionalMetadata : []
 }
