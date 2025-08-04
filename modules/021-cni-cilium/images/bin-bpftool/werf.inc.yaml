@@ -90,7 +90,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc
+  - apk add --no-cache rsync make python3 gcc linux-headers
   install:
   - |
     if [[ -d /libs ]]; then
