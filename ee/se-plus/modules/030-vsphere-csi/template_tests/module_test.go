@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-vsphere"]
+  enabledModules: ["vertical-pod-autoscaler", "vsphere-csi"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -70,7 +70,7 @@ const moduleValuesA = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         datacenter: X1
         zones: ["aaa", "bbb"]
       providerClusterConfiguration:
@@ -108,7 +108,8 @@ const moduleValuesB = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
         zones: ["aaa", "bbb"]
         datacenter: X1
       providerClusterConfiguration:
@@ -124,10 +125,6 @@ const moduleValuesB = `
         vmFolderPath: dev/test
         externalNetworkNames: ["aaa", "bbb"]
         internalNetworkNames: ["ccc", "ddd"]
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
-        zones:
-        - default
 `
 
 const moduleValuesC = `
@@ -144,9 +141,10 @@ const moduleValuesC = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
           server: myhost
@@ -169,8 +167,6 @@ const moduleValuesC = `
           user: user
           password: password
           host: 1.2.3.4
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
 `
 
 const moduleValuesD = `
@@ -187,9 +183,10 @@ const moduleValuesD = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      vsphereDiscoveryData:
+      providerDiscoveryData:
         zones: ["aaa", "bbb"]
         datacenter: X1
+        resourcePoolPath: kubernetes-dev
       providerClusterConfiguration:
         provider:
           server: myhost
@@ -216,8 +213,6 @@ const moduleValuesD = `
           - name: class1
             ipPoolName: pool2
             tcpAppProfileName: profile1
-      providerDiscoveryData:
-        resourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
@@ -248,28 +243,21 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-vsphere")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "deckhouse-registry")
+			namespace := f.KubernetesGlobalResource("Namespace", "vsphere-csi")
+			registrySecret := f.KubernetesResource("Secret", "d8-vsphere-csi", "deckhouse-registry")
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			csiCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller")
+			csiCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-vsphere-csi", "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
-			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "csi-node")
-			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "csi")
-			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
-			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
-			csiAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-attacher")
-			csiAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-attacher")
-			csiResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
-			csiResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
-
-			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:cloud-controller-manager")
-			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:cloud-controller-manager")
-			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-vsphere-csi", "csi-node")
+			csiSA := f.KubernetesResource("ServiceAccount", "d8-vsphere-csi", "csi")
+			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:vsphere-csi:csi:controller:external-provisioner")
+			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:vsphere-csi:csi:controller:external-provisioner")
+			csiAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:vsphere-csi:csi:controller:external-attacher")
+			csiAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:vsphere-csi:csi:controller:external-attacher")
+			csiResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:vsphere-csi:csi:controller:external-resizer")
+			csiResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:vsphere-csi:csi:controller:external-resizer")
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vsphere:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vsphere:cluster-admin")
@@ -314,13 +302,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(csiResizerCRB.Exists()).To(BeTrue())
 			Expect(csiResizerCR.Exists()).To(BeTrue())
 			Expect(csiResizerCRB.Exists()).To(BeTrue())
-
-			Expect(ccmSA.Exists()).To(BeTrue())
-			Expect(ccmCR.Exists()).To(BeTrue())
-			Expect(ccmCRB.Exists()).To(BeTrue())
-			Expect(ccmVPA.Exists()).To(BeTrue())
-			Expect(ccmDeploy.Exists()).To(BeTrue())
-			Expect(ccmSecret.Exists()).To(BeTrue())
 
 			// user story #3
 			scMydsname1 := f.KubernetesGlobalResource("StorageClass", "mydsname1")
@@ -410,7 +391,6 @@ labels:
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller").Exists()).To(BeFalse())
-
 			})
 		})
 	})
@@ -437,110 +417,6 @@ labels:
 			Expect(scMydsname2.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
-`))
-		})
-	})
-
-	Context("Vsphere with NSX-T specified", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
-			f.HelmRender()
-		})
-
-		It("Everything must render properly with proper secret", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			Expect(ccmSecret.Exists()).To(BeTrue())
-
-			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
-			Expect(cloudConfig).To(MatchYAML(`
-global:
-  user: "myuname"
-  password: "myPaSsWd"
-  insecureFlag: true
-
-vcenter:
-  main:
-    server: "myhost"
-    datacenters:
-      - "X1"
-
-labels:
-  region: "myregtagcat"
-  zone: "myzonetagcat"
-
-loadBalancer:
-  ipPoolName: main
-  size: SMALL
-  snatDisabled: true
-  tcpAppProfileName: default-tcp-lb-app-profile
-  tier1GatewayPath: /host/tier1
-  udpAppProfileName: default-udp-lb-app-profile
-nsxt:
-  host: 1.2.3.4
-  password: password
-  user: user
-nodes:
-  externalVmNetworkName: aaa,bbb
-  internalVmNetworkName: ccc,ddd
-`))
-		})
-	})
-
-	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
-			f.HelmRender()
-		})
-
-		It("Everything must render properly with proper secret", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			Expect(ccmSecret.Exists()).To(BeTrue())
-
-			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
-			Expect(cloudConfig).To(MatchYAML(`
-global:
-  insecureFlag: true
-  password: myPaSsWd
-  user: myuname
-labels:
-  region: myregtagcat
-  zone: myzonetagcat
-
-loadBalancer:
-  ipPoolName: main
-  size: SMALL
-  snatDisabled: true
-  tcpAppProfileName: default-tcp-lb-app-profile
-  tier1GatewayPath: /host/tier1
-  udpAppProfileName: default-udp-lb-app-profile
-
-loadBalancerClass:
-  class1:
-    ipPoolName: pool2
-    tcpAppProfileName: profile1
-
-nsxt:
-  host: 1.2.3.4
-  password: password
-  user: user
-
-nodes:
-  externalVmNetworkName: aaa,bbb
-  internalVmNetworkName: ccc,ddd
-
-vcenter:
-  main:
-    datacenters:
-    - X1
-    server: myhost
 `))
 		})
 	})
