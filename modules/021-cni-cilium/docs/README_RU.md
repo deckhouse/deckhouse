@@ -9,6 +9,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 1. Сервисам с типом `NodePort` и `LoadBalancer` не подходят эндпоинты в LB-режиме `DSR`, работающие с hostNetwork. Если это необходимо, переключитесь на режим `SNAT`.
 1. Поды `HostPort` связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
+1. Для обеспечения стабильной работы cni-cilium на узлах кластера необходимо деактивировать или ограничить функциональность Elastic Agent. Этот агент включает в себя компонент Elastic Endpoint, который взаимодействует с eBPF (Extended Berkeley Packet Filter) на узлах кластера. Elastic Endpoint может удалять программы eBPF, необходимые для корректной работы cni-cilium. Для получения более детальной информации рекомендуется ознакомиться с соответствующими публикациями проектов [Cilium](https://github.com/cilium/cilium/issues/28433) и [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202).
 1. Требования к ядру:
    * ядро Linux версии не ниже `5.8` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../istio/), [openvpn](../openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/).
 1. Совместимость с ОС:

@@ -9,9 +9,10 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
 
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
 2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
-3. Kernel requirements:
+3. To ensure stable operation of cni-cilium on cluster nodes, it is necessary to deactivate or limit the functionality of Elastic Agent. This agent includes an Elastic Endpoint component that interacts with eBPF (Extended Berkeley Packet Filter) on cluster nodes. Elastic Endpoint can delete eBPF programs that are necessary for cni-cilium to work correctly. For more detailed information, it is recommended to consult the relevant publications of the [Cilium](https://github.com/cilium/cilium/issues/28433) and [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202) projects.
+4. Kernel requirements:
    * Linux kernel version not lower than `5.8` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
-4. OS compatibility:
+5. OS compatibility:
     * Ubuntu:
       * incompatible with version 18.04;
       * HWE kernel installation required for working with version 20.04.
