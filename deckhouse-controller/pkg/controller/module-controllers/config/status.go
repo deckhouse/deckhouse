@@ -262,11 +262,13 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 
 // refreshModuleConfigStatus refreshes module config status by validator and conversions
 func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
-	validationResult := r.configValidator.Validate(config)
-	if validationResult.HasError() {
-		config.Status.Version = ""
-		config.Status.Message = fmt.Sprintf("Error: %s", validationResult.Error)
-		return
+	if r.configValidator != nil {
+		validationResult := r.configValidator.Validate(config)
+		if validationResult.HasError() {
+			config.Status.Version = ""
+			config.Status.Message = fmt.Sprintf("Error: %s", validationResult.Error)
+			return
+		}
 	}
 
 	// fill the 'version' field. The value is a spec.version or the latest version from registered conversions.

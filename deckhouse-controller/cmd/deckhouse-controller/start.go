@@ -269,6 +269,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
+
 	operatorStarted = true
 
 	debugserver.RegisterRoutes(operator.DebugServer)

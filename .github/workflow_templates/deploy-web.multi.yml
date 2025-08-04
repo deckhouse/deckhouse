@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- range $env := slice "test" "stage" -}!}
+{!{- range $env := slice "test" "test2" "test3" "test4" "stage" -}!}
 {!{-   $ctx := dict "webEnv" $env }!}
 {!{-   $outFile := printf "deploy-web-%s.yml" $env }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
@@ -93,6 +93,6 @@ jobs:
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" .webEnv | strings.Indent 6 }!}
 
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final,docs" $workflowName) | strings.Indent 6 }!}
 
 {!{ end -}!}

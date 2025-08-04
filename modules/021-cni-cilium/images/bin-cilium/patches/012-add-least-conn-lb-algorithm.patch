@@ -1,4 +1,4 @@
-From c5ffcd13ffa8dd4f1880cd61a992940b382b5947 Mon Sep 17 00:00:00 2001
+From 1fd75983a24118d20e82ec77fd3db0272c63efa8 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 13 May 2025 13:21:15 +0300
 Subject: [PATCH] add least-conn lb algorithm
@@ -7,7 +7,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
  bpf/bpf_lxc.c                           |   2 +
  bpf/include/bpf/helpers.h               |   5 +
- bpf/lib/lb.h                            | 289 +++++++++++++++++++++++-
+ bpf/lib/lb.h                            | 288 +++++++++++++++++++++++-
  daemon/cmd/daemon_main.go               |   4 +-
  daemon/cmd/datapath.go                  |   7 +
  daemon/cmd/kube_proxy_replacement.go    |   3 +-
@@ -25,7 +25,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  pkg/metrics/features/metrics.go         |   1 +
  pkg/option/config.go                    |   3 +
  pkg/service/service.go                  |  11 +
- 20 files changed, 651 insertions(+), 9 deletions(-)
+ 20 files changed, 651 insertions(+), 8 deletions(-)
  create mode 100644 pkg/maps/lbmap/leastconn.go
  create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
  create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
@@ -62,7 +62,7 @@ index 65ba8cf604..5892d1c4f1 100644
  static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
  static int BPF_FUNC(map_update_elem, const void *map, const void *key,
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..f80a17c3ae 100644
+index 9a6fee3035..8769cce01a 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
 @@ -3,6 +3,8 @@
@@ -142,34 +142,17 @@ index 15dacfa4df..f80a17c3ae 100644
  #endif /* ENABLE_IPV4 */
  
  #ifdef ENABLE_SESSION_AFFINITY
-@@ -692,7 +748,7 @@ struct lb6_service *lb6_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
- 	return NULL;
- }
- 
--#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM
-+#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN
- static __always_inline __u32
- lb6_select_backend_id_random(struct __ctx_buff *ctx,
- 			     struct lb6_key *key,
-@@ -754,7 +810,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
- 		return 0;
+@@ -758,8 +814,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
+ #endif /* LB_SELECTION */
  	}
  }
+-
 -#elif LB_SELECTION == LB_SELECTION_RANDOM
 +#elif LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN
  # define lb6_select_backend_id	lb6_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb6_select_backend_id	lb6_select_backend_id_maglev
-@@ -1425,7 +1481,7 @@ lb4_select_backend_id_random(struct __ctx_buff *ctx,
- 
- 	return be ? be->backend_id : 0;
- }
--#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_RANDOM */
-+#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN */
- 
- #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
- static __always_inline __u32
-@@ -1457,6 +1513,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+@@ -1464,6 +1519,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
  }
  #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
  
@@ -385,16 +368,23 @@ index 15dacfa4df..f80a17c3ae 100644
  #ifdef LB_SELECTION_PER_SERVICE
  static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
  {
-@@ -1473,6 +1738,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1480,11 +1744,15 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
  	case LB_SELECTION_RANDOM:
  		return lb4_select_backend_id_random(ctx, key, tuple, svc);
 +	case LB_SELECTION_LEAST_CONN:
 +		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
  	default:
- 		return 0;
- 	}
-@@ -1481,6 +1748,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+ #if LB_SELECTION == LB_SELECTION_RANDOM
+ 		return lb4_select_backend_id_random(ctx, key, tuple, svc);
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ 		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
++#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
++		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
+ #else
+ # error "Invalid load balancer backend selection algorithm!"
+ #endif /* LB_SELECTION */
+@@ -1494,6 +1762,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  # define lb4_select_backend_id	lb4_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb4_select_backend_id	lb4_select_backend_id_maglev
@@ -403,7 +393,7 @@ index 15dacfa4df..f80a17c3ae 100644
  #elif LB_SELECTION == LB_SELECTION_FIRST
  /* Backend selection for tests that always chooses first slot. */
  static __always_inline __u32
-@@ -1762,6 +2031,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1780,6 +2050,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		if (IS_ERR(ret))
  			goto drop_err;
  
@@ -414,7 +404,7 @@ index 15dacfa4df..f80a17c3ae 100644
  #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
  		_lb_act_conn_open(state->rev_nat_index, backend->zone);
  #endif
-@@ -1775,6 +2048,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1793,6 +2067,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		 * session we are likely to get a TCP RST.
  		 */
  		backend = lb4_lookup_backend(ctx, backend_id);
