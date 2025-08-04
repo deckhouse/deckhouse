@@ -92,7 +92,14 @@ spec:
     matchLabels:
       app: registry-modules-watcher
   namespaceSelector:
-    any: true
+    matchNames:
+    - deckhouse-web-dev
+    - deckhouse-web-stage
+    - deckhouse-web-test
+    - deckhouse-web-test2
+    - deckhouse-web-test3
+    - deckhouse-web-test4
+    - deckhouse-web-production
 {{- else }}
 apiVersion: v1
 kind: Service
