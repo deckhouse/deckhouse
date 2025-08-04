@@ -32,7 +32,6 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
   - git clone --branch 0.5.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
   - git clone --branch 7-3 --depth 1 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
@@ -43,27 +42,14 @@ shell:
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
-  - rm -rf /src/dumb-init/.git
   - rm -rf /src/lua-protobuf/.git
   - rm -rf /src/lua-iconv/.git
   - rm -rf /src/ingress-nginx/.git
   - cat /patches/build.sh > /src/ingress-nginx/images/nginx/rootfs/build.sh # FIXME delete
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact # FIXME Relocate to base_images
-fromImage: common/alt-p11-artifact
-# fromCacheVersion: "2025-07-28.01"
+image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init # FIXME delete
+from: dev-registry.deckhouse.io/base_images@sha256:9c4abf2a4cb568ea36fad410f45e8b82bb88a15d240ad5adef2cfda8cabef573
 final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/dumb-init
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  - apt-get install -y gcc glibc-core glibc-devel-static
-  setup:
-  - cd /src/
-  - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
 fromImage: builder/alpine
@@ -177,7 +163,7 @@ shell:
   - apk add --no-cache git openssh-client bash
   - mkdir -p ~/.ssh/
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
+  install: # FIXME libs!
   - apk add libc-dev
   - apk add openssl-dev
   - apk add pcre-dev
@@ -404,8 +390,8 @@ import:
   owner: "64535"
   group: "64535"
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init
+  add: /dumb-init
   to: /usr/bin/dumb-init
   before: install
 - image: tools/bash
