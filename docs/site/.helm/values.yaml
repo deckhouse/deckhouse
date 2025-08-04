@@ -7,7 +7,7 @@ observability:
   prometheusOperator:
     # if it true - create podMonitor resource
     # if it false - create service with label "prometheus.deckhouse.io/custom-target"
-    enable: true
+    enable: false
 
 ingressClass:
   _default: nginx
