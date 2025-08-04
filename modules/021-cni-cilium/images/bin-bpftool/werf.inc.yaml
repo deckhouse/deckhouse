@@ -88,9 +88,20 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
+- image: tools/openssl
+  add: /
+  to: /tools/openssl
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc linux-headers
+  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev
   install:
   - |
     if [[ -d /libs ]]; then
