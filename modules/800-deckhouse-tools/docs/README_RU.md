@@ -2,7 +2,7 @@
 title: "Модуль deckhouse-tools"
 webIfaces:
 - name: deckhouse-tools
-description: "Модуль deckhouse-tools Deckhouse предоставляет веб-интерфейс в кластере для скачивания утилит Deckhouse (Deckhouse CLI)"
+description: "Веб-интерфейс для скачивания утилиты Deckhouse CLI (d8) под различные операционные системы."
 ---
 
 Этот модуль создает веб-интерфейс со ссылками на скачивание утилит Deckhouse (в настоящее время – [Deckhouse CLI](../../deckhouse-cli/) под различные операционные системы).

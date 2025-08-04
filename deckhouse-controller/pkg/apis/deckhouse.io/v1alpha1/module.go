@@ -40,6 +40,7 @@ const (
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
+	ModulePhaseUnavailable      = "Unavailable"
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"
 	ModulePhaseDownloadingError = "DownloadingError"
@@ -50,43 +51,44 @@ const (
 	ModulePhaseReady            = "Ready"
 	ModulePhaseError            = "Error"
 
-	ModuleReasonBundle                      = "Bundle"
-	ModuleReasonModuleConfig                = "ModuleConfig"
-	ModuleReasonDynamicGlobalHookExtender   = "DynamicGlobalHookExtender"
-	ModuleReasonEnabledScriptExtender       = "EnabledScriptExtender"
-	ModuleReasonDeckhouseVersionExtender    = "DeckhouseVersionExtender"
-	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
-	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
-	ModuleReasonModuleDependencyExtender    = "ModuleDependencyExtender"
-	ModuleReasonNotInstalled                = "NotInstalled"
-	ModuleReasonDisabled                    = "Disabled"
-	ModuleReasonConflict                    = "Conflict"
-	ModuleReasonDownloading                 = "Downloading"
-	ModuleReasonHookError                   = "HookError"
-	ModuleReasonModuleError                 = "ModuleError"
-	ModuleReasonReconciling                 = "Reconciling"
-	ModuleReasonInstalling                  = "Installing"
-	ModuleReasonError                       = "Error"
+	ModuleReasonBundle                    = "Bundle"
+	ModuleReasonModuleConfig              = "ModuleConfig"
+	ModuleReasonDynamicGlobalHookExtender = "DynamicGlobalHookExtender"
+	ModuleReasonEnabledScriptExtender     = "EnabledScriptExtender"
+	ModuleReasonDeckhouseVersionExtender  = "DeckhouseVersionExtender"
+	ModuleReasonKubernetesVersionExtender = "KubernetesVersionExtender"
+	ModuleReasonBootstrappedExtender      = "BootstrappedExtender"
+	ModuleReasonModuleDependencyExtender  = "ModuleDependencyExtender"
+	ModuleReasonEditionAvailableExtender  = "EditionAvailableExtender"
+	ModuleReasonEditionEnabledExtender    = "EditionEnabledExtender"
+	ModuleReasonNotInstalled              = "NotInstalled"
+	ModuleReasonDisabled                  = "Disabled"
+	ModuleReasonConflict                  = "Conflict"
+	ModuleReasonDownloading               = "Downloading"
+	ModuleReasonHookError                 = "HookError"
+	ModuleReasonModuleError               = "ModuleError"
+	ModuleReasonReconciling               = "Reconciling"
+	ModuleReasonInstalling                = "Installing"
+	ModuleReasonError                     = "Error"
 
-	ModuleMessageBundle                      = "turned off by bundle"
-	ModuleMessageModuleConfig                = "turned off by module config"
-	ModuleMessageDynamicGlobalHookExtender   = "turned off by global hook"
-	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
-	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
-	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
-	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
-	ModuleMessageModuleDependencyExtender    = "turned off because of unmet module dependencies"
-	ModuleMessageNotInstalled                = "not installed"
-	ModuleMessageDisabled                    = "disabled"
-	ModuleMessageConflict                    = "several available sources"
-	ModuleMessageDownloading                 = "downloading"
-	ModuleMessageReconciling                 = "reconciling"
-	ModuleMessageInstalling                  = "installing"
-	ModuleMessageOnStartupHook               = "onStartup hooks done"
+	ModuleMessageBundle                    = "turned off by bundle"
+	ModuleMessageModuleConfig              = "turned off by module config"
+	ModuleMessageDynamicGlobalHookExtender = "turned off by global hook"
+	ModuleMessageEnabledScriptExtender     = "turned off by enabled script"
+	ModuleMessageDeckhouseVersionExtender  = "turned off by deckhouse version"
+	ModuleMessageKubernetesVersionExtender = "turned off by kubernetes version"
+	ModuleMessageBootstrappedExtender      = "turned off because the cluster not bootstrapped yet"
+	ModuleMessageModuleDependencyExtender  = "turned off because of unmet module dependencies"
+	ModuleMessageNotInstalled              = "not installed"
+	ModuleMessageDisabled                  = "disabled"
+	ModuleMessageConflict                  = "several available sources"
+	ModuleMessageDownloading               = "downloading"
+	ModuleMessageReconciling               = "reconciling"
+	ModuleMessageInstalling                = "installing"
+	ModuleMessageOnStartupHook             = "onStartup hooks done"
 
 	DeckhouseRequirementFieldName        string = "deckhouse"
 	KubernetesRequirementFieldName       string = "kubernetes"
-	BootstrappedRequirementFieldName     string = "bootstrapped"
 	ModuleDependencyRequirementFieldName string = "modules"
 )
 
@@ -142,9 +144,8 @@ type ModuleRequirements struct {
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
-	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	Deckhouse  string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
 }
 
 type ModuleProperties struct {
@@ -152,6 +153,7 @@ type ModuleProperties struct {
 	Source           string                `json:"source,omitempty"`
 	ReleaseChannel   string                `json:"releaseChannel,omitempty"`
 	Stage            string                `json:"stage,omitempty"`
+	Critical         bool                  `json:"critical,omitempty"`
 	Namespace        string                `json:"namespace,omitempty"`
 	Subsystems       []string              `json:"subsystems,omitempty"`
 	Version          string                `json:"version,omitempty"`
@@ -160,6 +162,16 @@ type ModuleProperties struct {
 	AvailableSources []string              `json:"availableSources,omitempty"`
 	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+	Accessibility    *ModuleAccessibility  `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
+}
+
+type ModuleAccessibility struct {
+	Editions map[string]ModuleEdition `json:"editions" yaml:"editions"`
+}
+
+type ModuleEdition struct {
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 type ModuleDisableOptions struct {

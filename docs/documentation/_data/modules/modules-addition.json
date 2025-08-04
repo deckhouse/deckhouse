@@ -204,6 +204,13 @@
     },
     "path": "modules/metallb/"
   },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
+  },
   "observability": {
     "editions": [
       "be",

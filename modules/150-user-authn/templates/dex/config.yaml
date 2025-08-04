@@ -126,7 +126,7 @@
         {{- if $provider.ldap.insecureNoSSL }}
         insecureNoSSL: true
         {{- end }}
-        {{- if $provider.ldap.rootCAData }}Ï
+        {{- if $provider.ldap.rootCAData }}
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
         {{- if $provider.ldap.bindDN  }}
@@ -176,6 +176,12 @@
         {{- end }}
         {{- if $provider.oidc.claimMappingOverride }}
         overrideClaimMapping: true
+        {{- end }}
+        {{- if $provider.oidc.allowedGroups }}
+        allowedGroups:
+          {{- range $group := $provider.oidc.allowedGroups }}
+          - {{ $group | quote }}
+          {{- end }}
         {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}

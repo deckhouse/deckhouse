@@ -55,6 +55,8 @@ func NewBashibleServerOptions(out, errOut io.Writer) *BashibleServerOptions {
 		StdErr: errOut,
 	}
 	o.RecommendedOptions.Etcd = nil
+	o.RecommendedOptions.Features.EnableProfiling = true
+
 	return o
 }
 

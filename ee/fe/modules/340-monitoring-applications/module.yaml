@@ -1,10 +1,10 @@
 name: monitoring-applications
-weight: 340
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring
 
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"
   modules:
     prometheus: '>= 0.0.0'

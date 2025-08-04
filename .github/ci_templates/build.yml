@@ -1,46 +1,27 @@
-{!{ define "go_generate_template" }!}
-# <template: go_generate_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
+{!{ define "check_changelog_template" }!}
+# <template: check_changelog_template>
+check_changelog:
+  name: Check changelog
+  runs-on: ubuntu-latest
+  steps:
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 4 }!}
+    - name: Check for tag
+      run: |
+        if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+          echo "Not a tag push, skipping changelog check."
+          exit 0
+        fi
 
-  - name: Set up Go 1.24
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.24'
-      cache: false
+        TAG_VERSION="${GITHUB_REF#refs/tags/}"
+        FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
 
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: |
-      git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-# </template: go_generate_template>
-{!{ end }!}
-
-{!{ define "workflow_render_template" }!}
-# <template: workflow_render_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-
-  - name: Render GitHub workflow
-    run: |
-      cd .github
-      ./render-workflows.sh
-
-  - name: Check rendered files
-    run: |
-      git diff --exit-code
-# </template: workflow_render_template>
+        if [ ! -f "$FILE" ]; then
+          echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+          exit 1
+        else
+          echo "✅ Changelog file $FILE found."
+        fi
+# </template: check_changelog_template>
 {!{ end }!}
 
 {!{ define "build_template" }!}
@@ -61,9 +42,26 @@ steps:
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
+  - name: Set up Go 1.24
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.24'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
   - name: Build and push deckhouse images
     id: build
     env:
+{!{- if eq $buildType "dev" }!}
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+{!{- end }!}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -161,13 +159,26 @@ steps:
       fi
       type werf && source $(werf ci-env github --verbose --as-file)
 
+      werf config render > werf-rendered.yaml
+
       werf build \
-        --parallel=true --parallel-tasks-limit=5 \
+        --dev \
+        --config werf-rendered.yaml \
+        --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json
 
       cp images_tags_werf.json "$TEMP_WORKDIR"
+
+      # Encrypting the rendered build file before dumping it into artifacts
+      echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+      ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+      openssl rand -out key.bin 32
+      openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+      openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+      rm -f ./key.bin
+      rm -f ./werf-rendered.yaml
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -220,6 +231,8 @@ steps:
       name: build_report_${{ env.WERF_ENV }}
       path: |
         ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+        ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+        ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
 # </template: build_template>
 {!{ end }!}

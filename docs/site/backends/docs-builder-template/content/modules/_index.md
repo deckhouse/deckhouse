@@ -16,9 +16,9 @@ Example of the output:
 
 ```console
 $ kubectl get modules
-NAME                WEIGHT   SOURCE      PHASE        ENABLED   READY
-cni-cilium          21       Embedded    Ready        True      True
-commander           911      deckhouse   Available    False     False
+NAME                STAGE    SOURCE      PHASE        ENABLED   READY
+cni-cilium                   Embedded    Ready        True      True
+commander                    deckhouse   Available    False     False
 ```
 
 This section provides information on Deckhouse modules that can be plugged in from the module source. The modules have undergone preliminary compatibility testing and are approved for use in conjunction with Deckhouse.

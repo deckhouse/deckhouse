@@ -145,7 +145,8 @@ function prepare_environment() {
       \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -161,7 +162,8 @@ function prepare_environment() {
       \"serviceAccountJson\": \"${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -178,7 +180,8 @@ function prepare_environment() {
       \"awsSecretKey\": \"${LAYOUT_AWS_SECRET_ACCESS_KEY}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -197,7 +200,8 @@ function prepare_environment() {
       \"tenantId\": \"${LAYOUT_AZURE_TENANT_ID}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -298,6 +302,7 @@ function wait_alerts_resolve() {
   "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
   "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
   "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+  "ModuleConfigObsoleteVersion" # This alert is informational and should not block e2e tests
   "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
   "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
   )
@@ -572,6 +577,9 @@ function run-test() {
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
       return 1
+    elif [ "configuration_error" = "$cluster_status" ]; then
+      echo "  Cluster status: $cluster_status"
+      return 1
     else
       echo "  Cluster status: $cluster_status"
     fi
@@ -587,11 +595,6 @@ function run-test() {
   wait_upmeter_green || return $?
 
   check_resources_state_results || return $?
-
-  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
-    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
-    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
-  fi
 
   wait_alerts_resolve || return $?
 

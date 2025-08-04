@@ -28,6 +28,12 @@ spec:
                     Параметры container runtime.
                   properties:
                     type:
+                    description: |
+                        Тип container runtime.
+
+                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:
                       description: |
                         Параметры работы containerd.
@@ -250,7 +256,9 @@ spec:
                       description: |
                         Тип container runtime.
 
-                        Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` Secret'а `d8-cluster-configuration` в пространстве имен `kube-system`), которая создается при установке.
+                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:
                       description: |
                         Параметры работы containerd.
@@ -519,7 +527,9 @@ spec:
                       description: |
                         Тип container runtime.
 
-                        Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` Secret'а `d8-cluster-configuration` в пространстве имен `kube-system`), которая создается при установке.
+                        Если не указан, используется значение параметра `defaultCRI` ClusterConfiguration.
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:
                       description: |
                         Параметры работы containerd.
@@ -534,6 +544,14 @@ spec:
                         Параметры работы containerd V2.
 
                         При настройке этих параметров `cri.type` должен быть `ContainerdV2`.
+
+                        При использовании `ContainerdV2` будет использоваться `CgroupsV2` (обеспечивает улучшенную безопасность и управление ресурсами).
+
+                        Для использования `ContainerdV2` в качестве container runtime узлы в группе должны соответствовать следующим требованиям:
+
+                        - поддержка `CgroupsV2`;
+                        - ядро Linux версии `5.8` и новее;
+                        - systemd версии `244` и новее.
                       properties:
                         maxConcurrentDownloads:
                           description: |
@@ -590,7 +608,7 @@ spec:
                             Фильтр на основе совпадения/несовпадения меток.
                     count:
                       description: |
-                        Количество узлов `staticInstances`, которые нужно автоматически настроить и включить в кластер.
+                        Количество узлов `staticInstances`, которые нужно автоматически настроить и включить в кластер. В NodeGroup с типами Static и CloudStatic вы можете явно указать количество узлов в этом параметре. Это позволяет задать ожидаемое количество узлов — DKP использует это значение для контроля состояния и автоматизации.
                 cloudInstances:
                   description: |
                     Параметры заказа облачных виртуальных машин.

@@ -1,6 +1,6 @@
 ---
 title: "The istio module"
-description: "Description of the istio module of the Deckhouse Kubernetes Platform, including the tasks it solves, architecture, as well as features of configuration and management."
+description: "Enables Istio Service Mesh in the Deckhouse Kubernetes Platform cluster."
 webIfaces:
 - name: istio
 ---
@@ -9,6 +9,7 @@ webIfaces:
 
 | Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
+|     1.25      |                                                1.29, 1.30, 1.31, 1.32                                                | Supported |
 |     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Supported |
 |     1.19      |                                                    1.25<sup>*</sup>, 1.26, 1.27, 1.28                                                     |           Deprecated and will be deleted            |
 

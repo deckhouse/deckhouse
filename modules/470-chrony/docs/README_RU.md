@@ -1,5 +1,6 @@
 ---
 title: "Модуль chrony"
+description: "Синхронизация времени в кластере Deckhouse Kubernetes Platform."
 ---
 
 Обеспечивает синхронизацию времени на всех узлах кластера с помощью утилиты [chrony](https://chrony.tuxfamily.org/).

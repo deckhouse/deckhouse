@@ -1,5 +1,6 @@
 ---
 title: "The upmeter module"
+description: "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components."
 webIfaces:
 - name: status
 - name: upmeter

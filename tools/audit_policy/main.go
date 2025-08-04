@@ -80,6 +80,7 @@ func main() {
 	for moduleYamlPath, moduleDirName := range res {
 		err = processModule(workDir, moduleYamlPath, moduleDirName, sasMap, namespacesMap)
 		if err != nil {
+			fmt.Println("moduleYamlPath: ", moduleYamlPath)
 			panic(err)
 		}
 	}

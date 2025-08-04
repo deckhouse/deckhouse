@@ -204,9 +204,9 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -424,13 +424,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
-                  deprecated: true
+                  x-doc-deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
@@ -808,7 +808,7 @@ spec:
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1558,7 +1558,6 @@ spec:
                         exclusive: {}
                 cri:
                   type: object
-                  x-doc-default: ContainerdV2
                   description: |
                     Container runtime parameters.
                   properties:
@@ -1567,9 +1566,9 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        > **Note!** The `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1593,6 +1592,14 @@ spec:
                         ContainerdV2 runtime parameters.
 
                         If used, `cri.type` must be set to `ContainerdV2`.
+
+                        When using `ContainerdV2`, `CgroupsV2` will be used (providing improved security and resource management).
+
+                        To use `ContainerdV2` as a container runtime, the nodes in the group must meet the following requirements:
+
+                        - Support for `CgroupsV2`.
+                        - Linux kernel version `5.8` or newer.
+                        - Systemd version `244` or newer.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1710,7 +1717,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of existing `staticInstances` to bootstrap and add to the cluster.
+                          The number of existing `staticInstances` to bootstrap and add to the cluster. In a NodeGroup of type Static or CloudStatic, you can explicitly specify the number of nodes using this parameter. This sets the expected number of nodes — DKP uses this value for state control and automation purposes.
                       type: integer
                       minimum: 0
                       default: 0
@@ -1727,7 +1734,7 @@ spec:
                   properties:
                     quickShutdown:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
@@ -1797,7 +1804,6 @@ spec:
                           description: |
                             Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
                         notHeldResources:
-                          deprecated: true
                           x-doc-deprecated: true
                           description: |
                             Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
@@ -1937,7 +1943,7 @@ spec:
                       description: |
                         This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
-                      deprecated: true
+                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |

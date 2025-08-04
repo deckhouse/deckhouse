@@ -1,6 +1,7 @@
 name: keepalived
 stage: "General Availability"
-weight: 450
 subsystems:
   - infrastructure
 namespace: d8-keepalived
+requirements:
+  deckhouse: ">= 1.68"

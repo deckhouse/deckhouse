@@ -44,7 +44,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.1"
+  WERF_VERSION: "v2.43.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -53,7 +53,10 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -214,135 +217,42 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - check_branch_name
 
-    # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
+  # <template: check_changelog_template>
+  check_changelog:
+    name: Check changelog
+    runs-on: ubuntu-latest
     steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+      - name: Check for tag
         run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "Not a tag push, skipping changelog check."
+            exit 0
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
 
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: |
-          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-    # </template: go_generate_template>
-
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - check_branch_name
-
-    # <template: workflow_render_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [ ! -f "$FILE" ]; then
+            echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+            exit 1
+          else
+            echo "✅ Changelog file $FILE found."
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      - name: Render GitHub workflow
-        run: |
-          cd .github
-          ./render-workflows.sh
-
-      - name: Check rendered files
-        run: |
-          git diff --exit-code
-    # </template: workflow_render_template>
+  # </template: check_changelog_template>
 
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
+      - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -489,6 +399,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -585,13 +509,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -644,6 +581,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -665,8 +604,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -812,6 +749,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -908,13 +859,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -967,6 +931,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -988,8 +954,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1135,6 +1099,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1231,13 +1209,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1290,6 +1281,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1299,8 +1292,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1446,6 +1437,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1542,13 +1547,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1601,6 +1619,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1610,8 +1630,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1757,6 +1775,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1853,13 +1885,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1912,6 +1957,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -1921,8 +1968,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -2068,6 +2113,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -2164,13 +2223,26 @@ jobs:
           fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
+          werf config render > werf-rendered.yaml
+
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --dev \
+            --config werf-rendered.yaml \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
 
           cp images_tags_werf.json "$TEMP_WORKDIR"
+
+          # Encrypting the rendered build file before dumping it into artifacts
+          echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
+          ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
+          openssl rand -out key.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
+          openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
+          rm -f ./key.bin
+          rm -f ./werf-rendered.yaml
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2223,6 +2295,8 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+            ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
+            ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
     # </template: build_template>
 
@@ -2234,7 +2308,7 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: ${{ github.event.repository.name }}
           ci_commit_ref_name: ${{ github.ref_name }}

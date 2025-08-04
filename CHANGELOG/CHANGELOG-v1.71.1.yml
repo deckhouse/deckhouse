@@ -1,0 +1,23 @@
+ci:
+  fixes:
+    - summary: add sh symlink to bash to the deckhouse-controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14553
+    - summary: Fix listing of changed modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14532
+control-plane-manager:
+  fixes:
+    - summary: correct indentation of the 'certSANs' in v1beta4 template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14554
+docs:
+  features:
+    - summary: Added documentation with recommendations for generating self-signed certificates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14494
+monitoring-ping:
+  fixes:
+    - summary: Reducing PROCESSOR time consumption by changing the method of waiting for incoming packets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14502
+user-authn:
+  fixes:
+    - summary: fix dex oidc connector insecureSkipVerify and rootCAData options
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14524
+

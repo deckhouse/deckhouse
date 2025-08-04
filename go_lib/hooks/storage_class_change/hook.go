@@ -48,6 +48,7 @@ type Args struct {
 	ObjectName                    string `json:"objectName"`
 	InternalValuesSubPath         string `json:"internalValuesSubPath,omitempty"`
 	D8ConfigStorageClassParamName string `json:"d8ConfigStorageClassParamName,omitempty"`
+	AllowEmptyDir                 bool   `json:"allowEmptyDir,omitempty"`
 
 	// if return value is false - hook will stop its execution
 	// if return value is true - hook will continue
@@ -230,7 +231,9 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 	emptydirUsageMetricValue := 0.0
 	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
-		emptydirUsageMetricValue = 1.0
+		if !args.AllowEmptyDir {
+			emptydirUsageMetricValue = 1.0
+		}
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
@@ -272,10 +275,13 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		return Pod{}, fmt.Errorf("pod with volume name [%s] not found", pvcName)
 	}
 
+	var existingPvcs []PVC
 	for _, pvc := range pvcs {
 		if !pvc.IsDeleted {
+			existingPvcs = append(existingPvcs, pvc)
 			continue
 		}
+
 		pod, err := findPodByPVCName(pvc.Name)
 		if err == nil {
 			// if someone deleted pvc then evict the pod.
@@ -291,8 +297,8 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	var currentStorageClass string
-	if len(pvcs) > 0 {
-		currentStorageClass = pvcs[0].StorageClassName
+	if len(existingPvcs) > 0 {
+		currentStorageClass = existingPvcs[0].StorageClassName
 	}
 
 	effectiveStorageClass, err := calculateEffectiveStorageClass(input, args, currentStorageClass)
@@ -302,7 +308,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
 		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
 		if wasPvc {
-			for _, pvc := range pvcs {
+			for _, pvc := range existingPvcs {
 				input.Logger.Info("PVC StorageClass changed. Deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {

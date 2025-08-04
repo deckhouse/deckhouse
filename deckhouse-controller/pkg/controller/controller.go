@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -57,6 +58,7 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -70,6 +72,8 @@ const (
 
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
+
+	bootstrappedGlobalValue = "clusterIsBootstrapped"
 )
 
 type DeckhouseController struct {
@@ -210,7 +214,26 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return module.GetVersion(), nil
 	})
 
-	exts := extenders.NewExtendersStack(version, logger.Named("extenders"))
+	bootstrappedHelper := func() (bool, error) {
+		value, ok := operator.ModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		if !ok {
+			return false, nil
+		}
+
+		bootstrapped, ok := value.(bool)
+		if !ok {
+			return false, errors.New("bootstrapped value not boolean")
+		}
+
+		return bootstrapped, nil
+	}
+
+	edition, err := d8edition.Parse(version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	exts := extenders.NewExtendersStack(edition, bootstrappedHelper, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {

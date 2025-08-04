@@ -1,11 +1,10 @@
 name: node-local-dns
 stage: "General Availability"
-weight: 350
 subsystems:
   - networking
 namespace: kube-system
 
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"
   modules:
     kube-dns: '>= 0.0.0'
