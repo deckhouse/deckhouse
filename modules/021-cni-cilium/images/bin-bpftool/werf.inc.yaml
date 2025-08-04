@@ -77,6 +77,17 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
+- image: libs/musl
+  add: /
+  to: /libs/zstd
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
 shell:
   beforeInstall:
   - apk add --no-cache rsync make python3 gcc
