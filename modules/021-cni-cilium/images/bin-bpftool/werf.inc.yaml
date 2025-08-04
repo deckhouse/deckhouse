@@ -79,7 +79,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make
+  - apk add --no-cache rsync make python3 gcc
   install:
   - |
     if [[ -d /libs ]]; then
