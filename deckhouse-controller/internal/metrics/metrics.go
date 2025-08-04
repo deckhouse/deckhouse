@@ -18,5 +18,5 @@ const (
 	MigratedModuleNotFoundMetricName        = "d8_migrated_module_not_found"
 	MigratedModuleNotFoundGroup             = "migrated_module_not_found"
 	ExperimentalModulesAreAllowedMetricName = "is_experimental_modules_allowed"
-	ExperimentalModuleIsEnabled             = "experimental_module_is_enabled"
+	ExperimentalModuleIsEnabled             = "is_experimental_module_enabled"
 )
