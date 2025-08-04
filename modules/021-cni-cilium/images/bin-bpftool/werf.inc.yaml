@@ -101,7 +101,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils
+  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils-dev
   install:
   - |
     if [[ -d /libs ]]; then
