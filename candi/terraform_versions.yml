@@ -99,7 +99,7 @@ ovirt:
   useOpentofu: true
 
 vsphere:
-  namespace: hashicorp
+  namespace: vmware
   cloudName: vSphere
   type: vsphere
   version: 2.14.2
