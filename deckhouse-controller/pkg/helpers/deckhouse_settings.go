@@ -21,6 +21,7 @@ import (
 
 	"github.com/flant/shell-operator/pkg/metric"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -84,11 +85,13 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
 
+	allowExperimentalModules := 0.
+
 	if c.settings.AllowExperimentalModules {
-		c.metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 1.0, map[string]string{"module": "deckhouse-controller"})
-	} else {
-		c.metricStorage.GaugeSet(telemetry.WrapName("is_experimental_modules_enabled"), 0.0, map[string]string{"module": "deckhouse-controller"})
+		allowExperimentalModules = 1.
 	}
+
+	c.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModulesAreAllowedMetricName), allowExperimentalModules, map[string]string{"module": "deckhouse-controller"})
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {

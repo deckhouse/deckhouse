@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -97,7 +98,7 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	r.metricStorage.Grouped().ExpireGroupMetrics(telemetry.WrapName("experimental_module"))
+	r.metricStorage.Grouped().ExpireGroupMetrics(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled))
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
@@ -304,7 +305,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	if module.IsExperimental() {
-		r.metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 1.0, map[string]string{"module": moduleConfig.GetName()})
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
 	}
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -394,7 +395,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	r.metricStorage.GaugeSet(telemetry.WrapName("experimental_module"), 0.0, map[string]string{"module": moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {

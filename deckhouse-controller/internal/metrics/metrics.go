@@ -15,6 +15,8 @@
 package metrics
 
 const (
-	MigratedModuleNotFoundMetricName = "d8_migrated_module_not_found"
-	MigratedModuleNotFoundGroup      = "migrated_module_not_found"
+	MigratedModuleNotFoundMetricName        = "d8_migrated_module_not_found"
+	MigratedModuleNotFoundGroup             = "migrated_module_not_found"
+	ExperimentalModulesAreAllowedMetricName = "is_experimental_modules_allowed"
+	ExperimentalModuleIsEnabled             = "experimental_module_is_enabled"
 )
