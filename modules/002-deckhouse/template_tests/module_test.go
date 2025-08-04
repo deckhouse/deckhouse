@@ -171,6 +171,9 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: testkey
   operator: Exists
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+  effect: NoSchedule
 - key: node.deckhouse.io/uninitialized
   operator: Exists
   effect: NoSchedule

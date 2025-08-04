@@ -107,6 +107,9 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/bashible-uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"        
         - key: node.deckhouse.io/uninitialized
           operator: "Exists"
           effect: "NoSchedule"
