@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	networkingv1 "k8s.io/api/networking/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -47,6 +48,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-monitoring"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "heritage",
+						Operator: "NotIn",
+						Values:   []string{"deckhouse"},
+					},
 				},
 			},
 			FilterFunc: ingressWithClientCertFilter,
