@@ -79,7 +79,7 @@ import:
     - usr/share
 - image: libs/musl
   add: /
-  to: /libs/zstd
+  to: /libs/musl
   before: install
   includePaths:
     - usr/lib
