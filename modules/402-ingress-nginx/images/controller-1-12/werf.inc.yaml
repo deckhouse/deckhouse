@@ -42,13 +42,14 @@ shell:
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
+  #
   - rm -rf /src/dumb-init/.git
   - rm -rf /src/lua-protobuf/.git
   - rm -rf /src/lua-iconv/.git
   - rm -rf /src/ingress-nginx/.git
   - cat /patches/build.sh > /src/ingress-nginx/images/nginx/rootfs/build.sh # FIXME delete
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact # FIXME Relocate to base_images
 fromImage: common/alt-p11-artifact
 # fromCacheVersion: "2025-07-28.01"
 final: false
@@ -64,8 +65,7 @@ shell:
   - cd /src/
   - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-# fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
 fromImage: builder/golang-alpine
 fromCacheVersion: "2025-08-04.01"
 final: false
@@ -90,7 +90,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
-# fromCacheVersion: "2025-07-28.01"
+fromCacheVersion: "2025-08-04.02"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -105,8 +105,7 @@ secrets:
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  # git needs for getting tag and commit sha for build purposes
-  - apk --no-cache add make bash git
+  - apk --no-cache add make bash
   setup:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
@@ -121,7 +120,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-01.05"
+fromCacheVersion: "2025-08-04.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -132,73 +131,64 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-#   add: /src/rootfs/etc
-#   to: /src/rootfs/etc
-#   before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git openssh-client
+  - apk add --no-cache build-base linux-headers autoconf automake g++ cmake bison libtool flex pkgconf pkgconfig make gcc clang
+  - apk add --no-cache git openssh-client bash
   - mkdir -p ~/.ssh/
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - apk add gcc
-  - apk add clang
   - apk add libc-dev
-  - apk add make
-  - apk add automake
   - apk add openssl-dev
   - apk add pcre-dev
   - apk add zlib-dev
-  - apk add linux-headers
   - apk add libxslt-dev
   - apk add gd-dev
   - apk add perl-dev
   - apk add libedit-dev
+  - apk add libaio-dev
+  - apk add curl-dev
+  - apk add libmaxminddb-dev
+  - apk add yajl-dev lmdb-dev
+  # - apk add libxml2-dev
+  - apk add gtest-dev
+  # - apk add c-ares-dev
+  - apk add re2-dev
+  - apk add grpc-dev
+  - apk add protobuf-dev
+
+  - apk add doxygen
   - apk add mercurial
   - apk add alpine-sdk
   - apk add findutils
   - apk add curl
   - apk add ca-certificates
   # - apk add patch
-  - apk add libaio-dev
   # - apk add openssl
-  - apk add cmake
   - apk add util-linux
   - apk add lmdb-tools
   - apk add wget
-  - apk add curl-dev
   - apk add libprotobuf
-  # - apk add g++ pkgconf libxml2 libxml2-dev
-  - apk add flex bison doxygen yajl-dev lmdb-dev libtool autoconf
+  # - apk add libxml2
   # - apk add python3
-  - apk add libmaxminddb-dev
   - apk add bc
   - apk add unzip
   - apk add dos2unix
   - apk add yaml-cpp
   - apk add coreutils
   - apk add ninja
-  - apk add gtest-dev
-  # - apk add build-base
-  # - apk add pkgconfig
-  # - apk add c-ares-dev
-  - apk add re2-dev
-  - apk add grpc-dev
-  - apk add protobuf-dev
   beforeSetup:
   - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
   - export CONTROLLER_BRANCH={{ $controllerBranch }}
   - git config --global url."${SOURCE_REPO}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
-  # - rm -rf /usr/local
-  # - export GIT_TRACE=1
   - /build.sh
   setup:
+  # Source: chroot.sh
   - |
     bash -eu -c '
     writeDirs=(
@@ -230,7 +220,7 @@ shell:
   - mkdir -p /etc/nginx && touch /etc/nginx/opentelemetry.toml
   - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
   - chown -R www-data:www-data /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
-
+  #
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /usr/* /chroot/usr/
@@ -277,9 +267,22 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-01.06"
+fromCacheVersion: "2025-08-04.01"
 final: false
+mount:
+- from: build_dir
+  to: /tmp/apps
 import:
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
+- image: registrypackages/d8-curl-artifact-8-9-1 # FIXME build!
+  add: /d8-curl
+  to: /chroot/usr/bin/curl
+  owner: "64535"
+  group: "64535"
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /
@@ -296,14 +299,6 @@ import:
   - usr/local/lib/lua/5.1/pb.so
   - usr/local/share/lua/5.1/protoc.lua
   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-#   add: /usr/lib64/lua/5.1/pb.so
-#   to: /chroot/usr/local/lib/lua/5.1/pb.so
-#   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-#   add: /usr/share/lua/5.1/protoc.lua
-#   to: /chroot/usr/local/share/lua/5.1/protoc.lua
-#   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
   to: /src/rootfs/etc
@@ -315,16 +310,21 @@ shell:
   setup:
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R www-data:www-data /chroot/etc # FIXME Danger
-
-  # - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  # - adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
+  # Source: Dockerfile-chroot
+  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
 
   - mkdir -p /var/log
   - chown -R www-data:www-data /var/log
+
   # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
   # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
   # Could get complicated arch specific paths become a need
   - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
+  #
+  - /tmp/apps/ln -sf /chroot/etc/nginx /etc/nginx
+  - /tmp/apps/ln -sf /chroot/tmp/nginx /tmp/nginx
+  - /tmp/apps/ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  - /tmp/apps/ln -sf /chroot/var/log/nginx /var/log/nginx
   - touch /chroot/var/log/nginx/access.log
   - chown www-data:www-data /chroot/var/log/nginx/access.log
   - echo "" > /chroot/etc/resolv.conf
@@ -336,49 +336,63 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
+
+  - mkdir -p /chroot/modules_mount
+  - mkdir -p modules_mount
+  - ln -s /modules_mount /chroot/modules_mount
+
+  # Utils for final image
+  - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/alpine
+fromImage: builder/alpine # FIXME replace
 # fromImage: common/distroless
-fromCacheVersion: "2025-08-01.06"
-# mount:
-# - from: build_dir
-#   to: /tmp/apps
+fromCacheVersion: "2025-08-04.03"
+mount:
+- from: build_dir
+  to: /tmp/apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
   to: /
   includePaths:
+  - chroot
   - etc/passwd
   - etc/group
-  - chroot
+  - modules_mount
+  - var/log
+  - etc/nginx
+  - tmp/nginx
+  - etc/ingress-controller
+  - var/log/nginx
+  - sbin/nginx
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/dbg # chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/dbg # FIXME chown=www-data:www-data
   to: /dbg
   owner: "101"
   group: "101"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/nginx-ingress-controller # chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/nginx-ingress-controller # FIXME chown=www-data:www-data
   to: /nginx-ingress-controller
   owner: "101"
   group: "101"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/wait-shutdown # chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/wait-shutdown # FIXME chown=www-data:www-data
   to: /wait-shutdown
   owner: "101"
   group: "101"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
+  add: /src/curl-chroot-wrapper.sh # FIXME chown=www-data:www-data
   to: /usr/bin/curl
   owner: "101"
   group: "101"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/nginx-chroot-wrapper.sh # chown=www-data:www-data
+  add: /src/nginx-chroot-wrapper.sh # FIXME chown=www-data:www-data
   to: /usr/bin/nginx
   owner: "101"
   group: "101"
@@ -387,59 +401,38 @@ import:
   add: /src/dumb-init
   to: /usr/bin/dumb-init
   before: install
-# - image: tools/bash
-#   add: /usr/bin/bash
-#   to: /bin/bash
-#   before: install
-# - image: tools/util-linux
-#   add: /usr/bin/unshare
-#   to: /usr/bin/unshare
-#   before: install
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: install
+- image: tools/util-linux
+  add: /usr/bin/unshare
+  to: /usr/bin/unshare
+  before: install
+- image: tools/openssl
+  add: /usr/lib
+  to: /usr/lib
+  includePaths:
+  - libcrypto.so*
+  - libssl.so*
+  - engines-3
+  - ossl-modules
+  before: install
+- image: tools/openssl
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
+  before: install
 shell:
-  install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk update && apk upgrade && apk add -U --no-cache bash openssl ca-certificates tzdata diffutils util-linux
+  # FIXME utils: diffutils pgrep
   setup:
-
-
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
-
-  - mkdir -p /chroot/modules_mount
-  - mkdir -p modules_mount
-  - ln -s /modules_mount /chroot/modules_mount
-
-  # - /tmp/apps/chmod 1777 /tmp
-  # - /tmp/apps/rm -rf /etc/pki /usr/share/ca-certificates
-  # - /tmp/apps/mkdir -p /var/log
-  # - /tmp/apps/ln -sf /chroot/etc/pki /etc/pki
-  # - /tmp/apps/ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  # - /tmp/apps/ln -sf /chroot/etc/nginx /etc/nginx
-  # - /tmp/apps/ln -sf /chroot/tmp/nginx /tmp/nginx
-  # - /tmp/apps/ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  # - /tmp/apps/ln -sf /chroot/var/log/nginx /var/log/nginx
-
-  - apk add --no-cache libcap
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - apk del libcap
-
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  # - /tmp/apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  # - /tmp/apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  # - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  # - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
