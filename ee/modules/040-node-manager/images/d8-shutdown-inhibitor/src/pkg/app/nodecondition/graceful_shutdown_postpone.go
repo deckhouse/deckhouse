@@ -133,15 +133,15 @@ func uncordonOnStart(nodeName string) error {
 	// 3. isInhibitorShutdownActive?
 	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
 	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
-	fmt.Printf("uncordonOnStart: shutdownIsActive %t\n", isInhibited)
+	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
 
 	if !isReady && isInhibited {
 		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
 		return nil
 	}
-	if isReady && !isInhibited {
+	if isReady {
 		fmt.Println("uncordonOnStart: uncordonAndCleanup")
-		// 4. Uncordon: Node is Ready and shutdown inhibition is not active.
+		// 4. Uncordon
 		return uncordonAndCleanup(k, nodeName)
 	}
 	return nil
