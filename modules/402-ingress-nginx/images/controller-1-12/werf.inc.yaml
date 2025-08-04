@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-08-01.01"
+fromCacheVersion: "2025-08-04.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -156,7 +156,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.02"
+fromCacheVersion: "2025-08-04.03"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -218,6 +218,11 @@ shell:
   - apk add coreutils
   - apk add ninja
   beforeSetup:
+  # add deckhouse user
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
+  - echo "deckhouse:x:64535:" >> /etc/group
+  - echo "deckhouse:!::0:::::" >> /etc/shadow
+  #
   - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
   - export CONTROLLER_BRANCH={{ $controllerBranch }}
   - git config --global url."${SOURCE_REPO}".insteadOf https://github.com
@@ -250,12 +255,12 @@ shell:
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
-      chown -R www-data:www-data ${dir};
+      chown -R deckhouse:deckhouse ${dir};
     done'
   # Create opentelemetry.toml file as it doesn't present in controller_image
   - mkdir -p /etc/nginx && touch /etc/nginx/opentelemetry.toml
   - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
-  - chown -R www-data:www-data /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
+  - chown -R deckhouse:deckhouse /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
   #
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
@@ -267,7 +272,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.02"
+fromCacheVersion: "2025-08-04.03"
 final: false
 mount:
 - from: build_dir
@@ -287,8 +292,8 @@ import:
   add: /
   to: /
   includePaths:
-  - etc/passwd
-  - etc/group
+  # - etc/passwd
+  # - etc/group
   - chroot
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
@@ -308,13 +313,18 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   setup:
+  # add deckhouse user
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
+  - echo "deckhouse:x:64535:" >> /etc/group
+  - echo "deckhouse:!::0:::::" >> /etc/shadow
+  #
   - cp -a /src/rootfs/etc/* /chroot/etc
-  - chown -R www-data:www-data /chroot/etc # FIXME Danger
+  - chown -R deckhouse:deckhouse /chroot/etc # FIXME Danger
   # Source: Dockerfile-chroot
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
 
   - mkdir -p /var/log
-  - chown -R www-data:www-data /var/log
+  - chown -R deckhouse:deckhouse /var/log
 
   # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
   # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
@@ -326,9 +336,9 @@ shell:
   - /tmp/apps/ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   - /tmp/apps/ln -sf /chroot/var/log/nginx /var/log/nginx
   - touch /chroot/var/log/nginx/access.log
-  - chown www-data:www-data /chroot/var/log/nginx/access.log
+  - chown deckhouse:deckhouse /chroot/var/log/nginx/access.log
   - echo "" > /chroot/etc/resolv.conf
-  - chown -R www-data:www-data /chroot/var/log/nginx /chroot/etc/resolv.conf
+  - chown -R deckhouse:deckhouse /chroot/var/log/nginx /chroot/etc/resolv.conf
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
@@ -357,8 +367,8 @@ import:
   to: /
   includePaths:
   - chroot
-  - etc/passwd
-  - etc/group
+  # - etc/passwd
+  # - etc/group
   - modules_mount
   - var/log
   - etc/nginx
@@ -368,34 +378,34 @@ import:
   - sbin/nginx
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/dbg # FIXME chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/dbg
   to: /dbg
-  owner: "101"
-  group: "101"
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/nginx-ingress-controller # FIXME chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/nginx-ingress-controller
   to: /nginx-ingress-controller
-  owner: "101"
-  group: "101"
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/wait-shutdown # FIXME chown=www-data:www-data
+  add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
-  owner: "101"
-  group: "101"
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh # FIXME chown=www-data:www-data
+  add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
-  owner: "101"
-  group: "101"
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/nginx-chroot-wrapper.sh # FIXME chown=www-data:www-data
+  add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
-  owner: "101"
-  group: "101"
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
   add: /src/dumb-init
@@ -436,7 +446,7 @@ shell:
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
-    user: "101"
+    user: "64535"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
