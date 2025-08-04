@@ -67,7 +67,11 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
+{{- if eq $.Values.web.env "web-production" }}
   name: registry-modules-watcher
+{{- else }}
+  name: registry-modules-watcher-{{ .Release.Namespace }}
+{{- end }}
   namespace: d8-monitoring
   labels:
     app: registry-modules-watcher
@@ -92,8 +96,8 @@ spec:
     matchLabels:
       app: registry-modules-watcher
   namespaceSelector:
-    matchNames: 
-{{ toYaml .Values.observability.prometheusOperator.namespaces |indent 6 }}
+    matchNames:
+      - {{ .Release.Namespace }}
 {{- else }}
 apiVersion: v1
 kind: Service
