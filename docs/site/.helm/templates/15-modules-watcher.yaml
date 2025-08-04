@@ -63,6 +63,7 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.namespace
 ---
+{{- if .Values.observability.prometheusOperator.enable }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -92,6 +93,28 @@ spec:
       app: registry-modules-watcher
   namespaceSelector:
     any: true
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-modules-watcher-http
+  labels:
+    # need to prometheus scrape "podMonitor/d8-monitoring/custom-pod"
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher
+spec:
+  clusterIP: None
+  selector:
+    app: registry-modules-watcher
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret

@@ -3,6 +3,12 @@ priorityClassName:
   production: production-medium
   web-production: production-medium
 
+observability:
+  prometheusOperator:
+    # if it true - create podMonitor resource
+    # if it false - create service with label "prometheus.deckhouse.io/custom-target"
+    enable: false
+
 ingressClass:
   _default: nginx
   prod-25: nginx
