@@ -187,6 +187,9 @@ apiVersions:
         vmFolderExists:
           description: |
             Установите значение в `true`, если путь заданный в `vmFolderPath` существует. Установка более одного кластера в папку невозможна.
+        storagePolicyID:
+          description: |
+            ID политики хранилищ SPBM (Storage Policy Based Management)
         region:
           description: |
             Тег, прикрепленный к vSphere Datacenter, в котором будут происходить все операции: заказ виртуальных машин, размещение их дисков на datastore, подключение к network.
