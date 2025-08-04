@@ -116,6 +116,16 @@ func moduleConfigValidationHandler(
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
+
+			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+					definition := module.GetModuleDefinition()
+
+					if definition.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+					}
+				}
+			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
 
@@ -143,7 +153,7 @@ func moduleConfigValidationHandler(
 					definition := module.GetModuleDefinition()
 
 					if definition.IsExperimental() && !allowExperimentalModules {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param allowExperimentalModules: true to allow it", cfg.Name))
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
 				}
 			}
