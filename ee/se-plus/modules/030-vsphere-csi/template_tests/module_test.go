@@ -140,7 +140,6 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
-
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Exists()).To(BeTrue())
@@ -209,7 +208,6 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
 			Expect(scMydsname1.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
-
 		})
 	})
 })
