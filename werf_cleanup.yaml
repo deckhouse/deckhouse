@@ -12,14 +12,14 @@ cleanup:
         in: 312h
     imagesPerReference:
       last: 1
-  # keep 4 pre-release builds
+  # keep 3 pre-release builds
   - references:
       branch: /release-[0-9]\.[0-9]+/
       limit:
         last: 3
     imagesPerReference:
       last: 1
-  # keep 6 release builds
+  # keep 5 release builds
   - references:
       tag: /.*/
       limit:
