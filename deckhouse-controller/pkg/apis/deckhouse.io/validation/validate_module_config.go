@@ -138,7 +138,7 @@ func moduleConfigValidationHandler(
 			oldEnabled := oldFlag.Spec.Enabled != nil && *oldFlag.Spec.Enabled
 			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
 
-			if !oldEnabled && !newEnabled {
+			if !oldEnabled && newEnabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
