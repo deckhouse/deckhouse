@@ -66,8 +66,8 @@ shell:
   - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
-fromImage: builder/golang-alpine
-fromCacheVersion: "2025-08-04.01"
+fromImage: builder/alpine
+fromCacheVersion: "2025-08-04.02"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -218,7 +218,7 @@ shell:
   - apk add coreutils
   - apk add ninja
   beforeSetup:
-  # add deckhouse user
+  # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
@@ -311,7 +311,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   setup:
-  # add deckhouse user
+  # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
@@ -354,9 +354,9 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/alpine # FIXME replace
-# fromImage: common/distroless
-fromCacheVersion: "2025-08-04.06"
+# fromImage: builder/alpine # FIXME replace
+fromImage: common/distroless
+fromCacheVersion: "2025-08-04.07"
 mount:
 - from: build_dir
   to: /tmp/apps
