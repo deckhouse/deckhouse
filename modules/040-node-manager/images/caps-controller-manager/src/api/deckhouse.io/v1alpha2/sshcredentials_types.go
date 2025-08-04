@@ -29,7 +29,7 @@ type SSHCredentialsSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	User          string `json:"user"`
-	PrivateSSHKey string `json:"privateSSHKey"`
+	PrivateSSHKey string `json:"privateSSHKey,omitempty"`
 	// base64 encoded password for user
 	SudoPasswordEncoded string `json:"sudoPasswordEncoded,omitempty"`
 
