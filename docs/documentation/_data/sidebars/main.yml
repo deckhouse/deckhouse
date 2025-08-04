@@ -1632,7 +1632,7 @@ entries:
                 - title:
                     en: "Custom Resources"
                     ru: "Custom Resources"
-                  url: /modules/operator-trivy/trivy-cr.html                  
+                  url: /modules/operator-trivy/cr.html
     - title:
         en: Storage
         ru: Хранилище
