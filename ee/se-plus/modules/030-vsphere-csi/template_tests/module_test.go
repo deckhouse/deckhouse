@@ -34,14 +34,12 @@ func Test(t *testing.T) {
 const globalValues = `
   enabledModules: ["vertical-pod-autoscaler", "vsphere-csi"]
   clusterConfiguration:
-    apiVersion: deckhouse.io/v1
-    cloud:
-      prefix: sandbox
-      provider: vSphere
-    clusterDomain: cluster.local
-    clusterType: Cloud
-    defaultCRI: Containerd
-    kind: ClusterConfiguration
+	apiVersion: deckhouse.io/v1
+	clusterDomain: cluster.local
+	clusterType: Static
+	defaultCRI: Containerd
+	encryptionAlgorithm: RSA-2048
+	kind: ClusterConfiguration
     kubernetesVersion: "%s"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
@@ -69,7 +67,7 @@ const moduleValuesA = `
         datastoreURL: ds:///vmfs/volumes/hash2/
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
-      compatibilityFlag: ""
+      compatibilityFlag: "none"
       providerDiscoveryData:
         datacenter: X1
         zones: ["aaa", "bbb"]
@@ -82,16 +80,7 @@ const moduleValuesA = `
         regionTagCategory: myregtagcat
         zoneTagCategory: myzonetagcat
         region: myreg
-        sshPublicKey: mysshkey1
         vmFolderPath: dev/test
-        masterNodeGroup:
-          instanceClass:
-            datastore: dev/lun_1
-            mainNetwork: k8s-msk/test_187
-            memory: 8192
-            numCPUs: 4
-            template: dev/golden_image
-          replicas: 1
 `
 
 const moduleValuesB = `
@@ -107,7 +96,7 @@ const moduleValuesB = `
         datastoreURL: ds:///vmfs/volumes/hash2/
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
-      compatibilityFlag: ""
+      compatibilityFlag: "none"
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
         zones: ["aaa", "bbb"]
@@ -121,101 +110,10 @@ const moduleValuesB = `
         regionTagCategory: myregtagcat
         zoneTagCategory: myzonetagcat
         region: myreg
-        sshPublicKey: mysshkey1
         vmFolderPath: dev/test
-        externalNetworkNames: ["aaa", "bbb"]
-        internalNetworkNames: ["ccc", "ddd"]
 `
 
-const moduleValuesC = `
-    internal:
-      storageClasses:
-      - name: mydsname1
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash1/
-        path: /my/ds/path/mydsname1
-        zones: ["zonea", "zoneb"]
-      - name: mydsname2
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash2/
-        path: /my/ds/path/mydsname2
-        zones: ["zonea", "zoneb"]
-      compatibilityFlag: ""
-      providerDiscoveryData:
-        zones: ["aaa", "bbb"]
-        datacenter: X1
-        resourcePoolPath: kubernetes-dev
-      providerClusterConfiguration:
-        provider:
-          server: myhost
-          username: myuname
-          password: myPaSsWd
-          insecure: true
-        regionTagCategory: myregtagcat
-        zoneTagCategory: myzonetagcat
-        region: myreg
-        sshPublicKey: mysshkey1
-        vmFolderPath: dev/test
-        externalNetworkNames: ["aaa", "bbb"]
-        internalNetworkNames: ["ccc", "ddd"]
-        nsxt:
-          defaultIpPoolName: main
-          defaultTcpAppProfileName: default-tcp-lb-app-profile
-          defaultUdpAppProfileName: default-udp-lb-app-profile
-          size: SMALL
-          tier1GatewayPath: /host/tier1
-          user: user
-          password: password
-          host: 1.2.3.4
-`
-
-const moduleValuesD = `
-    internal:
-      storageClasses:
-      - name: mydsname1
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash1/
-        path: /my/ds/path/mydsname1
-        zones: ["zonea", "zoneb"]
-      - name: mydsname2
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash2/
-        path: /my/ds/path/mydsname2
-        zones: ["zonea", "zoneb"]
-      compatibilityFlag: ""
-      providerDiscoveryData:
-        zones: ["aaa", "bbb"]
-        datacenter: X1
-        resourcePoolPath: kubernetes-dev
-      providerClusterConfiguration:
-        provider:
-          server: myhost
-          username: myuname
-          password: myPaSsWd
-          insecure: true
-        regionTagCategory: myregtagcat
-        zoneTagCategory: myzonetagcat
-        region: myreg
-        sshPublicKey: mysshkey1
-        vmFolderPath: dev/test
-        externalNetworkNames: ["aaa", "bbb"]
-        internalNetworkNames: ["ccc", "ddd"]
-        nsxt:
-          defaultIpPoolName: main
-          size: SMALL
-          defaultTcpAppProfileName: default-tcp-lb-app-profile
-          defaultUdpAppProfileName: default-udp-lb-app-profile
-          tier1GatewayPath: /host/tier1
-          user: user
-          password: password
-          host: 1.2.3.4
-          loadBalancerClass:
-          - name: class1
-            ipPoolName: pool2
-            tcpAppProfileName: profile1
-`
-
-var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
+var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	BeforeSuite(func() {
