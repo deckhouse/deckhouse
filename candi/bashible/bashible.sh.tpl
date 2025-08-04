@@ -253,6 +253,17 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
+ if [[ ! -f /var/lib/bashible/bashible-label-was-set ]] && [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
+    while true; do
+      if kubectl_exec label nodes $(bb-d8-node-name) node.deckhouse.io/bashible-first-run-finished=true; then
+        echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+        touch /var/lib/bashible/bashible-label-was-set
+        break
+      fi
+      echo "Failed to set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name), retrying in 10 seconds..."
+      sleep 10
+    done
+ fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
