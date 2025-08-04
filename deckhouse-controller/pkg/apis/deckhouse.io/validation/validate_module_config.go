@@ -123,6 +123,8 @@ func moduleConfigValidationHandler(
 			if err := json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
+
+			buf = bytes.NewBuffer(review.OldObjectRaw)
 			oldFlag := new(EnabledOnly)
 			if err := json.NewDecoder(buf).Decode(oldFlag); err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
