@@ -32,8 +32,8 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler", "vsphere-csi"]
-  clusterConfiguration:
+enabledModules: ["vertical-pod-autoscaler", "vsphere-csi"]
+clusterConfiguration:
 	apiVersion: deckhouse.io/v1
 	clusterDomain: cluster.local
 	clusterType: Static
@@ -44,14 +44,14 @@ const globalValues = `
 	podSubnetCIDR: 10.111.0.0/16
 	podSubnetNodeCIDRPrefix: "24"
 	serviceSubnetCIDR: 10.222.0.0/16
-  modules:
-    placement: {}
-  discovery:
-    d8SpecificNodeCountByRole:
-      worker: 1
-      master: 3
-    podSubnet: 10.0.1.0/16
-    kubernetesVersion: "%s.1"
+modules:
+	placement: {}
+discovery:
+	d8SpecificNodeCountByRole:
+		worker: 1
+		master: 3
+	podSubnet: 10.0.1.0/16
+	kubernetesVersion: "%s.1"
 `
 
 const moduleValuesA = `
