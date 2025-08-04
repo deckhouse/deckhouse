@@ -105,11 +105,11 @@ resource "vcd_vapp_vm" "master" {
     for_each = local.additional_metadata
 
     content {
-      type        = format("Metadata%sValue", metadata_entry.type)
-      is_system   = metadata_entry.isSystem
-      user_access = metadata_entry.userAccess
-      key         = metadata_entry.key
-      value       = metadata_entry.value
+      type        = format("Metadata%sValue", metadata_entry.value.type)
+      is_system   = metadata_entry.value.isSystem
+      user_access = upper(metadata_entry.value.userAccess)
+      key         = metadata_entry.value.key
+      value       = metadata_entry.value.value
     }
   }
 
