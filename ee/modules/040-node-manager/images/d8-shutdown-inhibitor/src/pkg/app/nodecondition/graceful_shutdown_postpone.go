@@ -97,8 +97,8 @@ func uncordonAndCleanup(k *kubernetes.Kubectl, nodeName string) error {
 	return nil
 }
 
-func isGracefulShutdownPostpone(condition *kubernetes.Condition) bool {
-	fmt.Printf("isGracefulShutdownPostpone: condition=%+v\n", condition)
+func isShutdownInhibitedByPods(condition *kubernetes.Condition) bool {
+	fmt.Printf("isShutdownInhibitedByPods: condition=%+v\n", condition)
 	if condition == nil {
 		return false
 	}
@@ -111,7 +111,7 @@ func uncordonOnStart(nodeName string) error {
 	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
 	k := kubernetes.NewDefaultKubectl()
 
-	// 1 isOurCordon?
+	// 1. isOurCordon?
 	isOurCordon, err := cordonedByInhibitor(k, nodeName)
 	if err != nil {
 		return err
@@ -123,24 +123,28 @@ func uncordonOnStart(nodeName string) error {
 		return nil
 	}
 
-	// 1 nodeIsReady?
+	// 1. nodeIsReady?
 	isReady, err := nodeIsReady(k, nodeName)
 	if err != nil {
 		isReady = false
 	}
 	fmt.Printf("uncordonOnStart: isReady %t\n", isReady)
 
-	// 3 isInhibitorShutdownActive?
-	podArePresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
-	shutdownIsActive := isGracefulShutdownPostpone(podArePresentCondition)
-	fmt.Printf("uncordonOnStart: shutdownIsActive %t\n", shutdownIsActive)
+	// 3. isInhibitorShutdownActive?
+	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
+	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
+	fmt.Printf("uncordonOnStart: shutdownIsActive %t\n", isInhibited)
 
-	if !isReady && shutdownIsActive {
+	if !isReady && isInhibited {
 		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
 		return nil
 	}
-	fmt.Println("uncordonOnStart: uncordonAndCleanup")
-	return uncordonAndCleanup(k, nodeName)
+	if isReady && !isInhibited {
+		fmt.Println("uncordonOnStart: uncordonAndCleanup")
+		// 4. Uncordon: Node is Ready and shutdown inhibition is not active.
+		return uncordonAndCleanup(k, nodeName)
+	}
+	return nil
 }
 
 func reformatExitError(err error) error {
