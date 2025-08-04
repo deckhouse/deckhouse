@@ -34,14 +34,6 @@ image: {{ .ModuleName }}/golang-artifact
 fromImage: builder/golang-alpine
 final: false
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-zstd-dev
-from: dev-registry.deckhouse.io/base_images@sha256:14a97086e5d77537cc3a5252c7bc64206fc02f520530fc3b9430dbfd4317cb5b
-final: false
----
-image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
-from: dev-registry.deckhouse.io/base_images@sha256:f69c711420769fd390569d1286ca7a6af9eb283ffc69ae244b1406344588398f
-final: false
----
 image: {{ .ModuleName }}/base-cilium-dev
 fromImage: builder/alt
 final: false
@@ -65,7 +57,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: {{ .ModuleName }}/{{ .ImageName }}-elfutils-dev
+- image: tools/elfutils
   add: /
   to: /tools/elfutils
   before: install
@@ -76,7 +68,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: {{ .ModuleName }}/{{ .ImageName }}-zstd-dev
+- image: libs/zstd
   add: /
   to: /libs/zstd
   before: install
