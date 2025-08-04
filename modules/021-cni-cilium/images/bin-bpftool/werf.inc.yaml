@@ -78,7 +78,7 @@ import:
     - usr/sbin
     - usr/share
 shell:
-  setup:
+  beforeInstall:
   - apk add --no-cache rsync
   install:
   - |
