@@ -2,6 +2,6 @@ type: object
 properties:
   enableLogs:
     description: |
-      Enables query logging for CoreDNS.
+      Enables query logging for node-local-dns instances.
     type: boolean
     default: false
