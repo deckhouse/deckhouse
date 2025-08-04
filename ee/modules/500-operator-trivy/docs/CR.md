@@ -12,7 +12,7 @@ Below is a description of the key CRDs created by the operator, including exampl
 
 [`VulnerabilityReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/vulnerability-report/) is a resource that contains a report on vulnerabilities found in a container image used in a Kubernetes workload.  
 
-The report includes a list of known vulnerabilities in OS packages and application dependencies, grouped by severity levels (Critical, High, Medium, etc.).
+The report includes a list of known vulnerabilities in OS packages and application dependencies, grouped by severity levels (`Critical`, `High`, `Medium`, etc.).
 
 For each container in a multi-container workload, `operator-trivy` creates a separate `VulnerabilityReport` in the corresponding namespace.  
 The link to the Kubernetes object is established via the `ownerReference` field.
@@ -83,13 +83,13 @@ report:
 
 [`ConfigAuditReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/configaudit-report/) is a resource that contains the results of a configuration audit of a Kubernetes object using tools such as Trivy.  
 
-The report includes a list of configuration issues grouped by categories (e.g., Security) and severity levels (Critical, High, etc.).
+The report includes a list of configuration issues grouped by categories (e.g., `Security`) and severity levels (`Critical`, `High`, etc.).
 
 Examples of checks include:
 
 - running a container as a non-root user;
 - defining resource requests and limits for containers;
-- configuring network access (hostNetwork, hostPID, etc.);
+- configuring network access (`hostNetwork`, `hostPID`, etc.);
 - setting security flags to prevent privilege escalation.
 
 `ConfigAuditReport` can be created for any namespaced resource, including:
