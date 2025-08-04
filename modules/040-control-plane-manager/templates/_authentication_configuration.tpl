@@ -8,9 +8,9 @@ jwt:
     {{- if .apiserver.oidcCA }}
     certificateAuthority: |
       {{- .apiserver.oidcCA | nindent 6 }} 
+    {{- end }}    
     audiences:
     - kubernetes
-    {{- end }}    
   claimMappings:
     username:
       claim: "email"
