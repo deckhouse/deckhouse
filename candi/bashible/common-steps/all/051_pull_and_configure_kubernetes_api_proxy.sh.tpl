@@ -38,6 +38,9 @@ spec:
     runAsNonRoot: false
     runAsUser: 0
     runAsGroup: 0
+    seLinuxOptions:
+      level: s0
+      type: spc_t
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
