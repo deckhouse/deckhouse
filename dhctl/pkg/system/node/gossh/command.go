@@ -128,6 +128,10 @@ func (c *SSHCommand) Start() error {
 	// setup stream handlers
 	command := c.cmd + " " + strings.Join(c.Args, " ")
 	log.DebugF("executor: start '%s'\n", command)
+	if c.session == nil {
+		return fmt.Errorf("ssh session not started")
+	}
+
 	err := c.SetupStreamHandlers()
 	if err != nil {
 		return err
