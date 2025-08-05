@@ -85,44 +85,20 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte, bool) {
+// GetGetReleaseVersionData searches for cached version data by checksum across all release channels
+// Returns version, tarFile if found, empty values otherwise
+func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string, []byte) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
 	r, ok := c.val[registryName(version.Registry)]
 	if !ok {
-		return "", nil, false
+		return "", nil
 	}
 
 	m, ok := r[moduleName(version.ModuleName)]
 	if !ok {
-		return "", nil, false
-	}
-
-	for ver, verData := range m.versions {
-		_, ok := verData.releaseChannels[version.ReleaseChannel]
-		if ok {
-			return string(ver), verData.tarFile, true
-		}
-	}
-
-	return "", nil, false
-}
-
-// GetVersionDataByChecksum searches for cached version data by checksum across all release channels
-// Returns version, tarFile and true if found, empty values and false otherwise
-func (c *Cache) GetVersionDataByChecksum(version *internal.VersionData) (string, []byte, bool) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	r, ok := c.val[registryName(version.Registry)]
-	if !ok {
-		return "", nil, false
-	}
-
-	m, ok := r[moduleName(version.ModuleName)]
-	if !ok {
-		return "", nil, false
+		return "", nil
 	}
 
 	// Search across all release channels for matching checksum
@@ -132,13 +108,13 @@ func (c *Cache) GetVersionDataByChecksum(version *internal.VersionData) (string,
 			for ver, verData := range m.versions {
 				// Check if this version contains the channel with matching checksum
 				if _, hasChannel := verData.releaseChannels[string(channelName)]; hasChannel {
-					return string(ver), verData.tarFile, true
+					return string(ver), verData.tarFile
 				}
 			}
 		}
 	}
 
-	return "", nil, false
+	return "", nil
 }
 
 // SyncWithRegistryVersions compares cache with registry versions and returns

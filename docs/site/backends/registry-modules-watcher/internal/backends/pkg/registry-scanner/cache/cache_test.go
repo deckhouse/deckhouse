@@ -300,13 +300,6 @@ func TestCache(t *testing.T) {
 		cache := New(metricsstorage.NewMetricStorage("test"))
 		cache.SyncWithRegistryVersions(testVersions)
 
-		t.Run("GetReleaseVersionData", func(t *testing.T) {
-			version, tarFile, found := cache.GetReleaseVersionData(&testVersions[0])
-			assert.True(t, found, "Version data should be found")
-			assert.Equal(t, "1.0.0", version, "Version should match")
-			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
-		})
-
 		t.Run("GetVersionDataByChecksum", func(t *testing.T) {
 			// Test finding version data by checksum from a different channel
 			newChannelVersion := internal.VersionData{
@@ -316,8 +309,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum", // Same checksum as alpha/beta
 			}
 
-			version, tarFile, found := cache.GetVersionDataByChecksum(&newChannelVersion)
-			assert.True(t, found, "Version data should be found by checksum")
+			version, tarFile := cache.GetGetReleaseVersionData(&newChannelVersion)
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
 		})
@@ -331,8 +323,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "nonexistent",
 			}
 
-			version, tarFile, found := cache.GetVersionDataByChecksum(&notFoundVersion)
-			assert.False(t, found, "Version data should not be found")
+			version, tarFile := cache.GetGetReleaseVersionData(&notFoundVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})
@@ -346,8 +337,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum",
 			}
 
-			version, tarFile, found := cache.GetVersionDataByChecksum(&differentModuleVersion)
-			assert.False(t, found, "Version data should not be found for different module")
+			version, tarFile := cache.GetGetReleaseVersionData(&differentModuleVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})

@@ -137,10 +137,11 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// Search across all channels by checksum
-	version, tarFile, ok := s.cache.GetVersionDataByChecksum(versionData)
-	if ok {
+	version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
+	if version != "" {
 		versionData.Version = version
 		versionData.TarFile = tarFile
+
 		return versionData, nil
 	}
 
@@ -149,6 +150,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
+
 	versionData.Version = version
 
 	// Extract tar file
