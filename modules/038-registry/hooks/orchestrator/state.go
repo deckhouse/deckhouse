@@ -122,9 +122,9 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 		return state.transitionToDirect(log, inputs)
 	case registry_const.ModeUnmanaged:
 		if inputs.Params.ImagesRepo != "" {
-			return state.transitionToConfigurableUnmanaged(log, inputs)
+			return state.transitionToConfigurableUnmanaged(inputs)
 		}
-		return state.transitionToUnmanaged(log, inputs)
+		return state.transitionToUnmanaged(inputs)
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
@@ -269,9 +269,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	return nil
 }
 
-func (state *State) transitionToConfigurableUnmanaged(log go_hook.Logger, inputs Inputs) error {
-	_ = log
-
+func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 	// check upstream registry
 	checkerRegistryParams := checker.RegistryParams{
 		Address:  inputs.Params.ImagesRepo,
@@ -380,9 +378,7 @@ func (state *State) transitionToConfigurableUnmanaged(log go_hook.Logger, inputs
 	return nil
 }
 
-func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
-	_ = log
-
+func (state *State) transitionToUnmanaged(inputs Inputs) error {
 	if state.Mode != registry_const.ModeUnmanaged &&
 		state.Mode != registry_const.ModeProxy &&
 		state.Mode != registry_const.ModeDirect {
