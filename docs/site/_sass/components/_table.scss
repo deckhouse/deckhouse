@@ -1,0 +1,113 @@
+@use "components/common/_variables.scss";
+
+.table {
+    margin: 0;
+    padding: 0;
+    border: 2px solid variables.$color-main;
+
+    line-height: 1.3;
+    border-spacing: 0;
+    a {
+        color: variables.$color-alt;
+        text-decoration: underline;
+    }
+    a:hover {
+        text-decoration: none;
+    }
+    td {
+        padding: 25px;
+        width: 150px;
+        min-height: 100px;
+        //vertical-align: bottom;
+        border-left: 2px solid variables.$color-main;
+    }
+    &__cell {
+        & > div {
+            small {
+                opacity: 0.6;
+            }
+        }
+        &_default {
+            & > div {
+                // padding-bottom: 15px;
+                // border-bottom: 2px solid #D8D8D8;
+                text-align: center;
+            }
+        }
+        &_left-title {
+            border-left: none !important;
+            background: #25245A;
+            color: variables.$color-inverse;
+            & > div {
+                // padding-bottom: 15px;
+                // border-bottom: 2px solid #FFFFFF;
+                text-align: left;
+            }
+            a {
+                color: variables.$color-inverse;
+            }
+        }
+        &_top-title {
+            background: variables.$color-smooth;
+            & > div {
+                text-align: center;
+                // border-bottom: none !important;
+                // padding-bottom: 0 !important;
+            }
+        }
+        &_separator-title {
+            border-left: none !important;
+            padding: 10px 25px !important;
+            background: variables.$color-main !important;
+            color: variables.$color-inverse !important;
+            font-size: variables.$font-size-small !important;
+        }
+        &_border-top {
+            border-top: 2px solid variables.$color-main;
+        }
+        &_center {
+            text-align: center;
+            vertical-align: middle !important;
+        }
+        &_mark {
+            &-alt {
+                color: variables.$color-alt;
+            }
+            &-warning {
+                color: #ff662a;
+            }
+        }
+    }
+
+    &_big td:first-child {
+        width: auto;
+    }
+
+    &__asterisk {
+        position: relative;
+        display: inline-block;
+        &:after {
+            content: '*';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+        }
+    }
+    &__double_asterisk {
+        position: relative;
+        display: inline-block;
+        &:after {
+            content: '**';
+            position: absolute;
+            top: -10px;
+            right: -15px;
+        }
+    }
+}
+
+.subscription_plans__table-footnote {
+    font-size: 12px;
+    opacity: .6;
+    width: 608px;
+    text-align: center;
+}

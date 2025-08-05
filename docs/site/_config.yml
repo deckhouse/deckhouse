@@ -24,6 +24,9 @@ metrics:
     ru: 78422802
     en: 100410448
 
+sass:
+    style: compressed
+
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
   ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
