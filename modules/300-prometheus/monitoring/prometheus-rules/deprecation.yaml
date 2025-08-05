@@ -56,12 +56,12 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__d8_prometheus_deprecations: "PrometheusDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__d8_prometheus_deprecations: "PrometheusDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-    summary: Deprecated ingress with direct Prometheus access found in cluster.
+    summary: Deprecated Ingress with direct Prometheus access found in cluster.
     description: |
-      The cluster has an ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
-      This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse releases.
+      The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
+      This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
 
-      To resolve this issue, remove the deprecated ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
+      To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
 - name: d8.grafana.interval_deprecation
   rules:
     - alert: GrafanaDashboardPanelIntervalDeprecated
