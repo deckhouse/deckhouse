@@ -253,7 +253,7 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
-  if [[ ! -f /var/lib/bashible/bashible-taints-removed ]] && [ "$FIRST_BASHIBLE_RUN" = "no" ] && [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
+  if [[ ! -f /var/lib/bashible/bashible-taints-removed ]] && [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     while true; do
       if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
         echo "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
