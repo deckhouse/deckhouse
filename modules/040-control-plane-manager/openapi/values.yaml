@@ -77,13 +77,3 @@ properties:
             caData:
               type: string
         default: []
-      admissionWebhookClientCertificateData:
-        description: |
-          Specifies the client TLS certificate and key used by the API server when sending AdmissionReview requests
-        type: object
-        default: {}
-        properties:
-          cert:
-            type: string
-          key:
-            type: string
