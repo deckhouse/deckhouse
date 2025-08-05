@@ -19,18 +19,14 @@ function kubectl_exec() {
 
 # If reboot flag is not set, nothing to do
 if ! bb-flag? reboot && [ "$FIRST_BASHIBLE_RUN" = "yes" ]; then
-  local attempt=0
-  local max_attempts=10
-  bb-log-info "Remove bashible-uninitialized taint from node $node_name"
-  until kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$max_attempts" ]; then
-      bb-log-error "failed to delete taint from node $(bb-d8-node-name) after $max_attempts attempts"
-      exit 1
+  while true; do
+    if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
+      bb-log-info "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
+      exit 0
     fi
-    bb-log-warning "Failed to remove taint (attempt $attempt/$max_attempts), retrying in 5 seconds..."
-    sleep 5
-  done  
+    bb-log-warning "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
+    sleep 10
+  done
   bb-flag-unset disruption
   exit 0
 fi
@@ -41,17 +37,13 @@ bb-flag-unset reboot
 
 # If it is first run bashible on bootstrap simple reboot node
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
-  local attempt=0
-  local max_attempts=10
-  bb-log-info "Remove bashible-uninitialized taint from node $node_name"
-  until kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$max_attempts" ]; then
-      bb-log-error "failed to delete taint from node $(bb-d8-node-name) after $max_attempts attempts"
-      exit 1
+  while true; do
+    if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
+      bb-log-info "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
+      exit 0
     fi
-    bb-log-warning "Failed to remove taint (attempt $attempt/$max_attempts), retrying in 5 seconds..."
-    sleep 5
+    bb-log-warning "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
+    sleep 10
   done
   bb-flag-unset disruption
   shutdown -r -t 5
