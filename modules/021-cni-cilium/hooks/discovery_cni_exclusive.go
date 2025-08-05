@@ -65,7 +65,11 @@ func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
 	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
 	sdnCniDaemonSets := input.NewSnapshots.Get("sdn-cni-daemonset")
-	isEnabled := len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets) != 0
-	input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", isEnabled)
+	if len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets) != 0 {
+		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", false)
+	} else {
+		eCNIP := input.Values.Get("cniCilium.exclusiveCNIPlugin")
+		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", eCNIP)
+	}
 	return nil
 }
