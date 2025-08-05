@@ -42,7 +42,7 @@ tree /etc/containerd/registry.d
 Если такие конфигурации существуют:
 
 {% alert level="danger" %}
-- После удаления [пользовательских конфигураций реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) из директории `/etc/containerd/conf.d`, сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
+- После удаления [пользовательских конфигураций реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) из директории `/etc/containerd/conf.d` сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
 
 - Новые Mirror Auth-конфигурации, добавленные в `/etc/containerd/registry.d`, вступят в силу только после перехода в режим `Direct`.
 {% endalert %}
