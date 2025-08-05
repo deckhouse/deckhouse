@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/bramvdbogaerde/go-scp"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"golang.org/x/crypto/ssh"
 	uuid "gopkg.in/satori/go.uuid.v1"
@@ -126,7 +127,7 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 		return err
 	}
 
-	if fType != "directory" {
+	if fType != "DIR" {
 		// regular file logic
 		scpClient, err := scp.NewClientBySSH(f.sshClient)
 		if err != nil {
@@ -203,7 +204,15 @@ func getRemoteFileStat(client *ssh.Client, remoteFilePath string) (string, error
 	command := fmt.Sprint("stat -c %F " + remoteFilePath)
 	output, err := session.CombinedOutput(command)
 
-	return strings.TrimSpace(string(output)), err
+	if strings.TrimSpace(string(output)) == "directory" {
+		return "DIR", nil
+	}
+
+	if strings.TrimSpace(string(output)) == "regular file" {
+		return "FILE", nil
+	}
+
+	return "", err
 }
 
 func getRemoteFilesList(client *ssh.Client, remoteFilePath string) (string, error) {
@@ -221,7 +230,7 @@ func getRemoteFilesList(client *ssh.Client, remoteFilePath string) (string, erro
 
 func CreateEmptyTmpFile() (string, error) {
 	tmpPath := filepath.Join(
-		os.TempDir(),
+		app.TmpDirName,
 		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),
 	)
 

@@ -180,7 +180,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		// Avoid starting a new ssh agent
 		newSSHClient.(*clissh.Client).InitializeNewAgent = false
 	} else {
-		newSSHClient = gossh.NewClient(sess, []session.AgentPrivateKey{privateKey})
+		pkeys := append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
+		newSSHClient = gossh.NewClient(sess, pkeys)
 	}
 
 	err = newSSHClient.Start()

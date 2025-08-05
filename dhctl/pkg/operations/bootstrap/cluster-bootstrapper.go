@@ -355,6 +355,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
 				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
 				if err := sshClient.Start(); err != nil {
 					return fmt.Errorf("unable to start ssh client: %w", err)
 				}
