@@ -32,7 +32,7 @@ entries:
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
       - title:
-          en: Audit events
+          en: Security audit
           ru: Аудит безопасности
         url: /code/documentation/admin/audit-events.html
   - title:

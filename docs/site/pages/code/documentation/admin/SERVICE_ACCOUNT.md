@@ -8,39 +8,46 @@ lang: en
 weight: 50
 ---
 
-A service account is a type of account used not by humans, but in automation scripts. It can be used in pipelines and integrations. It's not possible to authenticate via the web interface using a service account or to impersonate it.
+A service account is a user account intended for use in automated scripts. These accounts are typically used in CI/CD pipelines and integrations. A service account cannot be used to authenticate via the web interface or to perform actions through impersonation.
 
-## Create service account
+## Creating a service account
 
-### Open rails console
+### Rails console
 
-You can access the console using the [toolbox](https://deckhouse.ru/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox).
+To create a service account, use the Rails console provided in the [Toolbox](https://deckhouse.io/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox) utility set.
+Open the console by running the following command:
 
-### Create account
-
-Required fields are name, username, email, admin
-
-```ruby
-user_args = {
-name: 'kaiten_sa',
-username: 'kaiten_sa',
-email: 'kaiten_sa@flant.com',
-admin: false,
-user_type: :service_account,
-organization_id: Organizations::Organization.default_organization.id,
-password_automatically_set: true,
-force_random_password: true,
-skip_confirmation: true
-}
+```shell
+gitlab-rails console -e production
 ```
 
-Select the user on whose behalf the service account will be created, then create the service account.
+### Creating an account
 
-```ruby
-user = User.find_by_username('root')
-Users::CreateService.new(user, user_args).execute
-```
+1. In the Rails console, prepare the parameters defining the account to be created.
+   Fill in the `name`, `username`, `email`, and `admin` fields,
+   and define the rest of the parameters as shown in the example below:
 
-## Personal access token
+   ```ruby
+   user_args = {
+   name: 'kaiten_sa',
+   username: 'kaiten_sa',
+   email: 'kaiten_sa@flant.com',
+   admin: false,
+   user_type: :service_account,
+   organization_id: Organizations::Organization.default_organization.id,
+   password_automatically_set: true,
+   force_random_password: true,
+   skip_confirmation: true
+   }
+   ```
 
-For create personal access token you can use [API](https://docs.gitlab.com/api/personal_access_tokens/)
+1. Select the user on whose behalf the service account will be created and execute the account creation:
+
+   ```ruby
+   user = User.find_by_username('root')
+   Users::CreateService.new(user, user_args).execute
+   ```
+
+## Generating an access token
+
+To generate an access token, use GitLab's [Personal access tokens API](https://docs.gitlab.com/api/personal_access_tokens/).

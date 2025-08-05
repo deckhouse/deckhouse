@@ -8,39 +8,45 @@ lang: ru
 weight: 50
 ---
 
-Сервисный аккаунт — это учетная запись, предназначенная не для людей, а для использования в автоматизированных скриптах. Такие аккаунты применяются в пайплайнах и интеграциях. Аутентификация через веб-интерфейс от имени сервисного аккаунта невозможна, как и его имперсонация.
+Сервисный аккаунт — это учетная запись, предназначенная для использования в автоматизированных скриптах. Такие аккаунты применяются в CI/CD-пайплайнах и интеграциях. Сервисный аккаунт нельзя использовать для аутентификации в веб-интерфейсе, а также для выполнения действий от его имени через имперсонацию.
 
 ## Создание сервисного аккаунта
 
-### Открыть rails console
+### Rails-консоль
 
-Получить доступ к консоли можно через [toolbox](https://deckhouse.ru/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox)
+Для создания сервисного аккаунта используется Rails-консоль из набора служебных инструментов [Toolbox](https://deckhouse.ru/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox).
+Откройте консоль, выполнив следующую команду:
 
-### Создать аккаунт
-
-Необходимо заполнить следующие поля - name, login, email и admin
-
-```ruby
-user_args = {
-name: 'kaiten_sa',
-username: 'kaiten_sa',
-email: 'kaiten_sa@flant.com',
-admin: false,
-user_type: :service_account,
-organization_id: Organizations::Organization.default_organization.id,
-password_automatically_set: true,
-force_random_password: true,
-skip_confirmation: true
-}
+```shell
+gitlab-rails console -e production
 ```
 
-Выбрать пользователя от имени которого будет создан сервисный аккаунт. И создать пользователя.
+### Создание аккаунта
 
-```ruby
-user = User.find_by_username('root')
-Users::CreateService.new(user, user_args).execute
-```
+1. Используя Rails-консоль, подготовьте параметры с описанием создаваемого аккаунта.
+   Заполните поля `name`, `username`, `email` и `admin` и задайте остальные параметры на основе следующего примера:
 
-## Токен доступа
+   ```ruby
+   user_args = {
+   name: 'kaiten_sa',
+   username: 'kaiten_sa',
+   email: 'kaiten_sa@flant.com',
+   admin: false,
+   user_type: :service_account,
+   organization_id: Organizations::Organization.default_organization.id,
+   password_automatically_set: true,
+   force_random_password: true,
+   skip_confirmation: true
+   }
+   ```
 
-Для получения токена можно воспользоваться [АПИ](https://docs.gitlab.com/api/personal_access_tokens/)
+1. Выберите пользователя, от имени которого будет создан сервисный аккаунт, после чего выполните создание пользователя:
+
+   ```ruby
+   user = User.find_by_username('root')
+   Users::CreateService.new(user, user_args).execute
+   ```
+
+## Генерация токена доступа
+
+Чтобы сгенерировать токен доступа, используйте [Personal access tokens API](https://docs.gitlab.com/api/personal_access_tokens/) от GitLab.
