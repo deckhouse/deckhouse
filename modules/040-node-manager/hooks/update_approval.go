@@ -138,7 +138,7 @@ type updateApprover struct {
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
-	var concurrency = 1
+	concurrency := 1
 	switch ngCon.Type {
 	case intstr.Int:
 		concurrency = ngCon.IntValue()
@@ -202,7 +202,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
-			var allReady = true
+			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
 					allReady = false
@@ -276,7 +276,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		if !node.IsApproved {
 			continue
 		}
-		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
+		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) || node.IsDisruptionApproved {
 			continue
 		}
 
