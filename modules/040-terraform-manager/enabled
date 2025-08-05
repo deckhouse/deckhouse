@@ -21,11 +21,11 @@ function __main__() {
 
   if ! kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: secret 'kube-system/d8-provider-cluster-configuration' is not present" > "$MODULE_ENABLED_REASON"
+    echo "secret 'kube-system/d8-provider-cluster-configuration' is not present" > "$MODULE_ENABLED_REASON"
 
   elif ! kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: secret 'd8-system/d8-cluster-terraform-state' is not present" > "$MODULE_ENABLED_REASON"
+    echo "secret 'd8-system/d8-cluster-terraform-state' is not present" > "$MODULE_ENABLED_REASON"
   else
     echo "true" > "$MODULE_ENABLED_RESULT"
   fi

@@ -25,11 +25,11 @@ function __main__() {
       echo "true" > $MODULE_ENABLED_RESULT
     else
       echo "false" > $MODULE_ENABLED_RESULT
-      echo "Module disabled: 'https.mode' for module has 'Disabled' value" > $MODULE_ENABLED_REASON
+      echo "https.mode is set to 'Disabled' - set it in ModuleConfig/global." > $MODULE_ENABLED_REASON
     fi
   else
     echo "false" > $MODULE_ENABLED_RESULT
-    echo "Module disabled: 'global.modules.publicDomainTemplate' is not set" > $MODULE_ENABLED_REASON
+    echo "spec.settings.modules.publicDomainTemplate is not set in the global configuration, configure it in ModuleConfig/global." > $MODULE_ENABLED_REASON
   fi
 }
 

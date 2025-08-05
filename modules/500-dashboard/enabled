@@ -21,20 +21,20 @@ function __main__() {
 
   if ! values::has global.modules.publicDomainTemplate ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: required value global.modules.publicDomainTemplate is not set" > "$MODULE_ENABLED_REASON"
+    echo "spec.settings.modules.publicDomainTemplate is not set in the global configuration, configure it in ModuleConfig/global." > "$MODULE_ENABLED_REASON"
     return
   fi
 
   https_mode=$(values::get_first_defined dashboard.https.mode global.modules.https.mode)
   if [ "$https_mode" = "Disabled" ]; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: https.mode is set to 'Disabled' (from dashboard.https.mode or global.modules.https.mode)" > "$MODULE_ENABLED_REASON"
+    echo "https.mode is set to 'Disabled' - set it in ModuleConfig/global or ModuleConfig/dashboard." > "$MODULE_ENABLED_REASON"
     return
   fi
 
   if ! values::array_has global.enabledModules "user-authz" ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: global.enabledModules does not contain 'user-authz'" > "$MODULE_ENABLED_REASON"
+    echo "'user-authz' module need to be enabled." > "$MODULE_ENABLED_REASON"
     return
   fi
 
@@ -48,7 +48,7 @@ function __main__() {
     echo "true" > "$MODULE_ENABLED_RESULT"
   else
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: global.enabledModules does not contain 'user-authn' and required values dashboard.auth.externalAuthentication.authSignInURL or dashboard.auth.externalAuthentication.authURL are not set" > "$MODULE_ENABLED_REASON"
+    echo "required values settings.auth.externalAuthentication.authSignInURL and settings auth.externalAuthentication.authURL - set it in ModuleConfig/dashboard. " > "$MODULE_ENABLED_REASON"
   fi
 }
 

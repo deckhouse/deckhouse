@@ -21,7 +21,7 @@ function __main__() {
  
   if values::array_has global.enabledModules "cni-cilium" ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "Module disabled: global.enabledModules contains 'cni-cilium', which is mutually exclusive with this module" > "$MODULE_ENABLED_REASON"
+    echo "enabledModules contains 'cni-cilium', which is mutually exclusive with this module, remove it." > "$MODULE_ENABLED_REASON"
   else
     echo "true" > "$MODULE_ENABLED_RESULT"
   fi
