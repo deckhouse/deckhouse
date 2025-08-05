@@ -962,7 +962,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 Используется в Containerd V1, если Deckhouse не управляется модулем Registry (режим [Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
-Описание конфигурации выполняется в основном конфигурационном файле Containerd `/etc/containerd/config.toml`.
+Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
 
 Добавление пользовательской конфигурации осуществляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
 
