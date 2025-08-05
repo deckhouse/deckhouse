@@ -510,6 +510,4 @@ spec:
 
 ### Adding the ability to download images from insecure container registry to containerd
 
-{% alert level="info" %}
-For configuration instructions, see the section ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
-{% endalert %}
+The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the section  ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
