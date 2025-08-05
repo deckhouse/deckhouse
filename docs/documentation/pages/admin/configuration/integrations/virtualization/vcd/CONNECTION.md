@@ -190,7 +190,7 @@ These modifications are required for proper provisioning of CloudPermanent nodes
 
 ### Preparing the template from an OVA file
 
-1. Download the "OVA" file: https://cloud-images.ubuntu.com/jammy/
+1. Download [the OVA file](https://cloud-images.ubuntu.com/jammy/):
 
    ![Template setup, step 1](../../../../images/cloud-provider-vcd/template/Screenshot.png)
 
