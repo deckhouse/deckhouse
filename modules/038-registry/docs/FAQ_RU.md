@@ -109,7 +109,7 @@ tree /etc/containerd/registry.d
 
 1. Перейдите в режим `Unmanaged`.
 
-2. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
+1. Проверьте статус переключения, используя [инструкцию](./faq.html#как-посмотреть-статус-переключения-режима-registry). Пример вывода:
 
    ```yaml
    conditions:
@@ -124,7 +124,7 @@ tree /etc/containerd/registry.d
    target_mode: Unmanaged
    ```
 
-3. Удалите секрет `registry-bashible-config`:
+1. Удалите секрет `registry-bashible-config`:
 
    ```bash
    d8 k -n d8-system delete secret registry-bashible-config
