@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -34,6 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
+)
+
+var (
+	ErrRequireResync = errors.New("require resync")
 )
 
 func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, moduleName string) error {
@@ -184,16 +189,16 @@ func (r *reconciler) needToEnsureRelease(
 
 	// check the module enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		if !source.IsDefault() {
-			return false
-		}
-
 		enabledByBundle := false
 		if meta.ModuleDefinition != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
 		}
 
 		if !enabledByBundle {
+			return false
+		}
+
+		if len(module.Properties.AvailableSources) > 1 || !source.IsDefault() {
 			return false
 		}
 	}
@@ -241,15 +246,22 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		return nil, fmt.Errorf("update the '%s' module status: %w", moduleName, err)
 	}
 
+	var requireResync bool
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
+			requireResync = true
 		}
 		module.Properties.ReleaseChannel = releaseChannel
+
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
+	}
+
+	if requireResync {
+		return nil, ErrRequireResync
 	}
 
 	return module, nil
