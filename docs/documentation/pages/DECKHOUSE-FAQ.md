@@ -1002,7 +1002,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
-   > Before applying, refer to the section ["How to add configuration for an additional registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+   > Before creating a resource, refer to the section ["How to add configuration for an additional registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
    >
    > Skip this step if switching to Deckhouse CE.
 

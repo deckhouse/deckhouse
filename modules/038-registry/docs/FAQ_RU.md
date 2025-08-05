@@ -37,7 +37,7 @@ tree /etc/containerd/registry.d
       auth = "<base64>"
 ```
 
-Перед переключением убедитесь, что на узлах с `Containerd V1` отсутствуют [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), расположенные в директории `/etc/containerd/conf.d`.
+Перед переключением убедитесь, что на узлах с containerd v1 отсутствуют [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), расположенные в директории `/etc/containerd/conf.d`.
 
 Если такие конфигурации существуют:
 

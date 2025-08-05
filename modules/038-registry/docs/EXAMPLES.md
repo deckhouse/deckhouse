@@ -171,5 +171,5 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
 1. If you need to switch back to the previous `Containerd V1` auth configuration, refer to the [instruction](faq.html#how-to-switch-back-to-the-previous-containerd-v1-auth-configuration).
 
 {% alert level="warning" %}
-This Containerd configuration format is deprecated.
+This containerd configuration format is deprecated.
 {% endalert %}

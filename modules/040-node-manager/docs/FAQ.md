@@ -945,14 +945,14 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 #### Old Method
 
 {% alert level="warning" %}
-This Containerd configuration format is deprecated.
+This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="info" %}
-Used in Containerd V1 when Deckhouse is not managed by the Registry module ([Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when Deckhouse is not managed by the Registry module ([`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
-The configuration is described in the main Containerd configuration file `/etc/containerd/config.toml`.
+The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
 
 Adding custom configuration is carried out through the `toml merge` mechanism. Configuration files from the `/etc/containerd/conf.d` directory are merged with the main file `/etc/containerd/config.toml`. The merge takes place during the execution of the `032_configure_containerd.sh` script, so the corresponding files must be added in advance.
 
@@ -976,7 +976,7 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
 ```
 
 {% alert level="danger" %}
-Adding custom settings through the `toml merge` mechanism causes the `containerd` service to restart.
+Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
 
 Example of adding authorization to a custom registry (**old** configuration method):  
@@ -1131,9 +1131,9 @@ crictl pull private.registry.example/image/repo:tag
 #### New Method
 
 {% alert level="info" %}
-Used in Containerd V2.
+Used in containerd v2.
 
-Used in Containerd V1 when managed through the Registry module (for example, in [Direct](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the Registry module (for example, in [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -1169,7 +1169,7 @@ Example contents of the `hosts.toml` file:
 ```
 
 {% alert level="info" %}
-Configuration changes do not cause the `containerd` service to restart.
+Configuration changes do not cause the containerd service to restart.
 {% endalert %}
 
 Example of adding authentication to a custom registry (**new** configuration method):
@@ -1180,7 +1180,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the Containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required
   weight: 0
   bundles:
     - '*'
@@ -1222,7 +1222,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the Containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required
   weight: 0
   bundles:
     - '*'
@@ -1269,7 +1269,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the Containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required
   weight: 0
   bundles:
     - '*'

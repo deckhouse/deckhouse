@@ -37,7 +37,7 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) present on nodes with containerd v1 in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
@@ -95,7 +95,7 @@ If such configurations exist:
 ## How to switch back to the previous Containerd V1 auth configuration?
 
 {% alert level="warning" %}
-This Containerd configuration format is deprecated.
+This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="danger" %}

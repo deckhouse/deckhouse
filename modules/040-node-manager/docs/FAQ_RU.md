@@ -928,7 +928,7 @@ spec:
 
 ### Как добавить конфигурацию для дополнительного registry?
 
-В Containerd существует два способа описания конфигурации registry: **старый** и **новый**.
+В containerd существует два способа описания конфигурации registry: **старый** и **новый**.
 
 Для проверки наличия **старого** способа конфигурации выполните на узлах кластера следующие команды:
 
@@ -955,16 +955,16 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 #### Старый способ
 
 {% alert level="warning" %}
-Данный формат конфигурации Containerd является устаревшим (deprecated).
+Этот формат конфигурации containerd устарел (deprecated).
 {% endalert %}
 
 {% alert level="info" %}
-Используется в Containerd V1, если Deckhouse не управляется модулем Registry (режим [Unmanaged](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если Deckhouse не управляется модулем Registry (режим [`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
 
-Добавление пользовательской конфигурации осуществляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
+Пользовательская конфигурация добавляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
 
 Пример конфигурационного файла для директории `/etc/containerd/conf.d/`:
 
@@ -986,7 +986,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 ```
 
 {% alert level="danger" %}
-Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса `containerd`.
+Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса containerd.
 {% endalert %}
 
 Пример добавления авторизации в пользовательский registry (**старый** способ конфигурации):
@@ -1131,22 +1131,22 @@ spec:
     EOF
 ```
 
-После применения конфигурационного файла, проверьте доступ к registry с узлов, используя команду:
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
 
 ```bash
-# Через cri интерфейс
+# Через cri-интерфейс
 crictl pull private.registry.example/image/repo:tag
 ```
 
 #### Новый способ
 
 {% alert level="info" %}
-Используется в Containerd V2.  
+Используется в containerd v2.  
 
-Используется в Containerd V1, если управление осуществляется через модуль Registry (например, в режиме [Direct](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль Registry (например, в режиме [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
-Описание конфигурации выполняется в каталоге `/etc/containerd/registry.d`. Конфигурация задаётся через создание подкаталогов с именами, соответствующими адресу registry:
+Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
 
 ```bash
 /etc/containerd/registry.d
@@ -1178,7 +1178,7 @@ crictl pull private.registry.example/image/repo:tag
 ```
 
 {% alert level="info" %}
-Изменения конфигураций не приводят к перезапуску сервиса `containerd`.
+Изменения конфигураций не приводят к перезапуску сервиса containerd.
 {% endalert %}
 
 Пример добавления авторизации в пользовательский registry (**новый** способ конфигурации):
@@ -1189,7 +1189,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса Containerd
+  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
   weight: 0
   bundles:
     - '*'
@@ -1231,7 +1231,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса Containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
   weight: 0
   bundles:
     - '*'
@@ -1278,7 +1278,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса Containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
   weight: 0
   bundles:
     - '*'
@@ -1310,7 +1310,7 @@ spec:
     EOF
 ```
 
-После применения конфигурационного файла, проверьте доступ к registry с узлов, используя команды:
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
 
 ```bash
 # Через cri интерфейс
@@ -1326,7 +1326,7 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http p
 ### Как добавить авторизацию в дополнительный registry?
 
 {% alert level="info" %}
-Для настройки перейдите в раздел ["Как добавить конфигурацию для дополнительного registry"](faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
+Для настройки перейдите в раздел [«Как добавить конфигурацию для дополнительного registry»](faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 {% endalert %}
 
 ### Как настроить сертификат для дополнительного registry?
@@ -1336,7 +1336,7 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http p
 {% endalert %}
 
 {% alert level="info" %}
-Для настройки перейдите в раздел ["Как добавить конфигурацию для дополнительного registry"](faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
+Для настройки перейдите в раздел [«Как добавить конфигурацию для дополнительного registry»](faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 {% endalert %}
 
 ## Как использовать NodeGroup с приоритетом?
