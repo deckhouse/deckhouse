@@ -136,7 +136,7 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
-		"modules/030-vsphere-csi/openapi/values.yaml": {
+		"modules/030-csi-vsphere/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
