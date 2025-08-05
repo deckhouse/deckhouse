@@ -51,7 +51,7 @@ Therefore, any Kubernetes node not launched with the `--cloud-provider=external`
 DKP automatically sets `static://` in the `.spec.providerID` field of such nodes, which `cloud-controller-manager` then ignores.
 {% endalert %}
 
-## Storage integration
+### Storage integration
 
 If you require PersistentVolumes on nodes connected to the cluster from OpenStack, you must create a StorageClass with the appropriate OpenStack volume type. You can get a list of available types using `openstack volume type list` command.
 

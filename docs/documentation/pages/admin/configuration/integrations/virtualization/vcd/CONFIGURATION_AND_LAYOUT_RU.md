@@ -222,37 +222,3 @@ spec:
 #### CSI
 
 Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью параметра [compatibilityFlag](#parameters-storageclass-compatibilityflag).
-
-#### Важная информация об увеличении размера PVC
-
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
-
-1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
-2. Удалите под.
-3. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
-
-### Требования к окружению
-
-* Версия vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
-* vCenter: доступен изнутри кластера с master-узлов.
-* Созданный Datacenter, в котором:
-  1. VirtualMachine template.
-     * Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
-     * Необходимо наличие пакетов: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (при использовании версии `cloud-init` ниже 21.3).
-  2. Network.
-     * Должна быть доступна на всех ESXi, на которых будут создаваться виртуальные машины.
-  3. Datastore (один или несколько).
-     * Подключен ко всем ESXi, на которых будут создаваться виртуальные машины.
-     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
-  4. Cluster.
-     * Добавлены используемые ESXi.
-     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
-  5. Folder для создаваемых виртуальных машин.
-     * Опциональный (по умолчанию используется root vm-каталог).
-  6. Роль.
-     * Должна содержать необходимый [набор](#список-необходимых-привилегий) прав.
-  7. Пользователь.
-     * Привязывается роль из п. 6.
-* На созданный Datacenter **необходимо** назначить тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
