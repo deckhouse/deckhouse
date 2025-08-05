@@ -198,7 +198,7 @@ func (r *reconciler) needToEnsureRelease(
 			return false
 		}
 
-		if len(module.Properties.AvailableSources) > 1 || !source.IsDefault() {
+		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
 			return false
 		}
 	}
