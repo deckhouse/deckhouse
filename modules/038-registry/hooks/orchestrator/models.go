@@ -65,17 +65,19 @@ type Values struct {
 }
 
 func (p Params) Validate() error {
-	switch {
-	case p.Mode == registry_const.ModeDirect ||
-		(p.Mode == registry_const.ModeUnmanaged && p.ImagesRepo != ""):
+	if p.Mode == registry_const.ModeUnmanaged && p.ImagesRepo == "" {
+		// Skip validation for Unmanaged mode if it's not configurable
+		return nil
+	}
+
+	switch p.Mode {
+	case registry_const.ModeDirect, registry_const.ModeUnmanaged:
 		return validation.ValidateStruct(&p,
 			validation.Field(&p.ImagesRepo, validation.Required),
 			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),
 			validation.Field(&p.UserName, validation.When(p.Password != "", validation.Required)),
 			validation.Field(&p.Password, validation.When(p.UserName != "", validation.Required)),
 		)
-	case p.Mode == registry_const.ModeUnmanaged:
-		return nil
 	}
-	return fmt.Errorf("Unknown registry mode")
+	return fmt.Errorf("Unknown registry mode: %q", p.Mode)
 }
