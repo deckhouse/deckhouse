@@ -18,4 +18,9 @@ jwt:
     groups:
       claim: "groups"
       prefix: ""
+    extra:
+    - key: 'user-authn.deckhouse.io/name'
+      valueExpression: 'claims.name'
+    - key: 'user-authn.deckhouse.io/preferred_username'
+      valueExpression: 'has(claims.preferred_username) ? claims.preferred_username : null'
 {{- end }}
