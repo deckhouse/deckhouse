@@ -105,10 +105,6 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 		return err
 	})
 
-	if err != nil {
-		panic(err)
-	}
-
 	return &SSHCommand{
 		// Executor: process.NewDefaultExecutor(sess.Run(cmd)),
 		sshClient: client,
@@ -174,6 +170,9 @@ func (c *SSHCommand) start() error {
 
 	command := c.cmd + " " + strings.Join(c.Args, " ")
 
+	if c.session == nil {
+		return fmt.Errorf("ssh session not started")
+	}
 	return c.session.Start(command)
 }
 
@@ -279,6 +278,10 @@ func (c *SSHCommand) ProcessWait() {
 func (c *SSHCommand) Run(ctx context.Context) error {
 	log.DebugF("executor: run '%s'\n", c.cmd)
 	c.Cmd(ctx)
+
+	if c.session == nil {
+		return fmt.Errorf("ssh session not started")
+	}
 	defer c.session.Close()
 
 	err := c.Start()
@@ -395,6 +398,9 @@ func (c *SSHCommand) Cmd(ctx context.Context) {
 
 func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	c.Cmd(ctx)
+	if c.session == nil {
+		return nil, nil, fmt.Errorf("ssh session not started")
+	}
 	defer c.session.Close()
 
 	var o bytes.Buffer
@@ -424,6 +430,10 @@ func (w *singleWriter) Write(p []byte) (int, error) {
 
 func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 	c.Cmd(ctx)
+	if c.session == nil {
+		return nil, fmt.Errorf("ssh session not started")
+	}
+
 	defer c.session.Close()
 
 	var o singleWriter
