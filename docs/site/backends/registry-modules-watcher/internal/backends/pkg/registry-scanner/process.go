@@ -136,27 +136,25 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Image:          releaseImage,
 	}
 
-	// Check if we already have this release in cache
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-		if ok {
-			versionData.Version = version
-			versionData.TarFile = tarFile
+	// Search across all channels by checksum
+	version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
+	if version != "" {
+		versionData.Version = version
+		versionData.TarFile = tarFile
 
-			return versionData, nil
-		}
+		return versionData, nil
 	}
 
 	// Extract version from image
-	version, err := getVersionFromImage(versionData.Image)
+	version, err = getVersionFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
+
 	versionData.Version = version
 
 	// Extract tar file
-	tarFile, err := s.extractTar(ctx, versionData)
+	tarFile, err = s.extractTar(ctx, versionData)
 	if err != nil {
 		return nil, fmt.Errorf("extract tar: %w", err)
 	}
