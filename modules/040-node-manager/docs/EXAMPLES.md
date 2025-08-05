@@ -177,7 +177,6 @@ spec:
 This Job runs NVIDIA’s **vectoradd** CUDA sample.
 If the Pod finishes with `Succeeded`, the GPU is present and configured correctly.
 
-
 ## Adding a static node to a cluster
 
 <span id='an-example-of-the-static-nodegroup-configuration'></span>

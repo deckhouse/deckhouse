@@ -1016,6 +1016,7 @@ Here’s a faithful English version of your section, preserving structure, wordi
 ## How do I work with GPU nodes?
 
 ### Step-by-step procedure for adding a GPU node to the cluster
+
 <span id="step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster"></span>
 
 Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, the `node-manager` module **automatically**:
@@ -1059,7 +1060,7 @@ Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#node
 Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
 Below are NodeGroupConfiguration examples for the gpu NodeGroup
 
-**Ubuntu**
+#### Ubuntu
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1096,7 +1097,7 @@ spec:
   weight: 30
 ```
 
-**CentOS**
+#### CentOS
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1142,7 +1143,7 @@ nvidia-smi
 
 **Expected healthy output (example):**
 
-```
+```bash
 root@k8s-dvp-w1-gpu:~# nvidia-smi
 Tue Aug  5 07:08:48 2025
 +---------------------------------------------------------------------------------------+
@@ -1173,7 +1174,7 @@ kubectl -n d8-nvidia-gpu get pod
 
 **Expected healthy output (example):**
 
-```
+```bash
 NAME                                  READY   STATUS    RESTARTS   AGE
 gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
 nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
@@ -1189,7 +1190,7 @@ kubectl describe node <node-name>
 
 **Output snippet (example):**
 
-```
+```bash
 Capacity:
   cpu:                40
   memory:             263566308Ki
@@ -1202,7 +1203,7 @@ Allocatable:
 
 ### 5. Run functional tests
 
-**Option A. Invoke `nvidia-smi` from inside a container**
+#### Option A. Invoke `nvidia-smi` from inside a container
 
 Create a Job:
 
@@ -1253,7 +1254,7 @@ Tue Aug  5 07:48:02 2025
 +---------------------------------------------------------------------------------------+
 ```
 
-**Option B. CUDA sample (vectoradd)**
+#### Option B. CUDA sample (vectoradd)
 
 Create a Job:
 
@@ -1311,6 +1312,7 @@ See examples in [Examples → GPU nodes](../node-manager/examples.html#example-g
      mig:
        partedConfig: all-1g.5gb
    ```
+
 3. **Wait for reconfiguration:** allow `nvidia-mig-manager` to complete (the `mig-reconfigure` taint will be removed).
 4. **If `nvidia.com/mig-*` resources are still missing, check:**
 

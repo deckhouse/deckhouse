@@ -74,6 +74,7 @@ spec:
 ```
 
 ### GPU-узлы
+
 <span id="пример-gpu-nodegroup"></span>
 
 Для работы узлов с GPU требуются **драйвер NVIDIA** и **NVIDIA Container Toolkit**. Возможны два варианта:

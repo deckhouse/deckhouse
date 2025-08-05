@@ -1067,7 +1067,7 @@ spec:
 Установку **драйвера NVIDIA** и **NVIDIA Container Toolkit** выполняйте на самих узлах — вручную или с помощью `NodeGroupConfiguration`.
 Ниже приведены примеры `NodeGroupConfiguration` для группы узлов `gpu`.
 
-**Ubuntu**
+#### Ubuntu
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1104,7 +1104,7 @@ spec:
   weight: 30
 ```
 
-**CentOS**
+#### CentOS
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1150,7 +1150,7 @@ nvidia-smi
 
 **Ожидаемый корректный вывод (пример):**
 
-```
+```bash
 root@k8s-dvp-w1-gpu:~# nvidia-smi
 Tue Aug  5 07:08:48 2025
 +---------------------------------------------------------------------------------------+
@@ -1181,7 +1181,7 @@ kubectl -n d8-nvidia-gpu get pod
 
 **Ожидаемый корректный вывод (пример):**
 
-```
+```bash
 NAME                                  READY   STATUS    RESTARTS   AGE
 gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
 nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
@@ -1197,7 +1197,7 @@ kubectl describe node <имя-ноды>
 
 **Фрагмент вывода (пример):**
 
-```
+```bash
 Capacity:
   cpu:                40
   memory:             263566308Ki
@@ -1210,7 +1210,7 @@ Allocatable:
 
 ### 5. Запустите функциональные тесты
 
-**Вариант A. Вызов `nvidia-smi` из контейнера**
+#### Вариант A. Вызов `nvidia-smi` из контейнера
 
 Создайте в кластере Job:
 
@@ -1262,7 +1262,7 @@ Tue Aug  5 07:48:02 2025
 +---------------------------------------------------------------------------------------+
 ```
 
-**Вариант B. CUDA sample (vectoradd)**
+#### Вариант B. CUDA sample (vectoradd)
 
 Создайте в кластере Job:
 
@@ -1320,6 +1320,7 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
      mig:
        partedConfig: all-1g.5gb
    ```
+   
 3. Дождитесь завершения `nvidia-mig-manager` (taint `mig-reconfigure` будет снят).
 4. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
 
