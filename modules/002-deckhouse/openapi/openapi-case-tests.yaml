@@ -73,8 +73,7 @@ negative:
 #          to: '13:00'
   - registry:
       mode: Unmanaged
-      unmanaged:
-        license: "somekey"
+      unmanaged: {}
   - registry:
       mode: Unmanaged
       unmanaged:
@@ -100,8 +99,7 @@ negative:
       mode: Direct
   - registry:
       mode: Direct
-      direct:
-        license: "somekey"
+      direct: {}
   - registry:
       mode: Direct
       direct:
