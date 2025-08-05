@@ -101,7 +101,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils-dev zstd-static
+  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils-dev zstd-dev zstd-static
   install:
   - |
     if [[ -d /libs ]]; then
@@ -121,6 +121,6 @@ shell:
     fi
   - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
-  - make V=1 EXTRA_CFLAGS="--static" EXTRA_LDFLAGS="-L/usr/lib -lzstd" -j "$(getconf _NPROCESSORS_ONLN)"
+  - make V=1 EXTRA_CFLAGS="--static" EXTRA_LDFLAGS="-L/usr/lib -lzstd -lelf -lz" -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   - cp -a bpftool /usr/local/bin
