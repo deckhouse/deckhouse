@@ -104,8 +104,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/030-vsphere-csi
-  to: /deckhouse/modules/030-vsphere-csi
+- add: /ee/se-plus/modules/030-csi-vsphere
+  to: /deckhouse/modules/030-csi-vsphere
   stageDependencies:
     install:
         - '**/*'

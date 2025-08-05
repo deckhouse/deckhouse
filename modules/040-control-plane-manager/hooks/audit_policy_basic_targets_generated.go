@@ -20,6 +20,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-cni-cilium",
 	"d8-cni-flannel",
 	"d8-cni-simple-bridge",
+	"d8-csi-vsphere",
 	"d8-dashboard",
 	"d8-descheduler",
 	"d8-ingress-nginx",
@@ -41,7 +42,6 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
-	"d8-vsphere-csi",
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
@@ -101,6 +101,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cni-cilium:ui",
 	"system:serviceaccount:d8-cni-flannel:cni-flannel",
 	"system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge",
+	"system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer",
 	"system:serviceaccount:d8-dashboard:api",
 	"system:serviceaccount:d8-dashboard:auth",
 	"system:serviceaccount:d8-dashboard:metrics-scraper",
@@ -161,7 +162,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-user-authn:basic-auth-proxy",
 	"system:serviceaccount:d8-user-authn:dex",
 	"system:serviceaccount:d8-user-authz:webhook",
-	"system:serviceaccount:d8-vsphere-csi:cloud-data-discoverer",
 	"system:serviceaccount:kube-system:d8-control-plane-manager",
 	"system:serviceaccount:kube-system:d8-kube-dns",
 	"system:serviceaccount:kube-system:d8-kube-proxy",
