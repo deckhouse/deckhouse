@@ -872,7 +872,7 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 {% endalert %}
 
 {% alert level="danger" %}
-Adding custom settings causes a restart of the `containerd` service.
+Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
 Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
@@ -979,7 +979,9 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
 
-Example of adding authorization to a custom registry (**old** configuration method):  
+##### How to add additional registry auth (old method)?
+
+Example of adding authorization to a additional registry when using the **old** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1027,7 +1029,9 @@ spec:
     EOF
 ```
 
-Example of adding a CA to a custom registry (**old** configuration method):
+##### How to configure a certificate for an additional registry (old method)?
+
+Example of configuring a certificate for an additional registry when using the **old** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1079,7 +1083,13 @@ spec:
     EOF
 ```
 
-Example of adding TLS skip verify (**old** configuration method):
+{% alert level="info" %}
+In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
+{% endalert %}
+
+##### How to add TLS skip verify (old method)?
+
+Example of adding TLS skip verify when using the **old** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1172,7 +1182,9 @@ Example contents of the `hosts.toml` file:
 Configuration changes do not cause the containerd service to restart.
 {% endalert %}
 
-Example of adding authentication to a custom registry (**new** configuration method):
+##### How to add additional registry auth (new method)?
+
+Example of adding authorization to a additional registry when using the **new** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1214,7 +1226,9 @@ spec:
     EOF
 ```
 
-Example of adding a CA to a custom registry (**new** configuration method):
+##### How to configure a certificate for an additional registry (new method)?
+
+Example of configuring a certificate for an additional registry when using the **new** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1261,7 +1275,13 @@ spec:
     EOF
 ```
 
-Example of adding TLS skip verify (**new** configuration method):
+{% alert level="info" %}
+In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
+{% endalert %}
+
+##### How to add TLS skip verify (new method)?
+
+Example of adding TLS skip verify when using the **new** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1313,22 +1333,6 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 # Via ctr for an HTTP registry
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
-
-### How to add additional registry auth?
-
-{% alert level="info" %}
-For configuration instructions, see the section ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
-{% endalert %}
-
-### How to configure a certificate for an additional registry?
-
-{% alert level="info" %}
-In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
-{% endalert %}
-
-{% alert level="info" %}
-For configuration instructions, see the section ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
-{% endalert %}
 
 ## How to use NodeGroup's priority feature
 
