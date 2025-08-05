@@ -1320,7 +1320,7 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
      mig:
        partedConfig: all-1g.5gb
    ```
-   
+
 3. Дождитесь завершения `nvidia-mig-manager` (taint `mig-reconfigure` будет снят).
 4. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
 
