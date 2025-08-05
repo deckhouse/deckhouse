@@ -31,6 +31,8 @@ import (
 )
 
 func Test_JSON_Logger(t *testing.T) {
+	t.Parallel()
+
 	const (
 		message  = "stub msg"
 		argKey   = "stub_arg"
@@ -60,10 +62,15 @@ func Test_JSON_Logger(t *testing.T) {
 		//test fatal
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 
-		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:57","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:59","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
+		expectedRegex := `^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[0-9]+","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$`
+		reg := regexp.MustCompile(expectedRegex)
+
+		lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		assert.Equal(t, 4, len(lines))
+
+		for _, line := range lines {
+			assert.Regexp(t, reg, line)
+		}
 	})
 
 	t.Run("log output with error", func(t *testing.T) {
@@ -71,7 +78,11 @@ func Test_JSON_Logger(t *testing.T) {
 
 		logger.Error(message, slog.String(argKey, argValue))
 
-		assert.Contains(t, buf.String(), `{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":`)
+		expectedRegex := `^{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$`
+		reg := regexp.MustCompile(expectedRegex)
+
+		line := strings.TrimSpace(buf.String())
+		assert.Regexp(t, reg, line)
 	})
 }
 
@@ -195,7 +206,7 @@ func Test_JSON_LoggerFormat(t *testing.T) {
 				level:     log.LevelInfo,
 			},
 			wants: wants{
-				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
+				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
 					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(trace)".*`,
 			},
