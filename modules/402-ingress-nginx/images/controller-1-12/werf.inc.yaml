@@ -47,10 +47,6 @@ shell:
   - rm -rf /src/ingress-nginx/.git
   - cat /patches/build.sh > /src/ingress-nginx/images/nginx/rootfs/build.sh # FIXME delete
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:9c4abf2a4cb568ea36fad410f45e8b82bb88a15d240ad5adef2cfda8cabef573
-final: false
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
 fromImage: builder/alpine
 fromCacheVersion: "2025-08-04.02"
@@ -339,10 +335,25 @@ shell:
   # Utils for final image
   - cp -a /tools/setcap /tmp/apps
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-bash # FIXME delete
+from: dev-registry.deckhouse.io/base_images@sha256:6f0bf9700d8538405af122cd401c41b4931338e6a8892fddeba71a0bc211054d
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-procps # FIXME delete
+from: dev-registry.deckhouse.io/base_images@sha256:bcad612f9a058069697238950c4bb71151dde97780e46dc901a63e935727f07e
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-diffutils # FIXME delete
+from: dev-registry.deckhouse.io/base_images@sha256:3b5ab706e267ef7535c97d1e107afd4d4b383139a7e0b9526cd8b14a9f128d64
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init # FIXME delete
+from: dev-registry.deckhouse.io/base_images@sha256:9c4abf2a4cb568ea36fad410f45e8b82bb88a15d240ad5adef2cfda8cabef573
+final: false
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/alpine # FIXME replace
-# fromImage: common/distroless
-fromCacheVersion: "2025-08-04.07"
+fromImage: common/distroless
+fromCacheVersion: "2025-08-05.01"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -394,29 +405,48 @@ import:
   add: /dumb-init
   to: /usr/bin/dumb-init
   before: install
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /bin/bash
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-bash
+  add: /usr
+  to: /
+  includePaths:
+  - bin/bash
+  - bin/sh
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-procps
+  add: /
+  to: /
+  includePaths:
+  - bin/pkill
+  - bin/pgrep
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-diffutils
+  add: /usr/bin/diff
+  to: /usr/bin/diff
   before: install
 - image: tools/util-linux
   add: /usr/bin/unshare
   to: /usr/bin/unshare
   before: install
 - image: tools/openssl
-  add: /usr/lib
-  to: /usr/lib
+  add: /
+  to: /
   includePaths:
-  - libcrypto.so*
-  - libssl.so*
-  - engines-3
-  - ossl-modules
+  - usr/lib/libcrypto.so*
+  - usr/lib/libssl.so*
+  - usr/lib/engines-3
+  - usr/lib/ossl-modules
+  - usr/bin/openssl
+  - usr/lib/libc.so
+  - lib/ld-musl-x86_64.so.1
   before: install
-- image: tools/openssl
-  add: /usr/bin/openssl
-  to: /usr/bin/openssl
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/coreutils
+  - usr/bin/test
   before: install
 shell:
-  # FIXME utils: diffutils pgrep
   setup:
   - /tmp/apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /tmp/apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
