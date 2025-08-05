@@ -285,12 +285,15 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// calculate standby request as percent of the node
 		standbyRequestCPU := resource.NewScaledQuantity(nodeAllocatableCPU.ScaledValue(resource.Milli)/100*nodeGroup.OverprovisioningRate, resource.Milli)
 		standbyRequestMemory := resource.NewScaledQuantity(nodeAllocatableMemory.ScaledValue(resource.Milli)/100*nodeGroup.OverprovisioningRate, resource.Milli)
+		// Convert memory to Mi and format as a string. 1 Mi = 1024 * 1024 bytes.
+		reserveMemoryInMi := standbyRequestMemory.Value() / (1024 * 1024)
+		reserveMemoryMi := fmt.Sprintf("%dMi", reserveMemoryInMi)
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:          nodeGroup.Name,
 			Standby:       desiredStandby,
 			ReserveCPU:    standbyRequestCPU.String(),
-			ReserveMemory: fmt.Sprintf("%dMi", standbyRequestMemory.ScaledValue(resource.Mega)),
+			ReserveMemory: reserveMemoryMi,
 			Taints:        nodeGroup.Taints,
 		})
 	}

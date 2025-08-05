@@ -1,0 +1,31 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  source: test-source
+status:
+  phase: Ready
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: test-module-v1.0.0
+  labels:
+    module: test-module
+spec:
+  moduleName: test-module
+  version: 1.0.0
+status:
+  phase: Pending 

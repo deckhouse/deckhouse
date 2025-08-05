@@ -14,8 +14,9 @@ import (
 
 // NodeCordoner waits for shutdown signal and cordons the node.
 type NodeCordoner struct {
-	NodeName         string
-	ShutdownSignalCh <-chan struct{}
+	NodeName           string
+	StartCordonCh      <-chan struct{}
+	UnlockInhibitorsCh <-chan struct{}
 }
 
 func (n *NodeCordoner) Name() string {
@@ -23,21 +24,25 @@ func (n *NodeCordoner) Name() string {
 }
 
 func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
-	// Stage 1. Wait for shutdown.
-	fmt.Printf("nodeCordoner: wait for PrepareForShutdown signal or power key press\n")
+	// Stage 1. Wait for a signal to start.
+	fmt.Printf("nodeCordoner: wait for a signal to cordon node\n")
 	select {
 	case <-ctx.Done():
 		fmt.Printf("nodeCordoner: stop on global exit\n")
 		// Return now, cordon is not needed in case of the global stop.
 		return
-	case <-n.ShutdownSignalCh:
-		fmt.Printf("nodeCordoner: catch prepare shutdown signal, cordon node\n")
+	case <-n.StartCordonCh:
+		fmt.Printf("nodeCordoner: catch a signal, cordon node\n")
+	case <-n.UnlockInhibitorsCh:
+		fmt.Printf("nodeCordoner: unlock signal received, cordon is not needed, exiting\n")
+		return
 	}
 
 	kubectl := kubernetes.NewDefaultKubectl()
 	output, err := kubectl.Cordon(n.NodeName)
 	if err != nil {
 		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, output)
+		return
 	}
 	output, err = kubectl.SetCordonAnnotation(n.NodeName)
 	if err != nil {

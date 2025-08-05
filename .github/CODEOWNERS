@@ -11,6 +11,7 @@
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
 036-kube-proxy/                 @apolovov
+038-registry/                   @RaveNoX
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212 @sprait
@@ -64,5 +65,7 @@ helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
+testing/cloud_layouts/          @Nikolay1224 @KraMorK @Taior
 /monitoring/prometheus-rules/   @sudoroot-null
 /release.yaml                   @yalosev @nabokihms
+go_lib/registry/                @RaveNoX

@@ -23,8 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
@@ -38,7 +37,7 @@ func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
 	}
 }
 
-func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.Tunnel, error) {
+func setupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tunnel, error) {
 	port := proxyUrl.Port()
 	if port == "" {
 		switch proxyUrl.Scheme {
@@ -50,7 +49,7 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 	}
 	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	log.DebugF("tunnel string: %s", tunnel)
-	tun := sshCl.Tunnel("L", tunnel)
+	tun := sshCl.Tunnel(tunnel)
 	err := tun.Up()
 	if err != nil {
 		return nil, err

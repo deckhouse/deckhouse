@@ -15,12 +15,17 @@
 package cache
 
 import (
+	"log/slog"
 	"slices"
 	"sort"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 type (
@@ -43,12 +48,34 @@ type versionData struct {
 type Cache struct {
 	m   sync.RWMutex
 	val map[registryName]map[moduleName]moduleData
+	ms  *metricsstorage.MetricStorage
 }
 
-func New() *Cache {
-	return &Cache{
+func New(ms *metricsstorage.MetricStorage) *Cache {
+	c := &Cache{
 		val: make(map[registryName]map[moduleName]moduleData),
+		ms:  ms,
 	}
+
+	// function that will be triggered on metrics handler
+	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
+		log.Debug(
+			"collector func triggered",
+			slog.Int("registry_len", len(c.val)),
+		)
+
+		for registry, modules := range c.val {
+			s.GaugeSet(
+				metrics.RegistryScannerCacheLengthMetric,
+				float64(len(modules)),
+				map[string]string{
+					"registry": string(registry),
+				},
+			)
+		}
+	})
+
+	return c
 }
 
 func (c *Cache) GetState() []backends.DocumentationTask {
@@ -274,6 +301,7 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 	return versions
 }
 
+// nolint: revive
 func RemapFromVersionData(input []internal.VersionData) map[registryName]map[moduleName]moduleData {
 	sort.Slice(input, func(i, j int) bool {
 		if input[i].Registry != input[j].Registry {

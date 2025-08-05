@@ -8,6 +8,7 @@
 {{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
 {{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
 {{ $required  := .required }} {{/* Array of the required parameters. */}}
+{{ $type := .type }}  {{/* A string. "module_configuration" for ModuleConfig schema or nil */}}
 
 {{- $description :=  "" }}
 
@@ -51,13 +52,21 @@
     <div class="resources__prop_name anchored" data-anchor-id="{{ $linkAnchor }}"  id="{{ $linkAnchor }}">
       <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div><span title="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span>
+      {{ if eq .type "module_configuration" }}
+        <div><span class="ancestors">settings.{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div><span title="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span>
+      {{ else }}
+        <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div><span title="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span>
+      {{ end }}
     </div>
   {{- else }}
     <div class="resources__prop_name anchored" data-anchor-id="{{ $linkAnchor }}"  id="{{ $linkAnchor }}">
       <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div>
+      {{ if eq .type "module_configuration" }}
+        <div><span class="ancestors">settings.{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div>
+      {{ else }}
+        <div><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></div>
+      {{ end }}
     </div>
   {{- end }}
 
@@ -87,7 +96,7 @@
   {{- range $subParameterName, $subParameterAttributes := $data.properties }}
     {{- $subParameterLangData := index $langData.properties $subParameterName }}
 
-    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters ) }}
+    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters "type" $type) }}
   {{ end }}
   </ul>
 {{- else if and (reflect.IsMap $data) $data.items }}
@@ -96,7 +105,7 @@
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
       {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
-      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
     {{- end }}
     </ul>
   {{- else }}{{/* Array of non-objects (string, integer, etc.) */}}
@@ -108,7 +117,7 @@
 
     {{- if $keysToShowIsExist }}
       <ul>
-      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
       </ul>
     {{- end }}
 

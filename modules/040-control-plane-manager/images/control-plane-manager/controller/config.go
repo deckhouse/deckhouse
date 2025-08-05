@@ -212,5 +212,5 @@ func (c *Config) getLastAppliedConfigurationChecksum() error {
 }
 
 func (c *Config) writeLastAppliedConfigurationChecksum() error {
-	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0600)
+	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0o600)
 }
