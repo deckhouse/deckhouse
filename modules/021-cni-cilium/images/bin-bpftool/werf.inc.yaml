@@ -66,17 +66,17 @@ import:
 #     - usr/bin
 #     - usr/sbin
 #     - usr/share
-- image: libs/zstd
-  add: /
-  to: /libs/zstd
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
+# - image: libs/zstd
+#   add: /
+#   to: /libs/zstd
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
 - image: libs/musl
   add: /
   to: /libs/musl
@@ -101,7 +101,7 @@ import:
     - usr/share
 shell:
   beforeInstall:
-  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils-dev
+  - apk add --no-cache rsync make python3 gcc linux-headers bison binutils-dev clang20 glib-dev libbpf-dev libcap-dev libnl3-dev libtool libtraceevent-dev libunwind-dev llvm20-dev ncurses-dev numactl-dev elfutils-dev zstd-dev
   install:
   - |
     if [[ -d /libs ]]; then
@@ -121,7 +121,6 @@ shell:
     fi
   - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
-  - ls -la /usr/lib
   - make V=1 EXTRA_CFLAGS="--static" EXTRA_LDFLAGS="-L/usr/lib" -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   - cp -a bpftool /usr/local/bin
