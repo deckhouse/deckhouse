@@ -367,7 +367,7 @@ entries:
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/dvp/dvp-authorization.html
                         - title:
-                            en: Configuration and layout
+                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html      
                     - title:

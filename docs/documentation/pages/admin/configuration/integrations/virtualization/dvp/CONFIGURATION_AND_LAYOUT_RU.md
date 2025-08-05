@@ -47,13 +47,13 @@ Deckhouse использует ресурс [DVPClusterConfiguration](/modules/c
 
 Для изменения конфигурации в работающем кластере выполните:
 
-```console
+```shell
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 После изменения параметров узлов выполните команду:
 
-```console
+```shell
 dhctl converge
 ```
 

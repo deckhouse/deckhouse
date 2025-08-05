@@ -53,30 +53,9 @@ DKP automatically sets `static://` in the `.spec.providerID` field of such nodes
 
 ## Storage integration
 
-If you need PersistentVolumes on nodes provisioned from OpenStack,
-create a StorageClass with the target OpenStack volume type.
-You can list the available types using the following command:
-
-```shell
-openstack volume type list
-```
-
-Example for `ceph-ssd` volume type:
-
-1. Remove flannel from kube-system: `d8 -n kube-system delete ds flannel-ds`.
-1. Configure the integration and specify the required parameters.
-1. Create one or more custom resources [OpenStackInstanceClass](cr.html#openstackinstanceclass).
-1. Create one or more custom resources [NodeManager](modules/node-manager/cr.html#nodegroup) to manage the number and provisioning process of cloud machines.
-
-{% alert level="warning" %}
-The cloud-controller-manager synchronizes the state between OpenStack and Kubernetes, removing from Kubernetes any nodes that do not exist in OpenStack. In a hybrid cluster, this behavior is not always desired; therefore, if a Kubernetes node is not started with the `--cloud-provider=external` parameter, it is automatically ignored (DKP sets `static://` in the `.spec.providerID` of such nodes, and the cloud-controller-manager ignores them).
-{% endalert %}
-
-### Connecting storage
-
 If you require PersistentVolumes on nodes connected to the cluster from OpenStack, you must create a StorageClass with the appropriate OpenStack volume type. You can get a list of available types using `openstack volume type list` command.
 
-For example, for the volume type `ceph-ssd`:
+Example for `ceph-ssd` volume type:
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -101,7 +80,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 ### Setup steps
 
-1. Add an annotation to all existing `static NodeGroup` resources to exclude nodes from Cluster Autoscaler deletion:
+1. Add an annotation to all existing static node groups (NodeGroup resources) exclude nodes from Cluster Autoscaler deletion:
 
    ```yaml
    metadata:
@@ -109,7 +88,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
       cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
    ```
 
-   This annotation prevents adding taints such as `ToBeDeletedByClusterAutoscaler` and `DeletionCandidateOfClusterAutoscaler` to nodes that are not managed by MachineControllerManager (e.g., static and CloudPermanent). [More info](https://github.com/deckhouse/deckhouse/issues/5252).
+   This annotation prevents adding taints such as `ToBeDeletedByClusterAutoscaler` and `DeletionCandidateOfClusterAutoscaler` to nodes that are not managed by `machine-controller-manager` (e.g., `static` and `CloudPermanent`). [More info](https://github.com/deckhouse/deckhouse/issues/5252).
 
 1. Create a Service Account in the required Yandex Cloud folder:
 
@@ -180,7 +159,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
     Parameter descriptions:
     - `internalNetworkIDs` — List of network IDs in Yandex Cloud providing internal node connectivity.
     - `zoneToSubnetIdMap` — Zone-to-subnet mapping (one subnet per zone).
-    - `shouldAssignPublicIPAddress: true` — Assigns public IPs to created nodes if required.
+    - `shouldAssignPublicIPAddress: true` — Assigns public IPs to created nodes if required. For zones without subnets, can be set to `empty`.
 
 1. Encode the above files (YandexClusterConfiguration and YandexCloudDiscoveryData) in Base64, then insert them into the `cloud-provider-cluster-configuration.yaml` and `cloud-provider-discovery-data.json` fields in the secret.
 
@@ -212,7 +191,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 1. Remove the `ValidatingAdmissionPolicyBinding` object to avoid conflicts:
 
-   ```console
+   ```shell
    d8 delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
    ```
 
@@ -220,7 +199,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 1. Wait for the `cloud-provider-yandex` module activation and CRD creation:
 
-   ```console
+   ```shell
    d8 get mc cloud-provider-yandex
    d8 get crd yandexinstanceclasses
    ```
@@ -256,13 +235,13 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
      mainSubnet: <YOUR-SUBNET-ID>
    ```
 
-   The `mainSubnet` parameter must contain the subnet ID from Yandex Cloud that is used for interconnection with your infrastructure (L2 connectivity with `static NodeGroup` nodes).
+   The `mainSubnet` parameter must contain the subnet ID from Yandex Cloud that is used for interconnection with your infrastructure (L2 connectivity with static node groups).
 
    After applying the manifests, the provisioning of virtual machines in Yandex Cloud managed by the `node-manager` module will begin.
 
-1. Check logs for troubleshooting:
+1. Check the `machine-controller-manager` logs for troubleshooting:
 
-   ```console
+   ```shell
    d8 -n d8-cloud-provider-yandex get machine
    d8 -n d8-cloud-provider-yandex get machineset
    d8 -n d8-cloud-instance-manager logs deploy/machine-controller-manager
@@ -281,7 +260,7 @@ Before you begin, ensure the following conditions are met:
   - A working network is configured in VCD with DHCP enabled.
 
 - **Software settings**:
-  - The CNI controller is switched to VXLAN mode. More details — [tunnelMode configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
+  - The CNI controller is switched to VXLAN mode. More details — [`tunnelMode` configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
   - A [list of required VCD resources](../virtualization/vcd/connection-and-authorization.html) is prepared (VDC, VAPP, templates, policies, etc.).
 
 ### Setup
@@ -326,7 +305,7 @@ Before you begin, ensure the following conditions are met:
 
 1. Encode the `cloud-provider-vcd-token.yml` file in Base64:
 
-   ```console
+   ```shell
    base64 -i $PWD/cloud-provider-vcd-token.yml
    ```
 
@@ -349,15 +328,15 @@ Before you begin, ensure the following conditions are met:
 
 1. Enable the `cloud-provider-vcd` module:
 
-   ```console
+   ```shell
    d8 platform module enable cloud-provider-vcd
    ```
 
-1. Edit the `d8-cni-configuration` secret so that the mode parameter is determined from `mc cni-cilium` (change `.data.cilium` to `.data.necilium` if necessary).
+1. Edit the `d8-cni-configuration` secret so that the `mode` parameter is determined from `mc cni-cilium` (change `.data.cilium` to `.data.necilium` if necessary).
 
 1. Verify that all pods in the `d8-cloud-provider-vcd` namespace are in the `Running` state:
 
-   ```console
+   ```shell
    d8 get pods -n d8-cloud-provider-vcd
    ```
 
@@ -399,6 +378,6 @@ Before you begin, ensure the following conditions are met:
 
 1. Verify that the required number of nodes has appeared in the cluster:
 
-   ```console
+   ```shell
    d8 get nodes -o wide
    ```

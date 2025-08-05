@@ -35,7 +35,7 @@ spec:
         - slow-lun103
 ```
 
-## Изменение размера тома (PVC)
+### Изменение размера тома (PVC)
 
 Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
 
@@ -76,7 +76,7 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 1. Удалите под.
 1. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
    > Состояние `FileSystemResizePending` не является проблемой.
-1. На узле, где находится под, выполните команду `d8 k  uncordon <имя_узла>`.
+1. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
 
 ## Настройка Datastore
 
@@ -84,7 +84,7 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 
 Назначьте теги:
 
-```console
+```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 

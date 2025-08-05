@@ -70,12 +70,12 @@ volumeBindingMode: WaitForFirstConsumer
 ### Предварительные требования
 
 - Рабочий кластер с параметром `clusterType: Static`.
-- Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка tunnelMode](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
+- Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
 - Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера.
 
 ### Шаги по настройке
 
-1. Добавьте аннотацию ко всем текущим `static NodeGroup`, чтобы исключить узлы из процесса удаления Cluster Autoscaler:
+1. Добавьте аннотацию ко всем текущим группам статических узлов (ресурсам NodeGroup), чтобы исключить узлы из процесса удаления Cluster Autoscaler:
 
    ```yaml
    metadata:
@@ -83,7 +83,7 @@ volumeBindingMode: WaitForFirstConsumer
       cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
    ```
 
-   Эта аннотация предотвращает добавление taints типа `ToBeDeletedByClusterAutoscaler` и `DeletionCandidateOfClusterAutoscaler` к узлам, которые не управляются MachineControllerManager (например, `static` и `CloudPermanent`). [Подробнее](https://github.com/deckhouse/deckhouse/issues/5252).
+   Эта аннотация предотвращает добавление taints типа `ToBeDeletedByClusterAutoscaler` и `DeletionCandidateOfClusterAutoscaler` к узлам, которые не управляются `machine-controller-manager` (например, `static` и `CloudPermanent`). [Подробнее](https://github.com/deckhouse/deckhouse/issues/5252).
 
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
@@ -116,9 +116,9 @@ volumeBindingMode: WaitForFirstConsumer
    ```
 
    Значения параметров:
-   - `nodeNetworkCIDR` — CIDR сети, который включает адреса всех используемых подсетей нод в ЯО;
+   - `nodeNetworkCIDR` — CIDR сети, который включает адреса всех используемых подсетей узлов в Yandex Cloud;
    - `cloudID` — ID вашего облака;
-   - `folderID` — ID фолдера;
+   - `folderID` — ID каталога;
    - `serviceAccountJSON` — service account в фолдере выгруженный в формате JSON;
    - `sshPublicKey` — публичный ключ, который будет добавлен на разворачиваемые машины.
 
@@ -154,10 +154,9 @@ volumeBindingMode: WaitForFirstConsumer
     Значения параметров:
     - `internalNetworkIDs` — список ID сетей в Yandex Cloud, через которые обеспечивается внутренняя связность между узлами.
     - `zoneToSubnetIdMap` — отображение зон на соответствующие подсети внутри указанных сетей (по одной подсети на зону).
-    - `shouldAssignPublicIPAddress: true` — указывает, требуется ли назначать публичные IP-адреса для создаваемых узлов. Для зон, в которых подсети отсутствуют, допустимо использовать значение empty.
+    - `shouldAssignPublicIPAddress: true` — указывает, требуется ли назначать публичные IP-адреса для создаваемых узлов. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
 
-1. Закодируйте полученные выше файлы YandexClusterConfiguration и YandexCloudDiscoveryData в формат base64.
-Затем вставьте закодированные строки в поля `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` секрета, как показано в примере ниже:
+1. Закодируйте полученные выше файлы YandexClusterConfiguration и YandexCloudDiscoveryData в формат Base64. Затем вставьте закодированные строки в поля `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` секрета, как показано в примере ниже:
 
    ```yaml
    apiVersion: v1
@@ -187,7 +186,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Удалите объект `ValidatingAdmissionPolicyBinding`, чтобы избежать конфликтов:
 
-   ```console
+   ```shell
    d8 delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
    ```
 
@@ -195,7 +194,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. После применения дождитесь активации модуля `cloud-provider-yandex` и появления CRD yandexinstanceclasses:
 
-   ```console
+   ```shell
    d8 get mc cloud-provider-yandex
    d8 get crd yandexinstanceclasses
    ```
@@ -231,13 +230,13 @@ volumeBindingMode: WaitForFirstConsumer
      mainSubnet: <YOUR-SUBNET-ID>
    ```
 
-   Параметр `mainSubnet` должен содержать ID подсети из Yandex Cloud, которая используется для интерконнекта с вашей инфраструктурой (L2-связность с узлами `static NodeGroup`).
+   Параметр `mainSubnet` должен содержать ID подсети из Yandex Cloud, которая используется для связи с вашей инфраструктурой (L2-связность с группами статических узлов).
 
    После применения манифестов начнётся заказ виртуальных машин в Yandex Cloud, управляемых модулем `node-manager`.
 
 1. Для диагностики состояния и поиска возможных проблем проверьте логи `machine-controller-manager`:
 
-   ```console
+   ```shell
    d8 -n d8-cloud-provider-yandex get machine
    d8 -n d8-cloud-provider-yandex get machineset
    d8 -n d8-cloud-instance-manager logs deploy/machine-controller-manager
@@ -301,7 +300,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Закодируйте файл `cloud-provider-vcd-token.yml` в Base64:
 
-   ```console
+   ```shell
    base64 -i $PWD/cloud-provider-vcd-token.yml
    ```
 
@@ -324,7 +323,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Включите модуль `cloud-provider-vcd`:
 
-   ```console
+   ```shell
    d8 platform module enable cloud-provider-vcd
    ```
 
@@ -332,7 +331,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
-   ```console
+   ```shell
    d8 get pods -n d8-cloud-provider-vcd
    ```
 
@@ -374,6 +373,6 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 
-   ```console
+   ```shell
    d8 get nodes -o wide
    ```

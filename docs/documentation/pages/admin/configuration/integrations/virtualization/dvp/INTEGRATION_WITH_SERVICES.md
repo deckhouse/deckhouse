@@ -7,7 +7,7 @@ Deckhouse Kubernetes Platform integrates with the DVP infrastructure and uses [D
 
 Key features:
 
-- Management of DVP resources via the cloud-controller-manager module
+- Management of DVP resources via the `cloud-controller-manager module`
 - Provisioning of disks using the CSI storage component
 - Integration with the [`node-manager`](/modules/node-manager/) module to support DVPInstanceClass when defining a [NodeGroup](/modules/node-manager/cr.html#nodegroup)
 

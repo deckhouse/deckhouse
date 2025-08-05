@@ -10,6 +10,7 @@ These tools let you:
 - Automatically use cloud infrastructure to provision virtual machines and connect them to the cluster.
 - Deploy clusters in cloud environments.
 - Scale resources as needed.
+- Automatically create base infrastructure resources (such as networks, routes, etc.), if supported by the provider.
 
 The workflow for working with different cloud providers is generally the same,
 with only the preparation steps (such as creating a service account in the cloud) and configuration files differing.

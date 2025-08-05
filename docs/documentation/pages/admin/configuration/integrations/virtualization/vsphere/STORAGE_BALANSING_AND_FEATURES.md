@@ -81,9 +81,9 @@ Legacy mode with FCD disks is also supported. The subsystem behavior is configur
 Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44) of the CSI volume-resizer and vSphere API, after increasing a PVC size, you must perform the following steps:
 
 1. On the node hosting the Pod, run `d8 k cordon <node_name>`.
-1. Delete the pod.
+1. Delete the Pod.
 1. Ensure the resize operation completed successfully — the PVC **must not** have the `Resizing` condition.  
-   The `FileSystemResizePending` condition is not an issue.
+   > The `FileSystemResizePending` condition is not an issue.
 1. On the node hosting the Pod, run `d8 k uncordon <node_name>`
 
 ## Datastore configuration
@@ -92,7 +92,7 @@ For PersistentVolume to function correctly, the datastore must be accessible fro
 
 Assign tags:
 
-```console
+```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 
