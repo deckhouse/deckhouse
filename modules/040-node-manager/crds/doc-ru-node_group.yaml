@@ -491,10 +491,13 @@ spec:
                     sharing:
                       type: string
                       description: |
-                        Стратегия разделения GPU.
+                        Стратегия разделения GPU:
+                        - `Exclusive` — без разделения (каждый GPU полностью выделяется одному Pod'у).
+                        - `TimeSlicing` — разделение GPU по времени (несколько Pod'ов могут одновременно использовать один GPU, распределяя его время работы).
+                        - `MIG` — разделение одного GPU на несколько экземпляров (технология NVIDIA MIG, при наличии поддержки).
                       enum:
                         - TimeSlicing
-                        - Mig
+                        - MIG
                         - Exclusive
                     mig:
                       type: object
@@ -512,12 +515,12 @@ spec:
                         gpuPartitionCount:
                           type: integer
                           description: |
-                            Количество партиций на GPU с TimeSlicing.
+                            Количество разделов (виртуальных GPU) на один физический GPU в режиме time-slicing.
                           x-doc-default: 4
                     exclusive:
                       type: object
                       description: |
-                        Без разделения GPU.
+                        Режим без разделения GPU.
                 cri:
                   type: object
                   description: |

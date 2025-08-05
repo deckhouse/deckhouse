@@ -1513,7 +1513,9 @@ spec:
                     sharing:
                       type: string
                       description: |
-                        GPU sharing strategy.
+                        - `Exclusive` — no sharing (each GPU is fully allocated to a single Pod).
+                        - `TimeSlicing` — time-sliced sharing (multiple Pods can share one GPU concurrently by splitting GPU time).
+                        - `MIG` — use NVIDIA Multi-Instance GPU (MIG) to split each GPU into multiple instances (if supported by hardware).
                       enum:
                         - TimeSlicing
                         - MIG
