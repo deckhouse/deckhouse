@@ -144,7 +144,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 
 	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+		return fmt.Errorf("cannot process checker on upstream: %w", err)
 	}
 
 	if !checkerReady {
@@ -283,7 +283,7 @@ func (state *State) transitionToConfigurableUnmanaged(log go_hook.Logger, inputs
 
 	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+		return fmt.Errorf("cannot process checker on upstream: %w", err)
 	}
 
 	if !checkerReady {
@@ -429,7 +429,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 		checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 		if err != nil {
-			return fmt.Errorf("cannot process checkper on upstream: %w", err)
+			return fmt.Errorf("cannot process checker on upstream: %w", err)
 		}
 
 		if !checkerReady {
