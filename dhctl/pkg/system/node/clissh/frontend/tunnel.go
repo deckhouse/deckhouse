@@ -23,8 +23,8 @@ import (
 	"os/exec"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 type Tunnel struct {
@@ -83,7 +83,7 @@ func (t *Tunnel) Up() error {
 	tunnelReadyCh := make(chan struct{}, 1)
 	go func() {
 		// defer wg.Done()
-		t.ConsumeLines(stdoutReadPipe, func(l string) {
+		t.consumeLines(stdoutReadPipe, func(l string) {
 			if l == "SUCCESS" {
 				tunnelReadyCh <- struct{}{}
 			}
@@ -139,7 +139,7 @@ func (t *Tunnel) String() string {
 	return fmt.Sprintf("%s:%s", t.Type, t.Address)
 }
 
-func (t *Tunnel) ConsumeLines(r io.Reader, fn func(l string)) {
+func (t *Tunnel) consumeLines(r io.Reader, fn func(l string)) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		text := scanner.Text()
