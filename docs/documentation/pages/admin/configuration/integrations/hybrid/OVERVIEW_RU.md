@@ -119,7 +119,7 @@ volumeBindingMode: WaitForFirstConsumer
    - `nodeNetworkCIDR` — CIDR сети, который включает адреса всех используемых подсетей узлов в Yandex Cloud;
    - `cloudID` — ID вашего облака;
    - `folderID` — ID каталога;
-   - `serviceAccountJSON` — service account в фолдере выгруженный в формате JSON;
+   - `serviceAccountJSON` — service account в каталоге, выгруженный в формате JSON;
    - `sshPublicKey` — публичный ключ, который будет добавлен на разворачиваемые машины.
 
      Значения в `masterNodeGroup` не имеют значения, так как master-узлы не разворачиваются.
@@ -255,7 +255,7 @@ volumeBindingMode: WaitForFirstConsumer
   - Настроена рабочая сеть в VCD с включённым DHCP-сервером.
 
 - **Настройки ПО**:
-  - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка tunnelMode](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
+  - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
   - Подготовлен [список необходимых ресурсов VCD](../virtualization/vcd/connection-and-authorization.html) (VDC, VAPP, шаблоны, политики и т.д.).
 
 ### Настройка

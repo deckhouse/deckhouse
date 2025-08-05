@@ -75,7 +75,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 ### Prerequisites
 
 - A working cluster with the parameter `clusterType: Static`.
-- The CNI controller switched to VXLAN mode. [More details](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
+- The CNI controller switched to VXLAN mode. For details, refer to the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) parameter.
 - Configured network connectivity between Yandex Cloud and the static cluster node network.
 
 ### Setup steps

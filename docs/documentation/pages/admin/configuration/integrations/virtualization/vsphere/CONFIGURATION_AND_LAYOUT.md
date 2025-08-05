@@ -109,4 +109,3 @@ Read [the documentation](environment.html#creating-and-assigning-a-role) on how 
     </tr>
   </tbody>
 </table>
-

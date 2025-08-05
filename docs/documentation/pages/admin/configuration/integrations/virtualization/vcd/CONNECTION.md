@@ -267,12 +267,12 @@ shutdown -P now
 
 1. In the created template, go to the “Metadata” tab and add six fields:
 
-* `guestinfo.metadata`
-* `guestinfo.metadata.encoding`
-* `guestinfo.userdata`
-* `guestinfo.userdata.encoding`
-* `disk.enableUUID`
-* `guestinfo.hostname`
+   * `guestinfo.metadata`
+   * `guestinfo.metadata.encoding`
+   * `guestinfo.userdata`
+   * `guestinfo.userdata.encoding`
+   * `disk.enableUUID`
+   * `guestinfo.hostname`
 
    ![Template setup, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
 
