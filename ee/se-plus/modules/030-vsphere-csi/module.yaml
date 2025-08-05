@@ -1,8 +1,0 @@
-name: vsphere-csi
-weight: 30
-subsystems:
-  - infrastructure
-namespace: d8-vsphere-csi
-stage: General Availability
-descriptions:
-  en: CSI vSphere Driver
