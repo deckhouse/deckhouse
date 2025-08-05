@@ -98,7 +98,7 @@ spec:
     count: 2
 ---
 # SSH-ключ, для доступа к рабочим узлам для автоматизированной установки
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: worker-key
@@ -108,7 +108,7 @@ spec:
   # Закрытый ключ, созданный на этапе подготовки узлов платформы, кодированный в base64 формате
   privateSSHKey: ZXhhbXBsZQo=
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: worker-01
@@ -121,7 +121,7 @@ spec:
     kind: SSHCredentials
     name: worker-key
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: worker-01
