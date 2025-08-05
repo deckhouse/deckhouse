@@ -162,11 +162,10 @@ apiVersions:
                       userAccess:
                         type: string
                         description: |
-                          The user access level for the metadata. Can be one of `ReadOnly`, `ReadWrite` or `Private`.
+                          The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
 
-                          Default value is `ReadWrite`.
-                        enum: [ReadOnly, ReadWrite, Private]
-                        default: ReadWrite
+                          Default value is `READWRITE`.
+                        enum: [READONLY, READWRITE, PRIVATE]
                       isSystem:
                         type: boolean
                         description: |
@@ -318,11 +317,11 @@ apiVersions:
                         userAccess:
                           type: string
                           description: |
-                            The user access level for the metadata. Can be one of `ReadOnly`, `ReadWrite` or `Private`.
+                            The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
 
-                            Default value is `ReadWrite`.
-                          enum: [ReadOnly, ReadWrite, Private]
-                          default: ReadWrite
+                            Default value is `READWRITE`.
+                          enum: [READONLY, READWRITE, PRIVATE]
+                          default: READWRITE
                         isSystem:
                           type: boolean
                           description: |

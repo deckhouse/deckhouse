@@ -97,7 +97,7 @@ resource "vcd_vapp_vm" "node" {
     content {
       type        = format("Metadata%sValue", metadata_entry.value.type)
       is_system   = metadata_entry.value.isSystem
-      user_access = upper(metadata_entry.value.userAccess)
+      user_access = metadata_entry.value.userAccess
       key         = metadata_entry.value.key
       value       = metadata_entry.value.value
     }
