@@ -258,7 +258,7 @@ function main() {
       if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
         echo "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
         touch /var/lib/bashible/bashible-taints-removed
-        exit 0
+        break
       fi
       echo "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
       sleep 10
@@ -296,7 +296,7 @@ function main() {
         if kubectl taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
           echo "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
           touch /var/lib/bashible/bashible-taints-removed
-          exit 0
+          break
         fi
         echo "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
         sleep 10
