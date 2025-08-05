@@ -1184,7 +1184,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
-   > Перед применением ознакомьтесь с разделом ["Как добавить конфигурацию для дополнительного registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
