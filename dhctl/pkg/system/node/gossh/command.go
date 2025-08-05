@@ -209,9 +209,7 @@ func (c *SSHCommand) wait() error {
 	select {
 	case err := <-c.ctxResult:
 		if c.ctxResult != nil {
-			if err == context.Canceled {
-				return nil
-			} else if err == context.DeadlineExceeded {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return nil
 			}
 		}

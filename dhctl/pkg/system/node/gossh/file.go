@@ -61,7 +61,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 				return err
 			}
 		}
-		if rType == "directory" {
+		if rType == "DIR" {
 			remotePath = remotePath + "/" + filepath.Base(srcPath)
 		}
 
