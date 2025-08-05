@@ -39,8 +39,8 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.5.0"
-  - export VERSION_COMMON="v0.5.0"
+  - export VERSION="feature/autoscaler-huawei"
+  - export VERSION_COMMON="feature/autoscaler-huawei"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/cloud-data-discoverer.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
   - mv /deckhouse/go_lib /src
