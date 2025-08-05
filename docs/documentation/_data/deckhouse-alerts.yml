@@ -6195,7 +6195,8 @@ alerts:
         This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
 
         To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
-      summary: Deprecated Ingress with direct Prometheus access found in cluster.
+      summary: |
+        Deprecated Ingress with direct Prometheus access found in cluster.
       severity: "6"
       markupFormat: markdown
     - name: PrometheusDiskUsage
