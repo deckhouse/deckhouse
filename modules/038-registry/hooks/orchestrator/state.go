@@ -181,7 +181,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			CA:         inputs.Params.CA,
 		},
 	}
-	bashibleParam := bashible.Params{
+	bashibleParams := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
 			Direct: &bashible.DirectModeParams{
@@ -203,7 +203,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
+	processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
+	processedBashible, err = state.processBashibleFinalize(bashibleParams, inputs)
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 		return nil
 	}
 
-	bashibleParam := bashible.Params{
+	bashibleParams := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
 			Unmanaged: &bashible.UnmanagedModeParams{
@@ -319,7 +319,7 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
+	processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
+	processedBashible, err = state.processBashibleFinalize(bashibleParams, inputs)
 	if err != nil {
 		return err
 	}
