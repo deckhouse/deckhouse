@@ -6,6 +6,8 @@ metadata:
   labels:
     app: registry-modules-watcher
     prometheus: main
+    heritage: deckhouse
+    module: documentation
 spec:
   jobLabel: app
   podMetricsEndpoints:
