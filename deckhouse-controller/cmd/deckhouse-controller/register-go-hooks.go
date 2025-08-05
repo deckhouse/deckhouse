@@ -23,7 +23,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/021-cni-cilium/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-vsphere-csi/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-csi-vsphere/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/380-metallb/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/380-metallb/requirements"
 	_ "github.com/deckhouse/deckhouse/global-hooks"
