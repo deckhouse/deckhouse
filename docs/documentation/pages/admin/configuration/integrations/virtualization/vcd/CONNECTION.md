@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/virtualization/vcd/сonnection-and-authorization.html
+permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
 ---
 
 ## Resource preparation
