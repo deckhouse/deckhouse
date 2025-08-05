@@ -5,47 +5,47 @@ permalink: en/admin/integrations/virtualization/vcd/сonnection-and-authorizatio
 
 ## Resource preparation
 
-To manage resources in VCD using the Deckhouse Kubernetes Platform, the following resources must be configured in the system:
+To manage resources in VCD using the "Deckhouse Kubernetes Platform", the following resources must be configured in the system:
 
 * Organization
 * VirtualDataCenter
-* vApp (for the `Standard` placement scheme)
+* vApp (for the "Standard" placement scheme)
 * StoragePolicy
 * SizingPolicy
-* Network (for the `Standard` placement scheme)
+* Network (for the "Standard" placement scheme)
 * EdgeRouter
 * Catalog
 
 The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
-The Network (internal network) can be configured by your VMware Cloud Director service provider or by yourself. When using the `StandardWithNetwork` placement scheme, the network is created automatically. Below is a method for manually setting up an internal network.
+The Network (internal network) can be configured by your VMware Cloud Director service provider or by yourself. When using the "StandardWithNetwork" placement scheme, the network is created automatically. Below is a method for manually setting up an internal network.
 
 ### User permissions
 
 The user accessing the VMware Cloud Director API must have the following permissions:
 
-* Role `Organization Administrator` with an additional rule `Preserve All ExtraConfig Elements During OVF Import and Export`;
-* The `Preserve All ExtraConfig Elements During OVF Import and Export` rule must also be included in the user’s `Right Bundle`.
+* Role "Organization Administrator" with an additional rule "Preserve All ExtraConfig Elements During OVF Import and Export";
+* The "Preserve All ExtraConfig Elements During OVF Import and Export" rule must also be included in the user’s "Right Bundle".
 
 ### Adding a network
 
 {% alert level="info" %}
-This instruction applies only to the `Standard` placement scheme.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
-1. Go to the “Networking” tab and click “NEW”:
+1. Go to the "Networking" tab and click "NEW":
 
    ![Add network, step 1](../../../../images/cloud-provider-vcd/network-setup/Screenshot.png)
 
-2. Select the desired Data Center:
+2. Select the desired "Data Center":
 
    ![Add network, step 2](../../../../images/cloud-provider-vcd/network-setup/Screenshot2.png)
 
-3. In the “Network type” step, select “Routed”:
+3. In the "Network type" step, select "Routed":
 
    ![Add network, step 3](../../../../images/cloud-provider-vcd/network-setup/Screenshot3.png)
 
-4. Connect the `EdgeRouter` to the network:
+4. Connect the "EdgeRouter" to the network:
 
    ![Add network, step 4](../../../../images/cloud-provider-vcd/network-setup/Screenshot4.png)
 
@@ -53,7 +53,7 @@ This instruction applies only to the `Standard` placement scheme.
 
    ![Add network, step 5](../../../../images/cloud-provider-vcd/network-setup/Screenshot5.png)
 
-6. Do not add “Static IP Pools” since DHCP will be used:
+6. Do not add "Static IP Pools" since DHCP will be used:
 
    ![Add network, step 6](../../../../images/cloud-provider-vcd/network-setup/Screenshot6.png)
 
@@ -64,25 +64,25 @@ This instruction applies only to the `Standard` placement scheme.
 ### DHCP setup
 
 {% alert level="info" %}
-This instruction applies only to the `Standard` placement scheme.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
 To dynamically provision nodes, enable the DHCP server for the internal network.
 
 {% alert level="info" %}
 We recommend reserving the beginning of the address range for system workloads (control plane, frontend nodes, system nodes), and using the rest for the DHCP pool.  
-For example, for a `/24` network, reserving 20 addresses for system workloads is sufficient.
+For example, for a "/24" network, reserving 20 addresses for system workloads is sufficient.
 {% endalert %}
 
-1. Go to the “Networking” tab and open the created network:
+1. Go to the "Networking" tab and open the created network:
 
    ![DHCP, step 1](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot.png)
 
-2. In the opened window, select “IP Management” → “DHCP” → “Activate”:
+2. In the opened window, select "IP Management" → "DHCP" → "Activate":
 
    ![DHCP, step 2](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot2.png)
 
-3. In the “General settings” tab, configure parameters as shown in the example:
+3. In the "General settings" tab, configure parameters as shown in the example:
 
    ![DHCP, step 3](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot3.png)
 
@@ -97,10 +97,10 @@ For example, for a `/24` network, reserving 20 addresses for system workloads is
 ### Adding a vApp
 
 {% alert level="info" %}
-This instruction applies only to the `Standard` placement scheme.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
-1. Go to “Data Centers” → “vApps” → “NEW” → “New vApp”:
+1. Go to "Data Centers" → "vApps" → "NEW" → "New vApp":
 
    ![Add vApp, step 1](../../../../images/cloud-provider-vcd/application-setup/Screenshot.png)
 
@@ -111,35 +111,35 @@ This instruction applies only to the `Standard` placement scheme.
 ### Adding a network to a vApp
 
 {% alert level="info" %}
-This instruction applies only to the `Standard` placement scheme.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
 After creating the vApp, attach the created internal network to it.
 
-1. Go to “Data Centers” → “vApps” and open the desired vApp:
+1. Go to "Data Centers" → "vApps" and open the desired vApp:
 
    ![Add network to vApp, step 1](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
 
-2. Go to the “Networks” tab and click “NEW”:
+2. Go to the "Networks" tab and click "NEW":
 
    ![Add network to vApp, step 2](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
-3. In the pop-up window, select “Direct” type and choose the network:
+3. In the pop-up window, select "Direct" type and choose the network:
 
    ![Add network to vApp, step 3](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
 
 ### Incoming traffic
 
-Incoming traffic must be directed to the edge router (ports `80`, `443`) using DNAT rules to the allocated address in the internal network.  
+Incoming traffic must be directed to the edge router (ports "80", "443") using DNAT rules to the allocated address in the internal network.  
 This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 
 ### Configuring DNAT/SNAT rules on the Edge Gateway
 
-1. Go to “Networking” → “Edge Gateways”, open the edge gateway:
+1. Go to "Networking" → "Edge Gateways", open the edge gateway:
 
    ![DNAT setup, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
 
-2. Go to “Services” → “NAT”:
+2. Go to "Services" → "NAT":
 
    ![DNAT setup, step 2](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
@@ -153,21 +153,21 @@ This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 
    ![SNAT setup, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
 
-   This rule allows VMs from the `192.168.199.0/24` subnet to access the internet.
+   This rule allows VMs from the "192.168.199.0/24" subnet to access the internet.
 
 ### Firewall setup
 
 {% alert level="info" %}
-This instruction applies only to the `Standard` placement scheme.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
 After configuring DNAT, configure the firewall. Start by setting up IP sets.
 
-1. Go to “Security” → “IP Sets”:
+1. Go to "Security" → "IP Sets":
 
    ![Firewall setup, step 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot.png)
 
-2. Create the following IP set (assuming the MetalLB address will be `.10` and the control plane node `.2`):
+2. Create the following IP set (assuming the MetalLB address will be ".10" and the control plane node ".2"):
 
    ![Firewall setup, step 2-1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
    ![Firewall setup, step 2-2](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
@@ -180,21 +180,21 @@ After configuring DNAT, configure the firewall. Start by setting up IP sets.
 ## Virtual machine template
 
 {% alert level="warning" %}
-The provider has been tested only with virtual machine templates based on Ubuntu 22.04.
+The provider has been tested only with virtual machine templates based on "Ubuntu 22.04".
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
 
-In the example, an OVA file provided by Ubuntu is used, with two modifications.  
+In the example, an "OVA" file provided by Ubuntu is used, with two modifications.  
 These modifications are required for proper provisioning of CloudPermanent nodes and to allow attaching disks created by CSI.
 
 ### Preparing the template from an OVA file
 
-1. Download the [OVA file](https://cloud-images.ubuntu.com/jammy/):
+1. Download the "OVA" file: https://cloud-images.ubuntu.com/jammy/
 
    ![Template setup, step 1](../../../../images/cloud-provider-vcd/template/Screenshot.png)
 
-2. Go to “Libraries” → “Catalogs” → “Organization Catalog”:
+2. Go to "Libraries" → "Catalogs" → "Organization Catalog":
 
    ![Template setup, step 2](../../../../images/cloud-provider-vcd/template/Screenshot2.png)
 
@@ -219,7 +219,7 @@ To connect to the VM:
 
 1. Start the VM.
 2. Wait until it gets an IP address.
-3. _Forward_ port `22` to the VM:
+3. Forward port "22" to the VM:
 
    ![Template setup, step 9](../../../../images/cloud-provider-vcd/template/Screenshot9.png)
 
@@ -253,7 +253,7 @@ shutdown -P now
 
 ### Configuring the template in VCD
 
-1. Power off the virtual machine and delete all filled “Guest Properties” fields:
+1. Power off the virtual machine and delete all filled "Guest Properties" fields:
 
    ![Template setup, Guest Properties 1](../../../../images/cloud-provider-vcd/template/GuestProperties1.png)
 
@@ -265,7 +265,7 @@ shutdown -P now
 
    ![Template setup, step 11](../../../../images/cloud-provider-vcd/template/Screenshot11.png)
 
-1. In the created template, go to the “Metadata” tab and add six fields:
+1. In the created template, go to the "Metadata" tab and add six fields:
 
    * `guestinfo.metadata`
    * `guestinfo.metadata.encoding`
