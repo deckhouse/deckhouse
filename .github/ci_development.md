@@ -26,7 +26,7 @@ git remote add test-2 git@github.com:deckhouse/deckhouse-test-2
 
 Commit and push current branch to the main branch in test-1 repo:
 
-``` 
+```
 git commit ...
 git push test-1 HEAD:main --force
 ```
@@ -40,10 +40,10 @@ git push test-1 HEAD:main --force
 5. No alerts on E2E fails in main branch.
 6. Push for deploy and suspend can be skipped with SKIP_PUSH_FOR_SUSPEND and SKIP_PUSH_FOR_DEPLOY variables.
 7. No registry cleanup.
-8. Autoclose for Dependabot PRs (can be enabled with secret ENABLE_DEPENDABOT_IN_FORKS=true).
+8. Autoclose for Dependabot PRs (can be enabled with variable ENABLE_DEPENDABOT_IN_FORKS=true).
 
 
-## Workflows schema 
+## Workflows schema
 
 Trigger -> workflow -> result.
 
