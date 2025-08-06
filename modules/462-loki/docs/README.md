@@ -5,7 +5,7 @@ description: "Log storage in the Deckhouse Kubernetes Platform cluster based on 
 
 In Kubernetes, the system logs on the nodes do not last long and may be lost during a restart or update. This module deploys its own operational log storage based on [Grafana Loki](https://grafana.com/oss/loki/) in the cluster..
 
-Key features:
+Module features:
 
 - system logs are automatically logged into Loki without additional configuration.;
 - access to the logs is implemented via Grafana and the Deckhouse web interface (console);
