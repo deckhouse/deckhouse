@@ -24,6 +24,7 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
@@ -80,7 +81,12 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
-		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		var err error
+		if instanceScope.SSHLegacyMode {
+			sshCl, err = clissh.CreateSSHClient(instanceScope)
+		} else {
+			sshCl, err = gossh.CreateSSHClient(instanceScope)
+		}
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
 			return false

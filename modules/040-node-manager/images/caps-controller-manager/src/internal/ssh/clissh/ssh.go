@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ssh
+package clissh
 
 import (
 	"bytes"
@@ -28,10 +28,17 @@ import (
 	"github.com/pkg/errors"
 
 	"caps-controller-manager/internal/scope"
+	genssh "caps-controller-manager/internal/ssh"
 )
 
+type SSH struct{}
+
+func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
+	return &SSH{}, nil
+}
+
 // ExecSSHCommand executes a command on the StaticInstance.
-func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
+func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
@@ -107,13 +114,13 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 	cmd.Stdin = stdin
 
 	if stdout == nil {
-		stdout = NewLogger(instanceScope.Logger.WithName("stdout"))
+		stdout = genssh.NewLogger(instanceScope.Logger.WithName("stdout"))
 	}
 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if stderr == nil {
-		stderr = NewLogger(instanceScope.Logger.WithName("stderr"))
+		stderr = genssh.NewLogger(instanceScope.Logger.WithName("stderr"))
 	}
 
 	instanceScope.Logger.Info("Exec ssh command", "command", cmd.String())
@@ -127,10 +134,10 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 }
 
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.
-func ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
+func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := ExecSSHCommand(instanceScope, command, stdout, stderr)
+	err := s.ExecSSHCommand(instanceScope, command, stdout, stderr)
 	if err != nil {
 		stderrBytes, err2 := io.ReadAll(stderr)
 		if err2 != nil {

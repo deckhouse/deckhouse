@@ -450,7 +450,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 		return nil, errors.Wrap(err, "failed to create a scope")
 	}
 
-	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance)
+	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance, ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create an instance scope")
 	}

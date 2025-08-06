@@ -30,6 +30,7 @@ import (
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
@@ -83,7 +84,13 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, error) {
 	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
-		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		var err error
+		if instanceScope.SSHLegacyMode {
+			sshCl, err = clissh.CreateSSHClient(instanceScope)
+		} else {
+			sshCl, err = gossh.CreateSSHClient(instanceScope)
+		}
+
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
 			return false
