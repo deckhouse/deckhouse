@@ -143,6 +143,7 @@
  - **[ingress-nginx]** Resolve conflicts to successfully merge [ingress-nginx] Restore validation [#13993](https://github.com/deckhouse/deckhouse/pull/13993)
  - **[ingress-nginx]** Implemented iptables cleanup when `HostWithFailover` Inlet was reconfigured to another nodes or deleted. [#13106](https://github.com/deckhouse/deckhouse/pull/13106)
  - **[ingress-nginx]** Forbidden to enable `enableIstioSidecar` when `HostWithFailover` is enabled. [#12789](https://github.com/deckhouse/deckhouse/pull/12789)
+ - **[istio]** fixed an error in processing custom input gateway addresses using the configuration option of the alliance.ingressGateway.advertise module. [#14850](https://github.com/deckhouse/deckhouse/pull/14850)
  - **[istio]** Added condition if the `cloud-provider-huaweicloud` module is enabled, define `RBAC` permissions granting the `cloud-controller-manager` access to list pods in the `d8-istio` namespace. [#13270](https://github.com/deckhouse/deckhouse/pull/13270)
  - **[istio]** Added `RBAC` rules to grant the HuaweiCloud `cloud-controller-manager` permission to view pods in the `d8-istio` namespace. [#12951](https://github.com/deckhouse/deckhouse/pull/12951)
  - **[loki]** Fix several bugs introduced while implementing loki disk based retention [#14026](https://github.com/deckhouse/deckhouse/pull/14026)
