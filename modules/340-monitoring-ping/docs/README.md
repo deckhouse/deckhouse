@@ -7,7 +7,7 @@ description: "Monitoring network interaction between all cluster nodes, as well 
 
 The network communication monitoring module provides continuous connectivity verification between all the main and, if necessary, external nodes of the cluster.
 
-Key features:
+Module features:
 
 - automatically checks the availability of all cluster nodes (and, optionally, external systems) using ICMP (ping) — testing is started every two seconds;
 - all results are exported in metrics format to the Prometheus monitoring system.;
