@@ -3,10 +3,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: documentation-modules-watcher
+  name: documentation-modules
   namespace: d8-monitoring
   labels:
-    app: registry-modules-watcher
+    app: documentation
     prometheus: main
     heritage: deckhouse
     module: documentation

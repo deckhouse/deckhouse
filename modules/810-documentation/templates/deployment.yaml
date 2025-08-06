@@ -172,3 +172,21 @@ spec:
             defaultMode: 420
             name: kube-rbac-proxy-ca.crt
 {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-builder-metrics
+  labels:
+    service: documentation
+  annotations:
+    prometheus.io/scrape: "true" 
+    prometheus.io/port: "9090"
+spec:
+  selector:
+    service: documentation      
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

@@ -200,21 +200,3 @@ spec:
   selector:
     matchLabels:
       service: frontend
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: docs-builder-metrics
-  labels:
-    service: frontend
-  annotations:
-    prometheus.io/scrape: "true" 
-    prometheus.io/port: "9090"
-spec:
-  selector:
-    service: frontend      
-  ports:
-    - name: metrics
-      port: 9090
-      targetPort: 9090
-      protocol: TCP
