@@ -35,6 +35,15 @@ import:
   add: /src
   to: /src
   before: install
+- image: tools/elfutils
+  add: /usr/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
 shell:
   install:
   # - |
