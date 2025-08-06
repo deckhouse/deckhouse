@@ -1,8 +1,8 @@
 ---
 title: "Модуль csi-vsphere: настройки"
 force_searchable: true
+permalink: ru/storage/admin/csi-vsphere/configuration.html
+lang: ru
 ---
 
-{% include module-alerts.liquid %}
-
-{% include module-conversion.liquid %}
+<!-- SCHEMA -->
