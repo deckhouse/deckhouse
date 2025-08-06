@@ -182,14 +182,14 @@ shell:
         done
       rm -rf /libs
     fi
-  - |
-    if [[ -d /tools ]]; then
-      for tool in $(ls -1 /tools); do
-        cd /tools/${tool}
-        rsync -aulv * /
-      done
-      rm -rf /tools
-    fi
+  # - |
+  #   if [[ -d /tools ]]; then
+  #     for tool in $(ls -1 /tools); do
+  #       cd /tools/${tool}
+  #       rsync -aulv * /
+  #     done
+  #     rm -rf /tools
+  #   fi
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
