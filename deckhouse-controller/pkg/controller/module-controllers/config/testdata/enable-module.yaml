@@ -1,0 +1,21 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: true
+  updatePolicy: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  availableSources:
+    - test-source
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "False" 

@@ -20,6 +20,9 @@ _on_containerd_config_changed() {
 
 migrate() {
   bb-log-info "start containerd migration"
+  systemctl stop kubelet.service
+  bb-flag-set kubelet-need-restart
+  crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
   systemctl stop containerd-deckhouse.service
   for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
   if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then

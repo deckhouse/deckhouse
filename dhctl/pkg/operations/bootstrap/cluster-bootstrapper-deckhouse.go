@@ -50,18 +50,21 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
 	installConfig.MasterNodeSelector = app.MasterNodeSelector
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-		sshClient := wrapper.Client()
-		if sshClient != nil {
-			if _, err = sshClient.Start(); err != nil {
-				return fmt.Errorf("unable to start ssh-client: %w", err)
-			}
-		}
-	}
-
 	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
+
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+		sshClient := wrapper.Client()
+		if sshClient != nil {
+			if err = sshClient.Start(); err != nil {
+				return fmt.Errorf("unable to start ssh-client: %w", err)
+			}
+		}
 	}
 
 	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)

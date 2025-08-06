@@ -314,7 +314,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const statusConfig = 'job,final';
+            const statusConfig = 'job,final,docs';
             const name = 'Deploy web to test';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);

@@ -18,21 +18,27 @@ import (
 	"context"
 	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
-	"registry-modules-watcher/internal/backends"
-	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
-	"registry-modules-watcher/internal/backends/pkg/sender"
-	"registry-modules-watcher/internal/watcher"
-	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
+	"registry-modules-watcher/internal/backends/pkg/sender"
+	handler "registry-modules-watcher/internal/http"
+	"registry-modules-watcher/internal/metrics"
+	"registry-modules-watcher/internal/watcher"
+	registryclient "registry-modules-watcher/pkg/registry-client"
 )
 
 func main() {
@@ -53,6 +59,40 @@ func main() {
 	defer stopNotify()
 
 	// * * * * * * * * *
+	// Metric storage
+	metricStorage := metricstorage.NewMetricStorage("registry_modules_watcher")
+	err := metrics.RegisterMetrics(metricStorage, logger)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	// * * * * * * * * *
+	// New handlers
+	h := handler.NewHandler(logger.Named("http"))
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: h,
+	}
+	go func() {
+		logger.Info("listen", slog.String("address", srv.Addr))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("listen: %w", err)
+		}
+	}()
+
+	metricHandler := handler.NewMetricHandler(logger.Named("http-metrics"), metricStorage)
+	metricServer := &http.Server{
+		Addr:    ":9090",
+		Handler: metricHandler,
+	}
+	go func() {
+		logger.Info("listen", slog.String("address", metricServer.Addr))
+		if err := metricServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("listen: %w", err)
+		}
+	}()
+
+	// * * * * * * * * *
 	// dockerconfigjson
 	regsecretRaw := os.Getenv("REGISTRY_AUTHS")
 	if regsecretRaw == "" {
@@ -63,13 +103,13 @@ func main() {
 	// Connect to registry
 	clients := make([]registryscanner.Client, 0)
 	for _, registry := range strings.Split(*registries, ",") {
-		logger.Info("watch modules", slog.String("source", registry))
+		logger.Info("watch modules", slog.String("registry", registry))
 
-		client, err := registryclient.NewClient(registry,
+		client, err := registryclient.NewClient(registry, metricStorage,
 			registryclient.WithAuth(regsecretRaw),
 		)
 		if err != nil {
-			logger.Warn("no dockercfg auth set, skipping", slog.String("source", registry))
+			logger.Warn("no dockercfg auth set, skipping", slog.String("registry", registry))
 			continue
 		}
 
@@ -81,16 +121,16 @@ func main() {
 		logger.Fatal("no registries to watch")
 	}
 
-	registryscanner := registryscanner.New(logger.Named("registry-scanner"), clients...)
+	registryscanner := registryscanner.New(logger.Named("registry-scanner"), metricStorage, clients...)
 	registryscanner.Subscribe(ctx, *scanInterval)
 
 	// * * * * * * * * *
 	// New sender
-	sender := sender.New(logger.Named("sender"))
+	sender := sender.New(logger.Named("sender"), metricStorage)
 
 	// * * * * * * * * *
 	// New backends service
-	backends := backends.New(registryscanner, sender, logger)
+	backends := backends.New(registryscanner, sender, logger, metricStorage)
 
 	// * * * * * * * * *
 	// Init kube client

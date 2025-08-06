@@ -20,17 +20,20 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 )
 
 func Test_RegistryScannerProcess(t *testing.T) {
@@ -43,7 +46,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(),
+			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
 		}
 
 		tasks := scanner.processRegistries(context.Background())
@@ -82,7 +85,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(),
+			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
 		}
 
 		scanner.processRegistries(context.Background())
@@ -159,7 +162,7 @@ func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTas
 			assert.Equal(t, expectedTask.Module, actualTask.Module, "Module mismatch for %s", key)
 			assert.Equal(t, expectedTask.Version, actualTask.Version, "Version mismatch for %s", key)
 			assert.Equal(t, expectedTask.ReleaseChannels, actualTask.ReleaseChannels, "ReleaseChannels mismatch for %s", key)
-			assert.Equal(t, 1536, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
+			assert.Equal(t, 2048, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
 			assert.Equal(t, expectedTask.Task, actualTask.Task, "Task mismatch for %s", key)
 			assert.Greater(t, len(actualTask.TarFile), 0, "TarFile should not be empty for %s", key)
 		}
