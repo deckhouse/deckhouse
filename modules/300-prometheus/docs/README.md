@@ -118,6 +118,6 @@ Deckhouse has interfaces to integrate with various popular solutions in the foll
 
 ## Fault Tolerance and High Availability Monitoring (HA) mode
 
-The Deckhouse monitoring module provides built-in fault tolerance for all key components. All monitoring services (Prometheus servers, storage systems, proxies, and other important components) are deployed in multiple copies by default. This ensures that in the event of a failure of a separate instance, the service will continue to work without loss of data and availability.
+The monitoring module provides built-in fault tolerance for all key DKP components. All monitoring services (Prometheus servers, storage systems, proxies, and other important components) are deployed in multiple copies by default. This ensures that in the event of a failure of a separate instance, the service will continue to work without loss of data and availability.
 
 Prometheus, the main component of metric collection, runs in at least two copies (if there are enough nodes in the cluster). Both Prometheus instances use the same configuration and receive the same data. To ensure seamless operation in case of failure of one of the copies, a special component, the aggregation proxy, is used to access Prometheus. It allows you to combine metrics from both Prometheus instances and always return the most complete and up-to-date data, even if one of the copies is temporarily unavailable.
