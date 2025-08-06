@@ -1682,23 +1682,19 @@ entries:
           - title:
              en: Description
              ru: Описание
-            url: /storage/admin/csi-vsphere/readme.html
+            url: /modules/csi-vsphere/readme.html
           - title:
              en: Configuration
              ru: Настройки
-            url: /storage/admin/csi-vsphere/configuration.html
-          - title:
-             en: Custom Resources
-             ru: Custom Resources
-            url: /storage/admin/csi-vsphere/cr.html
+            url: /modules/csi-vsphere/configuration.htmll
           - title:
              en: Examples
              ru: Примеры
-            url: /storage/admin/csi-vsphere/examples.html  
+            url: /modules/csi-vsphere/examples.html  
           - title:
              en: FAQ
              ru: FAQ
-            url: /storage/admin/csi-vsphere/faq.html      
+            url: /modules/csi-vsphere/faq.html      
       - title:
          en: Module settings
          ru: Настройки модулей
