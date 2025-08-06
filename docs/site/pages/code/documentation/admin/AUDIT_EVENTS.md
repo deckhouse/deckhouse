@@ -40,7 +40,9 @@ Code also provides an API method to retrieve a list of audit events with filteri
 **Description:**  
 Returns a list of audit events. You can filter by date range, full-text search, and entity types.
 
-> ⚠️ The date range must be within a single calendar month. If `created_after` and `created_before` refer to different months, `created_before` will be automatically adjusted to the last day of the month specified by `created_after`.
+{% alert level="warning" %}
+The date range must be within a single calendar month. If `created_after` and `created_before` refer to different months, `created_before` will be automatically adjusted to the last day of the month specified by `created_after`.
+{% endalert %}
 
 ### Request parameters
 
