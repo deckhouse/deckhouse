@@ -112,18 +112,17 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: libs/glibc-v2.41
-  add: /lib64/libm.so.6
-  to: /lib64/libm.so.6
+- image: libs/glibc
+  add: /
+  to: /libs/glibc
   before: install
-- image: libs/glibc-v2.41
-  add: /lib64/libc.so.6
-  to: /lib64/libc.so.6
-  before: install
-- image: libs/glibc-v2.41
-  add: /lib64/ld-linux-x86-64.so.2
-  to: /lib64/ld-linux-x86-64.so.2
-  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
 shell:
   install:
   - |
