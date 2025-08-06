@@ -780,6 +780,7 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
@@ -799,6 +800,7 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1alpha1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
@@ -818,6 +820,7 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).Should(BeEmpty())
