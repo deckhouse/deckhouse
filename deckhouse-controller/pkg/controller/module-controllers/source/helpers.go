@@ -207,11 +207,15 @@ func (r *reconciler) needToEnsureRelease(
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
+	var requireResync bool
+
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
+
+		requireResync = true
 
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
@@ -246,12 +250,12 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		return nil, fmt.Errorf("update the '%s' module status: %w", moduleName, err)
 	}
 
-	var requireResync bool
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
 			requireResync = true
 		}
+
 		module.Properties.ReleaseChannel = releaseChannel
 
 		return nil

@@ -274,6 +274,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("proceed enabled modules without default", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"enabledmodule", "notthissourcemodule", "bundlenabledmodule"},
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules-without-default.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
@@ -522,7 +533,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
 
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel

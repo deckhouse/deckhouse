@@ -345,8 +345,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
+			// skip modules that require resync
 			if errors.Is(err, ErrRequireResync) {
-				return nil
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
 			}
 
 			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
