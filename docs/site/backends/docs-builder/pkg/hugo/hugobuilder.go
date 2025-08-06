@@ -290,8 +290,7 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 
 	if len(conf.configs.LoadingInfo.ConfigFiles) == 0 {
-		// nolint: revive
-		return errors.New("Unable to locate config file or config directory. Perhaps you need to create a new site.\nRun `hugo help new` for details.")
+		return errors.New("unable to locate config file or config directory, perhaps you need to create a new site, run `hugo help new` for details")
 	}
 
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"

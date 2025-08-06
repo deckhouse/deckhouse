@@ -111,8 +111,7 @@ func getModuleNameFromErrorPath(errorMessage string) (string, bool) {
 	return "", false
 }
 
-// nolint: nonamedreturns
-func (svc *Service) parseModulePath(modulePath string) (moduleName string, channel string) {
+func (svc *Service) parseModulePath(modulePath string) ( /*moduleName*/ string /*channel*/, string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
 		svc.logger.Error("failed to parse", slog.String("path", modulePath))

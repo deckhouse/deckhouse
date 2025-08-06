@@ -42,7 +42,6 @@ func (fs *countingStatFs) Stat(name string) (os.FileInfo, error) {
 	return f, err
 }
 
-// nolint: revive
-func chmodFilter(dst, src os.FileInfo) bool {
+func chmodFilter(_, src os.FileInfo) bool {
 	return src.IsDir()
 }
