@@ -24,6 +24,7 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/gossh"
 )
 
 // Cleanup runs the cleanup script on StaticInstance.
@@ -78,7 +79,13 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 
 func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		err := ssh.ExecSSHCommand(instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
+		var sshCl ssh.SSH
+		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
+			return false
+		}
+		err = sshCl.ExecSSHCommand(instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
 			return false
