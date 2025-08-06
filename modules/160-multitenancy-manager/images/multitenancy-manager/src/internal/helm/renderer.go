@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	ErrNamespaceOverride = errors.New("objects with different namespace will still be deployed in project namespace")
+	ErrNamespaceOverride = errors.New("objects that defined in different namespaces will still be deployed to project namespace")
 )
 
 type postRenderer struct {
