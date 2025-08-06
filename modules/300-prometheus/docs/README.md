@@ -10,7 +10,12 @@ webIfaces:
 
 The module expands the monitoring stack with preset parameters for DKP and applications, which simplifies the initial configuration.
 
-The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/). It is possible to store historical data using downsampling.
+Module features:
+
+- The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/). It is possible to store historical data using downsampling.
+- The load is optimized by using caches and Deckhouse Prom++.
+- It is possible to store historical data using downsampling.
+- The module covers all the basic tasks of basic monitoring of the platform and applications.
 
 The module covers all the basic tasks of basic monitoring of DKP and applications.
 
