@@ -34,10 +34,8 @@ type SSH struct {
 }
 
 func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
-	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
-	if err != nil {
-		return nil, fmt.Errorf("privateSSHKey must be a valid base64 encoded string")
-	}
+	var signer ssh.Signer
+	var err error
 	var pass string
 	if len(instanceScope.Credentials.Spec.SudoPasswordEncoded) > 0 {
 		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.SudoPasswordEncoded)
@@ -46,10 +44,19 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 		}
 		pass = string(passBytes)
 	}
+	AuthMethods := make([]ssh.AuthMethod, 0, 2)
+	if len(instanceScope.Credentials.Spec.PrivateSSHKey) > 0 {
+		privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
+		if err != nil {
+			return nil, fmt.Errorf("privateSSHKey must be a valid base64 encoded string")
+		}
 
-	signer, err := ssh.ParsePrivateKey(privateSSHKey)
-
-	AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signer)}
+		signer, err = ssh.ParsePrivateKey(privateSSHKey)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse keys")
+		}
+		AuthMethods = append(AuthMethods, ssh.PublicKeys(signer))
+	}
 
 	if len(pass) > 0 {
 		AuthMethods = append(AuthMethods, ssh.Password(pass))
@@ -123,7 +130,6 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 			if strings.Contains(line, "SudoPassword") {
 				if !passwordSent {
 					passwordSent = true
-					fmt.Println("sending password...")
 					if _, err := stdin.Write([]byte(pass + "\n")); err != nil {
 						return fmt.Errorf("failed to write password to stdin: %w", err)
 					}
