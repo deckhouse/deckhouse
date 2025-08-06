@@ -40,6 +40,7 @@ import (
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/gossh"
 )
 
 const RequeueForStaticInstanceBootstrapping = 60 * time.Second
@@ -93,7 +94,13 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	}
 
 	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		data, err := ssh.ExecSSHCommandToString(instanceScope,
+		var sshCl ssh.SSH
+		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
+			return false
+		}
+		data, err := sshCl.ExecSSHCommandToString(instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
 		if err != nil {
@@ -173,7 +180,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	check := c.checkTaskManager.spawn(taskID(address), func() bool {
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo check_ssh")
+		var sshCl ssh.SSH
+		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+		}
+		data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
 		if err != nil {
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
