@@ -46,28 +46,6 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: tools/elfutils
-  add: /
-  to: /tools/elfutils
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: libs/zstd
-  add: /
-  to: /libs/zstd
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
 - image: libs/zlib
   add: /
   to: /libs/zlib
@@ -163,22 +141,6 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
-  - |
-    if [[ -d /libs ]]; then
-        for lib in $(ls -1 /libs); do
-          cd /libs/${lib}
-          rsync -aulv * /
-        done
-      rm -rf /libs
-    fi
-  - |
-    if [[ -d /tools ]]; then
-      for tool in $(ls -1 /tools); do
-        cd /tools/${tool}
-        rsync -aulv * /
-      done
-      rm -rf /tools
-    fi
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
   - apt-get update -y
@@ -212,6 +174,22 @@ shell:
     gcc11 gcc11-c++
   - apt-get autoclean && apt-get clean
   install:
+  - |
+    if [[ -d /libs ]]; then
+        for lib in $(ls -1 /libs); do
+          cd /libs/${lib}
+          rsync -aulv * /
+        done
+      rm -rf /libs
+    fi
+  - |
+    if [[ -d /tools ]]; then
+      for tool in $(ls -1 /tools); do
+        cd /tools/${tool}
+        rsync -aulv * /
+      done
+      rm -rf /tools
+    fi
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
