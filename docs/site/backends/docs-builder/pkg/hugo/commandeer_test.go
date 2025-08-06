@@ -15,13 +15,14 @@
 package hugo
 
 import (
-	"github.com/gohugoio/hugo/common/loggers"
 	"sync/atomic"
 	"testing"
 
 	"github.com/bep/lazycache"
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/hugolib"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestHugFromConfig_ErrorHandling(t *testing.T) {
