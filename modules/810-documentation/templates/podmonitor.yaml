@@ -12,6 +12,9 @@ metadata:
     module: documentation
 spec:
   jobLabel: app
+  namespaceSelector:
+    matchNames:
+      - d8-system
   podMetricsEndpoints:
   - port: http-metrics
     scheme: http
@@ -25,8 +28,8 @@ spec:
     - targetLabel: tier
       replacement: cluster
     - targetLabel: job
-      replacement: "registry-modules-watcher"
+      replacement: "documentation"
   selector:
     matchLabels:
-      app: registry-modules-watcher
+      app: documentation
 {{- end }}
