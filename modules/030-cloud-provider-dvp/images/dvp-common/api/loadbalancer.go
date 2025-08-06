@@ -19,17 +19,20 @@ package api
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -114,14 +117,23 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	name := loadBalancer.Name
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
+	lbKey := lbLabelKey(name)
+	selectorValue := getNodesSelectorLabels(lbKey)
+
+	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
+		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+		return nil, err
+	}
 
 	ports := lb.CreateLoadBalancerPorts(service)
-	vmLabels := map[string]string{}
-	vmLabels = getNodesSelectorLabels(loadBalancer.Nodes)
 
+	svc.Spec.Selector = map[string]string{}
+	if svc.Spec.Selector == nil {
+		svc.Spec.Selector = map[string]string{}
+	}
+	svc.Spec.Selector[lbKey] = selectorValue[lbKey]
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
-	svc.Spec.Selector = map[string]string{}
 	svc.Spec.ExternalIPs = []string{}
 	svc.Spec.LoadBalancerClass = nil
 	svc.Spec.LoadBalancerIP = ""
@@ -132,9 +144,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	}
 	if len(ports) > 0 {
 		svc.Spec.Ports = ports
-	}
-	if len(vmLabels) > 0 {
-		svc.Spec.Selector = vmLabels
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
@@ -175,10 +184,15 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	name := loadBalancer.Name
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
+	lbKey := lbLabelKey(name)
+	selectorValue := getNodesSelectorLabels(lbKey)
+
+	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
+		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+		return nil, err
+	}
 
 	ports := lb.CreateLoadBalancerPorts(service)
-	vmLabels := map[string]string{}
-	vmLabels = getNodesSelectorLabels(loadBalancer.Nodes)
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -191,10 +205,10 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Ports:                 ports,
 			Type:                  corev1.ServiceTypeLoadBalancer,
 			ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
+			Selector: map[string]string{
+				lbKey: selectorValue[lbKey],
+			},
 		},
-	}
-	if len(vmLabels) > 0 {
-		svc.Spec.Selector = vmLabels
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
@@ -266,10 +280,58 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	return nil
 }
 
-func getNodesSelectorLabels(nodes []*corev1.Node) map[string]string {
-	labels := make(map[string]string)
+func getNodesSelectorLabels(lbName string) map[string]string {
+	return map[string]string{lbLabelKey(lbName): "loadbalancer"}
+}
+
+func (lb *LoadBalancerService) ensureNodeLabels(
+	ctx context.Context,
+	nodes []*corev1.Node,
+	lbKey string,
+) error {
+	desired := make(map[string]struct{}, len(nodes))
 	for _, node := range nodes {
-		labels[DVPVMHostnameLabel] = node.Name
+		desired[node.Name] = struct{}{}
+		if node.Labels == nil {
+			node.Labels = make(map[string]string)
+		}
+		if node.Labels[lbKey] != "loadbalancer" {
+			labledNode := node.DeepCopy()
+			labledNode.Labels[lbKey] = "loadbalancer"
+			if err := lb.client.Update(ctx, labledNode); err != nil {
+				return err
+			}
+		}
 	}
-	return labels
+
+	var list corev1.NodeList
+	if err := lb.client.List(ctx, &list, &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			lbKey: "loadbalancer",
+		}),
+	}); err != nil {
+		klog.Errorf("Failed to list nodes: %v", err)
+		return err
+	}
+
+	for _, node := range list.Items {
+		if _, ok := desired[node.Name]; ok {
+			continue
+		}
+		unlabledNode := node.DeepCopy()
+		delete(unlabledNode.Labels, lbKey)
+		if err := lb.client.Update(ctx, unlabledNode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func lbLabelKey(lbName string) string {
+	prittyfied := strings.ToLower(strings.ReplaceAll(lbName, "-", ""))
+	max := 63 - len(DVPLoadBalancerLabelPrefix)
+	if len(prittyfied) > max {
+		prittyfied = prittyfied[:max]
+	}
+	return DVPLoadBalancerLabelPrefix + prittyfied
 }
