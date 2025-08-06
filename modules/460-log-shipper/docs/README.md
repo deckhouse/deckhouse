@@ -3,7 +3,7 @@ title: "The log-shipper module"
 description: Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.
 ---
 
-The log-shipper module significantly simplifies the configuration of log collection in Kubernetes. It allows you to quickly collect logs from both applications running in the cluster and from the nodes themselves, and then send them to any storage system, internal or external (for example, Loki, Elasticsearch, S3, and others).
+The `log-shipper` module simplifies the configuration of log collection in Kubernetes. It allows you to quickly collect logs from both applications running in the cluster and from the nodes themselves, and then send them to any storage system, internal or external (for example, Loki, Elasticsearch, S3, and others).
 
 Module features:
 
