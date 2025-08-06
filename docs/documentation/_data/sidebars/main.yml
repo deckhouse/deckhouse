@@ -1682,7 +1682,7 @@ entries:
           - title:
              en: Description
              ru: Описание
-            url: /storage/admin/csi-vsphere/
+            url: /storage/admin/csi-vsphere/readme.html
           - title:
              en: Configuration
              ru: Настройки
