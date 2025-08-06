@@ -170,7 +170,7 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-````
+```
 
 Этот Job запускает демонстрационный пример **vectoradd** из набора CUDA-samples.
 Если Pod завершается успешно (`Succeeded`), значит GPU-устройство доступно и корректно настроено.

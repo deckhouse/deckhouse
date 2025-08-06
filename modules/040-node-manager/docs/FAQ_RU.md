@@ -1056,7 +1056,7 @@ spec:
     - key: node-role
       value: gpu
       effect: NoSchedule
-````
+```
 
 > Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
