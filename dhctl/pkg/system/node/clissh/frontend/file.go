@@ -22,9 +22,10 @@ import (
 
 	uuid "gopkg.in/satori/go.uuid.v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 type File struct {
@@ -158,7 +159,7 @@ func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, er
 
 func CreateEmptyTmpFile() (string, error) {
 	tmpPath := filepath.Join(
-		os.TempDir(),
+		app.TmpDirName,
 		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),
 	)
 

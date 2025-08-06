@@ -21,21 +21,23 @@ import (
 	"testing"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/stretchr/testify/assert"
+
+	"registry-modules-watcher/internal/backends"
 )
 
 func TestSender(t *testing.T) {
 	logger := log.NewNop()
-	s := New(logger)
+	s := New(logger, nil)
 
 	MaxInterval = 10 * time.Millisecond
 
 	t.Run("Send", func(t *testing.T) {
 		t.Run("successful responses", func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// nolint: gocritic
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
 					w.WriteHeader(http.StatusCreated)
 				} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
@@ -52,7 +54,7 @@ func TestSender(t *testing.T) {
 				server.URL[7:]: {}, // remove "http://"
 			}
 
-			t.Run("with create task", func(t *testing.T) {
+			t.Run("with create task", func(_ *testing.T) {
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -67,7 +69,7 @@ func TestSender(t *testing.T) {
 				s.Send(context.Background(), listBackends, versions)
 			})
 
-			t.Run("with delete task", func(t *testing.T) {
+			t.Run("with delete task", func(_ *testing.T) {
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -131,16 +133,19 @@ func TestSender(t *testing.T) {
 				requestCount := 0
 
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
-						w.WriteHeader(http.StatusCreated)
-					} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
-						requestCount++
-						if requestCount <= 2 {
-							// Return error for first 2 attempts
-							w.WriteHeader(http.StatusInternalServerError)
-						} else {
-							// Success on the 3rd attempt (after 2 retries)
-							w.WriteHeader(http.StatusOK)
+					if r.Method == http.MethodPost {
+						switch r.URL.Path {
+						case "/api/v1/doc/TestModule/1.0.0":
+							w.WriteHeader(http.StatusCreated)
+						case "/api/v1/build":
+							requestCount++
+							if requestCount <= 2 {
+								// Return error for first 2 attempts
+								w.WriteHeader(http.StatusInternalServerError)
+							} else {
+								// Success on the 3rd attempt (after 2 retries)
+								w.WriteHeader(http.StatusOK)
+							}
 						}
 					} else {
 						w.WriteHeader(http.StatusOK)
@@ -285,7 +290,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("http error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			defer server.Close()
@@ -303,7 +308,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("connection error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// Hijack and close connection to simulate network failure
 				hj, ok := w.(http.Hijacker)
 				if !ok {
@@ -363,7 +368,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("http error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			defer server.Close()
@@ -382,7 +387,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("connection error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// Hijack and close connection to simulate network failure
 				hj, ok := w.(http.Hijacker)
 				if !ok {
@@ -435,7 +440,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("http error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			defer server.Close()
@@ -445,7 +450,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("connection error", func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// Hijack and close connection to simulate network failure
 				hj, ok := w.(http.Hijacker)
 				if !ok {
@@ -467,7 +472,7 @@ func TestSender(t *testing.T) {
 
 		t.Run("retry behavior", func(t *testing.T) {
 			requestCount := 0
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				requestCount++
 				if requestCount <= 2 {
 					w.WriteHeader(http.StatusInternalServerError)

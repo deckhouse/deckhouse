@@ -65,6 +65,7 @@ helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
+testing/cloud_layouts/          @Nikolay1224 @KraMorK @Taior
 /monitoring/prometheus-rules/   @sudoroot-null
 /release.yaml                   @yalosev @nabokihms
 go_lib/registry/                @RaveNoX

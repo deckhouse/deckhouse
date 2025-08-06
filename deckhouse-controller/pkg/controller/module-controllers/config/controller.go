@@ -39,12 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -309,6 +311,15 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 	}
 
+	if module.IsExperimental() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
+	}
+
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.logger.Debug("skip the system module", slog.String("name", module.Name))
@@ -390,6 +401,8 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	// clear conflict metrics
 	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {

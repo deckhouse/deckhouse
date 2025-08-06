@@ -199,7 +199,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (e.g., `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`).
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`.
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
-* The *frontend*-related modules (`nginx-ingress` only):
+* The *frontend*-related modules (`ingress-nginx` only):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/frontend` label is present in the cluster.

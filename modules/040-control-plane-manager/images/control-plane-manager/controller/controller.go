@@ -17,10 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -31,11 +33,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
+		cancel()
 		close(config.ExitChannel)
 	}()
 
@@ -57,9 +60,18 @@ func main() {
 
 	removeOrphanFiles()
 
-	runPhase(annotateNode())
-	runPhase(waitNodeApproval())
-	runPhase(waitImageHolderContainers())
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return annotateNode()
+	}, "annotate node"))
+
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return waitNodeApproval()
+	}, "wait for approval"))
+
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return waitImageHolderContainers()
+	}, "wait for image holders"))
+
 	runPhase(checkEtcdManifest())
 	runPhase(checkKubeletConfig())
 	runPhase(installKubeadmConfig())
