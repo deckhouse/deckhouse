@@ -1,0 +1,88 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index aa0707224..ad3396b20 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -331,16 +335,19 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
+ 		}
+ 	}
+
+-	// Do not attempt to validate an ingress that's not meant to be controlled by the current instance of the controller.
+-	if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
+-		klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
+-		return nil
+-	}
++	// Commented out the ingress class check in the ingress validation logic to allow usage of the --watch-namespace flag
++	// in a broader or more flexible way.
++	//if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
++	//	klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
++	//	return nil
++	//}
+
+-	if n.cfg.Namespace != "" && ing.ObjectMeta.Namespace != n.cfg.Namespace {
+-		klog.Warningf("ignoring ingress %v in namespace %v different from the namespace watched %s", ing.Name, ing.ObjectMeta.Namespace, n.cfg.Namespace)
+-		return nil
+-	}
++	// Commented out the namespace check in the ingress validation logic to allow usage of the --watch-namespace flag
++	// in a broader or more flexible way.
++	//if n.cfg.Namespace != "" && ing.ObjectMeta.Namespace != n.cfg.Namespace {
++	//	klog.Warningf("ignoring ingress %v in namespace %v different from the namespace watched %s", ing.Name, ing.ObjectMeta.Namespace, n.cfg.Namespace)
++	//	return nil
++	//}
+
+ 	if n.cfg.DisableCatchAll && ing.Spec.DefaultBackend != nil {
+ 		return fmt.Errorf("this deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.defaultBackend' or set DisableCatchAll flag to false")
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 0b6b3c237..c77ac68b1 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -279,28 +291,29 @@ func (n *NGINXController) Start() {
+ 	// TODO: For now, as the the IngressClass logics has changed, is up to the
+ 	// cluster admin to create different Leader Election IDs.
+ 	// Should revisit this in a future
++	if n.cfg.ValidationWebhook == "" { // Disabled in validation mode
++		if !n.cfg.DisableLeaderElection {
++			electionID := n.cfg.ElectionID
++			setupLeaderElection(&leaderElectionConfig{
++				Client:      n.cfg.Client,
++				ElectionID:  electionID,
++				ElectionTTL: n.cfg.ElectionTTL,
++				OnStartedLeading: func(stopCh chan struct{}) {
++					if n.syncStatus != nil {
++						go n.syncStatus.Run(stopCh)
++					}
+
+-	if !n.cfg.DisableLeaderElection {
+-		electionID := n.cfg.ElectionID
+-		setupLeaderElection(&leaderElectionConfig{
+-			Client:      n.cfg.Client,
+-			ElectionID:  electionID,
+-			ElectionTTL: n.cfg.ElectionTTL,
+-			OnStartedLeading: func(stopCh chan struct{}) {
+-				if n.syncStatus != nil {
+-					go n.syncStatus.Run(stopCh)
+-				}
+-
+-				n.metricCollector.OnStartedLeading(electionID)
+-				// manually update SSL expiration metrics
+-				// (to not wait for a reload)
+-				n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
+-				n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
+-			},
+-			OnStoppedLeading: func() {
+-				n.metricCollector.OnStoppedLeading(electionID)
+-			},
+-		})
++					n.metricCollector.OnStartedLeading(electionID)
++					// manually update SSL expiration metrics
++					// (to not wait for a reload)
++					n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
++					n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
++				},
++				OnStoppedLeading: func() {
++					n.metricCollector.OnStoppedLeading(electionID)
++				},
++			})
++		}
+ 	}
+
+ 	cmd := n.command.ExecCommand()

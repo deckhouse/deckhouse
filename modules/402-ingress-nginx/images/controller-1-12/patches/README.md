@@ -80,12 +80,10 @@ Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. A
 
 Re-enables configuration validation for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
 
-### 013-protect-validation-port.patch
+### 013-validation-mode.patch
 
-Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
-which the validator server trusts (CA and Common Name verification).  
-Without a valid client certificate, access to the validation service will be denied.
+Slightly tunes some logic related to validating ingress objects.
 
 ### 014-verbose-maxmind-logs.patch
 
-Added additional logging for downloading GeoIP databases from the MaxMind service.
+Added additional logging when downloading GeoIP databases from the MaxMind service.
