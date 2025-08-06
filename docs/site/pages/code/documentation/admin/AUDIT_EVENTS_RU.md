@@ -1,8 +1,8 @@
 ---
-title: "Аудит безопасности"
-menuTitle: Аудит безопасности
+title: "События аудита безопасности"
+menuTitle: События аудита безопасности
 force_searchable: true
-description: Аудит безопасности
+description: События аудита безопасности
 permalink: ru/code/documentation/admin/audit-events.html
 lang: ru
 weight: 50

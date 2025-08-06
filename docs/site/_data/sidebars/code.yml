@@ -32,8 +32,8 @@ entries:
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
       - title:
-          en: Security audit
-          ru: Аудит безопасности
+          en: Audit events
+          ru: События аудита безопасности
         url: /code/documentation/admin/audit-events.html
   - title:
       en: User guide

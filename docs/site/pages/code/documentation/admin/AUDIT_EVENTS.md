@@ -1,8 +1,8 @@
 ---
-title: "Security audit"
-menuTitle: Security audit
+title: "Audit events"
+menuTitle: Audit events
 force_searchable: true
-description: Security audit
+description: Audit events
 permalink: en/code/documentation/admin/audit-events.html
 lang: en
 weight: 50
