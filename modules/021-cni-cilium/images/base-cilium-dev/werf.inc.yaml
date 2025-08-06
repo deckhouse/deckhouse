@@ -53,75 +53,9 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: tools/elfutils
-  add: /
-  to: /tools/elfutils
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: libs/zstd
-  add: /
-  to: /libs/zstd
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: libs/musl
-  add: /
-  to: /libs/musl
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: tools/openssl
-  add: /
-  to: /tools/openssl
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: libs/libcap
-  add: /
-  to: /libs/libcap
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-- image: libs/libxml2
-  add: /
-  to: /libs/libxml2
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
-# - image: libs/glibc
+# - image: tools/elfutils
 #   add: /
-#   to: /libs/glibc
+#   to: /tools/elfutils
 #   before: install
 #   includePaths:
 #     - usr/lib
@@ -130,6 +64,72 @@ import:
 #     - usr/bin
 #     - usr/sbin
 #     - usr/share
+# - image: libs/zstd
+#   add: /
+#   to: /libs/zstd
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
+# - image: libs/musl
+#   add: /
+#   to: /libs/musl
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
+# - image: tools/openssl
+#   add: /
+#   to: /tools/openssl
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
+# - image: libs/libcap
+#   add: /
+#   to: /libs/libcap
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
+# - image: libs/libxml2
+#   add: /
+#   to: /libs/libxml2
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
+- image: libs/glibc
+  add: /
+  to: /libs/glibc
+  before: install
+  includePaths:
+    - usr/lib
+    - usr/lib64
+    - usr/include
+    - usr/bin
+    - usr/sbin
+    - usr/share
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
