@@ -3,7 +3,7 @@ title: "The monitoring-kubernetes module"
 description: "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform."
 ---
 
-The monitoring-kubernetes module provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
+The `monitoring-kubernetes` module provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
 
 Module features:
 
