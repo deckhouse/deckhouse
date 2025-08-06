@@ -42,10 +42,6 @@ mount:
 - from: tmp_dir
   to: /root/.cache/bazel
 import:
-- image: {{ .ModuleName }}/golang-artifact
-  add: /usr/local/go
-  to: /usr/local/go
-  before: install
 - image: libs/zlib
   add: /
   to: /libs/zlib
@@ -134,6 +130,10 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
+- image: {{ .ModuleName }}/golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
