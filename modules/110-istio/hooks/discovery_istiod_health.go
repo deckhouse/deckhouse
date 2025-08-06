@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
@@ -130,8 +134,12 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if len(input.Snapshots["istio_sidecar_injector_global_webhook"]) == 1 {
-		injectorGlobalFullVer = input.Snapshots["istio_sidecar_injector_global_webhook"][0].(string)
+	webhookSnaps := input.NewSnapshots.Get("istio_sidecar_injector_global_webhook")
+	if len(webhookSnaps) == 1 {
+		err := webhookSnaps[0].UnmarshalTo(&injectorGlobalFullVer)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'istio_sidecar_injector_global_webhook' snapshot: %w", err)
+		}
 	}
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
@@ -144,8 +152,11 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		versionMap[ver] = istioInfo
 	}
 
-	for _, podRaw := range input.Snapshots["istiod_pods"] {
-		pod := podRaw.(istiodPod)
+	for pod, err := range sdkobjectpatch.SnapshotIter[istiodPod](input.NewSnapshots.Get("istiod_pods")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istiod_pods' snapshot: %w", err)
+		}
+
 		podVer := versionMap.GetVersionByRevision(pod.Revision)
 		podFullVer := versionMap.GetFullVersionByRevision(pod.Revision)
 		// health cheks for istiod

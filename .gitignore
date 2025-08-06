@@ -9,7 +9,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
+.env
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 

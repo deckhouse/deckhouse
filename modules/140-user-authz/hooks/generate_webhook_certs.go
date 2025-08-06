@@ -30,7 +30,7 @@ const (
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	BeforeHookCheck: func(input *go_hook.HookInput) bool {
 		var (
-			secretExists        = len(input.Snapshots[tls_certificate.SnapshotKey]) > 0
+			secretExists        = len(input.NewSnapshots.Get(tls_certificate.SnapshotKey)) > 0
 			multitenancyEnabled = input.Values.Get("userAuthz.enableMultiTenancy").Bool()
 		)
 

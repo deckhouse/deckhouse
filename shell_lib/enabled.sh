@@ -21,6 +21,7 @@ function enabled::run() {
 function enabled::disable_module_if_cluster_is_not_bootstraped() {
   if ! values::is_true global.clusterIsBootstrapped ; then
     echo "false" > $MODULE_ENABLED_RESULT
+    echo "cluster is not bootstrapped" > "$MODULE_ENABLED_REASON"
     exit 0
   fi
 }
@@ -29,10 +30,14 @@ function enabled::disable_module_in_kubernetes_versions_less_than() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [ "$(semver compare $cluster_version $1)" -eq "-1" ] ; then
     echo "false" > $MODULE_ENABLED_RESULT
+    echo "Kubernetes version $cluster_version is less than required minimum $1" > "$MODULE_ENABLED_REASON"
     exit 0
   fi
 }
 
+# TODO: it may be worth explicitly checking the return value enabled::fail_if_values_are_not_set
+# and not continue execution if the values are missing. 
+# Right now the function returns 1, but this is ignored.
 function enabled::fail_if_values_are_not_set() {
   for var in "$@"
   do

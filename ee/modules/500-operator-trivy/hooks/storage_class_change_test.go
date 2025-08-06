@@ -49,4 +49,22 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: storage_class_change ::"
 			Expect(f.ValuesGet("operatorTrivy.internal.effectiveStorageClass").String()).To(Equal("test1"))
 		})
 	})
+
+	Context("AllowEmptyDir param", func() {
+		It("Do not set d8_emptydir_usage metric when using emptyDir", func() {
+			// operator-trivy hook has AllowEmptyDir: true hardcoded storage_class_change.go
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.ConfigValuesSet("operatorTrivy.storageClass", "false")
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+
+			metric := f.MetricsCollector.CollectedMetrics()[0]
+			Expect(metric.Name).To(Equal("d8_emptydir_usage"))
+			Expect(*metric.Value).To(Equal(float64(0)))
+			Expect(metric.Labels["namespace"]).To(Equal("d8-operator-trivy"))
+			Expect(metric.Labels["module_name"]).To(Equal("operatorTrivy"))
+		})
+	})
 })

@@ -73,6 +73,7 @@
  - **[candi]** Added lock the node name during node bootstrap. [#12996](https://github.com/deckhouse/deckhouse/pull/12996)
  - **[candi]** Fixed `bashible` configure-kubelet step. [#12722](https://github.com/deckhouse/deckhouse/pull/12722)
  - **[chrony]** Fixed `chrony` exporter CVE vulnerabilities. [#13317](https://github.com/deckhouse/deckhouse/pull/13317)
+ - **[cloud-provider-aws]** fix root_block_device converge [#14429](https://github.com/deckhouse/deckhouse/pull/14429)
  - **[cloud-provider-aws]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-aws]** Added cloud-controller-manager continues processing routes creation without blocking, even when errors occur. [#13350](https://github.com/deckhouse/deckhouse/pull/13350)
  - **[cloud-provider-aws]** Bumped `terraform-provider-aws` to `5.83.1`. [#11546](https://github.com/deckhouse/deckhouse/pull/11546)
@@ -106,7 +107,6 @@
  - **[cloud-provider-zvirt]** Fixed `zVirt` cloud-discoverer panic. [#13462](https://github.com/deckhouse/deckhouse/pull/13462)
  - **[cni-cilium]** Added the hook for the `EgressGateway` controller to clean up stale system node labels. [#12971](https://github.com/deckhouse/deckhouse/pull/12971)
  - **[cni-cilium]** Added restoring/hiding network access to `cilium` endpoint (cep) when higher/lower priority cep was removed/added. [#12793](https://github.com/deckhouse/deckhouse/pull/12793)
- - **[control-plane-manager]** correct indentation of the 'certSANs' in v1beta4 template. [#14559](https://github.com/deckhouse/deckhouse/pull/14559)
  - **[control-plane-manager]** Fixed issues with etcd backup restoration process, ensuring reliable master node scaling from 1 to 3. [#14083](https://github.com/deckhouse/deckhouse/pull/14083)
     Users can now restore etcd backups and scale their master nodes efficiently without encountering previous errors.
  - **[control-plane-manager]** Fix default behaviour for etcd backup. [#14146](https://github.com/deckhouse/deckhouse/pull/14146)
@@ -172,6 +172,7 @@
  - **[prometheus]** Kube-rbac-proxy stale cache request timeout has been set. [#11986](https://github.com/deckhouse/deckhouse/pull/11986)
     All components using kube-rbac-proxy will be restarted.
  - **[registry-packages-proxy]** Fixed `registry-packages-proxy` CVE vulnerabilities. [#13307](https://github.com/deckhouse/deckhouse/pull/13307)
+ - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14688](https://github.com/deckhouse/deckhouse/pull/14688)
  - **[runtime-audit-engine]** Fixed usage lib in `falco`. [#13475](https://github.com/deckhouse/deckhouse/pull/13475)
  - **[runtime-audit-engine]** Fixed `falco` CVE vulnerabilities. [#13318](https://github.com/deckhouse/deckhouse/pull/13318)
  - **[service-with-healthchecks]** change port kube-rbac-proxy in agent DaemonSet [#13891](https://github.com/deckhouse/deckhouse/pull/13891)

@@ -20,13 +20,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"slices"
+	"strings"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
@@ -40,6 +45,7 @@ const (
 	systemNamespace                     = "kube-system"
 	k8sAutomaticVersion                 = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
+	MigratedModulesRequirementFieldName = "migratedModules"
 )
 
 type RequirementsChecker[T any] interface {
@@ -54,6 +60,30 @@ type Check[T any] interface {
 type NotMetReason struct {
 	Reason  string
 	Message string
+}
+
+// CheckerOption represents an option for configuring a Checker
+type CheckerOption func(*CheckerConfig)
+
+// CheckerConfig holds configuration for a Checker
+type CheckerConfig struct {
+	logger *log.Logger
+}
+
+// WithLogger sets the logger for the checker
+func WithLogger(logger *log.Logger) CheckerOption {
+	return func(config *CheckerConfig) {
+		config.logger = logger
+	}
+}
+
+// applyOptions applies the given options to the config
+func applyOptions(options []CheckerOption) *CheckerConfig {
+	config := &CheckerConfig{}
+	for _, option := range options {
+		option(config)
+	}
+	return config
 }
 
 var _ RequirementsChecker[v1alpha1.DeckhouseRelease] = (*Checker[v1alpha1.DeckhouseRelease])(nil)
@@ -88,9 +118,16 @@ func (c *Checker[T]) MetRequirements(ctx context.Context, v *T) []NotMetReason {
 // 1) deckhouse version check
 // 2) deckhouse requirements check
 // 3) deckhouse kubernetes version check
+// 4) migrated modules check
 //
 // for more checks information - look at extenders
-func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, metricStorage metric.Storage, options ...CheckerOption) (*Checker[v1alpha1.DeckhouseRelease], error) {
+	config := applyOptions(options)
+
+	if config.logger == nil {
+		config.logger = log.NewLogger().Named("deckhouse-release-requirements-checker")
+	}
+
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err
@@ -101,8 +138,9 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
+			newMigratedModulesCheck(k8sclient, metricStorage, config.logger),
 		},
-		logger: logger,
+		logger: config.logger,
 	}, nil
 }
 
@@ -305,12 +343,18 @@ func (c *disruptionCheck) Verify(_ context.Context, pointer *v1alpha1.Release) e
 // 1) module release requirements check
 //
 // for more checks information - look at extenders
-func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
+func NewModuleReleaseRequirementsChecker(exts *extenders.ExtendersStack, options ...CheckerOption) (*Checker[v1alpha1.ModuleRelease], error) {
+	config := applyOptions(options)
+
+	if config.logger == nil {
+		config.logger = log.NewLogger().Named("module-release-requirements-checker")
+	}
+
 	return &Checker[v1alpha1.ModuleRelease]{
 		fns: []Check[v1alpha1.ModuleRelease]{
 			newModuleRequirementsCheck(exts),
 		},
-		logger: logger,
+		logger: config.logger,
 	}, nil
 }
 
@@ -337,4 +381,102 @@ func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleR
 	}
 
 	return nil
+}
+
+type migratedModulesCheck struct {
+	name string
+
+	k8sclient     client.Client
+	metricStorage metric.Storage
+	logger        *log.Logger
+}
+
+func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
+	return &migratedModulesCheck{
+		name:          "migrated modules check",
+		k8sclient:     k8sclient,
+		metricStorage: metricStorage,
+		logger:        logger,
+	}
+}
+
+func (c *migratedModulesCheck) GetName() string {
+	return c.name
+}
+
+func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
+
+	requirements := dr.GetRequirements()
+	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
+	if !exists || migratedModules == "" {
+		return nil
+	}
+
+	modules := strings.Split(migratedModules, ",")
+	for i, module := range modules {
+		modules[i] = strings.TrimSpace(module)
+	}
+
+	modules = slices.DeleteFunc(modules, func(module string) bool {
+		return module == ""
+	})
+
+	if len(modules) == 0 {
+		return nil
+	}
+
+	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
+
+	moduleSources := &v1alpha1.ModuleSourceList{}
+	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
+		return fmt.Errorf("failed to list ModuleSources: %w", err)
+	}
+
+	for _, moduleName := range modules {
+		found := false
+
+		for _, source := range moduleSources.Items {
+			if c.isModuleAvailableInSource(moduleName, &source) {
+				found = true
+				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
+				break
+			}
+		}
+
+		if !found {
+			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
+			c.setMigratedModuleNotFoundAlert(moduleName)
+
+			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
+		}
+	}
+
+	c.logger.Debug("all migrated modules found in registries")
+
+	return nil
+}
+
+// isModuleAvailableInSource checks if a module is available in a specific ModuleSource
+func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
+	// Check if module is in the available modules list
+	for _, availableModule := range source.Status.AvailableModules {
+		if availableModule.Name == moduleName {
+			// If there's a pull error, the module is not actually available
+			return availableModule.PullError == ""
+		}
+	}
+	return false
+}
+
+// setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
+func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
+	// Set the metric value to 1 to trigger alert
+	c.metricStorage.Grouped().GaugeSet(
+		metrics.MigratedModuleNotFoundGroup,
+		metrics.MigratedModuleNotFoundMetricName,
+		1,
+		map[string]string{
+			"module_name": moduleName,
+		})
 }
