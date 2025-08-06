@@ -1,4 +1,13 @@
 type: object
+x-examples:
+  host: myhost
+  username: myuname
+  password: myPaSsWd
+  vmFolderPath: dev/test
+  regionTagCategory: myregtagcat
+  zoneTagCategory: myzonetagcat
+  region: myreg
+  zones: ["zonea", "zoneb"]
 required:
   - host
   - username
