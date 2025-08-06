@@ -73,8 +73,7 @@ func filterHasNotLabelName(secret *unstructured.Unstructured) (go_hook.FilterRes
 		return true, nil
 	}
 
-	val, _ := labels["name"]
-	if val != secret.GetName() {
+	if labels["name"] != secret.GetName() {
 		return true, nil
 	}
 
