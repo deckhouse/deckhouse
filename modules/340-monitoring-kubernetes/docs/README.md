@@ -5,7 +5,7 @@ description: "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform
 
 The monitoring-kubernetes module provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
 
-Key features:
+Module features:
 
 - provides an opportunity to plan infrastructure resources (Capacity planning);
 - monitors the container runtime version (docker, containerd) on each node and checks it for compliance with the allowed versions;
