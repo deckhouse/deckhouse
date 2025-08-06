@@ -21,8 +21,8 @@ spec:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
   {{- $tolerations := include "helm_lib_tolerations" (tuple . "system") | fromYaml }}
-  {{- if $tolerations }}
-  tolerations: {{ $tolerations | toJson }}
+  {{- if $tolerations.tolerations }}
+  tolerations: {{ $tolerations.tolerations | toYaml | nindent 2 }}
   {{- end }}
   {{- if (include "helm_lib_ha_enabled" .) }}
   highAvailability: true
