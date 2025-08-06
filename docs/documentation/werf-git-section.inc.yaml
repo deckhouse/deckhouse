@@ -44,9 +44,15 @@
     setup: ['**/*']
   includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
 - add: /
-  to: /src/oss
+  to: /src/modules
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['**/oss.yaml']
+  excludePaths:
+    - docs
+    - candi
+  includePaths:
+    - '**/docs/README.md'
+    - '**/docs/readme.md'
+    - '**/oss.yaml'

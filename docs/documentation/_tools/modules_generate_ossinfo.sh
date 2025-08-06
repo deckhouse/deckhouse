@@ -17,7 +17,7 @@
 #
 # Copy files with information about the licenses used in modules to _data/ossinfo folder (jekyll will construct an array with this data)
 
-mkdir -p ${OSS_TARGET_DIR}
+mkdir -p $(dirname ${OSS_TARGET_FILE})
 
 find ${OSS_SOURCE_DIR} -name 'oss.yaml' | while read -r file; do
   dir_name=$(basename $(dirname "$file"))
