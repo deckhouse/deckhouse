@@ -42,17 +42,17 @@ mount:
 - from: tmp_dir
   to: /root/.cache/bazel
 import:
-- image: libs/zlib
-  add: /
-  to: /libs/zlib
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
+# - image: libs/zlib
+#   add: /
+#   to: /libs/zlib
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
 # - image: tools/elfutils
 #   add: /
 #   to: /tools/elfutils
@@ -119,17 +119,17 @@ import:
 #     - usr/bin
 #     - usr/sbin
 #     - usr/share
-- image: libs/glibc
-  add: /
-  to: /libs/glibc
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
+# - image: libs/glibc
+#   add: /
+#   to: /libs/glibc
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
