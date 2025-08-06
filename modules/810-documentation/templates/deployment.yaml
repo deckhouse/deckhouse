@@ -192,7 +192,7 @@ spec:
   selector:
     app: documentation
   ports:
-    - name: metrics
+    - name: http-metrics
       port: 9090
       targetPort: http-metrics
       protocol: TCP
