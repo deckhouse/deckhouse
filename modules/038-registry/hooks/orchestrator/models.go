@@ -43,6 +43,8 @@ type Params struct {
 	TTL        string
 	Scheme     string
 	CA         *x509.Certificate // optional
+
+	EnableSoftSwitch bool
 }
 
 type Inputs struct {

@@ -19,6 +19,7 @@ package orchestrator
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -284,5 +285,14 @@ func configFromSecret(secret v1core.Secret) (Params, error) {
 		}
 		ret.CA = cert
 	}
+
+	if rawEnableSoftSwitch := secret.Data["enableSoftSwitch"]; len(rawEnableSoftSwitch) > 0 {
+		enableSoftSwitch, err := strconv.ParseBool(string(rawEnableSoftSwitch))
+		if err != nil {
+			return Params{}, fmt.Errorf("failed to parse enableSoftSwitch option: %w", err)
+		}
+		ret.EnableSoftSwitch = enableSoftSwitch
+	}
+
 	return ret, ret.Validate()
 }
