@@ -1686,7 +1686,7 @@ entries:
           - title:
              en: Configuration
              ru: Настройки
-            url: /modules/csi-vsphere/configuration.htmll
+            url: /modules/csi-vsphere/configuration.html
           - title:
              en: Examples
              ru: Примеры
