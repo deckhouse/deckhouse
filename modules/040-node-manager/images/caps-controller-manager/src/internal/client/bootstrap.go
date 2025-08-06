@@ -40,6 +40,7 @@ import (
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
@@ -95,7 +96,12 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 
 	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
-		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		var err error
+		if instanceScope.SSHLegacyMode {
+			sshCl, err = clissh.CreateSSHClient(instanceScope)
+		} else {
+			sshCl, err = gossh.CreateSSHClient(instanceScope)
+		}
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
 			return false
@@ -181,7 +187,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	check := c.checkTaskManager.spawn(taskID(address), func() bool {
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
 		var sshCl ssh.SSH
-		sshCl, err := gossh.CreateSSHClient(instanceScope)
+		var err error
+		if instanceScope.SSHLegacyMode {
+			sshCl, err = clissh.CreateSSHClient(instanceScope)
+		} else {
+			sshCl, err = gossh.CreateSSHClient(instanceScope)
+		}
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
 		}
