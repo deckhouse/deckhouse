@@ -1,4 +1,13 @@
 type: object
+required:
+  - host
+  - username
+  - password
+  - vmFolderPath
+  - regionTagCategory
+  - zoneTagCategory
+  - region
+  - zones
 properties:
   host:
     type: string
