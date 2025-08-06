@@ -1,12 +1,14 @@
 ---
 title: Information about used software
 description: Information about the software used in the Deckhouse Kubernetes Platform.
-permalink: en/oss_info.html
+permalink: en/reference/oss_info.html
 ---
+
+<p>This page presents a list of third-party software used in the Deckhouse Kubernetes Platform.</p><br />
 
 <div markdown="0">
     <div class="oss">
-        {% assign sorted = site.data.ossinfo-cumulative | sort_natural: 'name' %}
+        {% assign sorted = site.data.ossinfo | sort_natural: 'name' %}
         {% for item in sorted %}
             <div class="oss__item">
                 <div class="oss__item-logo">

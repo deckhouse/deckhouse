@@ -1,14 +1,17 @@
 ---
 title: Информация об используемом ПО
-permalink: ru/oss_info.html
+permalink: ru/reference/oss_info.html
 description: Информация о стороннем ПО, используемом в Deckhouse Kubernetes Platform. 
 lang: ru
 ---
 
+<p>На этой странице представлен список стороннего ПО, используемого в Deckhouse Kubernetes Platform.</p><br />
+
 <div markdown="0">
     <div class="oss">
-        {% assign sorted = site.data.ossinfo-cumulative | sort_natural: 'name' %}
-        {% for item in sorted %}
+        {%- assign sorted = site.data.ossinfo | sort_natural: 'name' %}
+        {%- for item in sorted %}
+          {%- if item.name.size > 0 and item.link.size > 0 and item.description.size > 0 and item.license.size > 0 %}
             <div class="oss__item">
                 <div class="oss__item-logo">
                     {% if item.logo %}
@@ -27,6 +30,7 @@ lang: ru
                     {{ item.license }}
                 </div>
             </div>
-        {% endfor %}
+          {%- endif %}  
+        {%- endfor %}
     </div>
 </div>

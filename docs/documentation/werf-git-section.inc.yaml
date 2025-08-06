@@ -43,3 +43,10 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
+- add: /
+  to: /src/oss
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['**/oss.yaml']

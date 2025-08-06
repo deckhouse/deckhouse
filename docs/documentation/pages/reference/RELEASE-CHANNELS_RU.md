@@ -1,13 +1,11 @@
 ---
 title: Каналы обновлений
-permalink: ru/deckhouse-release-channels.html
-layout: page
+permalink: ru/reference/release-channels.html
 toc: false
 lang: ru
 ---
 
-{% capture asset_url %}{%- css_asset_tag releases %}[_assets/css/releases.css]{% endcss_asset_tag %}{% endcapture %}
-<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
+<link href='../assets/css/releases.css?v={{ 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 

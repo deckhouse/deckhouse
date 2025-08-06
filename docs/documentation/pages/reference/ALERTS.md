@@ -1,6 +1,6 @@
 ---
 title: "The list of alerts"
-permalink: en/alerts.html
+permalink: en/reference/alerts.html
 ---
 <!-- mirrored on /admin/configuration/monitoring/alert-settings.html  -->
 

@@ -365,7 +365,7 @@ entries:
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html      
+                          url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with VMware Cloud Director
                         ru: Интеграция с VMware Cloud Director
@@ -1087,18 +1087,6 @@ entries:
           url: /architecture/installation.html
           draft: true
         - title:
-            en: Supported K8s & OS versions
-            ru: Поддерживаемые версии K8s и ОС
-          url: /supported_versions.html
-        - title:
-            en: Revision comparison
-            ru: Сравнение редакций
-          url: /revision-comparison.html
-        - title:
-            en: Alerts
-            ru: Алерты
-          url: /alerts.html
-        - title:
             en: Module development
             ru: Разработка модуля
           folders:
@@ -1214,11 +1202,6 @@ entries:
                 en: Sysctl parameters
                 ru: Параметры sysctl
               url: /architecture/security/sysctl.html
-        - title:
-            en: Used software
-            ru: Используемое ПО
-          url: /oss_info.html
-
     - title:
         en: Reference
         ru: Справка
@@ -1235,6 +1218,26 @@ entries:
                 en: Custom Resources
                 ru: Custom Resources
               url: /reference/api/cr.html
+        - title:
+            en: Release channels
+            ru: Каналы обновлений
+          url: /reference/release-channels.html
+        - title:
+            en: Supported K8s & OS versions
+            ru: Поддерживаемые версии K8s и ОС
+          url: /reference/supported_versions.html
+        - title:
+            en: Revision comparison
+            ru: Сравнение редакций
+          url: /reference/revision-comparison.html
+        - title:
+            en: Alerts
+            ru: Алерты
+          url: /reference/alerts.html
+        - title:
+            en: Used software
+            ru: Используемое ПО
+          url: /reference/oss_info.html
     - title:
         en: Console utilities
         ru: Консольные утилиты

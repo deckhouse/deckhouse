@@ -1,6 +1,6 @@
 ---
 title: Deckhouse Kubernetes Platform editions comparison
-permalink: en/revision-comparison.html
+permalink: en/reference/revision-comparison.html
 toc: false
 ---
 

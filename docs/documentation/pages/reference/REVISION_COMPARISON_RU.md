@@ -1,6 +1,6 @@
 ---
 title: Сравнение редакций Deckhouse Kubernetes Platform
-permalink: ru/revision-comparison.html
+permalink: ru/reference/revision-comparison.html
 lang: ru
 toc: false
 ---

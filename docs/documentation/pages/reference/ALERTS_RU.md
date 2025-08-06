@@ -1,6 +1,6 @@
 ---
 title: "Список алертов"
-permalink: ru/alerts.html
+permalink: ru/reference/alerts.html
 lang: ru
 ---
 
