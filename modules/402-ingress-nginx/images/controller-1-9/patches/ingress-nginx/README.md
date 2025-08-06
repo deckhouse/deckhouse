@@ -61,7 +61,7 @@ Fix cve vulnerabilities.
 
 Build nginx for controller on ALT Linux.
 
-### 012-protect-validation-port.patch
+### 012-validation-mode.patch
 
 Slightly tunes some logic related to validating ingress objects.
 
