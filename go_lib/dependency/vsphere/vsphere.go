@@ -28,6 +28,8 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/pbm"
+	pbmTypes "github.com/vmware/govmomi/pbm/types"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
@@ -83,6 +85,11 @@ type Output struct {
 	ZonedDataStores []ZonedDataStore `json:"datastores"`
 }
 
+type StoragePolicy struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
 var (
 	dnsLabelRegex   = regexp.MustCompile(`^(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9]*[a-zA-Z0-9])$`)
 	dnsLabelMaxSize = 150
@@ -133,6 +140,49 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 	}
 
 	return &output, nil
+}
+
+// pbmClientFromGovmomiClient creates a new pbm client from given govmomi client.
+// Can we have it in govmomi client as a field similar to tag client?
+// We should not create a new pbm client every time we need it.
+func pbmClientFromGovmomiClient(ctx context.Context, client *govmomi.Client) (*pbm.Client, error) {
+	pc, err := pbm.NewClient(ctx, client.Client)
+	return pc, err
+}
+
+// PolicyIDByName finds a SPBM storage policy by name and returns its ID.
+func (v *client) ListPolicies() ([]StoragePolicy, error) {
+	pc, err := pbmClientFromGovmomiClient(context.TODO(), v.client)
+	if err != nil {
+		return nil, err
+	}
+
+	rtype := pbmTypes.PbmProfileResourceType{
+		ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
+	}
+
+	category := pbmTypes.PbmProfileCategoryEnumREQUIREMENT
+
+	ids, err := pc.QueryProfile(context.TODO(), rtype, string(category))
+	if err != nil {
+		return nil, err
+	}
+
+	profiles, err := pc.RetrieveContent(context.TODO(), ids)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]StoragePolicy, len(profiles))
+	for _, profile := range profiles {
+		base := profile.GetPbmProfile()
+		result = append(result, StoragePolicy{
+			Name: base.Name,
+			ID:   base.ProfileId.UniqueId,
+		})
+	}
+
+	return result, nil
 }
 
 func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
