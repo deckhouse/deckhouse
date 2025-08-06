@@ -122,7 +122,7 @@ func moduleConfigValidationHandler(
 					definition := module.GetModuleDefinition()
 
 					if definition.IsExperimental() && !allowExperimentalModules {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
 				}
 			}
@@ -153,7 +153,7 @@ func moduleConfigValidationHandler(
 					definition := module.GetModuleDefinition()
 
 					if definition.IsExperimental() && !allowExperimentalModules {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
 				}
 			}
