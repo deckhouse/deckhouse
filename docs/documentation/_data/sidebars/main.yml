@@ -548,12 +548,12 @@ entries:
                         ru: Шифрование трафика между подами
                       url: /admin/configuration/network/internal/encrypting-pods.html
                     - title:
-                        en: Configuring Cluster Network Stack Visualization
+                        en: Configuring cluster network stack visualization
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching from CNI flannel to cilium
-                        ru: Переключение с CNI flannel на cilium
+                        en: Switching CNI from Flannel to Cilium
+                        ru: Переключение CNI с Flannel на Cilium
                       url: /admin/configuration/network/internal/flannel-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
