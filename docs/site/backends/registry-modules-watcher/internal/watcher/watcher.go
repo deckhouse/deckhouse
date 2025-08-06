@@ -18,12 +18,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const leaseLabel = "deckhouse.io/documentation-builder-sync"
@@ -35,6 +36,7 @@ type watcher struct {
 	logger    *log.Logger
 }
 
+// nolint: revive
 func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *watcher {
 	return &watcher{
 		kClient:   kClient,
@@ -56,6 +58,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(ctx 
 	)
 
 	informer := factory.Coordination().V1().Leases().Informer()
+	// nolint:errcheck
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)

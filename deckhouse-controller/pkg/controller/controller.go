@@ -302,6 +302,7 @@ func NewDeckhouseController(
 		loader,
 		operator.MetricStorage,
 		settingsContainer,
+		exts,
 	)
 
 	return &DeckhouseController{

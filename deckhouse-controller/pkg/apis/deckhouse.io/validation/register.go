@@ -25,6 +25,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 type registerer interface {
@@ -38,6 +39,7 @@ type moduleStorage interface {
 
 type moduleManager interface {
 	IsModuleEnabled(name string) bool
+	GetEnabledModuleNames() []string
 }
 
 // RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
@@ -49,9 +51,11 @@ func RegisterAdmissionHandlers(
 	storage moduleStorage,
 	metricStorage metric.Storage,
 	settings *helpers.DeckhouseSettingsContainer,
+	exts *extenders.ExtendersStack,
 ) {
 	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
+	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
 }

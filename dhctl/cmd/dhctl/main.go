@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
@@ -460,19 +459,24 @@ func restoreTerminal() func() {
 }
 
 func initGlobalVars() {
-	// get current location of called binary
-	dhctlPath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
-	if err != nil {
-		panic(err)
-	}
-	dhctlPath = filepath.Dir(dhctlPath)
-	if dhctlPath == "/" {
-		dhctlPath = "" // All our paths are already absolute by themselves
-	}
+	dhctlPath := ""
 
-	// set path to ssh and terraform binaries
-	if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
-		panic(err)
+	if val, ok := os.LookupEnv("DHCTL_SKIP_LOOKUP_EXEC_PATH"); !ok || val != "yes" {
+		// get current location of called binary
+		var err error
+		dhctlPath, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
+		if err != nil {
+			panic(err)
+		}
+		dhctlPath = filepath.Dir(dhctlPath)
+		if dhctlPath == "/" {
+			dhctlPath = "" // All our paths are already absolute by themselves
+		}
+
+		// set path to ssh and terraform binaries
+		if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
+			panic(err)
+		}
 	}
 
 	commandsEnv := os.Getenv("DHCTL_CLI_ALLOWED_COMMANDS")
@@ -485,7 +489,6 @@ func initGlobalVars() {
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
 	app.InitGlobalVars(dhctlPath)
-	infrastructure.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 }
