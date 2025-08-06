@@ -52,35 +52,51 @@ discovery:
 `
 
 const moduleValuesA = `
-    internal:
-      storageClasses:
-      - name: mydsname1
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash1/
-        path: /my/ds/path/mydsname1
-        zones: ["zonea", "zoneb"]
-      - name: mydsname2
-        datastoreType: Datastore
-        datastoreURL: ds:///vmfs/volumes/hash2/
-        path: /my/ds/path/mydsname2
-        zones: ["zonea", "zoneb"]
-      compatibilityFlag: ""
-      providerDiscoveryData:
-        datacenter: X1
-        zones: ["aaa", "bbb"]
-      providerClusterConfiguration:
-        provider:
-          server: myhost
-          username: myuname
-          password: myPaSsWd
-          insecure: true
-        regionTagCategory: myregtagcat
-        zoneTagCategory: myzonetagcat
-        region: myreg
-        vmFolderPath: dev/test
+host: myhost
+username: myuname
+password: myPaSsWd
+vmFolderPath: dev/test
+regionTagCategory: myregtagcat
+zoneTagCategory: myzonetagcat
+region: myreg
+zones: ["zonea", "zoneb"]
+internal:
+  storageClasses:
+  - name: mydsname1
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/hash1/
+    path: /my/ds/path/mydsname1
+    zones: ["zonea", "zoneb"]
+  - name: mydsname2
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/hash2/
+    path: /my/ds/path/mydsname2
+    zones: ["zonea", "zoneb"]
+  compatibilityFlag: ""
+  providerDiscoveryData:
+    datacenter: X1
+    zones: ["aaa", "bbb"]
+  providerClusterConfiguration:
+    provider:
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure: true
+    regionTagCategory: myregtagcat
+    zoneTagCategory: myzonetagcat
+    region: myreg
+    vmFolderPath: dev/test
 `
 
 const moduleValuesB = `
+    host: myhost
+    username: myuname
+    password: myPaSsWd
+    vmFolderPath: dev/test
+    regionTagCategory: myregtagcat
+    zoneTagCategory: myzonetagcat
+    region: myreg
+    zones: ["zonea", "zoneb"]
     internal:
       storageClasses:
       - name: mydsname1
