@@ -23,4 +23,9 @@ jwt:
       valueExpression: 'claims.name'
     - key: 'user-authn.deckhouse.io/preferred_username'
       valueExpression: 'has(claims.preferred_username) ? claims.preferred_username : null'
+  userValidationRules:
+  - expression: "!user.username.startsWith('system:')"
+    message: 'username cannot used reserved system: prefix'
+  - expression: "user.groups.all(group, !group.startsWith('system:'))"
+    message: 'groups cannot used reserved system: prefix'          
 {{- end }}
