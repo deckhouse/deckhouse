@@ -33,10 +33,9 @@ The `node-manager` module is responsible for managing nodes and has the followin
      Available for both [cloud providers](#scaling-nodes-in-the-cloud) and static nodes (when using [Cluster API Provider Static](#working-with-static-nodes)).
 5. Managing Linux users on nodes.
 6. Managing GPU resources on nodes:
-   * Automatic detection and installation of NVIDIA GPU drivers and device plugins on nodes with GPUs.
-   * Configurable GPU sharing modes per NodeGroup – Exclusive (no sharing), time-slicing (concurrent sharing of one GPU by multiple Pods), and NVIDIA MIG (splitting a GPU into multiple instances).
-   * Monitoring integration — automatic GPU metrics collection through DCGM Exporter, plus ready-made Grafana dashboards for visualization and alerting.
-
+   * Automatic detection and enablement of NVIDIA GPU.
+   * Configurable GPU sharing modes per NodeGroup: Exclusive, TimeSlicing, MIG.
+   * Monitoring integration — ready-made Grafana dashboards are available to visualize key GPU metrics.
 
 Nodes are managed through the [NodeGroup](cr.html#nodegroup) resource, and each node group performs specific tasks. Below are examples of node groups pooled by their tasks performed:
 
