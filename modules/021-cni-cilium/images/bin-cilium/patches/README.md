@@ -65,6 +65,6 @@ For HostPort pseudo-serivces always use random LB algo. When bpf-lb-algorithm-an
 
 Added an implementation of the Least Connections load balancing algorithm.
 
-## 012-added-kernel-verifier-stats-logging.patch 
+## 013-added-kernel-verifier-stats-logging.patch 
 
 Added kernel verifier stats logging on bpf prog loading
