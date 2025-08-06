@@ -87,6 +87,9 @@ spec:
           - containerPort: 8081
             name: http
             protocol: TCP
+          - containerPort: 9090
+            name: http-metrics
+            protocol: TCP
           startupProbe:
             httpGet:
               path: /healthz
