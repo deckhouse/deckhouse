@@ -41,6 +41,7 @@ import (
 
 type Client interface {
 	GetZonesDatastores() (*Output, error)
+	ListPolicies() ([]StoragePolicy, error)
 }
 
 type client struct {
