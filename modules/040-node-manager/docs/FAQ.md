@@ -1323,4 +1323,4 @@ See examples in [Examples → GPU nodes](../node-manager/examples.html#example-g
 
 ## Are AMD or Intel GPUs supported?
 
-At this time, Deckhouse automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.
+At this time, Deckhouse Kubernetes Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.

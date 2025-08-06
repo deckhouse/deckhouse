@@ -89,7 +89,7 @@ Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**. The examples
 below demonstrate three common GPU operating modes (Exclusive, TimeSlicing,
 MIG).
 
-> **Tip:** GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
+> GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
 > regular workloads don’t land there by accident.
 > A workload that needs a GPU just adds the matching `tolerations`
 > and `nodeSelector`.

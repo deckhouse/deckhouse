@@ -1060,7 +1060,7 @@ spec:
 
 > Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
-Полная схема полей находится в [описании CR `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
 ### 2. Установите драйвер NVIDIA и nvidia-container-toolkit
 
@@ -1212,7 +1212,7 @@ Allocatable:
 
 #### Вариант A. Вызов `nvidia-smi` из контейнера
 
-Создайте в кластере Job:
+Создайте в кластере задачу (Job):
 
 ```yaml
 apiVersion: batch/v1
@@ -1303,8 +1303,8 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
 
 ## Какие режимы работы GPU поддерживаются?
 
-* **Exclusive** — узел публикует ресурс `nvidia.com/gpu`; каждому Pod выделяется целый GPU.
-* **TimeSlicing** — временное разделение одного GPU между несколькими Pod (по умолчанию `partitionCount: 4`), при этом Pod по-прежнему запрашивает `nvidia.com/gpu`.
+* **Exclusive** — узел публикует ресурс `nvidia.com/gpu`; каждому поду выделяется целый GPU.
+* **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
 * **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`. Полный перечень профилей и ограничений см. в [**NVIDIA MIG User Guide**](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/).
 
 Примеры см. в разделе [Примеры → GPU-узлы](../node-manager/examples.html#пример-gpu-nodegroup).
@@ -1331,4 +1331,4 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
 
 ## Поддерживаются ли AMD или Intel GPU?
 
-Сейчас Deckhouse автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.
+Сейчас Deckhouse Kubernetes Platform автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.
