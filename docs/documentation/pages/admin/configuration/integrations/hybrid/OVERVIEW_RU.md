@@ -187,7 +187,7 @@ volumeBindingMode: WaitForFirstConsumer
 1. Удалите объект `ValidatingAdmissionPolicyBinding`, чтобы избежать конфликтов:
 
    ```shell
-   d8 delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
+   d8 k delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
    ```
 
 1. Примените два созданных на предыдущем шаге манифеста в кластере.
@@ -195,8 +195,8 @@ volumeBindingMode: WaitForFirstConsumer
 1. После применения дождитесь активации модуля `cloud-provider-yandex` и появления CRD yandexinstanceclasses:
 
    ```shell
-   d8 get mc cloud-provider-yandex
-   d8 get crd yandexinstanceclasses
+   d8 k get mc cloud-provider-yandex
+   d8 k get crd yandexinstanceclasses
    ```
 
 1. Внесите необходимые значения в приведённые ниже манифесты и примените их в кластере. Пример:
@@ -237,9 +237,9 @@ volumeBindingMode: WaitForFirstConsumer
 1. Для диагностики состояния и поиска возможных проблем проверьте логи `machine-controller-manager`:
 
    ```shell
-   d8 -n d8-cloud-provider-yandex get machine
-   d8 -n d8-cloud-provider-yandex get machineset
-   d8 -n d8-cloud-instance-manager logs deploy/machine-controller-manager
+   d8 k -n d8-cloud-provider-yandex get machine
+   d8 k -n d8-cloud-provider-yandex get machineset
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager
    ```
 
 ## Гибридный кластер с VCD
@@ -332,7 +332,7 @@ volumeBindingMode: WaitForFirstConsumer
 1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
    ```shell
-   d8 get pods -n d8-cloud-provider-vcd
+   d8 k get pods -n d8-cloud-provider-vcd
    ```
 
 1. Перезагрузите master-узел и дождитесь завершения инициализации.
@@ -374,5 +374,5 @@ volumeBindingMode: WaitForFirstConsumer
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 
    ```shell
-   d8 get nodes -o wide
+   d8 k get nodes -o wide
    ```

@@ -192,7 +192,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 1. Remove the `ValidatingAdmissionPolicyBinding` object to avoid conflicts:
 
    ```shell
-   d8 delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
+   d8 k delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
    ```
 
 1. Apply the manifests in the cluster.
@@ -200,8 +200,8 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 1. Wait for the `cloud-provider-yandex` module activation and CRD creation:
 
    ```shell
-   d8 get mc cloud-provider-yandex
-   d8 get crd yandexinstanceclasses
+   d8 k get mc cloud-provider-yandex
+   d8 k get crd yandexinstanceclasses
    ```
 
 1. Create and apply NodeGroup and YandexInstanceClass manifests:
@@ -242,9 +242,9 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 1. Check the `machine-controller-manager` logs for troubleshooting:
 
    ```shell
-   d8 -n d8-cloud-provider-yandex get machine
-   d8 -n d8-cloud-provider-yandex get machineset
-   d8 -n d8-cloud-instance-manager logs deploy/machine-controller-manager
+   d8 k -n d8-cloud-provider-yandex get machine
+   d8 k -n d8-cloud-provider-yandex get machineset
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager
    ```
 
 ## Hybrid cluster with VCD
@@ -337,7 +337,7 @@ Before you begin, ensure the following conditions are met:
 1. Verify that all pods in the `d8-cloud-provider-vcd` namespace are in the `Running` state:
 
    ```shell
-   d8 get pods -n d8-cloud-provider-vcd
+   d8 k get pods -n d8-cloud-provider-vcd
    ```
 
 1. Reboot the master node and wait for initialization to complete.
@@ -379,5 +379,5 @@ Before you begin, ensure the following conditions are met:
 1. Verify that the required number of nodes has appeared in the cluster:
 
    ```shell
-   d8 get nodes -o wide
+   d8 k get nodes -o wide
    ```
