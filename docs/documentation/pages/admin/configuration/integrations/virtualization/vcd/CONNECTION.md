@@ -1,220 +1,229 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/virtualization/vcd/сonnection-and-authorization.html
+permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
 ---
 
-## Preparing the resources
+## Resource preparation
 
-To control VCD resources using Deckhouse Kubernetes Platform, the following resources must to be defined:
+To manage resources in VCD using the "Deckhouse Kubernetes Platform", the following resources must be configured in the system:
 
 * Organization
 * VirtualDataCenter
-* vApp
+* vApp (for the "Standard" placement scheme)
 * StoragePolicy
 * SizingPolicy
-* Network
+* Network (for the "Standard" placement scheme)
 * EdgeRouter
 * Catalog
 
-The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources
-must be provided by your VMware Cloud Director service provider.
+The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
-Network (internal network) can be configured by your VMware Cloud Director service provider, or you can configure it yourself.
-The following sections describe how you can configure the internal network.
+The Network (internal network) can be configured by your VMware Cloud Director service provider or by yourself. When using the "StandardWithNetwork" placement scheme, the network is created automatically. Below is a method for manually setting up an internal network.
 
 ### User permissions
 
 The user accessing the VMware Cloud Director API must have the following permissions:
 
-* The role of `Organization Administrator`
-  with the additional permission `Preserve All ExtraConfig Elements During OVF Import and Export`.
-* The permission `Preserve All ExtraConfig Elements During OVF Import and Export`
-  must be duplicated in the user's `Right Bundle`.
+* Role "Organization Administrator" with an additional rule "Preserve All ExtraConfig Elements During OVF Import and Export";
+* The "Preserve All ExtraConfig Elements During OVF Import and Export" rule must also be included in the user’s "Right Bundle".
 
 ### Adding a network
 
-1. Go to the **Networking** tab and click **NEW**:
-
-   ![Adding a network, step 1](../../../../images/cloud-provider-vcd/network-setup/Screenshot.png)
-
-1. Select the Data Center:
-
-   ![Adding a network, step 2](../../../../images/cloud-provider-vcd/network-setup/Screenshot2.png)
-
-1. At the **Network type** step, select **Routed**:
-
-   ![Adding a network, step 3](../../../../images/cloud-provider-vcd/network-setup/Screenshot3.png)
-
-1. Connect `EdgeRouter` to the network:
-
-   ![Adding a network, step 4](../../../../images/cloud-provider-vcd/network-setup/Screenshot4.png)
-
-1. Specify the network name and CIDR:
-
-   ![Adding a network, step 5](../../../../images/cloud-provider-vcd/network-setup/Screenshot5.png)
-
-1. Do not add **Static IP Pools** because DHCP will be used:
-
-   ![Adding a network, step 6](../../../../images/cloud-provider-vcd/network-setup/Screenshot6.png)
-
-1. Specify the DNS server addresses:
-
-   ![Adding a network, step 7](../../../../images/cloud-provider-vcd/network-setup/Screenshot7.png)
-
-### Configuring DHCP
-
-To provision nodes dynamically, enable the DHCP server for the internal network.
-
 {% alert level="info" %}
-We recommend allocating the beginning of the network address range to system consumers
-(control plane, frontend nodes, system nodes) and the rest to the DHCP pool.
-For example, for a `/24` mask network it would be enough to allocate 20 addresses to system consumers.
+This instruction applies only to the "Standard" placement scheme.
 {% endalert %}
 
-1. Click the **Networking** tab and open the network you created:
+1. Go to the "Networking" tab and click "NEW":
+
+   ![Add network, step 1](../../../../images/cloud-provider-vcd/network-setup/Screenshot.png)
+
+2. Select the desired "Data Center":
+
+   ![Add network, step 2](../../../../images/cloud-provider-vcd/network-setup/Screenshot2.png)
+
+3. In the "Network type" step, select "Routed":
+
+   ![Add network, step 3](../../../../images/cloud-provider-vcd/network-setup/Screenshot3.png)
+
+4. Connect the "EdgeRouter" to the network:
+
+   ![Add network, step 4](../../../../images/cloud-provider-vcd/network-setup/Screenshot4.png)
+
+5. Specify the network name and CIDR:
+
+   ![Add network, step 5](../../../../images/cloud-provider-vcd/network-setup/Screenshot5.png)
+
+6. Do not add "Static IP Pools" since DHCP will be used:
+
+   ![Add network, step 6](../../../../images/cloud-provider-vcd/network-setup/Screenshot6.png)
+
+7. Specify DNS server addresses:
+
+   ![Add network, step 7](../../../../images/cloud-provider-vcd/network-setup/Screenshot7.png)
+
+### DHCP setup
+
+{% alert level="info" %}
+This instruction applies only to the "Standard" placement scheme.
+{% endalert %}
+
+To dynamically provision nodes, enable the DHCP server for the internal network.
+
+{% alert level="info" %}
+We recommend reserving the beginning of the address range for system workloads (control plane, frontend nodes, system nodes), and using the rest for the DHCP pool.  
+For example, for a "/24" network, reserving 20 addresses for system workloads is sufficient.
+{% endalert %}
+
+1. Go to the "Networking" tab and open the created network:
 
    ![DHCP, step 1](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot.png)
 
-1. In the opened window, select **IP Management** -> **DHCP** -> **Activate**:
+2. In the opened window, select "IP Management" → "DHCP" → "Activate":
 
    ![DHCP, step 2](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot2.png)
 
-1. In the **General settings** tab, set the parameters as shown in the example:
+3. In the "General settings" tab, configure parameters as shown in the example:
 
    ![DHCP, step 3](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot3.png)
 
-1. Add a pool:
+4. Add a pool:
 
-   ![DHCP, step 3](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot4.png)
+   ![DHCP, step 4](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot4.png)
 
-1. Set the DNS server addresses:
+5. Specify DNS server addresses:
 
-   ![DHCP, step 3](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot5.png)
+   ![DHCP, step 5](../../../../images/cloud-provider-vcd/dhcp-setup/Screenshot5.png)
 
 ### Adding a vApp
 
-1. Switch to the **Data Centers** tab -> **vApps** -> **NEW** -> **New vApp**:
+{% alert level="info" %}
+This instruction applies only to the "Standard" placement scheme.
+{% endalert %}
 
-   ![Adding a vApp, step 1](../../../../images/cloud-provider-vcd/application-setup/Screenshot.png)
+1. Go to "Data Centers" → "vApps" → "NEW" → "New vApp":
 
-1. Specify a name and enable the vApp:
+   ![Add vApp, step 1](../../../../images/cloud-provider-vcd/application-setup/Screenshot.png)
 
-   ![Adding a vApp, step 2](../../../../images/cloud-provider-vcd/application-setup/Screenshot2.png)
+2. Specify a name and enable the vApp:
 
-### Adding a network to the vApp
+   ![Add vApp, step 2](../../../../images/cloud-provider-vcd/application-setup/Screenshot2.png)
 
-Once the vApp is created, connect the created internal network to it.
+### Adding a network to a vApp
 
-1. Switch to the **Data Centers** tab -> **vApps** and open the target vApp:
+{% alert level="info" %}
+This instruction applies only to the "Standard" placement scheme.
+{% endalert %}
 
-   ![Adding a network to the vApp, step 1](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+After creating the vApp, attach the created internal network to it.
 
-1. Go to the **Networks** tab and click **NEW**:
+1. Go to "Data Centers" → "vApps" and open the desired vApp:
 
-   ![Adding a network to the vApp, step 2](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+   ![Add network to vApp, step 1](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
 
-1. In the opened window, click the **Direct** type and select the network:
+2. Go to the "Networks" tab and click "NEW":
 
-   ![Adding a network to the vApp, step 3](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
+   ![Add network to vApp, step 2](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+
+3. In the pop-up window, select "Direct" type and choose the network:
+
+   ![Add network to vApp, step 3](../../../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
 
 ### Incoming traffic
 
-Incoming traffic should be routed to the edge router (ports `80`, `443`) using DNAT rules
-to be forwarded to a dedicated address on the internal network.  
-This address can be created by running MetalLB in L2 mode for dedicated frontend nodes.
+Incoming traffic must be directed to the edge router (ports "80", "443") using DNAT rules to the allocated address in the internal network.  
+This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 
-### Configuring DNAT/SNAT rules on the edge gateway
+### Configuring DNAT/SNAT rules on the Edge Gateway
 
-1. Navigate to the **Networking** tab -> **Edge Gateways** and open the edge gateway:
+1. Go to "Networking" → "Edge Gateways", open the edge gateway:
 
-   ![Configuring DNAT rules on the edge gateway, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+   ![DNAT setup, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
 
-1. Switch to the **Services** tab -> **NAT**:
+2. Go to "Services" → "NAT":
 
-   ![Configuring DNAT rules on the edge gateway, step 2](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
+   ![DNAT setup, step 2](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
-1. Add the following rules:
+3. Add the following rules:
 
-   ![Configuring DNAT rules on the edge gateway, step 3](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
+   ![DNAT setup, step 3](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
 
-   The first two rules are used for incoming traffic, while the third rule is used for SSH access to the control plane host (without this rule the installation will not be possible).
+   The first two rules are for incoming traffic, and the third is for SSH access to the control plane node (required for installation).
 
-1. To allow virtual machines to access the internet, configure SNAT rules following the example:
+4. To allow virtual machines to access the internet, configure SNAT rules as in the example:
 
-   ![Configuring SNAT rules on the edge gateway, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
+   ![SNAT setup, step 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
 
-   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the internet.
+   This rule allows VMs from the "192.168.199.0/24" subnet to access the internet.
 
-### Configuring a firewall
+### Firewall setup
 
-Once DNAT is configured, set up the firewall. Start by configuring the IP sets.
+{% alert level="info" %}
+This instruction applies only to the "Standard" placement scheme.
+{% endalert %}
 
-1. Switch to the **Security** tab -> **IP Sets**:
+After configuring DNAT, configure the firewall. Start by setting up IP sets.
 
-   ![Configuring the edge gateway firewall, step 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot.png)
+1. Go to "Security" → "IP Sets":
 
-1. Create the following set of IPs (the MetalLB address here is `.10` and the control plane node address is `.2`):
+   ![Firewall setup, step 1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot.png)
 
-   ![Configuring the edge gateway firewall, step 2-1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
+2. Create the following IP set (assuming the MetalLB address will be ".10" and the control plane node ".2"):
 
-   ![Configuring the edge gateway firewall, step 2-2](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
+   ![Firewall setup, step 2-1](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
+   ![Firewall setup, step 2-2](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
+   ![Firewall setup, step 2-3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot4.png)
 
-   ![Configuring the edge gateway firewall, step 2-3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot4.png)
+3. Add the following firewall rules:
 
-1. Add the following firewall rules:
-
-   ![Configuring the edge gateway firewall, step 3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot5.png)
+   ![Firewall setup, step 3](../../../../images/cloud-provider-vcd/edge-firewall/Screenshot5.png)
 
 ## Virtual machine template
 
 {% alert level="warning" %}
-The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
+The provider has been tested only with virtual machine templates based on "Ubuntu 22.04".
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
 
-The example below uses the OVA file provided by Ubuntu, updated to include two fixes.
-Those fixes are essential for CloudPermanent nodes to be provisioned correctly and to be able to mount CSI-created disks.
+In the example, an "OVA" file provided by Ubuntu is used, with two modifications.  
+These modifications are required for proper provisioning of CloudPermanent nodes and to allow attaching disks created by CSI.
 
-### Making a template from an OVA file
+### Preparing the template from an OVA file
 
-1. Download the [OVA file](https://cloud-images.ubuntu.com/jammy/):
+1. Download [the OVA file](https://cloud-images.ubuntu.com/jammy/):
 
-   ![Setting up the template, step 1](../../../../images/cloud-provider-vcd/template/Screenshot.png)
+   ![Template setup, step 1](../../../../images/cloud-provider-vcd/template/Screenshot.png)
 
-1. Switch to the **Libraries** tab -> **Catalogs** -> **Organization Catalog**:
+2. Go to "Libraries" → "Catalogs" → "Organization Catalog":
 
-   ![Setting up the template, step 2](../../../../images/cloud-provider-vcd/template/Screenshot2.png)
+   ![Template setup, step 2](../../../../images/cloud-provider-vcd/template/Screenshot2.png)
 
-1. Select the template you downloaded and add it to the catalog:
+3. Upload the downloaded template to the catalog:
 
-   ![Setting up the template, step 3](../../../../images/cloud-provider-vcd/template/Screenshot3.png)
+   ![Template setup, step 3](../../../../images/cloud-provider-vcd/template/Screenshot3.png)
+   ![Template setup, step 4](../../../../images/cloud-provider-vcd/template/Screenshot4.png)
+   ![Template setup, step 5](../../../../images/cloud-provider-vcd/template/Screenshot5.png)
 
-   ![Setting up the template, step 4](../../../../images/cloud-provider-vcd/template/Screenshot4.png)
+4. Create a VM from the template:
 
-   ![Setting up the template, step 5](../../../../images/cloud-provider-vcd/template/Screenshot5.png)
-
-1. Create a virtual machine from the template:
-
-   ![Setting up the template, step 6](../../../../images/cloud-provider-vcd/template/Screenshot6.png)
-
-   ![Setting up the template, step 7](../../../../images/cloud-provider-vcd/template/Screenshot7.png)
+   ![Template setup, step 6](../../../../images/cloud-provider-vcd/template/Screenshot6.png)
+   ![Template setup, step 7](../../../../images/cloud-provider-vcd/template/Screenshot7.png)
 
 {% alert level="warning" %}
-Enter the default password and public key. You will need them to log in to the VM console.
+Set a default password and public key. These will be needed to log into the VM console.
 {% endalert %}
 
-![Setting up the template, step 8](../../../../images/cloud-provider-vcd/template/Screenshot8.png)
+![Template setup, step 8](../../../../images/cloud-provider-vcd/template/Screenshot8.png)
 
-Follow these steps to be able to connect to the virtual machine:
+To connect to the VM:
 
-1. Start the virtual machine.
-2. Wait for the IP address to be set.
-3. _Forward_ port `22` to the virtual machine:
+1. Start the VM.
+2. Wait until it gets an IP address.
+3. Forward port "22" to the VM:
 
-   ![Setting up the template, step 9](../../../../images/cloud-provider-vcd/template/Screenshot9.png)
+   ![Template setup, step 9](../../../../images/cloud-provider-vcd/template/Screenshot9.png)
 
-Log on to the virtual machine over SSH and run the following commands:
+Log into the VM via SSH and run:
 
 ```shell
 rm /etc/netplan/99-netcfg-vmware.yaml
@@ -223,12 +232,11 @@ echo 'disable_vmware_customization: true' > /etc/cloud/cloud.cfg.d/91_vmware_cus
 dpkg-reconfigure cloud-init
 ```
 
-In the dialog box that appears, leave the checkmark only on `OVF: Reads data from OVF transports`
-and make sure to scroll down and remove checkmarks from other options:
+In the dialog window, leave only the checkbox for `OVF: Reads data from OVF transports`. Disable all other options:
 
-![Setting up the template, OVF](../../../../images/cloud-provider-vcd/template/OVF.png)
+![Template setup, OVF](../../../../images/cloud-provider-vcd/template/OVF.png)
 
-Execute the remaining commands:
+Run the remaining commands:
 
 ```shell
 truncate -s 0 /etc/machine-id
@@ -243,21 +251,21 @@ history -c
 shutdown -P now
 ```
 
-### Setting up the template in VCD
+### Configuring the template in VCD
 
-1. Shut down the virtual machine and clear all populated fields in **Guest Properties**:
+1. Power off the virtual machine and delete all filled "Guest Properties" fields:
 
-   ![Setting up the template, Guest Properties 1](../../../../images/cloud-provider-vcd/template/GuestProperties1.png)
+   ![Template setup, Guest Properties 1](../../../../images/cloud-provider-vcd/template/GuestProperties1.png)
 
-   ![Setting up the template, Guest Properties 5](../../../../images/cloud-provider-vcd/template/GuestProperties5.png)
+   ![Template setup, Guest Properties 5](../../../../images/cloud-provider-vcd/template/GuestProperties5.png)
 
 1. Create a virtual machine template:
 
-   ![Setting up the template, step 10](../../../../images/cloud-provider-vcd/template/Screenshot10.png)
+   ![Template setup, step 10](../../../../images/cloud-provider-vcd/template/Screenshot10.png)
 
-   ![Setting up the template, step 11](../../../../images/cloud-provider-vcd/template/Screenshot11.png)
+   ![Template setup, step 11](../../../../images/cloud-provider-vcd/template/Screenshot11.png)
 
-1. In the created template, navigate to the **Metadata** tab and add the following six fields:
+1. In the created template, go to the "Metadata" tab and add six fields:
 
    * `guestinfo.metadata`
    * `guestinfo.metadata.encoding`
@@ -266,24 +274,24 @@ shutdown -P now
    * `disk.enableUUID`
    * `guestinfo.hostname`
 
-   ![Setting up the template, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
+   ![Template setup, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
 
-   ![Setting up the template, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
+   ![Template setup, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
-1. In the vCenter management panel for the template, enable the `disk.EnableUUID` parameter:
+1. In the vCenter management panel, enable the `disk.EnableUUID` parameter for the template:
 
-   ![Setting up the template, vCenter 1](../../../../images/cloud-provider-vcd/template/vCenter1.png)
+   ![Template setup, vCenter 1](../../../../images/cloud-provider-vcd/template/vCenter1.png)
 
-   ![Setting up the template, vCenter 2](../../../../images/cloud-provider-vcd/template/vCenter2.png)
+   ![Template setup, vCenter 2](../../../../images/cloud-provider-vcd/template/vCenter2.png)
 
-   ![Setting up the template, vCenter 3](../../../../images/cloud-provider-vcd/template/vCenter3.png)
+   ![Template setup, vCenter 3](../../../../images/cloud-provider-vcd/template/vCenter3.png)
 
-   ![Setting up the template, vCenter 4](../../../../images/cloud-provider-vcd/template/vCenter4.png)
+   ![Template setup, vCenter 4](../../../../images/cloud-provider-vcd/template/vCenter4.png)
 
-   ![Setting up the template, vCenter 5](../../../../images/cloud-provider-vcd/template/vCenter5.png)
+   ![Template setup, vCenter 5](../../../../images/cloud-provider-vcd/template/vCenter5.png)
 
-## Using the storage
+## Storage usage
 
-* VCD supports CSI; disks are created as VCD Independent Disks.
-* The `disk.EnableUUID` guest property must be set for the virtual machine templates in use.
-* Deckhouse Kubernetes Platform supports disk resizing as of v1.59.1.
+* VCD supports CSI. Disks are created as VCD Independent Disks.
+* The guest property `disk.EnableUUID` must be enabled for the VM templates in use.
+* Deckhouse Kubernetes Platform supports disk resizing starting from version v1.59.1.

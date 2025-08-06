@@ -1,6 +1,6 @@
 ---
-title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
+title: Схемы размещения и настройка
+permalink: ru/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 lang: ru
 ---
 
@@ -37,6 +37,112 @@ masterNodeGroup:
     sizingPolicy: 4cpu8mem
     template: "catalog/Ubuntu 22.04 Server"
     mainNetwork: internal
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+    mainNetwork: internal
+```
+
+## StandardWithNetwork
+
+![Схема размещения StandardWithNetwork](../../../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+
+При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
+
+Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью параметра `internalNetworkDHCPPoolStartAddress`.
+
+Если используется `NSX-V`, DHCP необходимо настроить вручную. В противном случае узлы, ожидающие получение IP-адреса по DHCP, не смогут его получить.
+
+{% alert level="warning" %}
+Не рекомендуется использовать динамическую адресацию для первого master-узла совместно с `NSX-V`.
+{% endalert %}
+
+Схема размещения предполагает автоматическое создание следующих правил NAT:
+
+- SNAT — трансляция адресов внутренней сети узлов во внешний адрес, указанный в параметре `edgeGateway.externalIP`.
+- DNAT — трансляция внешнего адреса и порта, заданных в параметрах `edgeGateway.externalIP` и `edgeGateway.externalPort`, на внутренний IP-адрес первого master-узла по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
+
+{% alert level="warning" %}
+Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
+{% endalert %}
+
+Дополнительно возможно создание правил брандмауэра отдельным свойством `createDefaultFirewallRules`.
+
+{% alert level="warning" %}
+Если Edge Gateway обеспечивается средствами `NSX-T`, то существующие в Edge Gateway правила будут перезаписаны. Предполагается, что использование данной опции подразумевает размещение одного кластера на Edge Gateway.
+{% endalert %}
+
+Будут созданы следующие правила:
+
+- Разрешение любого исходящего трафика;
+- Разрешение входящего трафика по протоколу `TCP` и 22 порту для соединения с узлами кластера по SSH;
+- Разрешение любого входящего трафика по протоколу `ICMP`;
+- Разрешение входящего трафика по протоколам `TCP` и `UDP` и портам 30000–32767 для использования `NodePort`.
+
+Пример конфигурации схемы размещения с использованием `NSX-T`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-T"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
+    mainNetworkIPAddresses:
+    - 192.168.199.2
+```
+
+Пример конфигурации схемы размещения с использованием `NSX-V`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  insecure: true
+sshPublicKey: ssh-rsa AAAABBBBB
+organization: deckhouse
+virtualDataCenter: MSK-1
+virtualApplicationName: deckhouse
+internalNetworkCIDR: 192.168.199.0/24
+mainNetwork: internal
+edgeGateway:
+  name: "edge-gateway-01"
+  type: "NSX-V"
+  externalIP: 10.0.0.1
+  externalPort: 10022
+  NSX-V:
+    externalNetworkName: external
+    externalNetworkType: ext
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: "Fast vHDD"
+    sizingPolicy: 4cpu8mem
+    template: "catalog/Ubuntu 22.04 Server"
     mainNetworkIPAddresses:
     - 192.168.199.2
 ```
@@ -116,72 +222,3 @@ spec:
 #### CSI
 
 Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью параметра [compatibilityFlag](#parameters-storageclass-compatibilityflag).
-
-#### Важная информация об увеличении размера PVC
-
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
-
-1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
-2. Удалите под.
-3. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
-
-### Требования к окружению
-
-* Версия vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
-* vCenter: доступен изнутри кластера с master-узлов.
-* Созданный Datacenter, в котором:
-  1. VirtualMachine template.
-     * Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
-     * Необходимо наличие пакетов: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (при использовании версии `cloud-init` ниже 21.3).
-  2. Network.
-     * Должна быть доступна на всех ESXi, на которых будут создаваться виртуальные машины.
-  3. Datastore (один или несколько).
-     * Подключен ко всем ESXi, на которых будут создаваться виртуальные машины.
-     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
-  4. Cluster.
-     * Добавлены используемые ESXi.
-     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
-  5. Folder для создаваемых виртуальных машин.
-     * Опциональный (по умолчанию используется root vm-каталог).
-  6. Роль.
-     * Должна содержать необходимый [набор](#список-необходимых-привилегий) прав.
-  7. Пользователь.
-     * Привязывается роль из п. 6.
-* На созданный Datacenter **необходимо** назначить тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
-
-### Список необходимых привилегий
-
-{% alert level="info" %}
-О том, как создать и назначить роль пользователю, читайте [в документации](environment.html#создание-и-назначение-роли).
-{% endalert %}
-
-**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
-
-<table>
-  <thead>
-    <tr>
-        <th>Список привилегий</th>
-        <th>Назначение</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-        <td><code>Cns.Searchable</code><br><code>StorageProfile.View</code><br><code>Datastore.AllocateSpace</code><br><code>Datastore.Browse</code><br><code>Datastore.FileManagement</code></td>
-        <td>Выделение дисков при создании виртуальных машин и заказе <code>PersistentVolumes</code> в кластере.</td>
-    </tr>
-    <tr>
-        <td><code>Global.GlobalTag</code><br><code>Global.SystemTag</code><br><code>InventoryService.Tagging.AttachTag</code><br><code>InventoryService.Tagging.CreateCategory</code><br><code>InventoryService.Tagging.CreateTag</code><br><code>InventoryService.Tagging.DeleteCategory</code><br><code>InventoryService.Tagging.DeleteTag</code><br><code>InventoryService.Tagging.EditCategory</code><br><code>InventoryService.Tagging.EditTag</code><br><code>InventoryService.Tagging.ModifyUsedByForCategory</code><br><code>InventoryService.Tagging.ModifyUsedByForTag</code><br><code>InventoryService.Tagging.ObjectAttachable</code></td>
-        <td>Deckhouse Kubernetes Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
-    </tr>
-    <tr>
-        <td><code>Folder.Create</code><br><code>Folder.Delete</code><br><code>Folder.Move</code><br><code>Folder.Rename</code></td>
-        <td>Группировка кластера Deckhouse Kubernetes Platform в одном <code>Folder</code> в vSphere Inventory.</td>
-    </tr>
-    <tr>
-        <td><code>Network.Assign</code><br><code>Resource.ApplyRecommendation</code><br><code>Resource.AssignVAppToPool</code><br><code>Resource.AssignVMToPool</code><br><code>Resource.ColdMigrate</code><br><code>Resource.CreatePool</code><br><code>Resource.DeletePool</code><br><code>Resource.EditPool</code><br><code>Resource.HotMigrate</code><br><code>Resource.MovePool</code><br><code>Resource.QueryVMotion</code><br><code>Resource.RenamePool</code><br><code>VirtualMachine.Config.AddExistingDisk</code><br><code>VirtualMachine.Config.AddNewDisk</code><br><code>VirtualMachine.Config.AddRemoveDevice</code><br><code>VirtualMachine.Config.AdvancedConfig</code><br><code>VirtualMachine.Config.Annotation</code><br><code>VirtualMachine.Config.ChangeTracking</code><br><code>VirtualMachine.Config.CPUCount</code><br><code>VirtualMachine.Config.DiskExtend</code><br><code>VirtualMachine.Config.DiskLease</code><br><code>VirtualMachine.Config.EditDevice</code><br><code>VirtualMachine.Config.HostUSBDevice</code><br><code>VirtualMachine.Config.ManagedBy</code><br><code>VirtualMachine.Config.Memory</code><br><code>VirtualMachine.Config.MksControl</code><br><code>VirtualMachine.Config.QueryFTCompatibility</code><br><code>VirtualMachine.Config.QueryUnownedFiles</code><br><code>VirtualMachine.Config.RawDevice</code><br><code>VirtualMachine.Config.ReloadFromPath</code><br><code>VirtualMachine.Config.RemoveDisk</code><br><code>VirtualMachine.Config.Rename</code><br><code>VirtualMachine.Config.ResetGuestInfo</code><br><code>VirtualMachine.Config.Resource</code><br><code>VirtualMachine.Config.Settings</code><br><code>VirtualMachine.Config.SwapPlacement</code><br><code>VirtualMachine.Config.ToggleForkParent</code><br><code>VirtualMachine.Config.UpgradeVirtualHardware</code><br><code>VirtualMachine.GuestOperations.Execute</code><br><code>VirtualMachine.GuestOperations.Modify</code><br><code>VirtualMachine.GuestOperations.ModifyAliases</code><br><code>VirtualMachine.GuestOperations.Query</code><br><code>VirtualMachine.GuestOperations.QueryAliases</code><br><code>VirtualMachine.Hbr.ConfigureReplication</code><br><code>VirtualMachine.Hbr.MonitorReplication</code><br><code>VirtualMachine.Hbr.ReplicaManagement</code><br><code>VirtualMachine.Interact.AnswerQuestion</code><br><code>VirtualMachine.Interact.Backup</code><br><code>VirtualMachine.Interact.ConsoleInteract</code><br><code>VirtualMachine.Interact.CreateScreenshot</code><br><code>VirtualMachine.Interact.CreateSecondary</code><br><code>VirtualMachine.Interact.DefragmentAllDisks</code><br><code>VirtualMachine.Interact.DeviceConnection</code><br><code>VirtualMachine.Interact.DisableSecondary</code><br><code>VirtualMachine.Interact.DnD</code><br><code>VirtualMachine.Interact.EnableSecondary</code><br><code>VirtualMachine.Interact.GuestControl</code><br><code>VirtualMachine.Interact.MakePrimary</code><br><code>VirtualMachine.Interact.Pause</code><br><code>VirtualMachine.Interact.PowerOff</code><br><code>VirtualMachine.Interact.PowerOn</code><br><code>VirtualMachine.Interact.PutUsbScanCodes</code><br><code>VirtualMachine.Interact.Record</code><br><code>VirtualMachine.Interact.Replay</code><br><code>VirtualMachine.Interact.Reset</code><br><code>VirtualMachine.Interact.SESparseMaintenance</code><br><code>VirtualMachine.Interact.SetCDMedia</code><br><code>VirtualMachine.Interact.SetFloppyMedia</code><br><code>VirtualMachine.Interact.Suspend</code><br><code>VirtualMachine.Interact.SuspendToMemory</code><br><code>VirtualMachine.Interact.TerminateFaultTolerantVM</code><br><code>VirtualMachine.Interact.ToolsInstall</code><br><code>VirtualMachine.Interact.TurnOffFaultTolerance</code><br><code>VirtualMachine.Inventory.Create</code><br><code>VirtualMachine.Inventory.CreateFromExisting</code><br><code>VirtualMachine.Inventory.Delete</code><br><code>VirtualMachine.Inventory.Move</code><br><code>VirtualMachine.Inventory.Register</code><br><code>VirtualMachine.Inventory.Unregister</code><br><code>VirtualMachine.Namespace.Event</code><br><code>VirtualMachine.Namespace.EventNotify</code><br><code>VirtualMachine.Namespace.Management</code><br><code>VirtualMachine.Namespace.ModifyContent</code><br><code>VirtualMachine.Namespace.Query</code><br><code>VirtualMachine.Namespace.ReadContent</code><br><code>VirtualMachine.Provisioning.Clone</code><br><code>VirtualMachine.Provisioning.CloneTemplate</code><br><code>VirtualMachine.Provisioning.CreateTemplateFromVM</code><br><code>VirtualMachine.Provisioning.Customize</code><br><code>VirtualMachine.Provisioning.DeployTemplate</code><br><code>VirtualMachine.Provisioning.DiskRandomAccess</code><br><code>VirtualMachine.Provisioning.DiskRandomRead</code><br><code>VirtualMachine.Provisioning.FileRandomAccess</code><br><code>VirtualMachine.Provisioning.GetVmFiles</code><br><code>VirtualMachine.Provisioning.MarkAsTemplate</code><br><code>VirtualMachine.Provisioning.MarkAsVM</code><br><code>VirtualMachine.Provisioning.ModifyCustSpecs</code><br><code>VirtualMachine.Provisioning.PromoteDisks</code><br><code>VirtualMachine.Provisioning.PutVmFiles</code><br><code>VirtualMachine.Provisioning.ReadCustSpecs</code><br><code>VirtualMachine.State.CreateSnapshot</code><br><code>VirtualMachine.State.RemoveSnapshot</code><br><code>VirtualMachine.State.RenameSnapshot</code><br><code>VirtualMachine.State.RevertToSnapshot</code></td>
-        <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Kubernetes Platform.</td>
-    </tr>
-  </tbody>
-</table>
