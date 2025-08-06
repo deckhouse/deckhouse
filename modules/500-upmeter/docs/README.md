@@ -8,7 +8,7 @@ webIfaces:
 
 The module tests the availability of the platform and the status of cluster components in real time, and outputs information in the form of corresponding dashboards.
 
-Key features:
+Module features:
 
 - continuous testing scenarios have been developed for all major cluster components;
 - the test results are saved as metrics;
