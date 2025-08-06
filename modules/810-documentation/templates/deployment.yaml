@@ -84,7 +84,7 @@ spec:
             name: builder-http
             protocol: TCP
           - containerPort: 9090
-            name: metrics
+            name: http-metrics
             protocol: TCP
         livenessProbe:
           httpGet:
@@ -194,5 +194,5 @@ spec:
   ports:
     - name: metrics
       port: 9090
-      targetPort: metrics
+      targetPort: http-metrics
       protocol: TCP
