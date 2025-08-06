@@ -119,17 +119,17 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: libs/glibc
-  add: /
-  to: /libs/glibc
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
+# - image: libs/glibc
+#   add: /
+#   to: /libs/glibc
+#   before: install
+#   includePaths:
+#     - usr/lib
+#     - usr/lib64
+#     - usr/include
+#     - usr/bin
+#     - usr/sbin
+#     - usr/share
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
@@ -182,14 +182,14 @@ shell:
         done
       rm -rf /libs
     fi
-  # - |
-  #   if [[ -d /tools ]]; then
-  #     for tool in $(ls -1 /tools); do
-  #       cd /tools/${tool}
-  #       rsync -aulv * /
-  #     done
-  #     rm -rf /tools
-  #   fi
+  - |
+    if [[ -d /tools ]]; then
+      for tool in $(ls -1 /tools); do
+        cd /tools/${tool}
+        rsync -aulv * /
+      done
+      rm -rf /tools
+    fi
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
