@@ -6,7 +6,11 @@
 
 ## {{ site.data.i18n.common.conversions[page.lang] }}
 
+{% if moduleName == "global" %}
+{{ site.data.i18n.common.conversion_global_action_message[page.lang] }}:
+{% else %}
 {{ site.data.i18n.common.conversion_action_message[page.lang] }}:
+{% endif %}
 
 <div markdown="0">
 <ul>

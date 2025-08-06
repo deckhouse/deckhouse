@@ -77,6 +77,11 @@ shell:
         echo '[] Preparing OSS license info...'
         export MODULES_DIR=/src/modules
         bash _tools/modules_generate_ossinfo.sh
+{{ else }}{{/* .BuildModules */}}
+
+        echo "Render global OpenAPI DKP schemas..."
+        bash _tools/prepare_resources.sh
+
 {{ end }}{{/* .BuildModules */}}
 
         echo '[] Extracting the default Kubernetes version...'

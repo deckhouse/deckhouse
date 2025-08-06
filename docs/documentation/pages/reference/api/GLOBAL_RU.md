@@ -1,12 +1,14 @@
 ---
 title: "Глобальные настройки"
-permalink: ru/deckhouse-configure-global.html
+permalink: ru/reference/api/global.html
 description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
-module-kebab-name: "global"
+module-kebab-name: global
 lang: ru
 ---
 
-Глобальные настройки Deckhouse хранятся в ресурсе `ModuleConfig/global` (см. [конфигурация Deckhouse](./#конфигурация-deckhouse)).
+Глобальные настройки Deckhouse Kubernetes Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
+
+Глобальные настройки Deckhouse хранятся в ModuleConfig `global`.
 
 {% alert %}
 В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон DNS-имен, с учётом которого некоторые модули Deckhouse создают Ingress-ресурсы. Если параметр не указан, Ingress-ресурсы создаваться не будут.
@@ -20,6 +22,7 @@ lang: ru
 В случае, если шаблон совпадает с доменом сети узлов, используйте только А записи для назначения служебным веб-интерфейсам платформы адресов Frontend узлов. Например, для узлов заведена зона `company.my`, а шаблон имеет вид `%s.company.my`.
 {% endalert %}
 
+<div>
 Пример ресурса `ModuleConfig/global`:
 
 ```yaml
@@ -47,4 +50,4 @@ spec:
 
 ## Параметры
 
-{{ site.data.schemas.global.config-values | format_module_configuration: "global" }}
+{{ site.data.schemas.modules.global.config-values | format_module_configuration: "global" }}

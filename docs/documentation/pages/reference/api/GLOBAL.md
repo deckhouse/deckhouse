@@ -1,11 +1,13 @@
 ---
 title: "Global configuration"
-permalink: en/deckhouse-configure-global.html
+permalink: en/reference/api/global.html
 description: "Deckhouse Kubernetes Platform global settings."
-module-kebab-name: "global"
+module-kebab-name: global
 ---
 
-The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)).
+Global configuration settings allow you to customize parameters that are used by default by all modules and components of the Deckhouse Kubernetes Platform. Some modules may override some of these parameters (this can be found in the settings section of the respective module's documentation).
+
+The global configuration settings are stored in the ModuleConfig `global`.
 
 {% alert %}
 The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a DNS name template used by some Deckhouse modules to create Ingress resources. If this parameter is not specified, Ingress resources will not be created.
@@ -47,4 +49,4 @@ spec:
 
 ## Parameters
 
-{{ site.data.schemas.global.config-values | format_module_configuration: "global" }}
+{{ site.data.schemas.modules.global.config-values | format_module_configuration: "global" }}

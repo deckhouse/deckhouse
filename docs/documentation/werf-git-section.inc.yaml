@@ -16,3 +16,30 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /global-hooks/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml','conversions/v*.yml','conversions/v*.yaml']
+- add: /candi/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /src/global/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/openapi/dhctl
+  to: /src/global/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
