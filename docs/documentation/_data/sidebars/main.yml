@@ -30,10 +30,6 @@ entries:
                 ru: Описание
               url: /
             - title:
-                en: Global configuration
-                ru: Глобальные настройки
-              url: /deckhouse-configure-global.html
-            - title:
                en: Switching editions
                ru: Переключение редакций
               url: /admin/editions.html
@@ -1212,7 +1208,7 @@ entries:
           folders:
             - title:
                 en: Global configuration
-                ru: Глобальная конфигурация
+                ru: Глобальные настройки
               url: /reference/api/global.html
             - title:
                 en: Custom Resources
