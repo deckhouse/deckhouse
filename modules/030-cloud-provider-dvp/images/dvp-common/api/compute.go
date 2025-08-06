@@ -36,6 +36,7 @@ const (
 	DVPVMHostnameLabel         = "dvp.deckhouse.io/hostname"
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
+	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
 )
 
 type ComputeService struct {
