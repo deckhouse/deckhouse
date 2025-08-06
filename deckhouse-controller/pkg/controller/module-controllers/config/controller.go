@@ -98,8 +98,6 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	r.metricStorage.Grouped().ExpireGroupMetrics(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled))
-
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).

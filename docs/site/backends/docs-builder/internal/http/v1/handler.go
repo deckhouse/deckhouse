@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flant/docs-builder/internal/docs"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/flant/docs-builder/internal/docs"
 )
 
 type DocsBuilderHandler struct {

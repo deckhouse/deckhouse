@@ -21,10 +21,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flant/docs-builder/pkg/hugo"
 	"github.com/spf13/fsync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/flant/docs-builder/pkg/hugo"
 )
 
 func (svc *Service) Build() error {
