@@ -125,6 +125,13 @@ webhooks:
     namespaceSelector:
       matchLabels:
         kubernetes.io/metadata.name: kube-system
+    objectSelector:
+      matchExpressions:
+        - key: name
+          operator: In
+          values:
+            - d8-provider-cluster-configuration
+            - d8-static-cluster-configuration
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
