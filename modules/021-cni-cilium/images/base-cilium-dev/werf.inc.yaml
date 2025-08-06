@@ -46,17 +46,6 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: libs/zlib
-  add: /
-  to: /libs/zlib
-  before: install
-  includePaths:
-    - usr/lib
-    - usr/lib64
-    - usr/include
-    - usr/bin
-    - usr/sbin
-    - usr/share
 - image: tools/elfutils
   add: /
   to: /tools/elfutils
