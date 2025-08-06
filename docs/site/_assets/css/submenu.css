@@ -1,8 +1,8 @@
-.submenu__container {
+.channel-menu__container {
     position: sticky;
     display: flex;
     justify-content: start;
-    padding-top: 12px;
+    padding-top: 14px;
     padding-bottom: 35px;
     gap: 25px;
 }

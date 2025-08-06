@@ -374,6 +374,10 @@
 
 .layout-sidebar__sidebar_right {
   padding-top: 63px;
+
+  .sidebar__wrapper-inner {
+    padding-top: 14px;
+  }
 }
 
 .layout-sidebar__sidebar::after,
