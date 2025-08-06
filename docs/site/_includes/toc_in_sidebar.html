@@ -8,11 +8,12 @@
         }
         const headerHeight = getHeaderHeight();
 
-        const $submenu = $('.submenu__container');
-        const $sidebar = $('.sidebar__wrapper-inner');
-        $submenu.css("top", headerHeight);
-        $sidebar.css("top", headerHeight + $submenu.outerHeight(true));
-        console.log($submenu)
+        const submenu = $('.submenu__container');
+        const sidebarLeft = $('.layout-sidebar__sidebar .sidebar__wrapper-inner');
+        const sidebarRight = $('.layout-sidebar__sidebar_right .sidebar__wrapper-inner');
+        submenu.css("top", headerHeight);
+        sidebarLeft.css("top", headerHeight + $submenu.outerHeight(true));
+        sidebarRight.css("top", headerHeight);
         
         const $toc = $('#toc-sidebar');
 
