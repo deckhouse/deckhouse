@@ -9,8 +9,11 @@
     }
     const headerHeight = getHeaderHeight();
 
-    const $sidebar = $('.sidebar__wrapper-inner');
-    $sidebar.css("top", headerHeight);
+        const $submenu = $('.submenu__container');
+        const $sidebar = $('.sidebar__wrapper-inner');
+        $submenu.css("top", headerHeight);
+        $sidebar.css("top", headerHeight + $submenu.outerHeight(true));
+        console.log($submenu)
     
     const $toc = $('#toc-sidebar');
 

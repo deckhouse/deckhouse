@@ -1,3 +1,12 @@
+.submenu__container {
+    position: sticky;
+    display: flex;
+    justify-content: start;
+    padding-top: 12px;
+    padding-bottom: 35px;
+    gap: 25px;
+}
+
 .submenu-container {
     position: absolute;
     z-index: 1000;
