@@ -5,7 +5,7 @@ description: "Metrics for extended monitoring of the Deckhouse Kubernetes Platfo
 
 The `extended-monitoring` module extends cluster monitoring capabilities with additional Prometheus exporters, which allow you to identify potential problems before they affect the operation of services.
 
-Key features:
+Module features:
 
 - Advanced Metrics Collection — collects additional metrics, and also includes ready-made alerts and dashboards that allow you to detect and diagnose incidents faster:
   - collects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace;
