@@ -15,6 +15,7 @@ community_edition_en: community edition
 commercial_editions_en: commercial editions
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+conversion_global_action_message: Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
 conversion_from_version: Обновление из версии
 conversion_to: в
 conversion_expressions: Преобразования, выполняемые конверсией (синтаксис jq)

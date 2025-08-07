@@ -67,6 +67,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
   puts "Custom hook: pre_render"
 
+  site.data['bundles'] = Hash.new() if ! site.data.has_key?('bundles')
+  site.data['bundles']['raw'] = Hash.new() if ! site.data['bundles'].has_key?('raw')
+
   site.data['bundles']['raw'].each do |revision, revisionData|
     revisionData.each do |key, val|
       bundleName = key.delete_prefix('values-').capitalize
@@ -97,6 +100,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   site.data['bundles']['bundleModules'] = bundlesModules
 
   #parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+
+  site.data['modules'] = Hash.new() if ! site.data.has_key?('modules')
+  site.data['modules']['all'] = Hash.new() if ! site.data['modules'].has_key?('all')
 
   _editionsFullList = site.data['modules']['editions-weight'].keys
   # Automatically fill editions, except for CSE, since their CSE needs to be specified explicitly.

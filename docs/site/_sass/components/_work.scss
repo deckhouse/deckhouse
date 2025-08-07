@@ -1,0 +1,45 @@
+@use "components/common/_variables.scss";
+
+.work {
+    padding: 150px 0;
+    &__content {
+        box-sizing: border-box;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+    &__item {
+        width: 100%;
+        margin-bottom: variables.$spacing-l*3;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        &-num {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: variables.$color-alt;
+            color: variables.$color-inverse;
+            font-size: variables.$font-size-h2;
+            font-weight: variables.$font-weight-bold;
+            line-height: 1;
+            margin-bottom: variables.$spacing-l;
+        }
+        &-title {
+            margin-top: 0;
+            margin-bottom: variables.$spacing-l;
+            color: variables.$color-alt;
+            text-align: center;
+        }
+        &-diagram {
+
+        }
+    }
+}

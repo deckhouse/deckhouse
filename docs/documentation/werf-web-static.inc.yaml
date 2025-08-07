@@ -12,18 +12,23 @@ shell:
         yq -V
         echo "jq: $(jq -V)"
 
-        echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
-{{ if ne .ModuleName "docs" }}
-        export MODULES_DIR=/comparison
-{{ end }}
-        _tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
+
+        echo '[] Creating modules list...'
+        export MODULES_DIR=/src/modules-metadata
+        _tools/modules_list.sh > _data/modules/internal.json
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        # The list of modules, which documentation should be excluded from the site...
-        # TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
-        cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+{{ if .BuildModules }}
+        #echo '[] Creating modules.yml ...'
+        #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
+        ## Creating list of ALL the modules...
+        #cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+
+        ## The list of modules, which documentation should be excluded from the site...
+        ## TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
+        #cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
@@ -74,10 +79,17 @@ shell:
         mkdir -p _data/schemas/crds/
         find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
+{{ else }}{{/* .BuildModules */}}
+
         echo
         echo '[] Preparing OSS license info...'
-        export MODULES_DIR=/src/modules
+        export OSS_SOURCE_DIR=/src/modules-metadata
+        export OSS_TARGET_FILE=/srv/jekyll-data/documentation/_data/ossinfo.yaml
         bash _tools/modules_generate_ossinfo.sh
+
+        echo "Render global OpenAPI DKP schemas..."
+        bash _tools/prepare_resources.sh
+{{ end }}{{/* .BuildModules */}}
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -90,7 +102,6 @@ shell:
         echo '[] Converting editions structure...'
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
-
 {{ if ne .ModuleName "docs" }}
         # Syncing file from the documentation to the main site...
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
@@ -100,17 +111,14 @@ shell:
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
           xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
 
-        cat <<"EOD" > /tmp/_config_additional.yml
+        cat <<'EOD' > /tmp/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/documentation/_data/topnav.yml
+        cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_data/topnav.yml
+        cat <<'EOD' > /srv/jekyll-data/site/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
-        EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
-        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
         EOD
 {{ end }}
         # Creating additional config...
@@ -178,46 +186,13 @@ git:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if ne .ModuleName "docs" }}
-- add: /{{ .ModulePath }}
-  to: /comparison
-  owner: jekyll
-  group: jekyll
+- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
+  to: /srv/jekyll-data/site/_includes/footer.html
   stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-  - ee/modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/fe
-  to: /comparison/fe
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/be
-  to: /comparison/be
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/se
-  to: /comparison/se
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
-- add: /{{ .ModulePath }}ee/se-plus
-  to: /comparison/se-plus
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths:
-  - modules/**/docs/README.md
+    setup:
+    - '**/*'
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
+{{ if .BuildModules }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}
+{{ end }}

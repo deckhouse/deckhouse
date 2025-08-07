@@ -1,0 +1,33 @@
+//@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+
+//.container {
+//    width: $container-width-m;
+//    @media (min-width: $container-breakpoint-lg) {
+//        width: $container-width-lg;
+//    }
+//    margin-left: auto;
+//    margin-right: auto;
+//}
+
+.container {
+  padding-left: 20px;
+  padding-right: 20px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @include breakpoints.min-w(s) {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  @include breakpoints.min-w(xl) {
+    max-width: var(--wp--style--global--content-size);
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
