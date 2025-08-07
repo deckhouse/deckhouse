@@ -25,6 +25,7 @@
 {{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
 {{- $_ := set $options "sizingPolicy" $sizingPolicy -}}
 {{- $_ := set $options "placementPolicy" $placementPolicy -}}
+{{- $_ := set $options "additionalMetadata" $additionalMetadata -}}
 
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
