@@ -52,7 +52,7 @@ var (
 	ConfigPaths = make([]string, 0)
 	SanityCheck = false
 	LoggerType  = "pretty"
-	IsDebug     = true
+	IsDebug     = false
 
 	DoNotWriteDebugLogFile = false
 	DebugLogFilePath       = ""

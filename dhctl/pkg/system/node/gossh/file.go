@@ -196,13 +196,17 @@ func (f *SSHFile) DownloadBytes(ctx context.Context, remotePath string) ([]byte,
 }
 
 func getRemoteFileStat(client *ssh.Client, remoteFilePath string) (string, error) {
+	if remoteFilePath == "." {
+		return "DIR", nil
+	}
+
 	session, err := client.NewSession()
 	if err != nil {
 		return "", fmt.Errorf("failed to create session: %w", err)
 	}
 	defer session.Close()
 
-	command := fmt.Sprint("stat -c %F " + remoteFilePath)
+	command := fmt.Sprint("LC_ALL=en_US.utf8 stat -c %F " + remoteFilePath)
 	output, err := session.CombinedOutput(command)
 
 	log.DebugF("remote path %s is %s\n", remoteFilePath, output)
