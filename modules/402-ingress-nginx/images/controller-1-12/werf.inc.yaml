@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-08-04.01"
+fromCacheVersion: "2025-08-07.02"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -34,18 +34,61 @@ shell:
   - cd /src
   - git clone --branch 0.5.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
   - git clone --branch 7-3 --depth 1 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  #
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
-  # pass env for build
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
+  # - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  # - export GIT_TRACE=1
+  - mkdir -p /src/nginx-deps
+  - git clone -b {{ $controllerBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
+    # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
+  - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
+  - git clone -b v3.11.3 $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
+  # - sed -i '7,11d' exporters/fluentd/cmake/nlohmann-json.cmake
+  # - sed -i '7i\    SOURCE_DIR "/src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5/nlohmann_json"' exporters/fluentd/cmake/nlohmann-json.cmake
+  # - cat exporters/fluentd/cmake/nlohmann-json.cmake
+  #
+  - cd /src/nginx-deps
+  - git clone --depth=100 $(cat /run/secrets/SOURCE_REPO)/google/ngx_brotli.git
+  - cd ngx_brotli
+  - git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
+  - git submodule init
+  - git submodule update
+  #
+  - cd /src/nginx-deps
+  - git clone --depth=1 $(cat /run/secrets/SOURCE_REPO)/ssdeep-project/ssdeep
+  #
+  - cd /src/nginx-deps
+  - git clone -b v3.0.14 $(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity
+  - cd ModSecurity/
+  # - git checkout v3.0.14
+  - git submodule init
+  - git submodule update
+  #
+  - cd /src/nginx-deps
+  - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5
+  - cd /src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5
+  - git reset --hard 8933841f0a7f8737f61404cf0a64acf6b079c8a5
+  #
+  - cd /src/nginx-deps
+  - git clone -b v4.10.0 $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset
+  - mv coreruleset owasp-modsecurity-crs
+  #
   - rm -rf /src/lua-protobuf/.git
   - rm -rf /src/lua-iconv/.git
   - rm -rf /src/ingress-nginx/.git
-  - cat /patches/build.sh > /src/ingress-nginx/images/nginx/rootfs/build.sh # FIXME delete
+  - rm -rf /src/nginx-deps/.git
+  - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/.git
+  - rm -rf /src/ngx_brotli/.git
+  - rm -rf /src/ssdeep/.git
+  - rm -rf /src/ModSecurity/.git
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5/.git
+  - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
 fromImage: builder/alpine
@@ -63,7 +106,7 @@ import:
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev
+  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev # FIXME rebuild!
   setup:
   - cd /src/lua-protobuf
   - luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
@@ -138,7 +181,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.03"
+fromCacheVersion: "2025-08-07.02"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -149,17 +192,24 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+# - image: base/distroless
+#   add: /usr
+#   to: /chroot/usr
+#   before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/nginx-deps
+  to: /src/nginx-deps
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache build-base linux-headers autoconf automake g++ cmake bison libtool flex pkgconf pkgconfig make gcc clang
-  - apk add --no-cache git openssh-client bash
-  - mkdir -p ~/.ssh/
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install: # FIXME libs!
+  - apk add --no-cache build-base linux-headers autoconf automake g++ cmake bison libtool flex bash pkgconfig ninja
+  # - mkdir -p ~/.ssh/ # FIXME delete
+  # - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config # FIXME delete
+  install:
   - apk add libc-dev
   - apk add openssl-dev
   - apk add pcre-dev
@@ -179,39 +229,354 @@ shell:
   - apk add grpc-dev
   - apk add protobuf-dev
 
-  - apk add doxygen
-  - apk add mercurial
-  - apk add alpine-sdk
-  - apk add findutils
-  - apk add curl
-  - apk add ca-certificates
   # - apk add patch
   # - apk add openssl
-  - apk add util-linux
-  - apk add lmdb-tools
-  - apk add wget
   - apk add libprotobuf
   # - apk add libxml2
   # - apk add python3
-  - apk add bc
-  - apk add unzip
-  - apk add dos2unix
   - apk add yaml-cpp
-  - apk add coreutils
-  - apk add ninja
   beforeSetup:
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
   #
-  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
-  - export CONTROLLER_BRANCH={{ $controllerBranch }}
-  - git config --global url."${SOURCE_REPO}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
-  - /build.sh
+  - cp -R /src/nginx-deps/owasp-modsecurity-crs /etc/nginx/
+
+  # BUILD NGINX and components (source: images/nginx/rootfs/build.sh)
+  - export NGINX_VERSION=1.25.5
+  - export BUILD_PATH=/src/nginx-deps
+  - mkdir -p /etc/nginx
+  - cd "$BUILD_PATH"
+
+  # Improve compilation times
+  - CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
+  - export MAKEFLAGS=-j${CORES}
+  - export CTEST_BUILD_FLAGS=${MAKEFLAGS}
+
+  # Install luajit from openresty fork
+  - export LUAJIT_LIB=/usr/local/lib
+  - export LUA_LIB_DIR="$LUAJIT_LIB/lua"
+  - export LUAJIT_INC=/usr/local/include/luajit-2.1
+
+  - cd "$BUILD_PATH/luajit2"
+  - make CCDEBUG=-g
+  - make install
+
+  - ln -s /usr/local/bin/luajit /usr/local/bin/lua
+  - ln -s "$LUAJIT_INC" /usr/local/include/lua
+
+  - echo "### 1"
+  - cd "$BUILD_PATH/opentelemetry-cpp"
+  - export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
+
+  - mkdir .git # A hack to trick the builder
+  - ls -l third_party/nlohmann-json
+  - cmake -B build -G Ninja -Wno-dev
+    -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/"
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_TESTING="OFF"
+    -DBUILD_W3CTRACECONTEXT_TEST="OFF"
+    -DCMAKE_BUILD_TYPE=None
+    -DWITH_ABSEIL=ON
+    -DWITH_STL=ON
+    -DWITH_EXAMPLES=OFF
+    -DWITH_ZPAGES=OFF
+    -DWITH_OTLP_GRPC=ON
+    -DWITH_OTLP_HTTP=ON
+    -DWITH_ZIPKIN=ON
+    -DWITH_PROMETHEUS=OFF
+    -DWITH_ASYNC_EXPORT_PREVIEW=OFF
+    -DWITH_METRICS_EXEMPLAR_PREVIEW=OFF
+  - cmake --build build
+  - cmake --install build
+
+  - echo "### 2"
+  # Build ssdeep
+  - cd "$BUILD_PATH"
+  - cd ssdeep/
+  - ./bootstrap
+  - ./configure
+  - make
+  - make install
+
+  # Build modsecurity library
+  - cd "$BUILD_PATH"
+  - cd ModSecurity/
+  - sh build.sh
+
+  # https://github.com/SpiderLabs/ModSecurity/issues/1909#issuecomment-465926762
+  - sed -i '115i LUA_CFLAGS="${LUA_CFLAGS} -DWITH_LUA_JIT_2_1"' build/lua.m4
+  - sed -i '117i AC_SUBST(LUA_CFLAGS)' build/lua.m4
+
+  - ./configure
+    --disable-doxygen-doc
+    --disable-doxygen-html
+    --disable-examples
+  - make
+  - make install
+
+  - mkdir -p /etc/nginx/modsecurity
+  - cp modsecurity.conf-recommended /etc/nginx/modsecurity/modsecurity.conf
+  - cp unicode.mapping /etc/nginx/modsecurity/unicode.mapping
+
+  # Replace serial logging with concurrent
+  - sed -i 's|SecAuditLogType Serial|SecAuditLogType Concurrent|g' /etc/nginx/modsecurity/modsecurity.conf
+
+  # Concurrent logging implies the log is stored in several files
+  - echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecurity.conf
+
+  # Prepare owasp modsecurity crs
+  - cd /etc/nginx/owasp-modsecurity-crs
+  - mv crs-setup.conf.example crs-setup.conf
+  - mv rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+  - mv rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+  - cd ..
+
+  # OWASP CRS v4 rules
+  - |
+    echo "
+    Include /etc/nginx/owasp-modsecurity-crs/crs-setup.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-905-COMMON-EXCEPTIONS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-911-METHOD-ENFORCEMENT.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-913-SCANNER-DETECTION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-920-PROTOCOL-ENFORCEMENT.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-921-PROTOCOL-ATTACK.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-922-MULTIPART-ATTACK.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-930-APPLICATION-ATTACK-LFI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-931-APPLICATION-ATTACK-RFI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-932-APPLICATION-ATTACK-RCE.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-933-APPLICATION-ATTACK-PHP.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-934-APPLICATION-ATTACK-GENERIC.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-943-APPLICATION-ATTACK-SESSION-FIXATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-944-APPLICATION-ATTACK-JAVA.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-949-BLOCKING-EVALUATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-950-DATA-LEAKAGES.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-951-DATA-LEAKAGES-SQL.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-952-DATA-LEAKAGES-JAVA.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-953-DATA-LEAKAGES-PHP.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-954-DATA-LEAKAGES-IIS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-955-WEB-SHELLS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-959-BLOCKING-EVALUATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-980-CORRELATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+    " > /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
+
+  - sed -i "s/ngx_feature_test='printf(\"hello\");'/ngx_feature_test='msc_init();'/" $BUILD_PATH/ModSecurity-nginx/config
+
+  # build nginx
+  - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
+
+  # apply nginx patches
+  - |
+    for PATCH in `ls /patches`;do
+      echo "Patch: $PATCH"
+      if [[ "$PATCH" == *.txt ]]; then
+        patch -p0 < /patches/$PATCH
+      else
+        patch -p1 < /patches/$PATCH
+      fi
+    done
+
+  - WITH_FLAGS="--with-debug
+    --with-compat
+    --with-pcre-jit
+    --with-http_ssl_module
+    --with-http_stub_status_module
+    --with-http_realip_module
+    --with-http_auth_request_module
+    --with-http_addition_module
+    --with-http_gzip_static_module
+    --with-http_sub_module
+    --with-http_v2_module
+    --with-http_v3_module
+    --with-stream
+    --with-stream_ssl_module
+    --with-stream_realip_module
+    --with-stream_ssl_preread_module
+    --with-threads
+    --with-http_secure_link_module
+    --with-http_gunzip_module"
+
+  # "Combining -flto with -g is currently experimental and expected to produce unexpected results."
+  # https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+  - CC_OPT="-g -O2 -fPIE -fstack-protector-strong
+    -Wformat
+    -Werror=format-security
+    -Wno-deprecated-declarations
+    -fno-strict-aliasing
+    -D_FORTIFY_SOURCE=2
+    --param=ssp-buffer-size=4
+    -DTCP_FASTOPEN=23
+    -fPIC
+    -Wno-cast-function-type"
+
+  - LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now"
+  - |
+    if [[ ${ARCH} == "x86_64" ]]; then
+      CC_OPT+=' -m64 -mtune=generic'
+    fi
+
+  - WITH_MODULES="
+    --add-module=$BUILD_PATH/ngx_devel_kit
+    --add-module=$BUILD_PATH/set-misc-nginx-module
+    --add-module=$BUILD_PATH/headers-more-nginx-module
+    --add-module=$BUILD_PATH/ngx_http_substitutions_filter_module
+    --add-module=$BUILD_PATH/lua-nginx-module
+    --add-module=$BUILD_PATH/stream-lua-nginx-module
+    --add-module=$BUILD_PATH/lua-upstream-nginx-module
+    --add-dynamic-module=$BUILD_PATH/nginx-http-auth-digest
+    --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx
+    --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module
+    --add-dynamic-module=$BUILD_PATH/ngx_brotli"
+
+  - ./configure
+    --prefix=/usr/local/nginx
+    --conf-path=/etc/nginx/nginx.conf
+    --modules-path=/etc/nginx/modules
+    --http-log-path=/var/log/nginx/access.log
+    --error-log-path=/var/log/nginx/error.log
+    --lock-path=/var/lock/nginx.lock
+    --pid-path=/run/nginx.pid
+    --http-client-body-temp-path=/var/lib/nginx/body
+    --http-fastcgi-temp-path=/var/lib/nginx/fastcgi
+    --http-proxy-temp-path=/var/lib/nginx/proxy
+    --http-scgi-temp-path=/var/lib/nginx/scgi
+    --http-uwsgi-temp-path=/var/lib/nginx/uwsgi
+    ${WITH_FLAGS}
+    --without-mail_pop3_module
+    --without-mail_smtp_module
+    --without-mail_imap_module
+    --without-http_uwsgi_module
+    --without-http_scgi_module
+    --with-cc-opt="${CC_OPT}"
+    --with-ld-opt="${LD_OPT}"
+    --user=deckhouse
+    --group=deckhouse
+    ${WITH_MODULES}
+
+  - make
+  - make modules
+  - make install
+
+  # Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp-contrib/compare/8933841f0a7f8737f61404cf0a64acf6b079c8a5...main
+  - export OPENTELEMETRY_CONTRIB_COMMIT=8933841f0a7f8737f61404cf0a64acf6b079c8a5
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
+
+  - export OTEL_TEMP_INSTALL=/tmp/otel
+  - mkdir -p ${OTEL_TEMP_INSTALL}
+
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx
+  # remove downloading nginx from cmake and clone it manually
+  # by default cmake download nginx from internet
+  # and change cmake NGINX_DIR
+  - sed -e "35d" nginx.cmake | sed -e "35i set(NGINX_DIR \"${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx/build/nginx/\")" | sed -e "27d" | sed -e "27i \ \ SOURCE_DIR nginx" > nginx.cmake.tmp
+  - rm -f nginx.cmake
+  - mv nginx.cmake.tmp nginx.cmake
+  - cat nginx.cmake
+  - mkdir -p build
+  - cp -R "${BUILD_PATH}/nginx-$NGINX_VERSION" build/nginx
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release
+    -G Ninja
+    -DCMAKE_CXX_STANDARD=17
+    -DCMAKE_INSTALL_PREFIX=${OTEL_TEMP_INSTALL}
+    -DBUILD_SHARED_LIBS=ON
+    -DNGINX_VERSION=${NGINX_VERSION}
+    ..
+
+  - cmake --build . -j ${CORES} --target install
+
+  - mkdir -p /etc/nginx/modules
+  - cp ${OTEL_TEMP_INSTALL}/otel_ngx_module.so /etc/nginx/modules/otel_ngx_module.so
+
+
+  - cd "$BUILD_PATH/lua-resty-core"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-balancer"
+  - make all
+  - make install
+
+  - export LUA_INCLUDE_DIR=/usr/local/include/luajit-2.1
+  - ln -s $LUA_INCLUDE_DIR /usr/include/lua5.1
+
+  - cd "$BUILD_PATH/lua-cjson"
+  - make all
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-cookie"
+  - make all
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-lrucache"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-dns"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-lock"
+  - make install
+
+  # required for OCSP verification
+  - cd "$BUILD_PATH/lua-resty-http"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-upload"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-string"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-memcached"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-redis"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-ipmatcher"
+  - INST_LUADIR=/usr/local/lib/lua make install
+
+  - cd "$BUILD_PATH/mimalloc"
+  - mkdir -p out/release
+  - cd out/release
+
+  - cmake ../..
+
+  - make
+  - make install
+
+  # update image permissions
+  - |
+    writeDirs=( \
+      /etc/nginx \
+      /usr/local/nginx \
+      /opt/modsecurity/var/log \
+      /opt/modsecurity/var/upload \
+      /opt/modsecurity/var/audit \
+      /var/log/audit \
+      /var/log/nginx \
+    );
+
+    for dir in "${writeDirs[@]}"; do
+      mkdir -p ${dir};
+      chown -R deckhouse:deckhouse ${dir};
+    done
+
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/.git
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/tests
+
+  # remove .a files
+  - find /usr/local -name "*.a" -print | xargs /bin/rm
+
   setup:
-  # Source: chroot.sh
+  # Source: rootfs/chroot.sh
   - |
     bash -eu -c '
     writeDirs=(
@@ -246,15 +611,15 @@ shell:
   #
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
-  - cp -a /usr/* /chroot/usr/
+  # - cp -a /usr/* /chroot/usr/ # FIXME delete
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
-  - cp /lib/ld-musl-* /chroot/lib/
-  - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/
+  # - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
+  # - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.05"
+fromCacheVersion: "2025-08-07.02"
 final: false
 mount:
 - from: build_dir
@@ -264,7 +629,7 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
-- image: registrypackages/d8-curl-artifact-8-9-1 # FIXME build!
+- image: registrypackages/d8-curl-artifact-8-9-1 # FIXME rebuild!
   add: /d8-curl
   to: /chroot/usr/bin/curl
   owner: "64535"
@@ -297,7 +662,8 @@ shell:
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
-  # Source: Dockerfile-chroot
+
+  # Source: rootfs/Dockerfile-chroot
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
@@ -445,6 +811,7 @@ import:
   includePaths:
   - usr/bin/coreutils
   - usr/bin/test
+  - usr/bin/chroot
   before: install
 shell:
   setup:
