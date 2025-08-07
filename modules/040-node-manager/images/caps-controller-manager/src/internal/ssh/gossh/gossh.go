@@ -19,7 +19,6 @@ package gossh
 import (
 	"bytes"
 	"caps-controller-manager/internal/scope"
-	genssh "caps-controller-manager/internal/ssh"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -98,11 +97,11 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	defer session.Close()
 
 	if stdout == nil {
-		stdout = genssh.NewLogger(instanceScope.Logger.WithName("stdout"))
+		stdout = &bytes.Buffer{}
 	}
 
 	if stderr == nil {
-		stderr = genssh.NewLogger(instanceScope.Logger.WithName("stderr"))
+		stderr = &bytes.Buffer{}
 	}
 
 	session.Stdout = stdout
