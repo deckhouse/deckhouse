@@ -168,7 +168,7 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	}
 
 	if isNewConfig {
-		state.Message = state.buildMessage()
+		state.Message = state.buildMessage(inputs.Params.CheckMode)
 		return nil
 	}
 
@@ -253,7 +253,7 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 
 	// fast path
 	if !state.hasItems() {
-		state.Message = state.buildMessage()
+		state.Message = state.buildMessage(inputs.Params.CheckMode)
 		state.Ready = true
 		return 0, nil
 	}
@@ -338,13 +338,13 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		return 0, errors.Join(errs...)
 	}
 
-	state.Message = state.buildMessage()
+	state.Message = state.buildMessage(inputs.Params.CheckMode)
 	state.Ready = !state.hasItems()
 
 	return processedCount, nil
 }
 
-func (state *stateModel) buildMessage() string {
+func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string {
 	var (
 		msg    = new(strings.Builder)
 		qNames = make([]string, 0, len(state.Queues))
@@ -360,7 +360,8 @@ func (state *stateModel) buildMessage() string {
 		q := state.Queues[name]
 
 		if !q.any() {
-			fmt.Fprintf(msg, "%v: all %v items are checked\n", name, q.Processed)
+			fmt.Fprintf(msg, "mode: %v, %v: all %v items are checked\n",
+				mode, name, q.Processed)
 			continue
 		}
 
@@ -375,8 +376,8 @@ func (state *stateModel) buildMessage() string {
 
 		if len(errItems) > 0 {
 			fmt.Fprintf(msg,
-				"%v: %v of %v items processed, %v items with errors:\n",
-				name, q.Processed, q.total(), len(errItems),
+				"mode: %v, %v: %v of %v items processed, %v items with errors:\n",
+				mode, name, q.Processed, q.total(), len(errItems),
 			)
 
 			for i, item := range errItems {
@@ -396,8 +397,8 @@ func (state *stateModel) buildMessage() string {
 		}
 
 		fmt.Fprintf(msg,
-			"%v: %v of %v items processed\n",
-			name, q.Processed, q.total(),
+			"mode: %v, %v: %v of %v items processed\n",
+			mode, name, q.Processed, q.total(),
 		)
 	}
 
