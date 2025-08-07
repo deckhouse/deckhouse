@@ -21,56 +21,28 @@ status:
   modules:
   - checksum: 'sha256:'
     name: bundlenabledmodule
+    verified: false
     version: v1.2.3
   - checksum: 'sha256:'
     name: disabledmodule
+    verified: false
     version: v1.2.3
   - checksum: 'sha256:'
     name: enabledmodule
+    verified: true
     version: v1.2.3
   - checksum: 'sha256:'
     name: notthissourcemodule
+    verified: false
     version: v1.2.3
   - checksum: 'sha256:'
     name: withpolicymodule
     policy: test-alpha
+    verified: true
     version: v1.2.3
   modulesCount: 5
   phase: Active
   syncTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    modules.deckhouse.io/apply-now: "true"
-    modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
-  labels:
-    module: bundlenabledmodule
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 1beb143dffb1b662137094e7faea1e17
-    source: test-source-1
-  name: bundlenabledmodule-v1.2.3
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test-source-1
-    uid: ""
-  resourceVersion: "1"
-spec:
-  moduleName: bundlenabledmodule
-  requirements:
-    kubernetes: '>= 1.27'
-  version: 1.2.3
-  weight: 900
-status:
-  approved: false
-  message: ""
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease

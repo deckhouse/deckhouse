@@ -20,6 +20,7 @@ status:
   modules:
   - checksum: 'sha256:'
     name: parca
+    verified: true
     version: v1.4.4
   modulesCount: 1
   phase: Active

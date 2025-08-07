@@ -20,16 +20,20 @@ status:
   modules:
   - checksum: 'sha256:'
     name: disabledmodule
+    verified: false
     version: v1.2.3
   - checksum: 'sha256:'
     name: enabledmodule
+    verified: true
     version: v1.2.3
   - checksum: 'sha256:'
     name: notthissourcemodule
+    verified: false
     version: v1.2.3
   - checksum: 'sha256:'
     name: withpolicymodule
     policy: test-alpha
+    verified: true
     version: v1.2.3
   modulesCount: 4
   phase: Active

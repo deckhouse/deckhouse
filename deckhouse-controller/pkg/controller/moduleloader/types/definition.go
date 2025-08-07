@@ -232,10 +232,10 @@ func (d *Definition) IsExperimental() bool {
 
 func (d *Definition) CalculateChecksum() (string, error) {
 	templatesPath := filepath.Join(d.Path, "templates")
-	openApiPath := filepath.Join(d.Path, "openapi")
+	valuesPath := filepath.Join(d.Path, "openapi")
 	defPath := filepath.Join(d.Path, "module.yaml")
 
-	return addonutils.CalculateChecksumOfPaths(templatesPath, openApiPath, defPath)
+	return addonutils.CalculateChecksumOfPaths(templatesPath, valuesPath, defPath)
 }
 
 func (d *Definition) ParseSignature() ([]byte, error) {
