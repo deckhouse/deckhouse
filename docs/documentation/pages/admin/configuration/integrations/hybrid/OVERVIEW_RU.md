@@ -71,7 +71,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 - Рабочий кластер с параметром `clusterType: Static`.
 - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера.
+- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html).
 
 ### Шаги по настройке
 
@@ -251,8 +251,9 @@ volumeBindingMode: WaitForFirstConsumer
 - **Инфраструктура**:
   - Установлен bare-metal кластер DKP.
   - Настроен тенант в VCD [с выделенными ресурсами](../virtualization/vcd/connection-and-authorization.html).
-  - Настроена сетевая связанность — L2-сеть между узлами bare-metal и VCD или L3-сеть с необходимыми доступами по портам.
+  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html)).
   - Настроена рабочая сеть в VCD с включённым DHCP-сервером.
+  - Создан пользователь со статичным паролем и правами администратора VCD.
 
 - **Настройки ПО**:
   - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
@@ -280,7 +281,7 @@ volumeBindingMode: WaitForFirstConsumer
      instanceClass:
        etcdDiskSizeGb: 10
        mainNetworkIPAddresses:
-         - 192.168.199.2
+       - 192.168.199.2
        rootDiskSizeGb: 50
        sizingPolicy: <SIZING_POLICY>
        storageProfile: <STORAGE_PROFILE>
@@ -297,6 +298,11 @@ volumeBindingMode: WaitForFirstConsumer
    - `virtualDataCenter` — имя виртуального датацентра.
    - `template` — шаблон ВМ для создания узлов.
    - `sizingPolicy` и `storageProfile` — соответствующие политики в VCD.
+   - `provider.server` — URL-адрес API вашего VCD.
+   - `provider.apiToken` — токен доступа (пароль) пользователя с правами администратора в VCD.
+   - `provider.username` — имя статического пользователя, от имени которого будет происходить взаимодействие с VCD.
+   - `mainNetworkIPAddresses` — список IP-адресов из указанной сети, которые будут выделены для master-узлов.
+   - `storageProfile` — имя storage-профиля, определяющего хранилище для дисков создаваемых ВМ.
 
 1. Закодируйте файл `cloud-provider-vcd-token.yml` в Base64:
 
@@ -308,17 +314,17 @@ volumeBindingMode: WaitForFirstConsumer
 
    ```yaml
    apiVersion: v1
-    data:
-      cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
-      cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-    kind: Secret
-      metadata:
-        labels:
-          heritage: deckhouse
-          name: d8-provider-cluster-configuration
-        name: d8-provider-cluster-configuration
-        namespace: kube-system
-    type: Opaque
+   data:
+     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
+     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
+   kind: Secret
+     metadata:
+       labels:
+         heritage: deckhouse
+         name: d8-provider-cluster-configuration
+       name: d8-provider-cluster-configuration
+       namespace: kube-system
+   type: Opaque
    ```
 
 1. Включите модуль `cloud-provider-vcd`:
