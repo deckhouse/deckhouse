@@ -38,5 +38,12 @@ spec:
       maxAllowed:
         cpu: 200m
         memory: 500Mi
+    - containerName: "kube-rbac-proxy-metrics"
+      minAllowed:
+        cpu: 5m
+        memory: 10Mi
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
