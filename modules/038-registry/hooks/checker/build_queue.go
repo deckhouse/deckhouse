@@ -36,11 +36,11 @@ func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, checkMode 
 			return nil, fmt.Errorf("failed to update image reference: %w", err)
 		}
 
-		if _, ok := newImageRef.(gcr_name.Tag); ok {
-			images[newImageRef.String()] = "deckhouse/containers/deckhouse"
-		} else {
+		// Need to be a tag
+		if _, ok := newImageRef.(gcr_name.Tag); !ok {
 			return nil, fmt.Errorf("expected deckhouse image reference to be a tag, but got: %s", newImageRef.String())
 		}
+		images[newImageRef.String()] = "deckhouse/containers/deckhouse"
 	default:
 		images = make(map[string]string, len(info.ModulesImagesDigests)+len(info.DeckhouseImagesRefs))
 
