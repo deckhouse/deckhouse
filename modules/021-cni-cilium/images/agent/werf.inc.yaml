@@ -474,15 +474,6 @@ import:
   - libzstd.so
   - libzstd.so.1
   - libzstd.so.1.5.6
-- image: libs/libxml2
-  add: /usr/lib
-  to: /lib64
-  before: install
-  includePaths:
-  - libzstd.a
-  - libzstd.so
-  - libzstd.so.1
-  - libzstd.so.1.5.6
 - image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
   add: /usr/lib
   to: /lib64
@@ -494,6 +485,32 @@ import:
   - libxml2.so.2
   - libxml2.so.2.13.4
   - libxml2.so.2.13.8
+- image: libs/libffi
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libffi.a
+  - libffi.la
+  - libffi.so
+  - libffi.so.8
+  - libffi.so.8.1.4
+- image: libs/xz
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so
+  - liblzma.a
+  - liblzma.la
+  - liblzma.so
+  - liblzma.so.5
+  - liblzma.so.5.6.3
+  - liblzma.so.5.8.1
+### place for libedit
+### place for ncurses
+### place for llvm
+### place for gcc
 git:
 {{- include "image mount points" . }}
 imageSpec:
