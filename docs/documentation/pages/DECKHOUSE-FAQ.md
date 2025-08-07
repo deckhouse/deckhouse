@@ -1002,6 +1002,8 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
+   > Before creating a resource, refer to the section ["How to add configuration for an additional registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+   >
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
@@ -1224,18 +1226,18 @@ spec:
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}
 
-### How do I change container runtime to ContainerdV2 on nodes?
+### How do I change container runtime to containerd v2 on nodes?
 
-You can migrate to `ContainerdV2` in one of the following ways:
+You can migrate to containerd v2 in one of the following ways:
 
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
 {% alert level="info" %}
-Migration to `ContainerdV2` is possible if the following conditions are met:
+Migration to containerd v2 is possible if the following conditions are met:
 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 {% endalert %}
 
-Migrating to `ContainerdV2` clears the `/var/lib/containerd` folder. For `Containerd`, the `/etc/containerd/conf.d` folder is used. For `ContainerdV2`, `/etc/containerd/conf2.d` is used.
+Migrating to containerd v2 clears the `/var/lib/containerd` folder. For containerd, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.

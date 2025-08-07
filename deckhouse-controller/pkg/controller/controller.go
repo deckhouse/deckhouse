@@ -89,7 +89,12 @@ type DeckhouseController struct {
 	log            *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
+func NewDeckhouseController(
+	ctx context.Context,
+	version string,
+	operator *addonoperator.AddonOperator,
+	logger *log.Logger,
+) (*DeckhouseController, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
@@ -251,7 +256,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	})
 
 	dc := dependency.NewDependencyContainer()
-	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil)
+	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
@@ -296,6 +301,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
 		operator.MetricStorage,
+		settingsContainer,
 		exts,
 	)
 
@@ -363,7 +369,8 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		configBytes, _ := deckhouseConfig.AsBytes("yaml")
 		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel: "",
+			ReleaseChannel:           "",
+			AllowExperimentalModules: false,
 		}
 		settings.Update.Mode = "Auto"
 		settings.Update.DisruptionApprovalMode = "Auto"
@@ -374,6 +381,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.log.Debug("update deckhouse settings")
+
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
