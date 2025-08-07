@@ -6,6 +6,7 @@ metadata:
   name: documentation
   namespace: d8-monitoring
   labels:
+    prometheus.deckhouse.io/custom-target: documentation
     app: documentation
     prometheus: main
     heritage: deckhouse
@@ -32,4 +33,26 @@ spec:
   selector:
     matchLabels:
       app: documentation
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-builder-metrics
+  namespace: d8-system
+  labels:
+    prometheus.deckhouse.io/custom-target: documentation
+    service: documentation
+    heritage: helm
+    module: documentation
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  selector:
+    app: documentation
+  ports:
+    - name: http-metrics
+      port: 9090
+      targetPort: http-metrics
+      protocol: TCP
 {{- end }}
