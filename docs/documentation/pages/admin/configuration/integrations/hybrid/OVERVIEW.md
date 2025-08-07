@@ -76,7 +76,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 - A working cluster with the parameter `clusterType: Static`.
 - The CNI controller switched to VXLAN mode. For details, refer to the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) parameter.
-- Configured network connectivity between Yandex Cloud and the static cluster node network.
+- Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
 
 ### Setup steps
 
@@ -256,8 +256,9 @@ Before you begin, ensure the following conditions are met:
 - **Infrastructure**:
   - A bare-metal DKP cluster is installed.
   - A tenant is configured in VCD [with allocated resources](../virtualization/vcd/connection-and-authorization.html).
-  - Network connectivity is set up — either an L2 network between bare-metal and VCD nodes, or an L3 network with the necessary port access.
+  - Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
   - A working network is configured in VCD with DHCP enabled.
+  - A user with a static password and VCD administrator privileges has been created.
 
 - **Software settings**:
   - The CNI controller is switched to VXLAN mode. More details — [`tunnelMode` configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
@@ -285,7 +286,7 @@ Before you begin, ensure the following conditions are met:
      instanceClass:
        etcdDiskSizeGb: 10
        mainNetworkIPAddresses:
-         - 192.168.199.2
+       - 192.168.199.2
        rootDiskSizeGb: 50
        sizingPolicy: <SIZING_POLICY>
        storageProfile: <STORAGE_PROFILE>
@@ -295,13 +296,18 @@ Before you begin, ensure the following conditions are met:
    ```
 
    Where:
-   - `mainNetwork` — the name of the network where cloud nodes will be placed in your VCD cluster.
-   - `internalNetworkCIDR` — CIDR of the specified network.
+   - `mainNetwork` — the name of the network where cloud nodes will be deployed in your VCD cluster.
+   - `internalNetworkCIDR` — the CIDR of the specified network.
    - `organization` — the name of your VCD organization.
-   - `virtualApplicationName` — the name of the vApp where nodes will be created (for example, `dkp-vcd-app`).
+   - `virtualApplicationName` — the name of the vApp where nodes will be created (e.g., `dkp-vcd-app`).
    - `virtualDataCenter` — the name of the virtual data center.
-   - `template` — VM template used to create nodes.
-   - `sizingPolicy` and `storageProfile` — corresponding policies in VCD.
+   - `template` — the VM template used to create nodes.
+   - `sizingPolicy` and `storageProfile` — corresponding policies configured in VCD.
+   - `provider.server` — the API URL of your VCD instance.
+   - `provider.apiToken` — the access token (password) of a user with administrator privileges in VCD.
+   - `provider.username` — the name of the static user that will be used to interact with VCD.
+   - `mainNetworkIPAddresses` — a list of IP addresses from the specified network that will be assigned to master nodes.
+   - `storageProfile` — the name of the storage profile defining where the VM disks will be placed.
 
 1. Encode the `cloud-provider-vcd-token.yml` file in Base64:
 
@@ -313,17 +319,17 @@ Before you begin, ensure the following conditions are met:
 
    ```yaml
    apiVersion: v1
-    data:
-      cloud-provider-cluster-configuration.yaml: <BASE64_STRING_OBTAINED_IN_THE_PREVIOUS_STEP>
-      cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-    kind: Secret
-      metadata:
-        labels:
-          heritage: deckhouse
-          name: d8-provider-cluster-configuration
-        name: d8-provider-cluster-configuration
-        namespace: kube-system
-    type: Opaque
+   data:
+     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
+     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
+   kind: Secret
+     metadata:
+       labels:
+         heritage: deckhouse
+         name: d8-provider-cluster-configuration
+       name: d8-provider-cluster-configuration
+       namespace: kube-system
+   type: Opaque
    ```
 
 1. Enable the `cloud-provider-vcd` module:
