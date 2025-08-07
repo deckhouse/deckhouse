@@ -209,7 +209,7 @@ properties:
         description: |
           Параметры для режима доступа `Direct`.
           Эти параметры обязательны, если `mode` установлен в `Direct`.
-        properties:
+        properties: &registryDirectProperties
           imagesRepo:
             description: |
               Адрес репозитория в container registry, где хранятся образы Deckhouse.
@@ -240,3 +240,8 @@ properties:
               Параметр необходимо указывать, если container registry использует самоподписанный сертификат или сертификат, выданный частным центром сертификации.
               
               Если параметр не указан, будут использоваться сертификаты, определенные в хранилище корневых сертификатов узла.
+      unmanaged:
+        description: |
+          Параметры для режима доступа `Unmanaged`.
+        properties:
+          <<: *registryDirectProperties

@@ -314,6 +314,10 @@ properties:
       You can either rely on pre-configured access on cluster nodes (`Unmanaged` mode) or provide Deckhouse with direct access credentials (`Direct` mode).
     x-examples:
       - mode: Unmanaged
+      - mode: Unmanaged
+        unmanaged:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "DECKHOUSE_LICENSE_KEY"
       - mode: Direct
         direct:
           imagesRepo: registry.deckhouse.io/deckhouse/ee
@@ -396,10 +400,29 @@ properties:
               The root CA certificate (in PEM format) for validating the container registry's server certificate.
               This is necessary if the registry uses a self-signed certificate or a certificate issued by a private Certificate Authority.
               If not provided, the system's trusted root CAs will be used.
+      unmanaged:
+        type: object
+        description: |
+          Parameters for the `Unmanaged` access mode.
+        x-examples:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "DECKHOUSE_LICENSE_KEY"
+          - imagesRepo: "my-private-registry.com/deckhouse"
+            username: "user"
+            password: "password"
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              MIIC...
+              -----END CERTIFICATE-----
+        properties:
+          <<: *registryDirectProperties
 
 x-deckhouse-validations:
 - expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) : true"
   message: "When mode is 'Direct', 'direct' section must be specified."
+- expression: "self.registry.mode == 'Direct' ? !has(self.registry.unmanaged) : true"
+  message: "When mode is 'Direct', 'unmanaged' section must be omitted."
 - expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.direct) : true"
   message: "When mode is 'Unmanaged', 'direct' section must be omitted."
 - expression: "has(self.registry.direct) ? has(self.registry.direct.imagesRepo) : true"
@@ -410,3 +433,11 @@ x-deckhouse-validations:
   message: "'username' is required when 'password' is provided in the 'direct' section."
 - expression: "has(self.registry.direct) ? !(has(self.registry.direct.license) && (has(self.registry.direct.username) || has(self.registry.direct.password))) : true"
   message: "'license' and 'username'/'password' are mutually exclusive in the 'direct' section."
+- expression: "has(self.registry.unmanaged) ? has(self.registry.unmanaged.imagesRepo) : true"
+  message: "'imagesRepo' is required when 'unmanaged' section is specified."
+- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.username) ? has(self.registry.unmanaged.password) : true) : true"
+  message: "'password' is required when 'username' is provided in the 'unmanaged' section."
+- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.password) ? has(self.registry.unmanaged.username) : true) : true"
+  message: "'username' is required when 'password' is provided in the 'unmanaged' section."
+- expression: "has(self.registry.unmanaged) ? !(has(self.registry.unmanaged.license) && (has(self.registry.unmanaged.username) || has(self.registry.unmanaged.password))) : true"
+  message: "'license' and 'username'/'password' are mutually exclusive in the 'unmanaged' section."
