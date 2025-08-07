@@ -33,6 +33,11 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
+type deckhouseImagesModel struct {
+	InitContainers map[string]string
+	Containers     map[string]string
+}
+
 type queueItem struct {
 	Image string `json:"image,omitempty"`
 	Info  string `json:"info,omitempty"`
@@ -118,9 +123,9 @@ type inputsModel struct {
 }
 
 type clusterImagesInfo struct {
-	ModulesImagesDigests       map[string]string
-	DeckhouseImagesRefs        map[string]string
-	DeckhouseContainerImageRef string
+	Repo                 string
+	ModulesImagesDigests map[string]string
+	DeckhouseImages      deckhouseImagesModel
 }
 
 func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {

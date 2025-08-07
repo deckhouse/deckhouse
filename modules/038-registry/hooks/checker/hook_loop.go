@@ -101,17 +101,19 @@ var _ = sdk.RegisterFunc(
 					containers := deployment.Spec.Template.Spec.Containers
 					initContainers := deployment.Spec.Template.Spec.InitContainers
 
-					ret := make(map[string]string, len(containers)+len(initContainers))
+					ret := deckhouseImagesModel{
+						InitContainers: make(map[string]string),
+						Containers:     make(map[string]string),
+					}
 
 					for _, c := range initContainers {
-						info := fmt.Sprintf("deckhouse/init-containers/%v", c.Name)
-						ret[info] = c.Image
+						ret.InitContainers[c.Name] = c.Image
 					}
 
 					for _, c := range containers {
-						info := fmt.Sprintf("deckhouse/containers/%v", c.Name)
-						ret[info] = c.Image
+						ret.Containers[c.Name] = c.Image
 					}
+
 					return ret, nil
 				},
 			},
@@ -126,14 +128,10 @@ var _ = sdk.RegisterFunc(
 		inputs := inputsModel{
 			Params: GetParams(input),
 		}
-		inputs.ImagesInfo.DeckhouseImagesRefs, err = helpers.SnapshotToSingle[map[string]string](input, deckhouseDeploymentSnapName)
+		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
+		inputs.ImagesInfo.DeckhouseImages, err = helpers.SnapshotToSingle[deckhouseImagesModel](input, deckhouseDeploymentSnapName)
 		if err != nil {
 			return fmt.Errorf("cannot get deckhouse deployment snapshot: %w", err)
-		}
-
-		var ok bool
-		if inputs.ImagesInfo.DeckhouseContainerImageRef, ok = inputs.ImagesInfo.DeckhouseImagesRefs["deckhouse/containers/deckhouse"]; !ok {
-			return fmt.Errorf("cannot get deckhouse container image ref")
 		}
 
 		inputs.ImagesInfo.ModulesImagesDigests, err = getModulesImagesDigests(input)
