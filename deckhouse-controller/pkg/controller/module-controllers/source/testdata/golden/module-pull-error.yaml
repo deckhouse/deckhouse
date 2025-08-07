@@ -24,8 +24,8 @@ status:
   - name: errormodule
     policy: test-alpha
     pullError: |-
-      get image info: fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
-            MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
+      get release digest: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
+            DIGEST_UNKNOWN: digest unknown; map[Tag:alpha]
     version: unknown
   modulesCount: 2
   phase: Active

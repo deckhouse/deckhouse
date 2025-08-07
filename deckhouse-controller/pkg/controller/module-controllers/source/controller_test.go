@@ -287,6 +287,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
+		dependency.TestDC.CRClient.DigestMock.Set(func(_ context.Context, tag string) (string, error) {
+			if tag == "alpha" {
+				return "", errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      DIGEST_UNKNOWN: digest unknown; map[Tag:alpha]")
+			}
+			return "sha256:abc123", nil
+		})
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
@@ -533,7 +539,10 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
 
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		// Setup mock for GetReleaseDigest call - it calls Digest method
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.
+			DigestMock.Return("sha256:abc123", nil).
+			ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel
