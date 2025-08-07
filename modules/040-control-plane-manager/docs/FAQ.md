@@ -680,6 +680,19 @@ Follow these steps to restore a single-master cluster on master node:
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
 
+   To verify that etcd is running, use the command:
+
+   ```shell
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Output example:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
+
 1. Restart the master node.
 
 #### Restoring a multi-master cluster

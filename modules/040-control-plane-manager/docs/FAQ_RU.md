@@ -658,7 +658,19 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+      ```
+
+   Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
+
+   ```shell
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Пример вывода:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
 
 1. Перезапустите master-узел.
