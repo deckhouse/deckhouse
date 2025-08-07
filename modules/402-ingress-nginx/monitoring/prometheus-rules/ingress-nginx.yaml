@@ -265,3 +265,23 @@
         It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
         To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
 
+
+  - alert: GeoIPDownloadErrorDetected
+    expr: sum by (controller, reason) (max_over_time(geoip_errors_total{type="download"}[1m])) > 0
+    for: 1m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        GeoIP DB download error occurred in controller `{{ $labels.controller }}`
+      description: |-
+        An error occurred during GeoIP DB download in controller `{{ $labels.controller }}`.
+
+        **Reason:** `{{ $labels.reason }}`
+
+        **Type:** `{{ $labels.type }}`
+
+        If this persists, investigate the network connectivity or DB availability.
+
