@@ -340,23 +340,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		availableModule.Policy = policy.Name
 
-		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
-
-		// create or update module
-		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
-		if err != nil {
-			// skip modules that require resync
-			if errors.Is(err, ErrRequireResync) {
-				availableModule.Version = "unknown"
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
-
-			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
-		}
-
-		logger = logger.With(slog.String("source_name", source.Name))
-
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
@@ -370,26 +353,54 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+
+		// create or update module
+		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			// skip modules that require resync
+			if errors.Is(err, ErrRequireResync) {
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
+			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
+		}
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
+
+		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
+		logger = logger.With(slog.String("source_name", source.Name))
+
+		// Early check if we need to process this module at all
+		if module.Properties.Source != source.Name || !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			// For modules that are not on this source or disabled, we still need to show them in status but without pulling new data
+			meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
+			if err == nil {
+				availableModule.Version = meta.ModuleVersion
+				availableModule.Checksum = meta.Checksum
+			} else {
+				availableModule.Version = "unknown"
+			}
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
 
 		logger.Debug("get module digest from release channel")
 
 		// First, get only the digest to check if module has changed - this is much faster than downloading full metadata
 		digestFromRegistry, err := md.GetReleaseDigest(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
-				r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
-				availableModule.PullError = err.Error()
-				pullErrorsExist = true
+			r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
+			availableModule.PullError = err.Error()
+			pullErrorsExist = true
 
-				metricLabels := map[string]string{
-					"module":   moduleName,
-					"version":  availableModule.Version,
-					"registry": source.Spec.Registry.Repo,
-				}
-
-				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+			metricLabels := map[string]string{
+				"module":   moduleName,
+				"version":  availableModule.Version,
+				"registry": source.Spec.Registry.Repo,
 			}
+
+			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 
 			availableModule.Version = "unknown"
 			availableModules = append(availableModules, availableModule)
@@ -397,24 +408,23 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// Quick check: if digest hasn't changed, we can skip expensive operations
-		if availableModule.Checksum == digestFromRegistry {
-			logger.Debug("module digest unchanged, skipping metadata download", slog.String("digest", digestFromRegistry))
-
-			// check if release exists with current checksum
-			exists, err := r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
-			if err != nil {
-				return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
-			}
-
-			// If release exists, we can completely skip downloading metadata and creating new releases
-			if exists {
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
+		// check release by getting version from checksum
+		version, err := r.getReleaseVersionFromChecksum(ctx, source.Name, moduleName, digestFromRegistry)
+		if err != nil {
+			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
 
-		logger.Debug("digest changed or release missing, downloading full metadata", slog.String("old_digest", availableModule.Checksum), slog.String("new_digest", digestFromRegistry))
+		if r.noNeedToEnsureRelease(source, module, availableModule, digestFromRegistry, version != nil) {
+			availableModule.Checksum = digestFromRegistry
+			availableModule.Version = "unknown"
+			if version != nil {
+				availableModule.Version = version.String()
+			}
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		logger.Debug("ensure release")
 
 		// Only download full metadata if digest changed or release doesn't exist
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
@@ -439,43 +449,24 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, meta.Checksum)
+		err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+			if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
+				module.Status.Phase = v1alpha1.ModulePhaseDownloading
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
+			}
+
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
+			return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 		}
 
-		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
-			logger.Debug("ensure release")
-
-			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloading
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
-				}
-
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module status: %w", moduleName, err)
-			}
-
-			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-				module.Properties.Source = source.Name
-
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
-			}
-
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
-			if err != nil {
-				logger.Error("fetch module releases", log.Err(err))
-				availableModule.PullError = err.Error()
-				// wipe checksum to trigger meta downloading
-				meta.Checksum = ""
-			}
+		err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+		if err != nil {
+			logger.Error("fetch module releases", log.Err(err))
+			availableModule.PullError = err.Error()
+			// wipe checksum to trigger meta downloading
+			meta.Checksum = ""
 		}
 
 		availableModule.Checksum = meta.Checksum
