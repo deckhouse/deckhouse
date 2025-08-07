@@ -1,13 +1,4 @@
 type: object
-x-examples:
-  host: myhost
-  username: myuname
-  password: myPaSsWd
-  vmFolderPath: dev/test
-  regionTagCategory: myregtagcat
-  zoneTagCategory: myzonetagcat
-  region: myreg
-  zones: ["zonea", "zoneb"]
 required:
   - host
   - username
@@ -22,14 +13,20 @@ properties:
     type: string
     description: |
       The domain of the vCenter server.
+    x-examples:
+      - myhost
   username:
     type: string
     description: |
       The login ID.
+    x-examples:
+      - myuname
   password:
     type: string
     description: |
       The user's password.
+    x-examples:
+      - myPaSsWd
   insecure:
     type: boolean
     description: |
@@ -38,14 +35,20 @@ properties:
     type: string
     description: |
       The path to the VirtualMachine Folder where the cloned VMs will be created.
+    x-examples:
+      - dev/test
   regionTagCategory:
     type: string
     description: |
       The name of the tag category used to identify the region (vSphere Datacenter).
+    x-examples:
+      - myregtagcat
   zoneTagCategory:
     type: string
     description: |
       The name of the tag category used to identify the region (vSphere Cluster).
+    x-examples:
+      - myzonetagcat
   disableTimesync:
     type: boolean
     description: |
@@ -56,12 +59,16 @@ properties:
     type: string
     description: |
       Is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
+    x-examples:
+      - myreg
   zones:
     type: array
     items:
       type: string
     description: |
       The globally restricted set of zones that this Cloud Provider works with.
+    x-examples:
+      - ["zonea", "zoneb"]
   storageClass:
     type: object
     properties:
