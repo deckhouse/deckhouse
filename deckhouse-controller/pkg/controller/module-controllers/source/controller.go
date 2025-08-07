@@ -372,12 +372,55 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
-		logger.Debug("download module meta from release channel")
+		logger.Debug("get module digest from release channel")
 
+		// First, get only the digest to check if module has changed - this is much faster than downloading full metadata
+		digestFromRegistry, err := md.GetReleaseDigest(ctx, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+				r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
+				availableModule.PullError = err.Error()
+				pullErrorsExist = true
+
+				metricLabels := map[string]string{
+					"module":   moduleName,
+					"version":  availableModule.Version,
+					"registry": source.Spec.Registry.Repo,
+				}
+
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+			}
+
+			availableModule.Version = "unknown"
+			availableModules = append(availableModules, availableModule)
+
+			continue
+		}
+
+		// Quick check: if digest hasn't changed, we can skip expensive operations
+		if availableModule.Checksum == digestFromRegistry {
+			logger.Debug("module digest unchanged, skipping metadata download", slog.String("digest", digestFromRegistry))
+
+			// check if release exists with current checksum
+			exists, err := r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+			if err != nil {
+				return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
+			}
+
+			// If release exists, we can completely skip downloading metadata and creating new releases
+			if exists {
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
+
+		logger.Debug("digest changed or release missing, downloading full metadata", slog.String("old_digest", availableModule.Checksum), slog.String("new_digest", digestFromRegistry))
+
+		// Only download full metadata if digest changed or release doesn't exist
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
-				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				r.logger.Warn("failed to download module metadata", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
 
@@ -397,7 +440,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, meta.Checksum)
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}

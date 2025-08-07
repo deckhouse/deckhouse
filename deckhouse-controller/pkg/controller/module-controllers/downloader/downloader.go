@@ -86,7 +86,7 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
-	digest, err := md.getImgDigest(moduleName, imageTag)
+	digest, err := md.getImageDigest(moduleName, imageTag)
 	if err != nil {
 		return "", nil, err
 	}
@@ -185,6 +185,28 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 	return moduletools.ExtractDocs(img)
 }
 
+// GetReleaseDigest gets only the digest from the release channel without downloading full metadata
+// This is an optimized method for checking if release has changed
+func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, releaseChannel string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetReleaseDigest")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return "", fmt.Errorf("get registry client for release digest: %w", err)
+	}
+
+	digest, err := regCli.Digest(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		return "", fmt.Errorf("get release digest: %w", err)
+	}
+
+	return digest, nil
+}
+
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
@@ -194,7 +216,7 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image,
 	return regCli.Image(context.TODO(), imageTag)
 }
 
-func (md *ModuleDownloader) getImgDigest(moduleName, moduleVersion string) (string, error) {
+func (md *ModuleDownloader) getImageDigest(moduleName, moduleVersion string) (string, error) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return "", fmt.Errorf("fetch module error: %v", err)
