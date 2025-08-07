@@ -43,3 +43,7 @@ spec:
     {{- if $catalog }}
       catalog: {{ $catalog | quote }}
     {{- end }}
+    {{ - if .nodeGroup.instanceClass.additionalMetadata }}
+    additionalMetadata:
+      {{- toYaml .nodeGroup.instanceClass.additionalMetadata | nindent 6 }}
+    {{- end }}
