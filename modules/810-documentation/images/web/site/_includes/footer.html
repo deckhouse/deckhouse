@@ -2,6 +2,4 @@
 <div class="footer">
 </div>
 {% endraw %}
-{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
-
-<script type="text/javascript" src="/assets/js/codeblock.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/codeblock.js?v={{ 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256  }}"></script>
