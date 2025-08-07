@@ -42,6 +42,8 @@ masterNodeGroup:
 When using this placement scheme, you must check with the administrator which network virtualization platform is in use and specify it in the `edgeGateway.type` parameter.  
 Two options are supported: `NSX-T` and `NSX-V`.
 
+For administrative access to cluster nodes, a bastion host is deployed, whose parameters are described in `bastion`.
+
 If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically enabled in the created network for the nodes.  
 It will assign IP addresses starting from the 30th address in the subnet up to the second-to-last (just before the broadcast address).  
 You can change the starting address of the DHCP pool using the `internalNetworkDHCPPoolStartAddress` parameter.
@@ -55,7 +57,7 @@ It is not recommended to use dynamic addressing for the first master node in com
 The deployment scheme assumes automated creation of NAT rules:
 
 - An SNAT rule for translating the addresses of the internal node network to the external address specified in the `edgeGateway.externalIP` property.
-- A DNAT rule for translating the external address and port, specified in the `edgeGateway.externalIP` and `edgeGateway.externalPort` properties, respectively, to the internal address of the first master node on port 22 using the `TCP` protocol for administrative access to the nodes via SSH.
+- A DNAT rule for translating the external address and port, specified in the `edgeGateway.externalIP` and `edgeGateway.externalPort` properties, respectively, to the internal address of the bastion instance on port 22 using the `TCP` protocol for administrative access to the nodes via SSH.
 
 {% alert level="warning" %}
 If the Edge Gateway is provided by `NSX-V`, you must specify the name and type of the network to which the rule will be bound in the `edgeGateway.NSX-V.externalNetworkName` and `edgeGateway.NSX-V.externalNetworkType` properties, respectively. Typically, this is a network connected to the Edge Gateway in `Gateway Interface` and having an external IP address.
@@ -80,7 +82,7 @@ Example of the layout configuration using `NSX-T`:
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -91,12 +93,23 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-T"
   externalIP: 10.0.0.1
   externalPort: 10022
+createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -113,7 +126,7 @@ Example of the layout configuration using `NSX-V`:
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -124,7 +137,17 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-V"
@@ -133,6 +156,7 @@ edgeGateway:
   NSX-V:
     externalNetworkName: external
     externalNetworkType: ext
+createDefaultFirewallRules: true
 masterNodeGroup:
   replicas: 1
   instanceClass:
