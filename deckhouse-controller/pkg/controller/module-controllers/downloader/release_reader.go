@@ -27,6 +27,7 @@ type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
 	moduleReader    *bytes.Buffer
+	signatureReader *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
@@ -57,6 +58,11 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 			}
 		case "module.yaml":
 			_, err := io.Copy(rr.moduleReader, tr)
+			if err != nil {
+				return err
+			}
+		case "module.p7m":
+			_, err := io.Copy(rr.signatureReader, tr)
 			if err != nil {
 				return err
 			}

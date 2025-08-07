@@ -55,6 +55,9 @@ spec:
                       policy:
                         type: string
                         description: Имя политики.
+                      verified:
+                        type: boolean
+                        description: Показывает, прошел ли модуль верификацию подписи
                       overridden:
                         description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
                 message:

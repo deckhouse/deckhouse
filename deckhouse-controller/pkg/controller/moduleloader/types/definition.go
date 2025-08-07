@@ -17,6 +17,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -31,6 +32,7 @@ import (
 
 const (
 	DefinitionFile = "module.yaml"
+	SignatureFile  = "module.p7m"
 
 	ExperimentalModuleStage = "Experimental"
 )
@@ -226,4 +228,21 @@ func (d *Definition) Labels() map[string]string {
 
 func (d *Definition) IsExperimental() bool {
 	return d.Stage == ExperimentalModuleStage
+}
+
+func (d *Definition) CalculateChecksum() (string, error) {
+	templatesPath := filepath.Join(d.Path, "templates")
+	openApiPath := filepath.Join(d.Path, "openapi")
+	defPath := filepath.Join(d.Path, "module.yaml")
+
+	return addonutils.CalculateChecksumOfPaths(templatesPath, openApiPath, defPath)
+}
+
+func (d *Definition) ParseSignature() ([]byte, error) {
+	content, err := os.ReadFile(filepath.Join(d.Path, SignatureFile))
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
 }

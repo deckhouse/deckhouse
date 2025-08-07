@@ -35,6 +35,7 @@ const (
 	ModuleAnnotationDescriptionEn = "en.meta.deckhouse.io/description"
 
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
+	ModuleConditionSignatureVerified      = "SignatureVerified"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionLastReleaseDeployed    = "LastReleaseDeployed"
 	ModuleConditionIsReady                = "IsReady"
@@ -62,6 +63,7 @@ const (
 	ModuleReasonEditionAvailableExtender  = "EditionAvailableExtender"
 	ModuleReasonEditionEnabledExtender    = "EditionEnabledExtender"
 	ModuleReasonNotInstalled              = "NotInstalled"
+	ModuleReasonVerification              = "Verification"
 	ModuleReasonDisabled                  = "Disabled"
 	ModuleReasonConflict                  = "Conflict"
 	ModuleReasonDownloading               = "Downloading"

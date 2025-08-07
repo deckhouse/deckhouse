@@ -107,6 +107,9 @@ spec:
                       policy:
                         type: string
                         description: The module policy name.
+                      verified:
+                        type: boolean
+                        description: If the module passes signature verification
                       overridden:
                         type: boolean
                         description: If ModulePullOverride for this module exists.

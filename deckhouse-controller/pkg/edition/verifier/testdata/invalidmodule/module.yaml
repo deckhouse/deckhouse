@@ -1,0 +1,6 @@
+# invalid name
+name: deschedule
+subsystems:
+  - infrastructure
+namespace: d8-descheduler
+stage: General Availability

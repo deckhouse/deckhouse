@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition/verifier"
 )
 
 const (
@@ -31,9 +34,10 @@ const (
 )
 
 type Edition struct {
-	Name    string
-	Bundle  string
-	Version string
+	verifier *verifier.Verifier
+	Name     string
+	Bundle   string
+	Version  string
 }
 
 func Parse(version string) (*Edition, error) {
@@ -50,5 +54,15 @@ func Parse(version string) (*Edition, error) {
 		edition.Bundle = defaultBundle
 	}
 
+	edition.verifier = verifier.New()
+
 	return edition, nil
+}
+
+func (e *Edition) VerifyModule(module *moduletypes.Definition) error {
+	return e.verifier.VerifyModule(module)
+}
+
+func (e *Edition) VerifySignature(module string, signature []byte) error {
+	return e.verifier.VerifySignature(module, signature)
 }

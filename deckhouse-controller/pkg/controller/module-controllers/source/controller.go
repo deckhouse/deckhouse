@@ -426,12 +426,27 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
-			if err != nil {
-				logger.Error("fetch module releases", log.Err(err))
-				availableModule.PullError = err.Error()
-				// wipe checksum to trigger meta downloading
-				meta.Checksum = ""
+			if err = r.edition.VerifySignature(moduleName, meta.Signature); err != nil {
+				err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+					module.Status.Phase = v1alpha1.ModulePhaseError
+					module.SetConditionFalse(v1alpha1.ModuleConditionSignatureVerified, v1alpha1.ModuleReasonVerification, err.Error())
+					return nil
+				})
+				if err != nil {
+					return fmt.Errorf("update the '%s' module status: %w", moduleName, err)
+				}
+
+				availableModule.Verified = false
+			} else {
+				err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+				if err != nil {
+					logger.Error("fetch module releases", log.Err(err))
+					availableModule.PullError = err.Error()
+					// wipe checksum to trigger meta downloading
+					meta.Checksum = ""
+				}
+
+				availableModule.Verified = true
 			}
 		}
 

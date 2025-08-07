@@ -77,7 +77,9 @@ type ModuleDownloadResult struct {
 	ModuleVersion string
 
 	ModuleDefinition *moduletypes.Definition
-	Changelog        map[string]any
+	Signature        []byte
+
+	Changelog map[string]any
 }
 
 // DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
@@ -136,10 +138,10 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	}
 
 	res := &ModuleDownloadResult{
-		Checksum:         releaseImageInfo.Digest.String(),
-		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
-		Changelog:        releaseImageInfo.Metadata.Changelog,
-		ModuleDefinition: releaseImageInfo.Metadata.ModuleDefinition,
+		Checksum:      releaseImageInfo.Digest.String(),
+		ModuleVersion: "v" + releaseImageInfo.Metadata.Version.String(),
+		Changelog:     releaseImageInfo.Metadata.Changelog,
+		Signature:     releaseImageInfo.Metadata.Signature,
 	}
 
 	return res, nil
@@ -477,6 +479,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
 		moduleReader:    bytes.NewBuffer(nil),
+		signatureReader: bytes.NewBuffer(nil),
 	}
 
 	if err = rr.untarMetadata(rc); err != nil {
@@ -509,6 +512,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
+	}
+
+	if rr.signatureReader.Len() > 0 {
+		meta.Signature = rr.signatureReader.Bytes()
 	}
 
 	return meta, err
@@ -561,6 +568,7 @@ type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog        map[string]any          `json:"-"`
+	Signature        []byte                  `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 }
 

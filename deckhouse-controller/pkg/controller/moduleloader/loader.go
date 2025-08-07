@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -82,6 +83,7 @@ type Loader struct {
 	modulesDirs    []string
 	// global module dir
 	globalDir string
+	edition   *d8edition.Edition
 
 	dependencyContainer dependency.Container
 	exts                *extenders.ExtendersStack
@@ -327,6 +329,31 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
 		}
+
+		if loaded := l.modules[module.Name]; loaded != nil {
+			if verificationErr := l.edition.VerifyModule(loaded.GetModuleDefinition()); verificationErr != nil {
+				err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+					module.Status.Phase = v1alpha1.ModulePhaseError
+					module.SetConditionFalse(v1alpha1.ModuleConditionSignatureVerified, v1alpha1.ModuleReasonVerification, verificationErr.Error())
+
+					return nil
+				})
+				if err != nil {
+					return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
+				}
+				// unload module
+				delete(l.modules, module.Name)
+			} else {
+				err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+					module.SetConditionTrue(v1alpha1.ModuleConditionSignatureVerified)
+
+					return nil
+				})
+				if err != nil {
+					return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -340,10 +367,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				if !apierrors.IsNotFound(err) {
 					return fmt.Errorf("get the %q module: %w", def.Name, err)
 				}
+
 				if !embedded {
 					l.logger.Warn("downloaded module does not exist, skip it", slog.String("name", def.Name))
 					return nil
 				}
+
 				module = &v1alpha1.Module{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       v1alpha1.ModuleGVK.Kind,

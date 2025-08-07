@@ -111,6 +111,7 @@ type AvailableModule struct {
 	Policy     string `json:"policy,omitempty"`
 	Checksum   string `json:"checksum,omitempty"`
 	PullError  string `json:"pullError,omitempty"`
+	Verified   bool   `json:"verified"`
 	Overridden bool   `json:"overridden,omitempty"`
 }
 
