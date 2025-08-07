@@ -15,7 +15,7 @@ shell:
         cd /srv/jekyll-data/documentation/
 
         echo '[] Creating modules list...'
-        export MODULES_DIR=/src/modules
+        export MODULES_DIR=/src/modules-metadata
         _tools/modules_list.sh > _data/modules/internal.json
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
@@ -83,7 +83,7 @@ shell:
 
         echo
         echo '[] Preparing OSS license info...'
-        export OSS_SOURCE_DIR=/src/modules
+        export OSS_SOURCE_DIR=/src/modules-metadata
         export OSS_TARGET_FILE=/srv/jekyll-data/documentation/_data/ossinfo.yaml
         bash _tools/modules_generate_ossinfo.sh
 

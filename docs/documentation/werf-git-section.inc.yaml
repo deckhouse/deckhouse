@@ -44,7 +44,7 @@
     setup: ['**/*']
   includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
 - add: /
-  to: /src/modules
+  to: /src/modules-metadata
   owner: jekyll
   group: jekyll
   stageDependencies:

@@ -18,7 +18,7 @@
 # Update configuration.html page for modules from the corresponding module openapi schema
 #
 
-for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/\(doc-ru-\)\?config-values.yaml$' -print); do
+for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' -print); do
   module_name=$(echo $schema_path | sed -E 's#^.*/([0-9]+-)?([^/]+)/openapi.*$#\2#' )
   module_path=$(echo $schema_path | cut -d\/ -f-2 )
 
@@ -38,7 +38,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/\(doc-ru-\)\?config-v
 
   if grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md; then
     # Apply schema
-    sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
+    sed -i "s/<!-- SCHEMA -->/\{\% include module-configuration.liquid \%\}/" ${module_path}/docs/CONFIGURATION.md
   elif grep -q 'module-settings.liquid' ${module_path}/docs/CONFIGURATION.md; then
     # It is a normal case. Manually configured schema rendering.
     continue
@@ -49,29 +49,3 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/\(doc-ru-\)\?config-v
     fi
   fi
 done
-
-if [ -d /src/global ]; then
-  mkdir -p /srv/jekyll-data/documentation/_data/schemas/modules/global/crds /srv/jekyll-data/documentation/_data/schemas/crds
-  # Conversions
-  cp -fr /src/global/conversions _data/schemas/modules/global/
-  # OpenAPI spec for Deckhouse global config
-  cp -f /src/global/config-values.yaml _data/schemas/modules/global/
-  echo -e "\ni18n:\n  ru:" >>_data/schemas/modules/global/config-values.yaml
-  cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/modules/global/config-values.yaml
-  # ClusterConfiguration OpenAPI spec
-  cp -f /src/global/*cluster_configuration.yaml _data/schemas/crds/
-  # InitConfiguration OpenAPI spec
-  cp -f /src/global/*init_configuration.yaml _data/schemas/crds/
-  # StaticClusterConfiguration OpenAPI spec
-  cp -f /src/global/*static_cluster_configuration.yaml _data/schemas/crds/
-  # DeckhouseRelease CRD
-  cp -f /src/global/crds/*deckhouse-release.yaml _data/schemas/crds/
-  # module CRDS
-  cp /src/global/crds/module* /srv/jekyll-data/documentation/_data/schemas/crds/
-  cp /src/global/crds/doc-ru-module* /srv/jekyll-data/documentation/_data/schemas/crds/
-  for i in /src/global/crds/module* ; do
-    cp -v $i /srv/jekyll-data/documentation/_data/schemas/crds/
-    echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
-    cat /src/global/crds/doc-ru-$(echo $i | sed 's#/src/global/crds/##' ) | sed 's/^/    /' >>_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
-  done
-fi

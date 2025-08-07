@@ -36,8 +36,12 @@
 page::has_frontmatter() {
     if [[ -f $1 ]]
     then
-        head -n 1  $1 | grep -q "^---"
-        if [ $? -eq 0 ]; then return 0; fi
+        if awk 'NR==1 && /^---$/ { found_start=1 }
+            NR>1 && /^---$/ && found_start { found_end=1; exit }
+            END { exit !(found_start && found_end) }' "$1"; then
+            # Has valid frontmatter
+           return 0
+        fi
     else
         echo "Can't find file $1" >&2
         return 1
@@ -62,7 +66,10 @@ for page in ${pages}; do
 
     # Skip modules, which are listed in modules_menu_skip file
     # TODO: Use docs/documentation/_data/modules/excludedModules.json instead
-    if grep -Fxq "$module_name" _tools/modules_menu_skip; then
+    #if grep -Fxq "$module_name" _tools/modules_menu_skip; then
+    #    continue
+    #fi
+    if jq -e --arg name "$module_name" '.[] | select(. == $name)' _tools/modules_excluded.json &>/dev/null; then
         continue
     fi
 

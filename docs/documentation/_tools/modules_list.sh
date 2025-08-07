@@ -19,13 +19,11 @@
 # ...
 # modules:
 #   network-gateway:
-#     folder_name: modules/450-network-gateway/
 #     path: modules/network-gateway/
-#     edition: ee
+#     editionMinimumAvailable: ee
 #   network-policy-engine:
-#     folder_name: modules/050-network-policy-engine/
 #     path: modules/network-policy-engine/
-#     edition: ce
+#     ededitionMinimumAvailableition: ce
 #
 
 
