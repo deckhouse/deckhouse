@@ -118,7 +118,6 @@ type inputsModel struct {
 }
 
 type clusterImagesInfo struct {
-	Repo                       string
 	ModulesImagesDigests       map[string]string
 	DeckhouseImagesRefs        map[string]string
 	DeckhouseContainerImageRef string

@@ -126,7 +126,6 @@ var _ = sdk.RegisterFunc(
 		inputs := inputsModel{
 			Params: GetParams(input),
 		}
-		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
 		inputs.ImagesInfo.DeckhouseImagesRefs, err = helpers.SnapshotToSingle[map[string]string](input, deckhouseDeploymentSnapName)
 		if err != nil {
 			return fmt.Errorf("cannot get deckhouse deployment snapshot: %w", err)
