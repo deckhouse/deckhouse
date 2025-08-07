@@ -349,7 +349,7 @@ func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string 
 		msg    = new(strings.Builder)
 		qNames = make([]string, 0, len(state.Queues))
 	)
-	fmt.Fprintf(msg, "check mode: %v\n", mode)
+	fmt.Fprintf(msg, "Mode: %v\n", mode)
 
 	for name := range state.Queues {
 		qNames = append(qNames, name)
