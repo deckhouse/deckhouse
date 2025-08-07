@@ -32,6 +32,7 @@ spec:
       replacement: "documentation"
   selector:
     matchLabels:
+      app: documentation
       app.kubernetes.io/part-of: deckhouse-docs
 {{- else }}
 apiVersion: v1
