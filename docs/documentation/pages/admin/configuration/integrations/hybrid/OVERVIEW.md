@@ -320,7 +320,7 @@ Before you begin, ensure the following conditions are met:
    ```yaml
    apiVersion: v1
    data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
+     cloud-provider-cluster-configuration.yaml: <BASE64_STRING_OBTAINED_IN_THE_PREVIOUS_STEP>
      cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
    kind: Secret
      metadata:
