@@ -239,8 +239,8 @@ properties:
             description: |
               Режим проверки container registry:
 
-              - `Critical` (по умолчанию) — проверяет наличие всех критически важных компонентов в container registry.
-              - `Soft` — проверяет только наличие тега образа Deckhouse в container registry (используется для переключения между редакциями Deckhouse).
+              - `Default` (по умолчанию) — проверяет наличие всех критически важных компонентов в container registry.
+              - `Relax` — проверяет только наличие тега образа Deckhouse в container registry (используется для переключения между редакциями Deckhouse).
 
       unmanaged:
         description: |

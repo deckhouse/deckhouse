@@ -204,8 +204,8 @@ properties:
                 type: string
               checkMode:
                 type: string
-                enum: [Critical, Soft]
-                default: Critical
+                enum: [Default, Relax]
+                default: Default
           state:
             type: object
             default: {}

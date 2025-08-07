@@ -23,16 +23,16 @@ import (
 type CheckModeType = string
 
 const (
-	Critical CheckModeType = "Critical"
-	Soft     CheckModeType = "Soft"
+	Default CheckModeType = "Default"
+	Relax   CheckModeType = "Relax"
 )
 
 func ToCheckModeType(mode string) CheckModeType {
 	val := strings.ToLower(mode)
 	switch val {
-	case "soft":
-		return Soft
+	case "relax":
+		return Relax
 	default:
-		return Critical
+		return Default
 	}
 }
