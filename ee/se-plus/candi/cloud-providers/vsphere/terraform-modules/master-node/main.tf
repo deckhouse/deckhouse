@@ -199,6 +199,8 @@ resource "vsphere_virtual_machine" "master" {
       disk,
       vapp,
       firmware,
+      ept_rvi_mode,
+      hv_mode,
     ]
   }
 
