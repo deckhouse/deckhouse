@@ -112,16 +112,16 @@ shell:
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
           xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
 
-        cat <<"EOD" > /tmp/_config_additional.yml
+        cat <<'EOD' > /tmp/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/documentation/_data/topnav.yml
+        cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_data/topnav.yml
+        cat <<'EOD' > /srv/jekyll-data/site/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
+        cat <<'EOD' > /srv/jekyll-data/site/_includes/footer.html
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
         EOD
 {{ end }}
